@@ -41,6 +41,26 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.public.fingerprint)
         }
+        "apg-tpm-evidence-v1" => {
+            // Structure only; tpm.attestation.challenge and verify authenticate it.
+            let value: crate::attest::Evidence = serde_json::from_slice(data)?;
+            value.public.validate()?;
+            Some(value.public.fingerprint)
+        }
+        "apg-tpm-challenge-v1" => {
+            let value: crate::attest::Challenge = serde_json::from_slice(data)?;
+            crate::crypto::check_fingerprint(&value.fingerprint)?;
+            Some(value.fingerprint)
+        }
+        "apg-tpm-challenge-secret-v1" => {
+            let value: crate::attest::ChallengeSecret = serde_json::from_slice(data)?;
+            crate::crypto::check_fingerprint(&value.fingerprint)?;
+            Some(value.fingerprint)
+        }
+        "apg-tpm-response-v1" => {
+            let _: crate::attest::AttestationResponse = serde_json::from_slice(data)?;
+            None
+        }
         "apg-openpgp-key-v1" => {
             // Structure only: the sealed key is authenticated when opened.
             let value: crate::openpgp::KeyFile = serde_json::from_slice(data)?;

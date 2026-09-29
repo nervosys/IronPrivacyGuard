@@ -272,6 +272,40 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["load_provider", "read_pin", "delete_token_object"],
     ),
     (
+        "tpm.attest",
+        "Certify an identity's TPM keys with the TPM's attestation key and write evidence for a verifier",
+        &["TpmKeyFile", "TokenPin"],
+        &["TpmEvidence"],
+        &["load_provider", "read_pin", "create_file"],
+    ),
+    (
+        "tpm.attestation.challenge",
+        "Verify TPM key evidence against manufacturer roots and issue a one-time credential challenge to the TPM's endorsement key",
+        &["TpmEvidence", "TrustAnchors", "Fingerprint"],
+        &["TpmChallenge", "TpmChallengeSecret", "AttestationReport"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "tpm.attestation.respond",
+        "Release the challenge credential with TPM2_ActivateCredential, proving the attestation and endorsement keys share a TPM",
+        &["TpmEvidence", "TpmChallenge"],
+        &["TpmAttestationResponse"],
+        &["load_provider", "create_file"],
+    ),
+    (
+        "tpm.attestation.verify",
+        "Verify the evidence and the activated credential: the identity's keys are resident, non-exportable keys of a manufacturer-certified TPM",
+        &[
+            "TpmEvidence",
+            "TpmAttestationResponse",
+            "TpmChallengeSecret",
+            "TrustAnchors",
+            "Fingerprint",
+        ],
+        &["AttestationReport"],
+        &["read_file"],
+    ),
+    (
         "openpgp.key.generate",
         "Create a v4 OpenPGP key (Ed25519 or P-384) for GnuPG interoperability, sealed under a passphrase",
         &["OpenpgpUserId", "Passphrase"],
@@ -383,6 +417,20 @@ pub fn operation(id: &str) -> Value {
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
         "tpm.key.delete" => vec!["tpm-provider", "pin-channel", "irreversible-deletion"],
+        "tpm.attest" => vec![
+            "tpm-provider",
+            "pin-channel",
+            "tpm-attestation",
+            "no-clobber",
+        ],
+        "tpm.attestation.challenge" => vec![
+            "tpm-attestation",
+            "identity-pin",
+            "verifier-secret",
+            "no-clobber",
+        ],
+        "tpm.attestation.respond" => vec!["tpm-provider", "tpm-attestation", "no-clobber"],
+        "tpm.attestation.verify" => vec!["tpm-attestation", "identity-pin", "verifier-secret"],
         "openpgp.key.generate" => vec![
             "openpgp-boundary",
             "secret-channel",
@@ -489,6 +537,9 @@ pub fn operation(id: &str) -> Value {
         "openpgp.key.generate" | "openpgp.decrypt" | "openpgp.sign" => {
             vec!["argon2id", "chacha20-poly1305"]
         }
+        "tpm.attest" | "tpm.attestation.challenge" | "tpm.attestation.verify" => {
+            vec!["sha2-256", "sha2-384"]
+        }
         "hardware.key.generate" | "hardware.key.bind" | "tpm.key.generate" => {
             vec!["ecdh-p384", "ecdsa-p384-sha384", "sha2-384", "sha2-256"]
         }
@@ -550,6 +601,10 @@ pub fn operation(id: &str) -> Value {
                     | "tpm.key.generate"
                     | "tpm.key.delete"
                     | "kms.key.bind"
+                    | "tpm.attest"
+                    | "tpm.attestation.challenge"
+                    | "tpm.attestation.respond"
+                    | "tpm.attestation.verify"
                     | "openpgp.key.generate"
                     | "openpgp.cert.inspect"
                     | "openpgp.encrypt"
@@ -596,7 +651,7 @@ pub fn discover() -> Value {
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4],"generated_keys":["ed25519","p384"],"encryption":"SEIPDv1 with AES-256","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","hardware attestation","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -689,6 +744,36 @@ pub fn export() -> Value {
         (
             "KeyDeletion",
             "Confirmation that a TPM-backed identity's persisted keys were permanently deleted",
+            "control",
+        ),
+        (
+            "TpmEvidence",
+            "apg-tpm-evidence-v1: the identity, the TPM's EK public area and certificates, its attestation key and two TPM2_Certify certifications; public, and not a proof until verified with a credential challenge",
+            "public",
+        ),
+        (
+            "TrustAnchors",
+            "Root certificates (PEM or DER) of the TPM manufacturers the verifier accepts, chosen by the verifier",
+            "public",
+        ),
+        (
+            "TpmChallenge",
+            "apg-tpm-challenge-v1: a credential encrypted to the TPM's endorsement key for the evidence's attestation key (software TPM2_MakeCredential)",
+            "public",
+        ),
+        (
+            "TpmChallengeSecret",
+            "apg-tpm-challenge-secret-v1: the verifier's copy of the challenge credential; keep private and use once",
+            "secret",
+        ),
+        (
+            "TpmAttestationResponse",
+            "apg-tpm-response-v1: the credential the TPM released through TPM2_ActivateCredential",
+            "public",
+        ),
+        (
+            "AttestationReport",
+            "What a verification established: EK certificate and anchor digests, TPM firmware, key attributes (fixedTPM, fixedParent, sensitiveDataOrigin) and whether the credential activation was verified",
             "control",
         ),
         (
@@ -963,6 +1048,14 @@ pub fn export() -> Value {
             "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; APG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with APG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
+            "tpm-attestation",
+            "TPM attestation proves that an apg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. apg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
+        ),
+        (
+            "verifier-secret",
+            "tpm.attestation.challenge writes the credential to secret_output. Keep that file private to the verifier, never send it to the prover, and use each challenge once; verification succeeds only if the prover's TPM released the same credential.",
+        ),
+        (
             "openpgp-boundary",
             "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native APG artifacts, and native operations never read OpenPGP data. APG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, decryption and signing.",
         ),
@@ -1012,7 +1105,7 @@ pub fn export() -> Value {
         ),
         (
             "no-attestation",
-            "Protection flags are attributes the token reports about itself, not vendor attestation. Public artifacts do not reveal custody; counterparties cannot distinguish hardware from software keys.",
+            "Protection flags are attributes the token reports about itself, not vendor attestation. Public artifacts do not reveal custody; counterparties cannot distinguish hardware from software keys. For TPM identities, tpm.attest and the tpm.attestation operations produce verifiable attestation.",
         ),
         (
             "key-provider",
@@ -1178,6 +1271,16 @@ pub fn export() -> Value {
             vec!["key.revoke", "trust.revoke", "tpm.key.delete"],
         ),
         (
+            "attest-tpm-identity",
+            vec![
+                "tpm.key.generate",
+                "tpm.attest",
+                "tpm.attestation.challenge",
+                "tpm.attestation.respond",
+                "tpm.attestation.verify",
+            ],
+        ),
+        (
             "exchange-with-gnupg",
             vec![
                 "openpgp.key.generate",
@@ -1200,5 +1303,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.25.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.26.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

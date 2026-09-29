@@ -19,7 +19,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo clippy --locked --all-targets --features pkcs11,kms,openpgp -- -D warnings
 cargo test --locked
-cargo test --locked --features pkcs11,kms,openpgp
+cargo test --locked --features pkcs11,kms,openpgp,attestation
 ```
 
 Hardware-provider tests run against a real PKCS#11 module when
@@ -28,8 +28,8 @@ Hardware-provider tests run against a real PKCS#11 module when
 
 ## Unsafe code
 
-The main crate is `#![forbid(unsafe_code)]`. Windows CNG calls live in
-`crates/apg-cng`, which must stay minimal: owned handles freed on drop, checked
+The main crate is `#![forbid(unsafe_code)]`. Windows CNG and TPM Base Services
+calls live in `crates/apg-cng`, which must stay minimal: owned handles freed on drop, checked
 statuses and validated buffer lengths, with a `SAFETY` comment on every block.
 
 ## Contract discipline

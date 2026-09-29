@@ -7,7 +7,7 @@
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
-    provider::{self, CngKey, Protection, TpmBinding, TpmInfo},
+    provider::{CngKey, TpmBinding, TpmInfo},
 };
 use apg_cng::{Algorithm, Key, Provider, status};
 use ic_core::traits::Digest as _;
@@ -148,56 +148,6 @@ pub fn delete(key: &CngKey, pin: &[u8]) -> Result<()> {
         .delete(&key.encryption_key_name, &auth)
         .map_err(map)?;
     provider.delete(&key.signing_key_name, &auth).map_err(map)
-}
-
-pub fn generate(pin: &[u8]) -> Result<(CngKey, Protection)> {
-    let provider = open_provider()?;
-    let algorithms = provider.algorithms().map_err(map)?;
-    if !["ECDH_P384", "ECDSA_P384"]
-        .iter()
-        .all(|a| algorithms.iter().any(|b| b == a))
-    {
-        return Err(Error::new(
-            "mechanism_unsupported",
-            "This TPM does not offer ECDH_P384 and ECDSA_P384 through CNG",
-        ));
-    }
-    let (vendor, _) = platform(&provider)?;
-    let prefix = format!("apg-{}", hex::encode(crypto::random::<16>()?.as_ref()));
-    let (encryption_name, signing_name) = (format!("{prefix}-enc"), format!("{prefix}-sig"));
-    let auth = authorization(pin);
-    let created = (|| {
-        let encryption = provider
-            .create(&encryption_name, Algorithm::EcdhP384, &auth)
-            .map_err(map)?;
-        let signing = provider
-            .create(&signing_name, Algorithm::EcdsaP384, &auth)
-            .map_err(map)?;
-        let key = CngKey {
-            format: provider::CNG_KEY_FORMAT.into(),
-            public: crypto::identity(
-                Suite::P384,
-                &encryption.public_point().map_err(map)?,
-                &signing.public_point().map_err(map)?,
-            )?,
-            provider: apg_cng::PROVIDER.into(),
-            vendor: vendor.clone(),
-            encryption_key_name: encryption_name.clone(),
-            signing_key_name: signing_name.clone(),
-        };
-        key.validate()?;
-        drop((encryption, signing));
-        let identity = load(&key, pin)?;
-        // Created inside the TPM through a non-exporting provider.
-        let protection = provider::prove_possession(&identity, true)?;
-        Ok::<_, Error>((key, protection))
-    })();
-    if created.is_err() {
-        // Leave no half-created identity behind.
-        let _ = provider.delete(&encryption_name, &auth);
-        let _ = provider.delete(&signing_name, &auth);
-    }
-    created
 }
 
 pub fn info() -> Result<TpmInfo> {

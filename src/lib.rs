@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 pub mod artifact;
+pub mod attest;
+#[cfg(any(feature = "kms", feature = "attestation"))]
+mod base64;
 #[cfg(all(feature = "tpm", windows))]
 mod cng;
 mod contract;
@@ -19,6 +22,10 @@ pub mod provider;
 pub mod reconciliation;
 #[cfg(all(feature = "tpm", target_os = "linux"))]
 mod tpm;
+#[cfg(feature = "attestation")]
+mod tpm2;
+#[cfg(feature = "tpm")]
+mod tpm_native;
 pub mod transport;
 pub mod trust;
 pub mod validation;
@@ -318,6 +325,49 @@ pub enum Request {
         /// The keys' PIN; deletion is refused without it.
         passphrase_file: String,
     },
+    #[serde(rename = "tpm.attest")]
+    TpmAttest {
+        /// An apg-tpm-key-v1 file (Linux or Windows).
+        key: String,
+        /// The key's PIN.
+        passphrase_file: String,
+        output: String,
+    },
+    #[serde(rename = "tpm.attestation.challenge")]
+    TpmAttestationChallenge {
+        /// apg-tpm-evidence-v1 from tpm.attest.
+        input: String,
+        /// PEM or DER root certificates of accepted TPM manufacturers.
+        trust_anchors: String,
+        /// Optional PEM intermediates, if the evidence lacks them.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        intermediates: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// The challenge for the prover.
+        output: String,
+        /// The verifier's private credential; keep it and use it once.
+        secret_output: String,
+    },
+    #[serde(rename = "tpm.attestation.respond")]
+    TpmAttestationRespond {
+        /// The evidence this TPM produced.
+        input: String,
+        challenge: String,
+        output: String,
+    },
+    #[serde(rename = "tpm.attestation.verify")]
+    TpmAttestationVerify {
+        input: String,
+        response: String,
+        /// The private file tpm.attestation.challenge wrote.
+        secret: String,
+        trust_anchors: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        intermediates: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+    },
     #[serde(rename = "openpgp.key.generate")]
     OpenpgpKeyGenerate {
         output: String,
@@ -472,6 +522,28 @@ pub enum Outcome {
         fingerprint: Option<String>,
         authenticated: bool,
     },
+    TpmEvidence {
+        path: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        fingerprint: String,
+        /// EK certificates the platform supplied.
+        ek_certificates: usize,
+    },
+    TpmChallenge {
+        path: String,
+        secret_path: String,
+        /// Everything verified so far; activation_verified is false until tpm.attestation.verify.
+        report: attest::AttestationReport,
+    },
+    TpmResponse {
+        path: String,
+    },
+    TpmAttestation {
+        /// True only when the EK chain, both key certifications and the credential
+        /// activation all verified.
+        attested: bool,
+        report: attest::AttestationReport,
+    },
     OpenpgpKey {
         path: String,
         #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
@@ -552,6 +624,10 @@ impl Request {
             Self::KmsKeyBind { .. } => "kms.key.bind",
             Self::TpmKeyGenerate { .. } => "tpm.key.generate",
             Self::TpmKeyDelete { .. } => "tpm.key.delete",
+            Self::TpmAttest { .. } => "tpm.attest",
+            Self::TpmAttestationChallenge { .. } => "tpm.attestation.challenge",
+            Self::TpmAttestationRespond { .. } => "tpm.attestation.respond",
+            Self::TpmAttestationVerify { .. } => "tpm.attestation.verify",
             Self::OpenpgpKeyGenerate { .. } => "openpgp.key.generate",
             Self::OpenpgpCertExport { .. } => "openpgp.cert.export",
             Self::OpenpgpCertInspect { .. } => "openpgp.cert.inspect",
@@ -722,7 +798,7 @@ pub fn schemas() -> Value {
         "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
         "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
         "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),
+        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),
         "knowledge_application":schemars::schema_for!(knowledge::Application)}})
 }
 
@@ -1141,6 +1217,94 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 custody: Custody::Service,
                 protection,
                 attested: false,
+            })
+        }
+        Request::TpmAttest {
+            key,
+            passphrase_file,
+            output,
+        } => {
+            require_absent(&output)?;
+            let KeyFile::Tpm(key) = load_key(&key)? else {
+                return Err(Error::new(
+                    "invalid_request",
+                    "Only apg-tpm-key-v1 identities can be attested; apg-cng-key-v1 keys cannot, so create a new identity with tpm.key.generate",
+                ));
+            };
+            host.permit(Custody::Hardware)?;
+            let evidence = provider::tpm_attest(&key, &password(&passphrase_file)?)?;
+            write_new(&output, &serde_json::to_vec_pretty(&evidence)?)?;
+            Ok(Outcome::TpmEvidence {
+                path: output,
+                fingerprint: evidence.public.fingerprint,
+                ek_certificates: evidence.ek_certificates.len(),
+            })
+        }
+        Request::TpmAttestationChallenge {
+            input,
+            trust_anchors,
+            intermediates,
+            expected_fingerprint,
+            output,
+            secret_output,
+        } => {
+            require_absent(&output)?;
+            require_absent(&secret_output)?;
+            let evidence: attest::Evidence = load(&input)?;
+            let anchors = attest::parse_certificates(&read(&trust_anchors)?)?;
+            let intermediates = match intermediates {
+                Some(path) => attest::parse_certificates(&read(&path)?)?,
+                None => Vec::new(),
+            };
+            let (challenge, secret, report) =
+                attest::challenge(&evidence, &expected_fingerprint, &anchors, &intermediates)?;
+            write_new(&secret_output, &serde_json::to_vec_pretty(&secret)?)?;
+            write_new(&output, &serde_json::to_vec_pretty(&challenge)?)?;
+            Ok(Outcome::TpmChallenge {
+                path: output,
+                secret_path: secret_output,
+                report,
+            })
+        }
+        Request::TpmAttestationRespond {
+            input,
+            challenge,
+            output,
+        } => {
+            require_absent(&output)?;
+            let evidence: attest::Evidence = load(&input)?;
+            let challenge: attest::Challenge = load(&challenge)?;
+            let response = provider::tpm_respond(&evidence, &challenge)?;
+            write_new(&output, &serde_json::to_vec_pretty(&response)?)?;
+            Ok(Outcome::TpmResponse { path: output })
+        }
+        Request::TpmAttestationVerify {
+            input,
+            response,
+            secret,
+            trust_anchors,
+            intermediates,
+            expected_fingerprint,
+        } => {
+            let evidence: attest::Evidence = load(&input)?;
+            let response: attest::AttestationResponse = load(&response)?;
+            let secret: attest::ChallengeSecret = load(&secret)?;
+            let anchors = attest::parse_certificates(&read(&trust_anchors)?)?;
+            let intermediates = match intermediates {
+                Some(path) => attest::parse_certificates(&read(&path)?)?,
+                None => Vec::new(),
+            };
+            let report = attest::verify(
+                &evidence,
+                &secret,
+                &response,
+                &expected_fingerprint,
+                &anchors,
+                &intermediates,
+            )?;
+            Ok(Outcome::TpmAttestation {
+                attested: true,
+                report,
             })
         }
         Request::OpenpgpKeyGenerate {

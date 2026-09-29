@@ -23,6 +23,8 @@ pub const MODULE_ENV: &str = "APG_PKCS11_MODULE";
 pub const TPM_TCTI_ENV: &str = "APG_TPM_TCTI";
 /// Name of the fixed storage-root template every TPM identity is created under.
 pub const TPM_PARENT: &str = "apg-owner-ecc-p384-srk-v1";
+/// Keys created under the Windows storage root key (persistent handle 0x81000001).
+pub const WINDOWS_TPM_PARENT: &str = "windows-srk-81000001";
 const TPM_BLOB_BYTES_MAX: usize = 2048;
 pub const PIN_BYTES_MIN: usize = 1;
 pub const PIN_BYTES_MAX: usize = 255;
@@ -161,7 +163,9 @@ pub struct TpmKey {
 }
 impl TpmKey {
     pub fn validate(&self) -> Result<()> {
-        if self.format != TPM_KEY_FORMAT || self.parent != TPM_PARENT {
+        if self.format != TPM_KEY_FORMAT
+            || (self.parent != TPM_PARENT && self.parent != WINDOWS_TPM_PARENT)
+        {
             return Err(Error::new(
                 "invalid_format",
                 "Unsupported TPM key format or parent template",
@@ -551,7 +555,11 @@ pub fn open(key: &KeyFile, credential: Option<&[u8]>, host: &Host) -> Result<Box
         KeyFile::Tpm(key) => {
             let pin = required()?;
             check_pin(pin)?;
-            tpm_backend::open(key, pin)
+            if key.parent == WINDOWS_TPM_PARENT {
+                native_backend::open(key, pin)
+            } else {
+                tpm_backend::open(key, pin)
+            }
         }
         KeyFile::Cng(key) => {
             let pin = required()?;
@@ -642,13 +650,14 @@ pub fn tpm_tcti() -> Result<String> {
 /// Provider status for discovery. Never loads the module or opens the TPM.
 pub fn status() -> Value {
     json!({"windows_tpm":{"compiled":cfg!(all(feature = "tpm", windows)),"provider":CNG_PROVIDER,
-        "key_format":CNG_KEY_FORMAT,"persistence":"TPM-backed keys persist in the user's key store until tpm.key.delete","attestation":false},
+        "key_format":CNG_KEY_FORMAT,"persistence":"apg-cng-key-v1 keys persist in the user's key store until tpm.key.delete; new keys use TPM Base Services","attestation":false,"tbs_keys":{"parent":WINDOWS_TPM_PARENT,"attestation":cfg!(all(feature = "tpm", windows))}},
         "kms":{"compiled":cfg!(feature = "kms"),"credentials":"environment, web identity (STS), static profile, IAM Identity Center profile (cached aws sso login token), ECS/EKS container credentials, then EC2 IMDSv2 instance profile",
         "endpoint_env":"APG_KMS_ENDPOINT","fips_env":"APG_KMS_FIPS","key_spec":"ECC_NIST_P384",
         "key_usages":{"encryption":"KEY_AGREEMENT","signing":"SIGN_VERIFY"},"key_creation":false,"attestation":false},
         "tpm":{"compiled":cfg!(all(feature = "tpm", target_os = "linux")),"tcti_env":TPM_TCTI_ENV,
         "tcti_configured":std::env::var_os(TPM_TCTI_ENV).is_some(),"suites":[crypto::P384_KEY_FORMAT],
-        "parent":TPM_PARENT,"attestation":false},
+        "parent":TPM_PARENT,"attestation":cfg!(feature = "tpm")},
+        "attestation":{"verifier":cfg!(feature = "attestation"),"endorsement_keys":["rsa-2048"],"attestation_key":"restricted RSA-2048 RSASSA-SHA256 primary in the endorsement hierarchy","revocation_checking":false},
         "pkcs11":{"compiled":cfg!(feature = "pkcs11"),"module_env":MODULE_ENV,
         "module_configured":std::env::var_os(MODULE_ENV).is_some(),
         "suites":[crypto::P384_KEY_FORMAT],
@@ -802,10 +811,6 @@ mod cng_backend {
     pub fn info() -> Result<TpmInfo> {
         Err(unavailable())
     }
-    #[allow(dead_code)]
-    pub fn generate(_: &[u8]) -> Result<(CngKey, Protection)> {
-        Err(unavailable())
-    }
     pub fn open(_: &CngKey, _: &[u8]) -> Result<Box<dyn IdentityKey>> {
         Err(unavailable())
     }
@@ -824,10 +829,56 @@ pub fn tpm_info() -> Result<TpmInfo> {
 }
 pub fn tpm_generate(pin: &[u8]) -> Result<(TpmKeyFile, Protection)> {
     check_pin(pin)?;
+    // Windows keys live under the Windows storage root key through TPM Base
+    // Services, so they can be attested; apg-cng-key-v1 keys remain usable.
     if cfg!(windows) {
-        cng_backend::generate(pin).map(|(key, protection)| (TpmKeyFile::Cng(key), protection))
+        native_backend::generate(pin)
+            .map(|(key, protection)| (TpmKeyFile::Wrapped(key), protection))
     } else {
         tpm_backend::generate(pin).map(|(key, protection)| (TpmKeyFile::Wrapped(key), protection))
+    }
+}
+
+/// Prover: certify an identity's TPM keys with the TPM's attestation key.
+pub fn tpm_attest(key: &TpmKey, pin: &[u8]) -> Result<crate::attest::Evidence> {
+    check_pin(pin)?;
+    native_backend::evidence(key, pin)
+}
+/// Prover: answer a verifier's credential challenge.
+pub fn tpm_respond(
+    evidence: &crate::attest::Evidence,
+    challenge: &crate::attest::Challenge,
+) -> Result<crate::attest::AttestationResponse> {
+    native_backend::respond(evidence, challenge)
+}
+
+#[cfg(feature = "tpm")]
+pub(crate) use crate::tpm_native as native_backend;
+
+#[cfg(not(feature = "tpm"))]
+mod native_backend {
+    use super::*;
+
+    fn unavailable() -> Error {
+        Error::new(
+            "provider_unavailable",
+            "This apg build has no TPM support; rebuild with --features tpm",
+        )
+    }
+    pub fn generate(_: &[u8]) -> Result<(TpmKey, Protection)> {
+        Err(unavailable())
+    }
+    pub fn open(_: &TpmKey, _: &[u8]) -> Result<Box<dyn IdentityKey>> {
+        Err(unavailable())
+    }
+    pub fn evidence(_: &TpmKey, _: &[u8]) -> Result<crate::attest::Evidence> {
+        Err(unavailable())
+    }
+    pub fn respond(
+        _: &crate::attest::Evidence,
+        _: &crate::attest::Challenge,
+    ) -> Result<crate::attest::AttestationResponse> {
+        Err(unavailable())
     }
 }
 /// Delete the persisted keys of an apg-cng-key-v1 identity after checking the PIN.

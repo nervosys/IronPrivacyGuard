@@ -749,6 +749,47 @@
       ]
     },
     {
+      "@id": "apg:application/tpm-key-attestation",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/custody-assurance"
+      ],
+      "guidance": "The prover runs tpm.attest and sends the evidence. The verifier runs tpm.attestation.challenge with its accepted manufacturer roots, keeps the secret file, and sends the challenge. The prover runs tpm.attestation.respond; the verifier checks the response with tpm.attestation.verify.",
+      "id": "tpm-key-attestation",
+      "keywords": [
+        "attestation",
+        "attest",
+        "tpm attestation",
+        "key attestation",
+        "endorsement key",
+        "ek certificate",
+        "remote attestation"
+      ],
+      "label": "Prove keys are resident in a genuine TPM",
+      "limitations": [
+        "Proves key residency and attributes only, not host software state or PIN secrecy",
+        "RSA-2048 endorsement keys only; EK certificates are not checked for revocation",
+        "apg-cng-key-v1 keys cannot be attested",
+        "A point-in-time statement; use each challenge once"
+      ],
+      "prerequisites": [
+        "An apg-tpm-key-v1 identity from tpm.key.generate (Linux or Windows)",
+        "The TPM's EK certificate (TPM NV on Linux; Windows retrieves it)",
+        "Root certificates of the TPM manufacturers the verifier accepts",
+        "On Windows, an elevated process for tpm.attestation.respond"
+      ],
+      "sources": [
+        "https://trustedcomputinggroup.org/resource/tpm-library-specification/"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/tpm.attest",
+        "apg:operation/tpm.attestation.challenge",
+        "apg:operation/tpm.attestation.respond",
+        "apg:operation/tpm.attestation.verify"
+      ]
+    },
+    {
       "@id": "apg:application/managed-kms-custody",
       "@type": "apg:CryptographicApplication",
       "goals": [
@@ -846,6 +887,11 @@
       "@id": "apg:goal/content-integrity",
       "@type": "apg:SecurityGoal",
       "label": "content-integrity"
+    },
+    {
+      "@id": "apg:goal/custody-assurance",
+      "@type": "apg:SecurityGoal",
+      "label": "custody-assurance"
     },
     {
       "@id": "apg:goal/hardware-custody",
@@ -3049,6 +3095,243 @@
       "retry": "Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."
     },
     {
+      "@id": "apg:operation/tpm.attest",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/tpm-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Certify an identity's TPM keys with the TPM's attestation key and write evidence for a verifier",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.attest",
+      "inputs": [
+        "apg:TpmKeyFile",
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_attest",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TpmEvidence"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.attest"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/tpm.attestation.challenge",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-attestation",
+        "apg:constraint/identity-pin",
+        "apg:constraint/verifier-secret",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Verify TPM key evidence against manufacturer roots and issue a one-time credential challenge to the TPM's endorsement key",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.attestation.challenge",
+      "inputs": [
+        "apg:TpmEvidence",
+        "apg:TrustAnchors",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_attestation_challenge",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TpmChallenge",
+        "apg:TpmChallengeSecret",
+        "apg:AttestationReport"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.attestation.challenge"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/tpm.attestation.respond",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider",
+        "apg:constraint/tpm-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Release the challenge credential with TPM2_ActivateCredential, proving the attestation and endorsement keys share a TPM",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.attestation.respond",
+      "inputs": [
+        "apg:TpmEvidence",
+        "apg:TpmChallenge"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_attestation_respond",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TpmAttestationResponse"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.attestation.respond"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/tpm.attestation.verify",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-attestation",
+        "apg:constraint/identity-pin",
+        "apg:constraint/verifier-secret"
+      ],
+      "description": "Verify the evidence and the activated credential: the identity's keys are resident, non-exportable keys of a manufacturer-certified TPM",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.attestation.verify",
+      "inputs": [
+        "apg:TpmEvidence",
+        "apg:TpmAttestationResponse",
+        "apg:TpmChallengeSecret",
+        "apg:TrustAnchors",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_attestation_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:AttestationReport"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.attestation.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
       "@id": "apg:operation/openpgp.key.generate",
       "@type": "apg:Operation",
       "algorithms": [
@@ -3470,5 +3753,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.13.0"
+  "version": "1.14.0"
 }

@@ -15,7 +15,10 @@ fixed!(revocation_format, "apg-revocation-v1");
 fixed!(validity_format, "apg-validity-v1");
 fixed!(hardware_key_format, crate::provider::HARDWARE_KEY_FORMAT);
 fixed!(tpm_key_format, crate::provider::TPM_KEY_FORMAT);
-fixed!(tpm_parent, crate::provider::TPM_PARENT);
+pub fn tpm_parent(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "enum":[crate::provider::TPM_PARENT, crate::provider::WINDOWS_TPM_PARENT],
+        "description":"APG's owner-hierarchy P-384 storage root (Linux) or the Windows storage root key at 0x81000001."})
+}
 fixed!(kms_key_format, crate::provider::KMS_KEY_FORMAT);
 fixed!(cng_key_format, crate::provider::CNG_KEY_FORMAT);
 fixed!(cng_provider, crate::provider::CNG_PROVIDER);
@@ -45,6 +48,21 @@ pub fn kms_key_arn(_: &mut SchemaGenerator) -> Schema {
 }
 fixed!(kdf, "argon2id-m65536-t3-p4");
 fixed!(openpgp_key_format, crate::openpgp::KEY_FORMAT);
+fixed!(evidence_format, "apg-tpm-evidence-v1");
+fixed!(challenge_format, "apg-tpm-challenge-v1");
+fixed!(challenge_secret_format, "apg-tpm-challenge-secret-v1");
+fixed!(response_format, "apg-tpm-response-v1");
+/// A marshalled TPM structure (public area, attestation, signature or credential
+/// blob) as lowercase hex, 1..1024 bytes.
+pub fn tpm_structure(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":2, "maxLength":2048,
+        "pattern":"^([0-9a-f]{2})+$", "not":{"pattern":"[^0-9a-f]"}})
+}
+/// DER certificates as lowercase hex: the EK certificate, then platform-supplied intermediates.
+pub fn ek_certificates(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":1, "maxItems":4, "items":{"type":"string", "minLength":2,
+        "maxLength":8192, "pattern":"^([0-9a-f]{2})+$", "not":{"pattern":"[^0-9a-f]"}}})
+}
 /// A pinned v4 OpenPGP fingerprint; either case, since GnuPG prints uppercase.
 pub fn openpgp_fingerprint(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":40, "maxLength":40,

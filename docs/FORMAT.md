@@ -290,6 +290,13 @@ An APG-held v4 OpenPGP key with its transferable secret key sealed under a
 passphrase. It is an OpenPGP-boundary artifact, never a native identity; see
 [OPENPGP.md](OPENPGP.md#key-file) for its fields and sealing.
 
+## TPM attestation: apg-tpm-evidence-v1 and related formats
+
+`apg-tpm-evidence-v1`, `apg-tpm-challenge-v1`, `apg-tpm-challenge-secret-v1` and
+`apg-tpm-response-v1` carry the key-attestation protocol. Their fields, checks and
+cryptography are specified in [ATTESTATION.md](ATTESTATION.md); JSON Schemas are in
+`schemas/formats.json`.
+
 ## TPM key: apg-tpm-key-v1
 
 Fields in declared order: `format`, `public`, `tpm`, `parent`, `encryption_key`,
@@ -298,9 +305,10 @@ Fields in declared order: `format`, `public`, `tpm`, `parent`, `encryption_key`,
 * `public` is an `apg-public-p384-v1` identity.
 * `tpm` has `manufacturer` (at most 4 characters) and `vendor` (at most 16), read from
   TPM properties. Both must match the TPM that opens the file.
-* `parent` is exactly `apg-owner-ecc-p384-srk-v1`: a restricted P-384 decryption key
+* `parent` is `apg-owner-ecc-p384-srk-v1` (Linux): a restricted P-384 decryption key
   under the owner hierarchy with SHA-384 name algorithm and AES-256-CFB symmetric
-  protection, re-derived on each use.
+  protection, re-derived on each use; or `windows-srk-81000001` (Windows): the
+  Windows storage root key at persistent handle `0x81000001`.
 * `encryption_key` and `signing_key` each hold `public` (a marshalled TPM2B_PUBLIC)
   and `private` (the TPM2B_PRIVATE wrapped by the parent) as lowercase hex, at most
   2048 bytes each. The ECDH key has no scheme; the signing key uses ECDSA/SHA-384.
