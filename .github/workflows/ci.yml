@@ -17,6 +17,10 @@ jobs:
       - run: cargo clippy --locked --all-targets --features pkcs11,kms -- -D warnings
       - run: cargo test --locked
       - run: cargo test --locked --features pkcs11,kms
+      - if: runner.os == 'Windows'
+        run: cargo clippy --locked --all-targets --features tpm,pkcs11,kms -- -D warnings
+      - if: runner.os == 'Windows'
+        run: cargo test --locked --features tpm
       - run: cargo build --release --locked --features kms
       - uses: actions/setup-python@v5
         with:

@@ -705,7 +705,7 @@
       ],
       "prerequisites": [
         "PKCS#11: an apg build with the pkcs11 feature, host-set APG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
-        "TPM: a Linux apg build with the tpm feature, host-set APG_TPM_TCTI, a TPM 2.0 supporting P-384 and an owner hierarchy with empty authorization",
+        "TPM: an apg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set APG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider",
         "PIN in an access-controlled file"
       ],
       "sources": [
@@ -721,6 +721,7 @@
         "apg:operation/hardware.key.bind",
         "apg:operation/tpm.info",
         "apg:operation/tpm.key.generate",
+        "apg:operation/tpm.key.delete",
         "apg:operation/key.public",
         "apg:operation/decrypt",
         "apg:operation/sign",
@@ -2925,11 +2926,12 @@
         "apg:constraint/no-attestation",
         "apg:constraint/no-clobber"
       ],
-      "description": "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs",
+      "description": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file",
       "deterministic": false,
       "effects": [
         "load_provider",
         "read_pin",
+        "create_token_object",
         "create_file"
       ],
       "errors": [
@@ -2968,7 +2970,63 @@
         "command": "apg schema",
         "operation_const": "tpm.key.generate"
       },
-      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+      "retry": "Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."
+    },
+    {
+      "@id": "apg:operation/tpm.key.delete",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/irreversible-deletion"
+      ],
+      "description": "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "delete_token_object"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.key.delete",
+      "inputs": [
+        "apg:TpmKeyFile",
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_key_delete",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:KeyDeletion"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.key.delete"
+      },
+      "retry": "Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."
     }
   ],
   "@id": "apg:knowledgebase",
@@ -2986,5 +3044,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.9.0"
+  "version": "1.10.0"
 }

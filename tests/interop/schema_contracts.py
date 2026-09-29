@@ -114,6 +114,13 @@ def main():
     check(kms_schema, {**kms_key, "unknown": True}, False)
     check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
     check(kms_schema, {**kms_key, "signing_key_arn": kms_key["signing_key_arn"] + "\n"}, False)
+    cng_key = {"format": "apg-cng-key-v1", "public": p384_public, "provider": "Microsoft Platform Crypto Provider",
+               "vendor": "AMD", "encryption_key_name": "apg-" + "0" * 32 + "-enc", "signing_key_name": "apg-" + "0" * 32 + "-sig"}
+    cng_schema = schemas["formats"]["cng_key"]
+    check(cng_schema, cng_key)
+    check(cng_schema, {**cng_key, "provider": "Microsoft Software Key Storage Provider"}, False)
+    check(cng_schema, {**cng_key, "encryption_key_name": "apg-" + "0" * 32 + "-sig"}, False)
+    check(cng_schema, {**cng_key, "signing_key_name": "apg-" + "0" * 32 + "-sig\n"}, False)
     hardware = schemas["formats"]["hardware_key"]
     check(hardware, reference)
     check(hardware, {**reference, "unknown": True}, False)

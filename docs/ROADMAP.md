@@ -27,7 +27,7 @@ implemented surface, not feature parity with decades of GPG development.
    post-quantum hardware, TPM and KMS keys and SHA-384 trust-snapshot digests remain.
    Identity fingerprints use SHA-384 for P-384 and hybrid identities. PKCS#11 hardware-backed identities are
    implemented for P-384 ([HARDWARE.md](HARDWARE.md)); remaining work includes
-   vendor attestation, Windows TPM (CNG), other
+   vendor attestation, other
    cloud KMS providers, live testing of in-token decryption on FIPS-mode HSMs, and
    CNSA-aligned SHA-384
    fingerprints. Never silently substitute a weaker suite.

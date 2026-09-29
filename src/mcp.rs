@@ -166,7 +166,9 @@ pub fn tool_catalog(config: &Config) -> Value {
         relocate_request_root(&mut input);
         input["$defs"] = Value::Object(definitions.clone());
         let mut output = schemas["response"].clone(); output["type"] = json!("object");
-        let read_only = !effects.contains(&"create_file");
+        let read_only = !effects
+            .iter()
+            .any(|e| matches!(*e, "create_file" | "create_token_object" | "delete_token_object"));
         let hardware = effects.contains(&"load_provider") || ontology::KEY_PROVIDER_OPERATIONS.contains(id);
         json!({"name":tool_name(id), "title":description, "description":format!("{description}. Consult apg_ontology for constraints and apg_plan before mutation. Files resolve relative to the server working directory."),
             "inputSchema":input, "outputSchema":output,

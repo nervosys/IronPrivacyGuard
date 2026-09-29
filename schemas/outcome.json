@@ -446,6 +446,10 @@
     "TpmInfo": {
       "description": "TPM properties relevant to APG identities.",
       "properties": {
+        "backend": {
+          "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+          "type": "string"
+        },
         "curves": {
           "items": {
             "type": "string"
@@ -456,7 +460,11 @@
           "type": "string"
         },
         "owner_auth_empty": {
-          "type": "boolean"
+          "description": "Linux only: whether the owner hierarchy has empty authorization.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "suites": {
           "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -474,7 +482,7 @@
         "firmware_version",
         "curves",
         "suites",
-        "owner_auth_empty"
+        "backend"
       ],
       "type": "object"
     },
@@ -766,6 +774,26 @@
       "required": [
         "kind",
         "info"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "key_deleted",
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "fingerprint",
+        "provider"
       ],
       "type": "object"
     },

@@ -497,6 +497,7 @@ pub fn info() -> Result<TpmInfo> {
         } else {
             Vec::new()
         },
-        owner_auth_empty,
+        backend: "tss-esapi".into(),
+        owner_auth_empty: Some(owner_auth_empty),
     })
 }

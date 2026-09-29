@@ -37,17 +37,25 @@ ic-rustls = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac40
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
 webpki-roots = { version = "1", optional = true }
 
-# TPM access links the system TPM2 software stack (tpm2-tss); Linux only.
+# TPM access: the system TPM2 software stack (tpm2-tss) on Linux, CNG's Platform
+# Crypto Provider on Windows (FFI isolated in crates/apg-cng).
 [target.'cfg(target_os = "linux")'.dependencies]
 tss-esapi = { version = "7", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+apg-cng = { path = "crates/apg-cng", optional = true }
+
+[workspace]
+members = ["crates/apg-cng"]
 
 [features]
 default = []
 # Hardware-backed identities through a host-configured PKCS#11 module. Loads
 # vendor code at runtime only; no C compilation and no effect on contracts.
 pkcs11 = ["dep:cryptoki", "dep:secrecy"]
-# TPM 2.0 identities through tpm2-tss (ESAPI). Linux only; links libtss2 dynamically.
-tpm = ["dep:tss-esapi"]
+# TPM 2.0 identities: tpm2-tss (ESAPI) on Linux, linking libtss2 dynamically; the
+# Microsoft Platform Crypto Provider on Windows.
+tpm = ["dep:tss-esapi", "dep:apg-cng"]
 # AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
 kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
 

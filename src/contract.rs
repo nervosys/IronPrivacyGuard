@@ -17,6 +17,18 @@ fixed!(hardware_key_format, crate::provider::HARDWARE_KEY_FORMAT);
 fixed!(tpm_key_format, crate::provider::TPM_KEY_FORMAT);
 fixed!(tpm_parent, crate::provider::TPM_PARENT);
 fixed!(kms_key_format, crate::provider::KMS_KEY_FORMAT);
+fixed!(cng_key_format, crate::provider::CNG_KEY_FORMAT);
+fixed!(cng_provider, crate::provider::CNG_PROVIDER);
+/// Generated CNG key names: `apg-<32 hex>-enc` for the ECDH key.
+pub fn cng_encryption_key_name(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":40, "maxLength":40,
+        "pattern":"^apg-[0-9a-f]{32}-enc$"})
+}
+/// Generated CNG key names: `apg-<32 hex>-sig` for the ECDSA key.
+pub fn cng_signing_key_name(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":40, "maxLength":40,
+        "pattern":"^apg-[0-9a-f]{32}-sig$"})
+}
 
 pub fn aws_region(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":1, "maxLength":32, "pattern":"^[a-z0-9-]+$", "not":{"pattern":"[^a-z0-9-]"}})

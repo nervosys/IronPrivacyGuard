@@ -33,6 +33,11 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.fingerprint)
         }
+        "apg-cng-key-v1" => {
+            let value: crate::provider::CngKey = serde_json::from_slice(data)?;
+            value.validate()?;
+            Some(value.public.fingerprint)
+        }
         "apg-kms-key-v1" => {
             let value: crate::provider::KmsKey = serde_json::from_slice(data)?;
             value.validate()?;

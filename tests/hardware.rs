@@ -136,8 +136,13 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     );
     let key: Value = serde_json::from_str(include_str!("vectors/tpm-key-swtpm.json")).unwrap();
     let (value, code) = run(&["tpm", "info"], None);
-    assert_eq!(value["error"]["code"], "provider_unavailable", "{value}");
-    assert_eq!(code, 5);
+    if cfg!(all(feature = "tpm", windows)) {
+        // The Platform Crypto Provider needs no host configuration.
+        assert_eq!(value["result"]["info"]["backend"], "cng", "{value}");
+    } else {
+        assert_eq!(value["error"]["code"], "provider_unavailable", "{value}");
+        assert_eq!(code, 5);
+    }
     let (value, _) = run(&["inspect", "--input", fixture], None);
     assert_eq!(value["result"]["format"], "apg-tpm-key-v1");
     assert_eq!(value["result"]["fingerprint"], key["public"]["fingerprint"]);
@@ -251,6 +256,62 @@ fn kms_keys_fail_closed_and_refuse_pins() {
     );
     assert_eq!(missing.err().unwrap().code, "invalid_request");
     assert!(!dir.path().join("sig").exists());
+}
+
+#[test]
+fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
+    let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
+    let key = json!({"format":"apg-cng-key-v1","public":v["public"],
+        "provider":"Microsoft Platform Crypto Provider","vendor":"AMD",
+        "encryption_key_name":format!("apg-{}-enc", "0".repeat(32)),
+        "signing_key_name":format!("apg-{}-sig", "0".repeat(32))});
+    let metadata = apg::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+    assert_eq!(metadata.fingerprint.unwrap(), v["public"]["fingerprint"]);
+    for (field, bad) in [
+        ("provider", json!("Microsoft Software Key Storage Provider")),
+        ("encryption_key_name", json!("my-key-enc")),
+        (
+            "signing_key_name",
+            json!(format!("apg-{}-sig", "1".repeat(32))),
+        ),
+    ] {
+        let mut altered = key.clone();
+        altered[field] = bad;
+        assert!(
+            apg::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
+            "{field}"
+        );
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = |name: &str| dir.path().join(name).display().to_string();
+    fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+    fs::write(path("pin"), b"1234").unwrap();
+    // Deleting requires a Windows tpm build and never touches wrapped-blob keys.
+    let deleted = execute_with(
+        request(
+            json!({"operation":"tpm.key.delete","key":path("key"),"passphrase_file":path("pin")}),
+        ),
+        &Host::default(),
+    );
+    let code = deleted.err().unwrap().code;
+    if !cfg!(all(feature = "tpm", windows)) {
+        assert_eq!(code, "provider_unavailable");
+    }
+    fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/vectors/tpm-key-swtpm.json"
+        ),
+        path("wrapped"),
+    )
+    .unwrap();
+    let wrapped = execute_with(
+        request(
+            json!({"operation":"tpm.key.delete","key":path("wrapped"),"passphrase_file":path("pin")}),
+        ),
+        &Host::default(),
+    );
+    assert_eq!(wrapped.err().unwrap().code, "invalid_request");
 }
 
 #[test]
