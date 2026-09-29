@@ -29,10 +29,10 @@ fn main() {
         loop {
             match iron_privacy_guardian::transport::read_frame(&mut input) {
                 Ok(Some(frame)) => {
-                    if let Some(response) = server.handle(&frame) {
-                        if emit(&response).is_err() {
-                            std::process::exit(4);
-                        }
+                    if let Some(response) = server.handle(&frame)
+                        && emit(&response).is_err()
+                    {
+                        std::process::exit(4);
                     }
                 }
                 Ok(None) => return,
@@ -96,8 +96,8 @@ fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
     let operation = args[..field_start].join(".");
     let fields = &args[field_start..];
     map.insert("operation".into(), Value::String(operation));
-    let mut flags = fields.chunks_exact(2);
-    for pair in &mut flags {
+    let (flags, remainder) = fields.as_chunks::<2>();
+    for pair in flags {
         let name = pair[0]
             .strip_prefix("--")
             .ok_or_else(|| Error::new("invalid_request", "Expected --field value pairs"))?
@@ -112,6 +112,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
                 | "base"
                 | "candidate"
                 | "incoming"
+                | "recipients"
                 | "not_before"
                 | "not_after"
                 | "at_time"
@@ -122,7 +123,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
         };
         map.insert(name, value);
     }
-    if !flags.remainder().is_empty() {
+    if !remainder.is_empty() {
         return Err(Error::new("invalid_request", "Missing flag value"));
     }
     serde_json::from_value(Value::Object(map)).map_err(|_| {

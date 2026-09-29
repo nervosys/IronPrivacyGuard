@@ -10,13 +10,13 @@ use std::{
 };
 
 pub fn requests(data: &[u8]) {
-    if data.len() <= MAX_REQUEST_BYTES as usize {
-        if let Ok(candidate) = serde_json::from_slice::<Value>(data) {
-            let report = iron_privacy_guardian::validation::validate(candidate);
-            assert!(!report.execution);
-            assert_eq!(report.valid, report.issues.is_empty());
-            assert!(report.issues.len() <= iron_privacy_guardian::validation::MAX_ISSUES);
-        }
+    if data.len() <= MAX_REQUEST_BYTES as usize
+        && let Ok(candidate) = serde_json::from_slice::<Value>(data)
+    {
+        let report = iron_privacy_guardian::validation::validate(candidate);
+        assert!(!report.execution);
+        assert_eq!(report.valid, report.issues.is_empty());
+        assert!(report.issues.len() <= iron_privacy_guardian::validation::MAX_ISSUES);
     }
 
     if let Ok(value) = iron_privacy_guardian::control_json::parse(data) {
@@ -106,28 +106,26 @@ pub fn artifacts(data: &[u8]) {
     if data.len() > MAX_REQUEST_BYTES as usize {
         return;
     }
-    if let Ok(pair) = serde_json::from_slice::<Value>(data) {
-        if let (Some(base), Some(incoming)) = (pair.get("base"), pair.get("incoming")) {
-            if let (Ok(base), Ok(incoming)) = (
-                serde_json::from_value::<trust::TrustStore>(base.clone()),
-                serde_json::from_value::<trust::TrustStore>(incoming.clone()),
-            ) {
-                if let Ok(merged) = iron_privacy_guardian::reconciliation::merge(&base, &incoming) {
-                    assert!(
-                        iron_privacy_guardian::reconciliation::compare(&base, &merged)
-                            .unwrap()
-                            .compatible_extension
-                    );
-                    for entry in &incoming.entries {
-                        let result = merged.entry(&entry.public.fingerprint).unwrap();
-                        assert!(entry.revocation.is_none() || result.revocation.is_some());
-                        if let Some(window) = &entry.validity {
-                            let retained = result.validity.as_ref().unwrap();
-                            assert!(retained.not_before >= window.not_before);
-                            assert!(retained.not_after <= window.not_after);
-                        }
-                    }
-                }
+    if let Ok(pair) = serde_json::from_slice::<Value>(data)
+        && let (Some(base), Some(incoming)) = (pair.get("base"), pair.get("incoming"))
+        && let (Ok(base), Ok(incoming)) = (
+            serde_json::from_value::<trust::TrustStore>(base.clone()),
+            serde_json::from_value::<trust::TrustStore>(incoming.clone()),
+        )
+        && let Ok(merged) = iron_privacy_guardian::reconciliation::merge(&base, &incoming)
+    {
+        assert!(
+            iron_privacy_guardian::reconciliation::compare(&base, &merged)
+                .unwrap()
+                .compatible_extension
+        );
+        for entry in &incoming.entries {
+            let result = merged.entry(&entry.public.fingerprint).unwrap();
+            assert!(entry.revocation.is_none() || result.revocation.is_some());
+            if let Some(window) = &entry.validity {
+                let retained = result.validity.as_ref().unwrap();
+                assert!(retained.not_before >= window.not_before);
+                assert!(retained.not_after <= window.not_after);
             }
         }
     }
@@ -143,12 +141,11 @@ pub fn artifacts(data: &[u8]) {
     }
     if let Ok(reference) =
         serde_json::from_slice::<iron_privacy_guardian::provider::HardwareKey>(data)
+        && reference.validate().is_ok()
     {
-        if reference.validate().is_ok() {
-            assert_eq!(reference.public.suite().unwrap(), crypto::Suite::P384);
-            assert_ne!(reference.encryption_key_id, reference.signing_key_id);
-            assert!(!reference.token.serial.is_empty());
-        }
+        assert_eq!(reference.public.suite().unwrap(), crypto::Suite::P384);
+        assert_ne!(reference.encryption_key_id, reference.signing_key_id);
+        assert!(!reference.token.serial.is_empty());
     }
     if let Ok(secret) = serde_json::from_slice::<crypto::SecretKey>(data) {
         let _ = secret.validate(); // Deliberately no Argon2 or secret unlock.
@@ -161,49 +158,49 @@ pub fn artifacts(data: &[u8]) {
     // Verify against both suites; a signature must never verify for the wrong suite.
     for signer in [public(), p384_public()] {
         let suite = signer.suite().unwrap();
-        if let Ok(signature) = serde_json::from_slice::<crypto::Signature>(data) {
-            if crypto::verify(signer, &signer.fingerprint, &signature, b"fuzz").is_ok() {
-                assert_eq!(signature.algorithm, suite.signature_algorithm());
-            }
+        if let Ok(signature) = serde_json::from_slice::<crypto::Signature>(data)
+            && crypto::verify(signer, &signer.fingerprint, &signature, b"fuzz").is_ok()
+        {
+            assert_eq!(signature.algorithm, suite.signature_algorithm());
         }
-        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Revocation>(data) {
-            if lifecycle::verify_revocation(signer, &signer.fingerprint, &certificate).is_ok() {
-                assert_eq!(certificate.algorithm, suite.signature_algorithm());
-            }
+        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Revocation>(data)
+            && lifecycle::verify_revocation(signer, &signer.fingerprint, &certificate).is_ok()
+        {
+            assert_eq!(certificate.algorithm, suite.signature_algorithm());
         }
-        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Validity>(data) {
-            if lifecycle::verify_validity(signer, &signer.fingerprint, &certificate).is_ok() {
-                assert_eq!(certificate.algorithm, suite.signature_algorithm());
-            }
+        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Validity>(data)
+            && lifecycle::verify_validity(signer, &signer.fingerprint, &certificate).is_ok()
+        {
+            assert_eq!(certificate.algorithm, suite.signature_algorithm());
         }
     }
-    if let Ok(store) = serde_json::from_slice::<trust::TrustStore>(data) {
-        if let Ok(digest) = store.digest() {
-            let roundtrip: trust::TrustStore =
-                serde_json::from_slice(&serde_json::to_vec(&store).unwrap()).unwrap();
-            assert_eq!(roundtrip.digest().unwrap(), digest);
-            let _ = store.evaluate(&public().fingerprint, 1800000000);
-            let comparison =
-                iron_privacy_guardian::reconciliation::compare(&store, &roundtrip).unwrap();
-            assert!(
-                comparison.same_digest
-                    && comparison.compatible_extension
-                    && comparison.changes.is_empty()
-            );
-            // Self-merge only upgrades the format, so a v3 snapshot keeps its digest.
-            let merged = iron_privacy_guardian::reconciliation::merge(&store, &roundtrip).unwrap();
-            let mut upgraded = store.clone();
-            upgraded.format = trust::FORMAT.into();
-            assert!(merged == upgraded);
-            if store.format == trust::FORMAT {
-                assert_eq!(merged.digest().unwrap(), digest);
-            }
-            assert!(
-                iron_privacy_guardian::reconciliation::compare(&store, &merged)
-                    .unwrap()
-                    .compatible_extension
-            );
+    if let Ok(store) = serde_json::from_slice::<trust::TrustStore>(data)
+        && let Ok(digest) = store.digest()
+    {
+        let roundtrip: trust::TrustStore =
+            serde_json::from_slice(&serde_json::to_vec(&store).unwrap()).unwrap();
+        assert_eq!(roundtrip.digest().unwrap(), digest);
+        let _ = store.evaluate(&public().fingerprint, 1800000000);
+        let comparison =
+            iron_privacy_guardian::reconciliation::compare(&store, &roundtrip).unwrap();
+        assert!(
+            comparison.same_digest
+                && comparison.compatible_extension
+                && comparison.changes.is_empty()
+        );
+        // Self-merge only upgrades the format, so a v3 snapshot keeps its digest.
+        let merged = iron_privacy_guardian::reconciliation::merge(&store, &roundtrip).unwrap();
+        let mut upgraded = store.clone();
+        upgraded.format = trust::FORMAT.into();
+        assert!(merged == upgraded);
+        if store.format == trust::FORMAT {
+            assert_eq!(merged.digest().unwrap(), digest);
         }
+        assert!(
+            iron_privacy_guardian::reconciliation::compare(&store, &merged)
+                .unwrap()
+                .compatible_extension
+        );
     }
 }
 
@@ -242,11 +239,10 @@ pub fn mcp(data: &[u8]) {
                 if let Some(result) = response
                     .get("result")
                     .and_then(|v| v.get("structuredContent"))
+                    && result["ok"] == true
                 {
-                    if result["ok"] == true {
-                        assert_eq!(result["result"]["kind"], "document");
-                        assert_eq!(result["result"]["document"]["execution"], false);
-                    }
+                    assert_eq!(result["result"]["kind"], "document");
+                    assert_eq!(result["result"]["document"]["execution"], false);
                 }
             }
         }

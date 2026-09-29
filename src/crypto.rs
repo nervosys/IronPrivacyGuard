@@ -288,7 +288,8 @@ impl Envelope {
         }
         bytes::<12>(&self.nonce)?;
         bytes::<16>(&self.tag)?;
-        if self.ciphertext.len() % 2 != 0 || !self.ciphertext.bytes().all(|b| b.is_ascii_hexdigit())
+        if !self.ciphertext.len().is_multiple_of(2)
+            || !self.ciphertext.bytes().all(|b| b.is_ascii_hexdigit())
         {
             return Err(Error::new(
                 "invalid_format",
@@ -683,7 +684,7 @@ pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<Stri
     Ok(signature)
 }
 
-fn password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
+pub(crate) fn password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
     if !(16..=4096).contains(&password.len()) {
         return Err(Error::new(
             "invalid_request",

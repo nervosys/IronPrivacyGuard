@@ -17,9 +17,9 @@ Every change must pass the same gates as CI:
 ```sh
 cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
-cargo clippy --locked --all-targets --features pkcs11,kms -- -D warnings
+cargo clippy --locked --all-targets --features pkcs11,kms,openpgp -- -D warnings
 cargo test --locked
-cargo test --locked --features pkcs11,kms
+cargo test --locked --features pkcs11,kms,openpgp
 ```
 
 Hardware-provider tests run against a real PKCS#11 module when

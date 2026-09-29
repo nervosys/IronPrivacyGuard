@@ -83,6 +83,12 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | trust.add | store, expected_digest, public, expected_fingerprint, output |
 | trust.revoke | store, expected_digest, input, expected_fingerprint, output |
 | trust.status | store, expected_digest, expected_fingerprint |
+| openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384) |
+| openpgp.cert.export | key, output |
+| openpgp.cert.inspect | input |
+| openpgp.encrypt | input, output, recipients (1..32 of certificate, expected_openpgp_fingerprint) |
+| openpgp.decrypt, openpgp.sign | input, output, key, passphrase_file |
+| openpgp.verify | input, signature, certificate, expected_openpgp_fingerprint |
 
 `reason` is one of `compromised`, `superseded`, `retired`. A successful
 `revocation.verify` returns `kind: revocation_verified`, the fingerprint and reason,

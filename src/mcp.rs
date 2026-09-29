@@ -29,8 +29,8 @@ impl Config {
         let mut store = None;
         let mut digest = None;
         let mut seen = BTreeSet::new();
-        let mut pairs = args.chunks_exact(2);
-        for pair in &mut pairs {
+        let (pairs, remainder) = args.as_chunks::<2>();
+        for pair in pairs {
             if !seen.insert(&pair[0]) {
                 return Err(Error::new("invalid_request", "Duplicate MCP startup flag"));
             }
@@ -56,7 +56,7 @@ impl Config {
                 _ => return Err(Error::new("invalid_request", "Unknown MCP startup flag")),
             }
         }
-        if !pairs.remainder().is_empty() {
+        if !remainder.is_empty() {
             return Err(Error::new(
                 "invalid_request",
                 "Missing MCP startup flag value",
@@ -81,25 +81,29 @@ impl Config {
         Ok(config)
     }
     fn validate(&self) -> Result<()> {
-        if let Some(allowed) = &self.allowed {
-            if allowed.is_empty()
+        if let Some(allowed) = &self.allowed
+            && (allowed.is_empty()
                 || allowed
                     .iter()
-                    .any(|id| !ontology::OPERATIONS.iter().any(|o| o.0 == id))
-            {
-                return Err(Error::new(
-                    "invalid_request",
-                    "MCP allowlist must contain known APG operation IDs",
-                ));
-            }
+                    .any(|id| !ontology::OPERATIONS.iter().any(|o| o.0 == id)))
+        {
+            return Err(Error::new(
+                "invalid_request",
+                "MCP allowlist must contain known APG operation IDs",
+            ));
         }
         if let Some(policy) = &self.policy {
             trust::load(policy)?;
         }
         Ok(())
     }
+    /// OpenPGP operations are outside APG trust snapshots, so a host that pins a
+    /// trust policy exposes them only when its allowlist names them.
     fn allows(&self, id: &str) -> bool {
-        self.allowed.as_ref().is_none_or(|a| a.contains(id))
+        match &self.allowed {
+            Some(allowed) => allowed.contains(id),
+            None => self.policy.is_none() || !id.starts_with("openpgp."),
+        }
     }
 }
 

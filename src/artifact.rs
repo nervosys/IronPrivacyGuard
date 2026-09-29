@@ -38,6 +38,12 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.public.fingerprint)
         }
+        "apg-openpgp-key-v1" => {
+            // Structure only: the sealed key is authenticated when opened.
+            let value: crate::openpgp::KeyFile = serde_json::from_slice(data)?;
+            value.validate()?;
+            Some(value.fingerprint)
+        }
         "apg-kms-key-v1" => {
             let value: crate::provider::KmsKey = serde_json::from_slice(data)?;
             value.validate()?;

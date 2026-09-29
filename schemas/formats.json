@@ -725,6 +725,109 @@
     "title": "Application",
     "type": "object"
   },
+  "openpgp_key": {
+    "$defs": {
+      "Algorithm": {
+        "description": "Key shape for `openpgp.key.generate`.",
+        "oneOf": [
+          {
+            "const": "ed25519",
+            "description": "Ed25519 primary key (certify, sign) and Curve25519 ECDH subkey, as GnuPG\ncreates by default. Signatures use SHA-512.",
+            "type": "string"
+          },
+          {
+            "const": "p384",
+            "description": "ECDSA P-384 primary key and ECDH P-384 subkey with SHA-384 and AES-256\n(CNSA-aligned).",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "An APG-held OpenPGP secret key. The binary transferable secret key (with\nunprotected OpenPGP secret packets) is sealed with Argon2id and\nChaCha20-Poly1305 under the passphrase; the certificate is public.",
+    "properties": {
+      "algorithm": {
+        "$ref": "#/$defs/Algorithm"
+      },
+      "certificate": {
+        "description": "Binary transferable public key.",
+        "maxLength": 32768,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      },
+      "ciphertext": {
+        "maxLength": 8192,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      },
+      "fingerprint": {
+        "description": "v4 primary-key fingerprint.",
+        "maxLength": 40,
+        "minLength": 40,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^[0-9a-f]{40}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-openpgp-key-v1",
+        "type": "string"
+      },
+      "kdf": {
+        "const": "argon2id-m65536-t3-p4",
+        "type": "string"
+      },
+      "nonce": {
+        "maxLength": 24,
+        "minLength": 24,
+        "pattern": "^[0-9a-f]{24}$",
+        "type": "string"
+      },
+      "salt": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "tag": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "1..256 bytes of UTF-8 without control characters (byte length checked at runtime).",
+        "maxLength": 256,
+        "minLength": 1,
+        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "fingerprint",
+      "algorithm",
+      "user_id",
+      "certificate",
+      "kdf",
+      "salt",
+      "nonce",
+      "ciphertext",
+      "tag"
+    ],
+    "title": "KeyFile",
+    "type": "object"
+  },
   "public_key": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,

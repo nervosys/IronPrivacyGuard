@@ -100,88 +100,88 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
     if map.get("operation").and_then(Value::as_str) == Some("request.validate") {
         return;
     }
-    if map.get("operation").and_then(Value::as_str) == Some("knowledge.search") {
-        if let Some(query) = map.get("query").and_then(Value::as_str) {
-            if crate::knowledge::validate_query(query).is_err() {
-                report.issue(format!("{path}/query"), "invalid_request", "Knowledge query must contain 1..256 characters and at least one alphanumeric token");
-            }
-        }
+    if map.get("operation").and_then(Value::as_str) == Some("knowledge.search")
+        && let Some(query) = map.get("query").and_then(Value::as_str)
+        && crate::knowledge::validate_query(query).is_err()
+    {
+        report.issue(
+            format!("{path}/query"),
+            "invalid_request",
+            "Knowledge query must contain 1..256 characters and at least one alphanumeric token",
+        );
     }
-    if let Some(pin) = map.get("expected_fingerprint").and_then(Value::as_str) {
-        if crypto::check_fingerprint(pin).is_err() {
-            report.issue(
-                format!("{path}/expected_fingerprint"),
-                "invalid_format",
-                "Expected exactly 64 or 96 lowercase hexadecimal characters",
-            );
-        }
+    if let Some(pin) = map.get("expected_fingerprint").and_then(Value::as_str)
+        && crypto::check_fingerprint(pin).is_err()
+    {
+        report.issue(
+            format!("{path}/expected_fingerprint"),
+            "invalid_format",
+            "Expected exactly 64 or 96 lowercase hexadecimal characters",
+        );
     }
-    if let Some(pin) = map.get("expected_digest").and_then(Value::as_str) {
-        if crate::trust::check_digest(pin).is_err() {
-            report.issue(
-                format!("{path}/expected_digest"),
-                "invalid_format",
-                "Expected exactly 64 or 96 lowercase hexadecimal characters",
-            );
-        }
+    if let Some(pin) = map.get("expected_digest").and_then(Value::as_str)
+        && crate::trust::check_digest(pin).is_err()
+    {
+        report.issue(
+            format!("{path}/expected_digest"),
+            "invalid_format",
+            "Expected exactly 64 or 96 lowercase hexadecimal characters",
+        );
     }
     for name in ["encryption_key_id", "signing_key_id"] {
-        if let Some(id) = map.get(name).and_then(Value::as_str) {
-            if crate::provider::key_id(id).is_err() {
-                report.issue(
-                    format!("{path}/{name}"),
-                    "invalid_format",
-                    "Expected 1..64 bytes of lowercase hexadecimal",
-                );
-            }
+        if let Some(id) = map.get(name).and_then(Value::as_str)
+            && crate::provider::key_id(id).is_err()
+        {
+            report.issue(
+                format!("{path}/{name}"),
+                "invalid_format",
+                "Expected 1..64 bytes of lowercase hexadecimal",
+            );
         }
     }
     if let (Some(encryption), Some(signing)) = (
         map.get("encryption_key_id").and_then(Value::as_str),
         map.get("signing_key_id").and_then(Value::as_str),
-    ) {
-        if encryption == signing {
-            report.issue(
-                format!("{path}/signing_key_id"),
-                "invalid_request",
-                "Encryption and signing keys need distinct CKA_ID values",
-            );
-        }
+    ) && encryption == signing
+    {
+        report.issue(
+            format!("{path}/signing_key_id"),
+            "invalid_request",
+            "Encryption and signing keys need distinct CKA_ID values",
+        );
     }
-    if map.get("operation").and_then(Value::as_str) == Some("kms.key.bind") {
-        if let (Some(region), Some(encryption), Some(signing)) = (
+    if map.get("operation").and_then(Value::as_str) == Some("kms.key.bind")
+        && let (Some(region), Some(encryption), Some(signing)) = (
             map.get("region").and_then(Value::as_str),
             map.get("encryption_key_arn").and_then(Value::as_str),
             map.get("signing_key_arn").and_then(Value::as_str),
-        ) {
-            if crate::provider::check_kms_keys(region, encryption, signing).is_err() {
-                report.issue(
-                    format!("{path}/encryption_key_arn"),
-                    "invalid_request",
-                    "KMS keys must be distinct key ARNs (not aliases) in the stated region",
-                );
-            }
-        }
+        )
+        && crate::provider::check_kms_keys(region, encryption, signing).is_err()
+    {
+        report.issue(
+            format!("{path}/encryption_key_arn"),
+            "invalid_request",
+            "KMS keys must be distinct key ARNs (not aliases) in the stated region",
+        );
     }
-    if let Some(serial) = map.get("token_serial").and_then(Value::as_str) {
-        if serial.is_empty() || serial.chars().count() > 16 {
-            report.issue(
-                format!("{path}/token_serial"),
-                "invalid_request",
-                "Token serial must contain 1..16 characters",
-            );
-        }
+    if let Some(serial) = map.get("token_serial").and_then(Value::as_str)
+        && (serial.is_empty() || serial.chars().count() > 16)
+    {
+        report.issue(
+            format!("{path}/token_serial"),
+            "invalid_request",
+            "Token serial must contain 1..16 characters",
+        );
     }
-    if map.get("operation").and_then(Value::as_str) == Some("hardware.key.generate") {
-        if let Some(label) = map.get("label").and_then(Value::as_str) {
-            if label.is_empty() || label.len() > crate::provider::LABEL_BYTES_MAX {
-                report.issue(
-                    format!("{path}/label"),
-                    "invalid_request",
-                    "Key label must contain 1..64 bytes",
-                );
-            }
-        }
+    if map.get("operation").and_then(Value::as_str) == Some("hardware.key.generate")
+        && let Some(label) = map.get("label").and_then(Value::as_str)
+        && (label.is_empty() || label.len() > crate::provider::LABEL_BYTES_MAX)
+    {
+        report.issue(
+            format!("{path}/label"),
+            "invalid_request",
+            "Key label must contain 1..64 bytes",
+        );
     }
     for name in ["not_before", "not_after", "at_time"] {
         if let Some(time) = map.get(name).and_then(Value::as_u64) {
@@ -202,14 +202,13 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
     if let (Some(start), Some(end)) = (
         map.get("not_before").and_then(Value::as_u64),
         map.get("not_after").and_then(Value::as_u64),
-    ) {
-        if start >= end {
-            report.issue(
-                format!("{path}/not_after"),
-                "invalid_request",
-                "not_after must be strictly greater than not_before",
-            );
-        }
+    ) && start >= end
+    {
+        report.issue(
+            format!("{path}/not_after"),
+            "invalid_request",
+            "not_after must be strictly greater than not_before",
+        );
     }
     // Only typed Request/TrustPolicy object keys reach here; they need no JSON Pointer escaping.
     for (field, child) in map {

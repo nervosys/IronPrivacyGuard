@@ -1,5 +1,89 @@
 {
   "$defs": {
+    "Algorithm": {
+      "description": "Key shape for `openpgp.key.generate`.",
+      "oneOf": [
+        {
+          "const": "ed25519",
+          "description": "Ed25519 primary key (certify, sign) and Curve25519 ECDH subkey, as GnuPG\ncreates by default. Signatures use SHA-512.",
+          "type": "string"
+        },
+        {
+          "const": "p384",
+          "description": "ECDSA P-384 primary key and ECDH P-384 subkey with SHA-384 and AES-256\n(CNSA-aligned).",
+          "type": "string"
+        }
+      ]
+    },
+    "Certificate": {
+      "description": "Certificate evaluated under APG policy at `evaluated_at` (host time).",
+      "properties": {
+        "created": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "evaluated_at": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expired": {
+          "type": "boolean"
+        },
+        "expires": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "fingerprint": {
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "keys": {
+          "items": {
+            "$ref": "#/$defs/ComponentKey"
+          },
+          "type": "array"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "usable_for_encryption": {
+          "type": "boolean"
+        },
+        "usable_for_signing": {
+          "type": "boolean"
+        },
+        "user_ids": {
+          "description": "User IDs with a valid, unrevoked self-certification. Self-asserted and\nunverified: they are labels, not identity proof.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "created",
+        "revoked",
+        "expired",
+        "evaluated_at",
+        "user_ids",
+        "usable_for_encryption",
+        "usable_for_signing",
+        "keys"
+      ],
+      "type": "object"
+    },
     "Change": {
       "oneOf": [
         {
@@ -203,6 +287,79 @@
       ],
       "type": "object"
     },
+    "ComponentKey": {
+      "description": "A primary key or subkey and why it is or is not usable.",
+      "properties": {
+        "algorithm": {
+          "description": "For example ed25519, ecdsa-p384, ecdh-cv25519, ecdh-p384 or rsa-3072.",
+          "type": "string"
+        },
+        "bound": {
+          "description": "A valid binding self-signature (and, for signing subkeys, back signature) exists.",
+          "type": "boolean"
+        },
+        "created": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expires": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "fingerprint": {
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "flags": {
+          "description": "Key flags from the binding signature: certify, sign, encrypt, authenticate.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "primary": {
+          "type": "boolean"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "usable_for_encryption": {
+          "type": "boolean"
+        },
+        "usable_for_signing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "primary",
+        "algorithm",
+        "created",
+        "revoked",
+        "bound",
+        "flags",
+        "usable_for_encryption",
+        "usable_for_signing",
+        "issues"
+      ],
+      "type": "object"
+    },
     "Custody": {
       "description": "Where a private-key operation ran. Reported only as evidence from this process;\ncounterparties cannot verify it from public artifacts.",
       "oneOf": [
@@ -333,6 +490,31 @@
         "non_exportable",
         "generated_on_token",
         "possession_verified"
+      ],
+      "type": "object"
+    },
+    "RecipientKeys": {
+      "description": "The keys a message was encrypted to, per recipient certificate.",
+      "properties": {
+        "encryption_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fingerprint": {
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "encryption_keys"
       ],
       "type": "object"
     },
@@ -515,6 +697,51 @@
         "issues",
         "truncated",
         "execution"
+      ],
+      "type": "object"
+    },
+    "Verification": {
+      "description": "An authenticated detached signature.",
+      "properties": {
+        "certificate_expired_now": {
+          "description": "The certificate is expired at host time; the signature predates expiry.",
+          "type": "boolean"
+        },
+        "created": {
+          "description": "Signature creation time claimed by the signer.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fingerprint": {
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "hash_algorithm": {
+          "type": "string"
+        },
+        "signing_key": {
+          "description": "The primary key or subkey that made the signature.",
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "signing_key",
+        "created",
+        "hash_algorithm",
+        "certificate_expired_now"
       ],
       "type": "object"
     },
@@ -991,6 +1218,182 @@
                 "structurally_valid",
                 "format",
                 "authenticated"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "algorithm": {
+                  "$ref": "#/$defs/Algorithm"
+                },
+                "fingerprint": {
+                  "maxLength": 40,
+                  "minLength": 40,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "openpgp_key",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "algorithm",
+                "user_id"
+              ],
+              "type": "object"
+            },
+            {
+              "description": "A certificate evaluated under APG policy; `path` is set when one was written.",
+              "properties": {
+                "certificate": {
+                  "$ref": "#/$defs/Certificate"
+                },
+                "kind": {
+                  "const": "openpgp_certificate",
+                  "type": "string"
+                },
+                "path": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "certificate"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "openpgp_encrypted",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "recipients": {
+                  "items": {
+                    "$ref": "#/$defs/RecipientKeys"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "recipients"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "fingerprint": {
+                  "maxLength": 40,
+                  "minLength": 40,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "openpgp_decrypted",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "signatures_verified": {
+                  "description": "Always false: embedded signatures are not verified; use openpgp.verify\nwith a detached signature.",
+                  "type": "boolean"
+                },
+                "signed": {
+                  "description": "The message carried OpenPGP signatures.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "signed",
+                "signatures_verified"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "fingerprint": {
+                  "maxLength": 40,
+                  "minLength": 40,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                },
+                "hash_algorithm": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "openpgp_signed",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "signing_key": {
+                  "maxLength": 40,
+                  "minLength": 40,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "signing_key",
+                "hash_algorithm"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "openpgp_verified",
+                  "type": "string"
+                },
+                "valid": {
+                  "type": "boolean"
+                },
+                "verification": {
+                  "$ref": "#/$defs/Verification"
+                }
+              },
+              "required": [
+                "kind",
+                "valid",
+                "verification"
               ],
               "type": "object"
             }

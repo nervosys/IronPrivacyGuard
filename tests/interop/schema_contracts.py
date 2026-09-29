@@ -155,6 +155,17 @@ def main():
     check(schemas["formats"]["trust_store"], store)
     store["entries"].append(store["entries"][0])
     check(schemas["formats"]["trust_store"], store, False)
+    openpgp_key = {"format": "apg-openpgp-key-v1", "fingerprint": "ab" * 20, "algorithm": "ed25519",
+                   "user_id": "Alice <alice@example.test>", "certificate": "99" * 300,
+                   "kdf": "argon2id-m65536-t3-p4", "salt": "00" * 16, "nonce": "00" * 12, "ciphertext": "01" * 200,
+                   "tag": "00" * 16}
+    openpgp_schema = schemas["formats"]["openpgp_key"]
+    check(openpgp_schema, openpgp_key)
+    for field, bad in [("format", "apg-secret-v1"), ("fingerprint", "AB" * 20), ("fingerprint", "ab" * 32),
+                       ("algorithm", "rsa"), ("certificate", "999"), ("certificate", "99" * 16385),
+                       ("ciphertext", "01" * 4097), ("kdf", "pbkdf2"), ("salt", "00" * 15), ("user_id", "a\nb")]:
+        check(openpgp_schema, {**openpgp_key, field: bad}, False)
+    check(openpgp_schema, {**openpgp_key, "extra": 1}, False)
     tools = {tool["name"]: tool["inputSchema"] for tool in schemas["mcp-tools"]["tools"]}
     pin = "ab" * 32
     policy = {"store": "snapshot", "expected_digest": pin}
@@ -162,7 +173,7 @@ def main():
     for variant in schemas["request"]["oneOf"]:
         operation = variant["properties"]["operation"]["const"]
         values = {"operation": operation}
-        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2"}
+        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2", "user_id": "Alice <alice@example.test>", "expected_openpgp_fingerprint": "AB" * 20, "recipients": [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]}
         for field in variant["required"]:
             if field != "operation":
                 values[field] = defaults.get(field, "path")
@@ -197,6 +208,23 @@ def main():
         if operation == "kms.key.bind":
             for bad in ["alias", "arn:aws:kms:us-east-1:123:key/1", "arn:aws:s3:us-east-1:123456789012:key/1"]:
                 check(tool_schema, {**arguments, "encryption_key_arn": bad}, False)
+        if "expected_openpgp_fingerprint" in values:
+            # Either case is valid; APG fingerprints, spaces and trailing newlines are not.
+            check(tool_schema, {**arguments, "expected_openpgp_fingerprint": "ab" * 20})
+            for bad in ["ab" * 32, "g" * 40, ("ab" * 20) + "\n", " ".join(["ABCD"] * 10), "ab" * 19]:
+                check(tool_schema, {**arguments, "expected_openpgp_fingerprint": bad}, False)
+        if "recipients" in values:
+            recipient = values["recipients"][0]
+            for bad in [[], [recipient] * 33, [{"certificate": "path"}], [{**recipient, "extra": 1}],
+                        [{**recipient, "expected_openpgp_fingerprint": "ab" * 32}]]:
+                check(tool_schema, {**arguments, "recipients": bad}, False)
+            check(tool_schema, {**arguments, "recipients": [recipient] * 32})
+        if "user_id" in values:
+            for bad in ["", "line\nbreak", "tab\there", "c1\u0085control", "x" * 257]:
+                check(tool_schema, {**arguments, "user_id": bad}, False)
+            check(tool_schema, {**arguments, "user_id": "Ünïcode Name <u@example.test>"})
+            check(tool_schema, {**arguments, "algorithm": "p384"})
+            check(tool_schema, {**arguments, "algorithm": "rsa4096"}, False)
         if "token_serial" in values:
             for bad in ["", "x" * 17]:
                 check(tool_schema, {**arguments, "token_serial": bad}, False)

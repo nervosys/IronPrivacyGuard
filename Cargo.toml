@@ -2,7 +2,7 @@
 name = "iron-privacy-guardian"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 license = "AGPL-3.0-or-later"
 description = "Agent-first privacy CLI and discoverable cryptographic workflows on IronCrypto"
 keywords = ["cryptography", "agents", "mcp", "pkcs11", "hsm"]
@@ -36,6 +36,10 @@ secrecy = { version = "0.10", optional = true }
 ic-rustls = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
 webpki-roots = { version = "1", optional = true }
+# OpenPGP compatibility boundary. rPGP is pinned exactly: it supplies its own
+# (RustCrypto) primitives, and APG adds certificate-validity policy on top.
+pgp = { version = "=0.20.0", default-features = false, optional = true }
+rand_core = { version = "0.6", features = ["getrandom"], optional = true }
 
 # TPM access: the system TPM2 software stack (tpm2-tss) on Linux, CNG's Platform
 # Crypto Provider on Windows (FFI isolated in crates/apg-cng).
@@ -58,6 +62,9 @@ pkcs11 = ["dep:cryptoki", "dep:secrecy"]
 tpm = ["dep:tss-esapi", "dep:apg-cng"]
 # AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
 kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
+# OpenPGP (RFC 9580 v4) keys, messages and signatures for GnuPG interoperability,
+# through rPGP. Pure Rust; bzip2 decompression is not included.
+openpgp = ["dep:pgp", "dep:rand_core"]
 
 [profile.release]
 lto = true

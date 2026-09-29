@@ -14,14 +14,14 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo fmt --manifest-path fuzz/Cargo.toml -- --check
       - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo clippy --locked --all-targets --features pkcs11,kms -- -D warnings
+      - run: cargo clippy --locked --all-targets --features pkcs11,kms,openpgp -- -D warnings
       - run: cargo test --locked
-      - run: cargo test --locked --features pkcs11,kms
+      - run: cargo test --locked --features pkcs11,kms,openpgp
       - if: runner.os == 'Windows'
-        run: cargo clippy --locked --all-targets --features tpm,pkcs11,kms -- -D warnings
+        run: cargo clippy --locked --all-targets --features tpm,pkcs11,kms,openpgp -- -D warnings
       - if: runner.os == 'Windows'
         run: cargo test --locked --features tpm
-      - run: cargo build --release --locked --features kms
+      - run: cargo build --release --locked --features kms,openpgp
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -32,6 +32,9 @@ jobs:
       - run: python tests/interop/p384_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/hybrid_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/kms_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+      # GnuPG ships on the Linux and Windows runners (Git for Windows); macOS runners lack it.
+      - if: runner.os != 'macOS'
+        run: python tests/interop/gnupg_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
   tpm:
     # Full TPM lifecycle against a throwaway swtpm software TPM.
     runs-on: ubuntu-latest

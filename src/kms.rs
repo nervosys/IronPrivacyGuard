@@ -62,10 +62,10 @@ fn credentials(region: &str, partition: &str) -> Result<Credentials> {
     if let Some(credentials) = container_credentials()? {
         return Ok(credentials);
     }
-    if !env("AWS_EC2_METADATA_DISABLED").is_some_and(|v| v.eq_ignore_ascii_case("true")) {
-        if let Some(credentials) = instance_credentials()? {
-            return Ok(credentials);
-        }
+    if !env("AWS_EC2_METADATA_DISABLED").is_some_and(|v| v.eq_ignore_ascii_case("true"))
+        && let Some(credentials) = instance_credentials()?
+    {
+        return Ok(credentials);
     }
     Err(unavailable())
 }
@@ -95,15 +95,15 @@ fn shared_file_credentials() -> Result<Option<Credentials>> {
     for line in text.lines().map(str::trim) {
         if let Some(name) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
             section = name.trim().into();
-        } else if section == profile {
-            if let Some((key, value)) = line.split_once('=') {
-                let value = value.trim().to_string();
-                match key.trim() {
-                    "aws_access_key_id" => access_key = Some(value),
-                    "aws_secret_access_key" => secret = Some(Zeroizing::new(value)),
-                    "aws_session_token" => token = Some(Zeroizing::new(value)),
-                    _ => {}
-                }
+        } else if section == profile
+            && let Some((key, value)) = line.split_once('=')
+        {
+            let value = value.trim().to_string();
+            match key.trim() {
+                "aws_access_key_id" => access_key = Some(value),
+                "aws_secret_access_key" => secret = Some(Zeroizing::new(value)),
+                "aws_session_token" => token = Some(Zeroizing::new(value)),
+                _ => {}
             }
         }
     }
@@ -131,10 +131,10 @@ fn ini_section(text: &str, section: &str) -> Option<std::collections::BTreeMap<S
         if let Some(name) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
             current = name.split_whitespace().collect::<Vec<_>>().join(" ");
             found |= current == section;
-        } else if current == section {
-            if let Some((key, value)) = line.split_once('=') {
-                values.insert(key.trim().to_string(), value.trim().to_string());
-            }
+        } else if current == section
+            && let Some((key, value)) = line.split_once('=')
+        {
+            values.insert(key.trim().to_string(), value.trim().to_string());
         }
     }
     found.then_some(values)

@@ -271,6 +271,60 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["KeyDeletion"],
         &["load_provider", "read_pin", "delete_token_object"],
     ),
+    (
+        "openpgp.key.generate",
+        "Create a v4 OpenPGP key (Ed25519 or P-384) for GnuPG interoperability, sealed under a passphrase",
+        &["OpenpgpUserId", "Passphrase"],
+        &["OpenpgpKeyFile", "OpenpgpFingerprint"],
+        &["read_passphrase", "create_file"],
+    ),
+    (
+        "openpgp.cert.export",
+        "Write the ASCII-armored OpenPGP certificate of an APG-held OpenPGP key",
+        &["OpenpgpKeyFile"],
+        &["OpenpgpCertificate", "OpenpgpCertificateReport"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "openpgp.cert.inspect",
+        "Evaluate an OpenPGP certificate under APG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
+        &["OpenpgpCertificate"],
+        &["OpenpgpCertificateReport"],
+        &["read_file"],
+    ),
+    (
+        "openpgp.encrypt",
+        "Encrypt to 1..32 pinned OpenPGP certificates as an armored SEIPDv1 AES-256 message",
+        &["Plaintext", "OpenpgpCertificate", "OpenpgpFingerprint"],
+        &["OpenpgpMessage"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "openpgp.decrypt",
+        "Decrypt an integrity-protected OpenPGP message with an APG-held OpenPGP key",
+        &["OpenpgpMessage", "OpenpgpKeyFile", "Passphrase"],
+        &["Plaintext"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "openpgp.sign",
+        "Create an armored detached OpenPGP signature with an APG-held OpenPGP key",
+        &["Plaintext", "OpenpgpKeyFile", "Passphrase"],
+        &["OpenpgpSignature"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "openpgp.verify",
+        "Verify a detached OpenPGP signature against a pinned certificate under APG policy",
+        &[
+            "Plaintext",
+            "OpenpgpSignature",
+            "OpenpgpCertificate",
+            "OpenpgpFingerprint",
+        ],
+        &["OpenpgpVerification"],
+        &["read_file"],
+    ),
 ];
 
 /// Operations whose `key` input may be a software secret or a hardware reference.
@@ -329,6 +383,41 @@ pub fn operation(id: &str) -> Value {
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
         "tpm.key.delete" => vec!["tpm-provider", "pin-channel", "irreversible-deletion"],
+        "openpgp.key.generate" => vec![
+            "openpgp-boundary",
+            "secret-channel",
+            "no-clobber",
+            "openpgp-user-id",
+        ],
+        "openpgp.cert.export" => vec!["openpgp-boundary", "no-clobber"],
+        "openpgp.cert.inspect" => vec![
+            "openpgp-boundary",
+            "openpgp-certificate-policy",
+            "openpgp-user-id",
+        ],
+        "openpgp.encrypt" => vec![
+            "openpgp-boundary",
+            "openpgp-pin",
+            "openpgp-certificate-policy",
+            "no-sender-authentication",
+            "no-clobber",
+            "openpgp-size-bound",
+        ],
+        "openpgp.decrypt" => vec![
+            "openpgp-boundary",
+            "authenticate-before-release",
+            "openpgp-embedded-signatures",
+            "secret-channel",
+            "no-clobber",
+            "openpgp-size-bound",
+        ],
+        "openpgp.sign" => vec!["openpgp-boundary", "secret-channel", "no-clobber"],
+        "openpgp.verify" => vec![
+            "openpgp-boundary",
+            "openpgp-pin",
+            "openpgp-certificate-policy",
+            "exact-bytes",
+        ],
         "kms.key.bind" => vec![
             "kms-provider",
             "non-exportable-key",
@@ -397,6 +486,9 @@ pub fn operation(id: &str) -> Value {
         "sign" | "key.revoke" | "key.validity" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
         "verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "hash" => vec!["sha2-256"],
+        "openpgp.key.generate" | "openpgp.decrypt" | "openpgp.sign" => {
+            vec!["argon2id", "chacha20-poly1305"]
+        }
         "hardware.key.generate" | "hardware.key.bind" | "tpm.key.generate" | "kms.key.bind" => {
             vec!["ecdh-p384", "ecdsa-p384-sha384", "sha2-384", "sha2-256"]
         }
@@ -451,6 +543,11 @@ pub fn operation(id: &str) -> Value {
                     | "tpm.key.generate"
                     | "tpm.key.delete"
                     | "kms.key.bind"
+                    | "openpgp.key.generate"
+                    | "openpgp.cert.inspect"
+                    | "openpgp.encrypt"
+                    | "openpgp.sign"
+                    | "openpgp.verify"
             ));
     let mut conditional_effects = Vec::new();
     if governed {
@@ -491,7 +588,8 @@ pub fn discover() -> Value {
         "schema_validation":{"static":"field shape, fixed versions and algorithms, fixed-length lowercase hex, time bounds and trust capacity", "runtime":"identity binding, certificate authentication, unique identities and cross-field ordering", "plan":"typed shape only; not full JSON Schema validation"},
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
-        "unsupported":["OpenPGP packets","GPG key import","multi-recipient encryption","keyservers","web of trust","automatic revocation distribution","global policy enforcement","hardware attestation","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum hardware, TPM or KMS keys","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4],"generated_keys":["ed25519","p384"],"encryption":"SEIPDv1 with AES-256","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
+        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","hardware attestation","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum hardware, TPM or KMS keys","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -585,6 +683,46 @@ pub fn export() -> Value {
             "KeyDeletion",
             "Confirmation that a TPM-backed identity's persisted keys were permanently deleted",
             "control",
+        ),
+        (
+            "OpenpgpKeyFile",
+            "apg-openpgp-key-v1: a v4 OpenPGP key generated by APG whose transferable secret key is sealed with Argon2id and ChaCha20-Poly1305; the certificate is public",
+            "encrypted-secret",
+        ),
+        (
+            "OpenpgpCertificate",
+            "An OpenPGP certificate (transferable public key) file, ASCII-armored or binary; untrusted until pinned by fingerprint",
+            "public",
+        ),
+        (
+            "OpenpgpFingerprint",
+            "v4 OpenPGP primary-key fingerprint: 40 hexadecimal characters, either case; distinct from APG fingerprints",
+            "public",
+        ),
+        (
+            "OpenpgpUserId",
+            "Self-asserted OpenPGP User ID label such as \"Alice <alice@example.org>\"; 1..256 bytes without control characters; never identity proof",
+            "untrusted",
+        ),
+        (
+            "OpenpgpMessage",
+            "ASCII-armored or binary OpenPGP message; APG writes armored SEIPDv1 messages with AES-256",
+            "ciphertext",
+        ),
+        (
+            "OpenpgpSignature",
+            "Detached OpenPGP document signature, ASCII-armored or binary",
+            "public",
+        ),
+        (
+            "OpenpgpCertificateReport",
+            "A certificate evaluated under APG policy at host time: per-key algorithm, flags, expiry, revocation, usability and issues",
+            "control",
+        ),
+        (
+            "OpenpgpVerification",
+            "A valid detached OpenPGP signature by a key of the pinned certificate that was valid for signing when it signed; no identity assertion",
+            "public",
         ),
         (
             "KmsKeyFile",
@@ -818,6 +956,30 @@ pub fn export() -> Value {
             "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key with infrastructure tooling and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
+            "openpgp-boundary",
+            "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native APG artifacts, and native operations never read OpenPGP data. APG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, decryption and signing.",
+        ),
+        (
+            "openpgp-pin",
+            "Each certificate must match an independently trusted fingerprint in expected_openpgp_fingerprint (40 hex, either case). A certificate file must hold exactly one v4 certificate.",
+        ),
+        (
+            "openpgp-certificate-policy",
+            "APG evaluates certificates itself at host time (verification: at the signature's creation time, plus revocation now). A key is usable only with a valid unexpired binding self-signature using SHA-256 or stronger and matching key flags; signing subkeys need a valid back signature. Any valid revocation by the primary key revokes, whatever its reason. RSA below 2048 bits, DSA, ElGamal, SHA-1 and MD5 are refused. Third-party certifications and designated revokers are ignored. Encryption uses every usable encryption key of each certificate.",
+        ),
+        (
+            "openpgp-user-id",
+            "User IDs are self-asserted labels. APG reports only those with a valid self-certification and never treats them as identity proof; pin fingerprints instead.",
+        ),
+        (
+            "openpgp-embedded-signatures",
+            "Signatures inside a decrypted message are reported by signed=true but never verified (signatures_verified=false); exchange detached signatures and use openpgp.verify. Sender identity is otherwise unauthenticated.",
+        ),
+        (
+            "openpgp-size-bound",
+            "Plaintext is limited to 16 MiB and messages to the file limit. One compression layer is accepted and decompressed output is bounded; bzip2 is unsupported. Legacy unprotected (SED) messages are refused, and plaintext is released only after the integrity check.",
+        ),
+        (
             "irreversible-deletion",
             "Deleting TPM keys destroys the identity permanently: nothing encrypted to it can be decrypted and it can never sign again. APG checks the PIN and the pinned identity first. Publish a revocation beforehand if others trust the identity.",
         ),
@@ -1008,6 +1170,18 @@ pub fn export() -> Value {
             "retire-windows-tpm-identity",
             vec!["key.revoke", "trust.revoke", "tpm.key.delete"],
         ),
+        (
+            "exchange-with-gnupg",
+            vec![
+                "openpgp.key.generate",
+                "openpgp.cert.export",
+                "openpgp.cert.inspect",
+                "openpgp.encrypt",
+                "openpgp.decrypt",
+                "openpgp.sign",
+                "openpgp.verify",
+            ],
+        ),
         ("confidential-transfer", vec!["encrypt", "decrypt"]),
         ("authenticate-content", vec!["sign", "verify"]),
         (
@@ -1019,5 +1193,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.23.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.24.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }
