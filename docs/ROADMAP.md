@@ -33,9 +33,10 @@ implemented surface, not feature parity with decades of GPG development.
    post-quantum encryption. P-384 identities are implemented on PKCS#11 tokens, Linux
    and Windows TPMs and AWS KMS
    ([HARDWARE.md](HARDWARE.md)), with SHA-384 fingerprints and SHA-384
-   (`apg-trust-v3`) trust-snapshot digests. Remaining work includes vendor
-   attestation, other cloud KMS providers and live testing of in-token decryption
-   on FIPS-mode HSMs. Never silently substitute a weaker suite.
+   (`apg-trust-v3`) trust-snapshot digests, and TPM identities can be attested
+   ([ATTESTATION.md](ATTESTATION.md)). Remaining work includes PKCS#11 and KMS
+   attestation, ECC endorsement keys, EK certificate revocation checking, other cloud
+   KMS providers and live testing of in-token decryption on FIPS-mode HSMs. Never silently substitute a weaker suite.
 
 Future additions must extend schemas, ontology, constraints, adversarial tests and
 versioned formats together. Unsupported capabilities remain explicitly advertised

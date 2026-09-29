@@ -118,6 +118,30 @@ def main():
     check(kms_schema, {**kms_key, "unknown": True}, False)
     check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
     check(kms_schema, {**kms_key, "signing_key_arn": kms_key["signing_key_arn"] + "\n"}, False)
+    # TPM attestation evidence captured from swtpm, and the protocol messages.
+    evidence = json.loads((ROOT / "tests/vectors/tpm-attestation-swtpm/evidence.json").read_text())
+    evidence_schema = schemas["formats"]["tpm_evidence"]
+    check(evidence_schema, evidence)
+    check(evidence_schema, {**evidence, "unknown": 1}, False)
+    check(evidence_schema, {**evidence, "format": "apg-tpm-evidence-v2"}, False)
+    check(evidence_schema, {**evidence, "ek_certificates": []}, False)
+    check(evidence_schema, {**evidence, "ek_certificates": evidence["ek_certificates"] * 5}, False)
+    check(evidence_schema, {**evidence, "certifications": evidence["certifications"][:1]}, False)
+    check(evidence_schema, {**evidence, "ak_public": evidence["ak_public"].upper()}, False)
+    check(evidence_schema, {**evidence, "ak_public": evidence["ak_public"] + "\n"}, False)
+    certification = evidence["certifications"][0]
+    check(evidence_schema, {**evidence, "certifications": [{**certification, "role": "admin"}, certification]}, False)
+    challenge = {"format": "apg-tpm-challenge-v1", "fingerprint": evidence["public"]["fingerprint"],
+                 "evidence_digest": "ab" * 48, "id_object": "00" * 50, "encrypted_secret": "11" * 256}
+    check(schemas["formats"]["tpm_challenge"], challenge)
+    check(schemas["formats"]["tpm_challenge"], {**challenge, "evidence_digest": "ab" * 32}, False)
+    secret = {"format": "apg-tpm-challenge-secret-v1", "fingerprint": evidence["public"]["fingerprint"],
+              "evidence_digest": "ab" * 48, "credential": "cd" * 32}
+    check(schemas["formats"]["tpm_challenge_secret"], secret)
+    check(schemas["formats"]["tpm_challenge_secret"], {**secret, "credential": "cd" * 31}, False)
+    response = {"format": "apg-tpm-response-v1", "evidence_digest": "ab" * 48, "credential": "cd" * 32}
+    check(schemas["formats"]["tpm_response"], response)
+    check(schemas["formats"]["tpm_response"], {**response, "format": "apg-tpm-challenge-v1"}, False)
     # The optional ML-DSA key: an exact key ARN or absent.
     pq_kms = {**kms_key, "public": pq["public"],
               "mldsa_signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/33333333-3333-3333-3333-333333333333"}

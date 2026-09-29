@@ -1125,6 +1125,157 @@
         {
           "additionalProperties": false,
           "properties": {
+            "key": {
+              "description": "An apg-tpm-key-v1 file (Linux or Windows).",
+              "type": "string"
+            },
+            "operation": {
+              "const": "tpm.attest",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "description": "The key's PIN.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "key",
+            "passphrase_file",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_fingerprint": {
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "maxLength": 96,
+              "minLength": 64,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": "string"
+            },
+            "input": {
+              "description": "apg-tpm-evidence-v1 from tpm.attest.",
+              "type": "string"
+            },
+            "intermediates": {
+              "description": "Optional PEM intermediates, if the evidence lacks them.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "tpm.attestation.challenge",
+              "type": "string"
+            },
+            "output": {
+              "description": "The challenge for the prover.",
+              "type": "string"
+            },
+            "secret_output": {
+              "description": "The verifier's private credential; keep it and use it once.",
+              "type": "string"
+            },
+            "trust_anchors": {
+              "description": "PEM or DER root certificates of accepted TPM manufacturers.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "trust_anchors",
+            "expected_fingerprint",
+            "output",
+            "secret_output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "challenge": {
+              "type": "string"
+            },
+            "input": {
+              "description": "The evidence this TPM produced.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "tpm.attestation.respond",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "challenge",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_fingerprint": {
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "maxLength": 96,
+              "minLength": 64,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "intermediates": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "tpm.attestation.verify",
+              "type": "string"
+            },
+            "response": {
+              "type": "string"
+            },
+            "secret": {
+              "description": "The private file tpm.attestation.challenge wrote.",
+              "type": "string"
+            },
+            "trust_anchors": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "response",
+            "secret",
+            "trust_anchors",
+            "expected_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
             "algorithm": {
               "$ref": "#/$defs/Algorithm",
               "default": "ed25519"

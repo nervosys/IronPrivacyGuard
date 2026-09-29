@@ -1,5 +1,6 @@
-//! Minimal safe wrapper over Windows CNG (NCrypt) for TPM-backed P-384 keys through
-//! the Microsoft Platform Crypto Provider.
+//! Minimal safe wrapper over Windows CNG (NCrypt) and TPM Base Services (TBS): the
+//! Microsoft Platform Crypto Provider for apg-cng-key-v1 keys and EK certificates,
+//! and raw TPM 2.0 command submission for APG's own TPM layer.
 //!
 //! This is the only crate in IronPrivacyGuardian that contains `unsafe` code. It
 //! exposes owned handles that are freed on drop and byte-oriented operations; every
@@ -9,18 +10,31 @@
 
 use core::ptr::{null, null_mut};
 use windows_sys::Win32::Security::Cryptography::{
-    BCRYPT_ECDH_PUBLIC_P384_MAGIC, BCRYPT_ECDSA_PUBLIC_P384_MAGIC, NCRYPT_FLAGS,
-    NCRYPT_SECRET_AGREEMENT_OPERATION, NCRYPT_SIGNATURE_OPERATION, NCRYPT_SILENT_FLAG,
-    NCryptAlgorithmName, NCryptCreatePersistedKey, NCryptDeleteKey, NCryptDeriveKey,
-    NCryptEnumAlgorithms, NCryptExportKey, NCryptFinalizeKey, NCryptFreeBuffer, NCryptFreeObject,
-    NCryptGetProperty, NCryptImportKey, NCryptOpenKey, NCryptOpenStorageProvider,
+    BCRYPT_ECDH_PUBLIC_P384_MAGIC, BCRYPT_ECDSA_PUBLIC_P384_MAGIC, BCryptBuffer, BCryptBufferDesc,
+    CertCloseStore, CertEnumCertificatesInStore, HCERTSTORE, NCRYPT_CLAIM_AUTHORITY_AND_SUBJECT,
+    NCRYPT_FLAGS, NCRYPT_PCP_IDENTITY_KEY, NCRYPT_SECRET_AGREEMENT_OPERATION,
+    NCRYPT_SIGNATURE_OPERATION, NCRYPT_SILENT_FLAG, NCRYPTBUFFER_CLAIM_KEYATTESTATION_NONCE,
+    NCryptAlgorithmName, NCryptCreateClaim, NCryptCreatePersistedKey, NCryptDeleteKey,
+    NCryptDeriveKey, NCryptEnumAlgorithms, NCryptExportKey, NCryptFinalizeKey, NCryptFreeBuffer,
+    NCryptFreeObject, NCryptGetProperty, NCryptImportKey, NCryptOpenKey, NCryptOpenStorageProvider,
     NCryptSecretAgreement, NCryptSetProperty, NCryptSignHash,
+};
+
+use windows_sys::Win32::System::TpmBaseServices::{
+    TBS_COMMAND_LOCALITY_ZERO, TBS_COMMAND_PRIORITY_NORMAL, TBS_CONTEXT_PARAMS,
+    TBS_CONTEXT_PARAMS2, TBS_CONTEXT_PARAMS2_0, TBS_CONTEXT_VERSION_TWO, Tbsi_Context_Create,
+    Tbsip_Context_Close, Tbsip_Submit_Command,
 };
 
 pub const PROVIDER: &str = "Microsoft Platform Crypto Provider";
 const ECC_PUBLIC_BLOB: &str = "ECCPUBLICBLOB";
 const USAGE_AUTH: &str = "PCP_USAGEAUTH";
 const PLATFORM_TYPE: &str = "PCP_PLATFORM_TYPE";
+const KEY_USAGE_POLICY: &str = "PCP_KEY_USAGE_POLICY";
+const IDENTITY_ACTIVATION: &str = "PCP_TPM12_IDACTIVATION";
+const OPAQUE_BLOB: &str = "OpaqueKeyBlob";
+/// Upper bound for any property or blob this crate reads.
+const MAX_BLOB: u32 = 64 * 1024;
 /// `BCRYPT_KDF_RAW_SECRET`: the unprocessed secret, returned little-endian.
 const RAW_SECRET: &str = "TRUNCATE";
 const P384_FIELD: usize = 48;
@@ -77,6 +91,63 @@ impl Drop for Handle {
     }
 }
 
+/// A TPM Base Services context for submitting raw TPM 2.0 commands. TBS applies
+/// its command block list; commands it refuses fail with a TBS status.
+pub struct Tbs(*mut core::ffi::c_void);
+impl Drop for Tbs {
+    fn drop(&mut self) {
+        // SAFETY: the context was created by Tbsi_Context_Create and is closed once.
+        unsafe { Tbsip_Context_Close(self.0) };
+    }
+}
+/// The largest TPM response APG reads (TPM2B buffers are at most a few KiB).
+const MAX_TPM_RESPONSE: usize = 8192;
+impl Tbs {
+    pub fn open() -> Result<Self> {
+        let params = TBS_CONTEXT_PARAMS2 {
+            version: TBS_CONTEXT_VERSION_TWO,
+            // includeTpm20 is bit 2 of the flags.
+            Anonymous: TBS_CONTEXT_PARAMS2_0 { asUINT32: 1 << 2 },
+        };
+        let mut context = null_mut();
+        // SAFETY: `params` is a valid version-2 parameter block; `context` is an out
+        // pointer. TBS reads the version field to interpret the structure.
+        let status = unsafe {
+            Tbsi_Context_Create(
+                (&params as *const TBS_CONTEXT_PARAMS2).cast::<TBS_CONTEXT_PARAMS>(),
+                &mut context,
+            )
+        };
+        check("Tbsi_Context_Create", status as i32)?;
+        Ok(Self(context))
+    }
+    /// Submit one marshalled command and return the marshalled response, whose TPM
+    /// response code the caller checks.
+    pub fn submit(&self, command: &[u8]) -> Result<Vec<u8>> {
+        let mut response = vec![0u8; MAX_TPM_RESPONSE];
+        let mut size = response.len() as u32;
+        // SAFETY: `command` and `response` are valid for their stated lengths; the
+        // context is live.
+        let status = unsafe {
+            Tbsip_Submit_Command(
+                self.0,
+                TBS_COMMAND_LOCALITY_ZERO,
+                TBS_COMMAND_PRIORITY_NORMAL,
+                command.as_ptr(),
+                u32::try_from(command.len()).map_err(|_| Error {
+                    call: "Tbsip_Submit_Command",
+                    status: status::NOT_SUPPORTED,
+                })?,
+                response.as_mut_ptr(),
+                &mut size,
+            )
+        };
+        check("Tbsip_Submit_Command", status as i32)?;
+        response.truncate(size as usize);
+        Ok(response)
+    }
+}
+
 /// Which P-384 key role to create or import.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Algorithm {
@@ -124,6 +195,36 @@ fn set_property(handle: usize, name: &str, value: &[u8]) -> Result<()> {
     check("NCryptSetProperty", status)
 }
 
+/// Read a byte property of a provider or key handle.
+fn get_property(handle: usize, name: &str) -> Result<Vec<u8>> {
+    let name = wide(name);
+    let mut size = 0u32;
+    // SAFETY: a null output buffer with length 0 queries the required size.
+    let status = unsafe { NCryptGetProperty(handle, name.as_ptr(), null_mut(), 0, &mut size, 0) };
+    check("NCryptGetProperty", status)?;
+    if size > MAX_BLOB {
+        return Err(Error {
+            call: "NCryptGetProperty",
+            status: status::NOT_SUPPORTED,
+        });
+    }
+    let mut buffer = vec![0u8; size as usize];
+    // SAFETY: `buffer` holds `size` bytes as the previous call requested.
+    let status = unsafe {
+        NCryptGetProperty(
+            handle,
+            name.as_ptr(),
+            buffer.as_mut_ptr(),
+            size,
+            &mut size,
+            0,
+        )
+    };
+    check("NCryptGetProperty", status)?;
+    buffer.truncate(size as usize);
+    Ok(buffer)
+}
+
 impl Provider {
     pub fn open() -> Result<Self> {
         let name = wide(PROVIDER);
@@ -161,6 +262,116 @@ impl Provider {
             .take_while(|u| *u != 0)
             .collect();
         Ok(String::from_utf16_lossy(&units))
+    }
+
+    /// A provider property as bytes, such as `PCP_EKPUB` (a `BCRYPT_RSAPUBLIC_BLOB`
+    /// for the RSA endorsement key) or `PCP_EKNVCERT` (the EK certificate in TPM NV).
+    pub fn property(&self, name: &str) -> Result<Vec<u8>> {
+        get_property(self.0.0, name)
+    }
+
+    /// DER certificates from a provider property that returns a certificate store
+    /// handle, such as `PCP_EKNVCERT` (from TPM NV) or `PCP_EKCERT` (all EK
+    /// certificates Windows knows, including ones fetched from the manufacturer).
+    pub fn certificates(&self, name: &str) -> Result<Vec<Vec<u8>>> {
+        let value = self.property(name)?;
+        let bytes: [u8; core::mem::size_of::<usize>()] =
+            value.as_slice().try_into().map_err(|_| Error {
+                call: "NCryptGetProperty",
+                status: status::NOT_SUPPORTED,
+            })?;
+        let store = usize::from_ne_bytes(bytes) as HCERTSTORE;
+        if store.is_null() {
+            return Ok(Vec::new());
+        }
+        let mut certificates = Vec::new();
+        let mut context = null_mut();
+        loop {
+            // SAFETY: `store` is a certificate store handle the provider returned;
+            // enumeration frees the previous context on each call.
+            context = unsafe { CertEnumCertificatesInStore(store, context) };
+            if context.is_null() {
+                break;
+            }
+            // SAFETY: a non-null context points at a CERT_CONTEXT whose encoded
+            // certificate spans `cbCertEncoded` bytes while the context is live.
+            let der = unsafe {
+                core::slice::from_raw_parts(
+                    (*context).pbCertEncoded,
+                    (*context).cbCertEncoded as usize,
+                )
+            };
+            if der.len() <= MAX_BLOB as usize {
+                certificates.push(der.to_vec());
+            }
+        }
+        // SAFETY: the store handle is owned by this call and closed exactly once.
+        unsafe { CertCloseStore(store, 0) };
+        Ok(certificates)
+    }
+
+    /// Create a persisted RSA-2048 attestation identity key: a restricted signing key
+    /// that signs only TPM-generated structures. It has no usage authorization.
+    pub fn create_identity_key(&self, name: &str) -> Result<Key> {
+        let (key_name, algorithm_name) = (wide(name), wide("RSA"));
+        let mut handle = 0;
+        // SAFETY: out pointer and NUL-terminated names are valid for the call.
+        let status = unsafe {
+            NCryptCreatePersistedKey(
+                self.0.0,
+                &mut handle,
+                algorithm_name.as_ptr(),
+                key_name.as_ptr(),
+                0,
+                0,
+            )
+        };
+        check("NCryptCreatePersistedKey", status)?;
+        let key = Key {
+            handle: Handle(handle),
+        };
+        set_property(
+            key.handle.0,
+            KEY_USAGE_POLICY,
+            &NCRYPT_PCP_IDENTITY_KEY.to_le_bytes(),
+        )?;
+        // SAFETY: the handle is a key being created by this provider.
+        let status = unsafe { NCryptFinalizeKey(key.handle.0, NCRYPT_SILENT_FLAG as NCRYPT_FLAGS) };
+        check("NCryptFinalizeKey", status)?;
+        Ok(key)
+    }
+
+    /// Open a persisted key that has no usage authorization, such as an identity key.
+    pub fn open_unauthenticated(&self, name: &str) -> Result<Key> {
+        let key_name = wide(name);
+        let mut handle = 0;
+        // SAFETY: out pointer and NUL-terminated name are valid for the call.
+        let status = unsafe {
+            NCryptOpenKey(
+                self.0.0,
+                &mut handle,
+                key_name.as_ptr(),
+                0,
+                NCRYPT_SILENT_FLAG as NCRYPT_FLAGS,
+            )
+        };
+        check("NCryptOpenKey", status)?;
+        Ok(Key {
+            handle: Handle(handle),
+        })
+    }
+
+    /// Delete a persisted key that has no usage authorization.
+    pub fn delete_unauthenticated(&self, name: &str) -> Result<()> {
+        let key = self.open_unauthenticated(name)?;
+        let handle = key.handle.0;
+        core::mem::forget(key);
+        // SAFETY: NCryptDeleteKey frees the handle on success; on failure we free it.
+        let status = unsafe { NCryptDeleteKey(handle, 0) };
+        if status < 0 {
+            drop(Handle(handle));
+        }
+        check("NCryptDeleteKey", status)
     }
 
     /// Signature and secret-agreement algorithm names the provider supports, such as
@@ -310,6 +521,124 @@ impl Provider {
 }
 
 impl Key {
+    /// A key property as bytes, such as `PCP_TPM2BNAME`.
+    pub fn property(&self, name: &str) -> Result<Vec<u8>> {
+        get_property(self.handle.0, name)
+    }
+
+    /// The provider's opaque key blob. For Platform Crypto Provider keys it holds the
+    /// TPM2B_PUBLIC area and the TPM-wrapped private area; nothing usable outside
+    /// this TPM.
+    pub fn export_opaque(&self) -> Result<Vec<u8>> {
+        let blob_type = wide(OPAQUE_BLOB);
+        let mut size = 0u32;
+        // SAFETY: a null output buffer queries the required size. The provider
+        // rejects NCRYPT_SILENT_FLAG here (NTE_BAD_FLAGS).
+        let status = unsafe {
+            NCryptExportKey(
+                self.handle.0,
+                0,
+                blob_type.as_ptr(),
+                null(),
+                null_mut(),
+                0,
+                &mut size,
+                0,
+            )
+        };
+        check("NCryptExportKey", status)?;
+        if size > MAX_BLOB {
+            return Err(Error {
+                call: "NCryptExportKey",
+                status: status::NOT_SUPPORTED,
+            });
+        }
+        let mut blob = vec![0u8; size as usize];
+        // SAFETY: `blob` holds `size` bytes as the previous call requested.
+        let status = unsafe {
+            NCryptExportKey(
+                self.handle.0,
+                0,
+                blob_type.as_ptr(),
+                null(),
+                blob.as_mut_ptr(),
+                size,
+                &mut size,
+                0,
+            )
+        };
+        check("NCryptExportKey", status)?;
+        blob.truncate(size as usize);
+        Ok(blob)
+    }
+
+    /// Key attestation: this identity key certifies `subject` with TPM2_Certify over
+    /// `nonce` (the provider's `NCRYPT_CLAIM_AUTHORITY_AND_SUBJECT` claim).
+    pub fn certify(&self, subject: &Key, nonce: &[u8]) -> Result<Vec<u8>> {
+        let mut nonce = nonce.to_vec();
+        let mut buffer = BCryptBuffer {
+            cbBuffer: u32::try_from(nonce.len()).map_err(|_| Error {
+                call: "NCryptCreateClaim",
+                status: status::NOT_SUPPORTED,
+            })?,
+            BufferType: NCRYPTBUFFER_CLAIM_KEYATTESTATION_NONCE,
+            pvBuffer: nonce.as_mut_ptr().cast(),
+        };
+        let parameters = BCryptBufferDesc {
+            ulVersion: 0,
+            cBuffers: 1,
+            pBuffers: &mut buffer,
+        };
+        let mut size = 0u32;
+        // SAFETY: both handles are live keys; `parameters` points at one valid buffer
+        // that outlives the call; a null output queries the required size.
+        let status = unsafe {
+            NCryptCreateClaim(
+                subject.handle.0,
+                self.handle.0,
+                NCRYPT_CLAIM_AUTHORITY_AND_SUBJECT,
+                &parameters,
+                null_mut(),
+                0,
+                &mut size,
+                0,
+            )
+        };
+        check("NCryptCreateClaim", status)?;
+        if size > MAX_BLOB {
+            return Err(Error {
+                call: "NCryptCreateClaim",
+                status: status::NOT_SUPPORTED,
+            });
+        }
+        let mut claim = vec![0u8; size as usize];
+        // SAFETY: as above, with `claim` holding `size` bytes.
+        let status = unsafe {
+            NCryptCreateClaim(
+                subject.handle.0,
+                self.handle.0,
+                NCRYPT_CLAIM_AUTHORITY_AND_SUBJECT,
+                &parameters,
+                claim.as_mut_ptr(),
+                size,
+                &mut size,
+                0,
+            )
+        };
+        check("NCryptCreateClaim", status)?;
+        claim.truncate(size as usize);
+        Ok(claim)
+    }
+
+    /// TPM2_ActivateCredential for this identity key with the endorsement key:
+    /// `blob` is the TPM2B_ID_OBJECT followed by the TPM2B_ENCRYPTED_SECRET. Returns
+    /// the recovered credential; the TPM releases it only if this key and the EK are
+    /// resident in the same TPM.
+    pub fn activate(&self, blob: &[u8]) -> Result<Vec<u8>> {
+        set_property(self.handle.0, IDENTITY_ACTIVATION, blob)?;
+        get_property(self.handle.0, IDENTITY_ACTIVATION)
+    }
+
     /// The key's public point as uncompressed SEC1 (`04 || X || Y`).
     pub fn public_point(&self) -> Result<Vec<u8>> {
         let blob_type = wide(ECC_PUBLIC_BLOB);
@@ -461,6 +790,286 @@ mod tests {
         assert!(
             provider.open_key(&ecdsa_name, &auth).is_err(),
             "probe keys deleted"
+        );
+        result.unwrap();
+    }
+
+    /// Live probe of key attestation support. Creates an identity key and a P-384
+    /// key, prints what the provider exposes, saves the blobs to the temp directory
+    /// for offline parsing, and deletes both keys.
+    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture attestation`.
+    #[test]
+    #[ignore]
+    fn attestation_probe() {
+        let provider = Provider::open().unwrap();
+        let out = std::env::temp_dir();
+        for name in ["PCP_EKNVCERT", "PCP_EKCERT"] {
+            match provider.certificates(name) {
+                Ok(list) => {
+                    eprintln!("{name}: {} certificates", list.len());
+                    for (index, der) in list.iter().enumerate() {
+                        std::fs::write(out.join(format!("apg-{name}-{index}.der")), der).unwrap();
+                    }
+                }
+                Err(error) => eprintln!("{name}: {error}"),
+            }
+        }
+        for name in ["PCP_EKPUB", "PCP_SRKPUB"] {
+            match provider.property(name) {
+                Ok(value) => {
+                    eprintln!("{name}: {} bytes", value.len());
+                    std::fs::write(out.join(format!("apg-{name}.bin")), value).unwrap();
+                }
+                Err(error) => eprintln!("{name}: {error}"),
+            }
+        }
+        let suffix = std::process::id();
+        let (aik_name, subject_name) = (
+            format!("apg-probe-{suffix}-aik"),
+            format!("apg-probe-{suffix}-sig"),
+        );
+        let auth = [0x5a_u8; 32];
+        let result = std::panic::catch_unwind(|| {
+            let aik = provider.create_identity_key(&aik_name).unwrap();
+            let opaque = aik.export_opaque().unwrap();
+            eprintln!("aik opaque: {} bytes", opaque.len());
+            std::fs::write(out.join("apg-aik-opaque.bin"), &opaque).unwrap();
+            match aik.property("PCP_TPM2BNAME") {
+                Ok(v) => eprintln!("aik name: {v:02x?}"),
+                Err(e) => eprintln!("aik name: {e}"),
+            }
+            provider
+                .create(&subject_name, Algorithm::EcdsaP384, &auth)
+                .unwrap();
+            let subject = provider.open_key(&subject_name, &auth).unwrap();
+            eprintln!(
+                "subject point: {:02x?}",
+                &subject.public_point().unwrap()[..8]
+            );
+            std::fs::write(
+                out.join("apg-subject-point.bin"),
+                subject.public_point().unwrap(),
+            )
+            .unwrap();
+            match subject.export_opaque() {
+                Ok(blob) => {
+                    eprintln!("subject opaque: {} bytes", blob.len());
+                    std::fs::write(out.join("apg-subject-opaque.bin"), blob).unwrap();
+                }
+                Err(error) => eprintln!("subject opaque: {error}"),
+            }
+            let claim = aik.certify(&subject, &[0x11; 32]).unwrap();
+            eprintln!("claim: {} bytes", claim.len());
+            std::fs::write(out.join("apg-claim.bin"), &claim).unwrap();
+        });
+        let _ = provider.delete(&subject_name, &auth);
+        provider.delete_unauthenticated(&aik_name).unwrap();
+        assert!(
+            provider.open_unauthenticated(&aik_name).is_err(),
+            "probe identity key deleted"
+        );
+        assert!(
+            provider.open_key(&subject_name, &auth).is_err(),
+            "probe subject key deleted"
+        );
+        result.unwrap();
+    }
+
+    fn command(tag: u16, code: u32, body: &[u8]) -> Vec<u8> {
+        let mut out = tag.to_be_bytes().to_vec();
+        out.extend_from_slice(&((10 + body.len()) as u32).to_be_bytes());
+        out.extend_from_slice(&code.to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+    fn code(response: &[u8]) -> u32 {
+        u32::from_be_bytes([response[6], response[7], response[8], response[9]])
+    }
+
+    /// Live probe of raw TPM access through TBS as the current user. Creates only a
+    /// transient primary key, which is flushed.
+    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture tbs`.
+    #[test]
+    #[ignore]
+    fn tbs_probe() {
+        let tbs = Tbs::open().unwrap();
+        let random = tbs
+            .submit(&command(0x8001, 0x17b, &8u16.to_be_bytes()))
+            .unwrap();
+        eprintln!("GetRandom rc=0x{:x} len={}", code(&random), random.len());
+        for handle in [0x8100_0001u32, 0x8101_0001, 0x8101_0002] {
+            let read = tbs
+                .submit(&command(0x8001, 0x173, &handle.to_be_bytes()))
+                .unwrap();
+            eprintln!(
+                "ReadPublic 0x{handle:08x} rc=0x{:x} len={}",
+                code(&read),
+                read.len()
+            );
+        }
+        // CreatePrimary(TPM_RH_ENDORSEMENT) of a restricted RSA-2048 RSASSA-SHA256 key.
+        let mut body = 0x4000_000bu32.to_be_bytes().to_vec();
+        let auth = [0x4000_0009u32.to_be_bytes().to_vec(), vec![0, 0, 0, 0, 0]].concat();
+        body.extend_from_slice(&(auth.len() as u32).to_be_bytes());
+        body.extend_from_slice(&auth);
+        body.extend_from_slice(&[0, 4, 0, 0, 0, 0]); // inSensitive: empty auth and data
+        let attributes: u32 = 0x2 | 0x10 | 0x20 | 0x40 | 0x400 | 0x1_0000 | 0x4_0000;
+        let mut public = vec![0x00, 0x01, 0x00, 0x0b];
+        public.extend_from_slice(&attributes.to_be_bytes());
+        public.extend_from_slice(&[0, 0]); // authPolicy
+        public.extend_from_slice(&[0x00, 0x10]); // symmetric: null
+        public.extend_from_slice(&[0x00, 0x14, 0x00, 0x0b]); // RSASSA, SHA-256
+        public.extend_from_slice(&[0x08, 0x00, 0, 0, 0, 0]); // 2048 bits, default exponent
+        public.extend_from_slice(&[0, 0]); // unique
+        body.extend_from_slice(&(public.len() as u16).to_be_bytes());
+        body.extend_from_slice(&public);
+        body.extend_from_slice(&[0, 0, 0, 0, 0, 0]); // outsideInfo, creationPCR
+        let created = tbs.submit(&command(0x8002, 0x131, &body)).unwrap();
+        let rc = code(&created);
+        eprintln!(
+            "CreatePrimary(endorsement) rc=0x{rc:x} len={}",
+            created.len()
+        );
+        if rc == 0 {
+            let handle = &created[10..14];
+            let flush = tbs.submit(&command(0x8001, 0x165, handle)).unwrap();
+            eprintln!("FlushContext rc=0x{:x}", code(&flush));
+        }
+    }
+
+    fn password_session(auth: &[u8]) -> Vec<u8> {
+        let mut out = 0x4000_0009u32.to_be_bytes().to_vec();
+        out.extend_from_slice(&[0, 0, 0]); // empty nonce, no attributes
+        out.extend_from_slice(&(auth.len() as u16).to_be_bytes());
+        out.extend_from_slice(auth);
+        out
+    }
+    fn sessions(list: &[Vec<u8>]) -> Vec<u8> {
+        let body = list.concat();
+        let mut out = (body.len() as u32).to_be_bytes().to_vec();
+        out.extend_from_slice(&body);
+        out
+    }
+
+    /// Live probe: load a Platform Crypto Provider key through TBS and certify it
+    /// with a transient endorsement-hierarchy AK, to learn the provider's authValue
+    /// encoding. At most two authorization attempts (the DA counter counts them).
+    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture tbs_certify`.
+    #[test]
+    #[ignore]
+    fn tbs_certify_probe() {
+        let provider = Provider::open().unwrap();
+        let tbs = Tbs::open().unwrap();
+        let name = format!("apg-probe-{}-sig", std::process::id());
+        let auth = [0x5a_u8; 32];
+        provider.create(&name, Algorithm::EcdsaP384, &auth).unwrap();
+        let result = std::panic::catch_unwind(|| {
+            let key = provider.open_key(&name, &auth).unwrap();
+            let blob = key.export_opaque().unwrap();
+            let header: Vec<u32> = blob[..56]
+                .chunks_exact(4)
+                .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+                .collect();
+            let (start, public_len, private_len) =
+                (header[1] as usize, header[4] as usize, header[5] as usize);
+            let public = &blob[start..start + public_len];
+            let private = &blob[start + public_len..start + public_len + private_len];
+            // Load under the storage root key (empty authorization).
+            let mut body = 0x8100_0001u32.to_be_bytes().to_vec();
+            body.extend(sessions(&[password_session(&[])]));
+            body.extend_from_slice(private);
+            body.extend_from_slice(public);
+            let loaded = tbs.submit(&command(0x8002, 0x157, &body)).unwrap();
+            eprintln!("Load rc=0x{:x}", code(&loaded));
+            assert_eq!(code(&loaded), 0);
+            let object = loaded[10..14].to_vec();
+            // Transient AK: restricted RSA-2048 RSASSA-SHA256 primary in the endorsement hierarchy.
+            let mut body = 0x4000_000bu32.to_be_bytes().to_vec();
+            body.extend(sessions(&[password_session(&[])]));
+            body.extend_from_slice(&[0, 4, 0, 0, 0, 0]);
+            let attributes: u32 = 0x2 | 0x10 | 0x20 | 0x40 | 0x400 | 0x1_0000 | 0x4_0000;
+            let mut template = vec![0x00, 0x01, 0x00, 0x0b];
+            template.extend_from_slice(&attributes.to_be_bytes());
+            template.extend_from_slice(&[0, 0, 0x00, 0x10, 0x00, 0x14, 0x00, 0x0b]);
+            template.extend_from_slice(&[0x08, 0x00, 0, 0, 0, 0, 0, 0]);
+            body.extend_from_slice(&(template.len() as u16).to_be_bytes());
+            body.extend_from_slice(&template);
+            body.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
+            let created = tbs.submit(&command(0x8002, 0x131, &body)).unwrap();
+            assert_eq!(code(&created), 0);
+            let ak = created[10..14].to_vec();
+            let digest = {
+                use ic_core::traits::Digest;
+                ic_hash::Sha256::digest(&auth).as_ref().to_vec()
+            };
+            for (label, candidate) in [("raw", auth.to_vec()), ("sha256", digest)] {
+                let mut body = object.clone();
+                body.extend_from_slice(&ak);
+                body.extend(sessions(&[
+                    password_session(&candidate),
+                    password_session(&[]),
+                ]));
+                body.extend_from_slice(&[0, 4, 1, 2, 3, 4]); // qualifyingData
+                body.extend_from_slice(&[0x00, 0x10]); // inScheme: key default
+                let certified = tbs.submit(&command(0x8002, 0x148, &body)).unwrap();
+                eprintln!(
+                    "Certify with {label} authValue rc=0x{:x} len={}",
+                    code(&certified),
+                    certified.len()
+                );
+                if code(&certified) == 0 {
+                    std::fs::write(std::env::temp_dir().join("apg-tbs-certify.bin"), &certified)
+                        .unwrap();
+                    break;
+                }
+            }
+            for handle in [object, ak] {
+                let _ = tbs.submit(&command(0x8001, 0x165, &handle));
+            }
+        });
+        provider.delete(&name, &auth).unwrap();
+        assert!(
+            provider.open_key(&name, &auth).is_err(),
+            "probe key deleted"
+        );
+        result.unwrap();
+    }
+
+    /// Live probe: can a Platform Crypto Provider identity key be loaded through TBS
+    /// under the Windows storage root key? Load uses only the parent's (empty)
+    /// authorization. The identity key is deleted afterwards.
+    #[test]
+    #[ignore]
+    fn tbs_load_identity_key_probe() {
+        let provider = Provider::open().unwrap();
+        let tbs = Tbs::open().unwrap();
+        let name = format!("apg-probe-{}-aik", std::process::id());
+        let aik = provider.create_identity_key(&name).unwrap();
+        let result = std::panic::catch_unwind(|| {
+            let blob = aik.export_opaque().unwrap();
+            let header: Vec<u32> = blob[..56]
+                .chunks_exact(4)
+                .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+                .collect();
+            let (start, public_len, private_len) =
+                (header[1] as usize, header[4] as usize, header[5] as usize);
+            let public = &blob[start..start + public_len];
+            let private = &blob[start + public_len..start + public_len + private_len];
+            let mut body = 0x8100_0001u32.to_be_bytes().to_vec();
+            body.extend(sessions(&[password_session(&[])]));
+            body.extend_from_slice(private);
+            body.extend_from_slice(public);
+            let loaded = tbs.submit(&command(0x8002, 0x157, &body)).unwrap();
+            eprintln!("Load identity key under SRK rc=0x{:x}", code(&loaded));
+            if code(&loaded) == 0 {
+                let _ = tbs.submit(&command(0x8001, 0x165, &loaded[10..14]));
+            }
+        });
+        drop(aik);
+        provider.delete_unauthenticated(&name).unwrap();
+        assert!(
+            provider.open_unauthenticated(&name).is_err(),
+            "probe identity key deleted"
         );
         result.unwrap();
     }

@@ -1478,6 +1478,366 @@
     "title": "Signature",
     "type": "object"
   },
+  "tpm_challenge": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "encrypted_secret": {
+        "description": "TPM2B_ENCRYPTED_SECRET contents, lowercase hex.",
+        "maxLength": 2048,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      },
+      "evidence_digest": {
+        "description": "SHA-384 of the canonical evidence the challenge answers.",
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "fingerprint": {
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-tpm-challenge-v1",
+        "type": "string"
+      },
+      "id_object": {
+        "description": "TPM2B_ID_OBJECT contents, lowercase hex.",
+        "maxLength": 2048,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "fingerprint",
+      "evidence_digest",
+      "id_object",
+      "encrypted_secret"
+    ],
+    "title": "Challenge",
+    "type": "object"
+  },
+  "tpm_challenge_secret": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "The verifier's private half of a challenge. Keep it secret and use it once.",
+    "properties": {
+      "credential": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "evidence_digest": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "fingerprint": {
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-tpm-challenge-secret-v1",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "fingerprint",
+      "evidence_digest",
+      "credential"
+    ],
+    "title": "ChallengeSecret",
+    "type": "object"
+  },
+  "tpm_evidence": {
+    "$defs": {
+      "KeyCertification": {
+        "additionalProperties": false,
+        "properties": {
+          "attest": {
+            "description": "TPMS_ATTEST of type TPM_ST_ATTEST_CERTIFY, lowercase hex.",
+            "maxLength": 2048,
+            "minLength": 2,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{2})+$",
+            "type": "string"
+          },
+          "public": {
+            "description": "The certified key's TPMT_PUBLIC, lowercase hex.",
+            "maxLength": 2048,
+            "minLength": 2,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{2})+$",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/$defs/Role"
+          },
+          "signature": {
+            "description": "TPMT_SIGNATURE by the attestation key (RSASSA, SHA-256), lowercase hex.",
+            "maxLength": 2048,
+            "minLength": 2,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{2})+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "public",
+          "attest",
+          "signature"
+        ],
+        "type": "object"
+      },
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "apg-public-v1",
+              "apg-public-p384-v1",
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      },
+      "Role": {
+        "enum": [
+          "encryption",
+          "signing"
+        ],
+        "type": "string"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "Prover output of `tpm.attest`. Public; contains no secret.",
+    "properties": {
+      "ak_public": {
+        "description": "The attestation key's TPMT_PUBLIC, lowercase hex.",
+        "maxLength": 2048,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      },
+      "certifications": {
+        "items": {
+          "$ref": "#/$defs/KeyCertification"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "ek_certificates": {
+        "description": "DER certificates, lowercase hex: the EK certificate first, then any\nintermediates the platform supplied.",
+        "items": {
+          "maxLength": 8192,
+          "minLength": 2,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{2})+$",
+          "type": "string"
+        },
+        "maxItems": 4,
+        "minItems": 1,
+        "type": "array"
+      },
+      "ek_public": {
+        "description": "The RSA-2048 endorsement key's TPMT_PUBLIC (TCG default template), lowercase hex.",
+        "maxLength": 2048,
+        "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-tpm-evidence-v1",
+        "type": "string"
+      },
+      "public": {
+        "$ref": "#/$defs/PublicKey",
+        "description": "The attested apg-public-p384-v1 identity."
+      }
+    },
+    "required": [
+      "format",
+      "public",
+      "ek_public",
+      "ek_certificates",
+      "ak_public",
+      "certifications"
+    ],
+    "title": "Evidence",
+    "type": "object"
+  },
   "tpm_key": {
     "$defs": {
       "PublicKey": {
@@ -1682,7 +2042,11 @@
         "type": "string"
       },
       "parent": {
-        "const": "apg-owner-ecc-p384-srk-v1",
+        "description": "APG's owner-hierarchy P-384 storage root (Linux) or the Windows storage root key at 0x81000001.",
+        "enum": [
+          "apg-owner-ecc-p384-srk-v1",
+          "windows-srk-81000001"
+        ],
         "type": "string"
       },
       "public": {
@@ -1705,6 +2069,36 @@
       "signing_key"
     ],
     "title": "TpmKey",
+    "type": "object"
+  },
+  "tpm_response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "credential": {
+        "description": "The credential the TPM released, lowercase hex.",
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "evidence_digest": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-tpm-response-v1",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "evidence_digest",
+      "credential"
+    ],
+    "title": "AttestationResponse",
     "type": "object"
   },
   "trust_store": {

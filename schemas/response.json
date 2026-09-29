@@ -15,6 +15,53 @@
         }
       ]
     },
+    "AttestationReport": {
+      "description": "What a verified attestation establishes.",
+      "properties": {
+        "activation_verified": {
+          "description": "The AK and EK proved to share a TPM (credential activation); false for\nevidence checked without a response.",
+          "type": "boolean"
+        },
+        "ek_certificate_anchor": {
+          "description": "SHA-256 of the trust anchor certificate the chain ended at, lowercase hex.",
+          "type": "string"
+        },
+        "ek_certificate_sha256": {
+          "description": "SHA-256 of the EK certificate, lowercase hex.",
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "firmware_version": {
+          "description": "TPM firmware version reported in the certifications.",
+          "type": "string"
+        },
+        "key_attributes": {
+          "description": "Attributes both keys carry: fixedTPM, fixedParent, sensitiveDataOrigin.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "ek_certificate_sha256",
+        "ek_certificate_anchor",
+        "firmware_version",
+        "key_attributes",
+        "activation_verified"
+      ],
+      "type": "object"
+    },
     "Certificate": {
       "description": "Certificate evaluated under APG policy at `evaluated_at` (host time).",
       "properties": {
@@ -1218,6 +1265,102 @@
                 "structurally_valid",
                 "format",
                 "authenticated"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "ek_certificates": {
+                  "description": "EK certificates the platform supplied.",
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "fingerprint": {
+                  "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+                  "maxLength": 96,
+                  "minLength": 64,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "tpm_evidence",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "ek_certificates"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "tpm_challenge",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "report": {
+                  "$ref": "#/$defs/AttestationReport",
+                  "description": "Everything verified so far; activation_verified is false until tpm.attestation.verify."
+                },
+                "secret_path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "secret_path",
+                "report"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "tpm_response",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "attested": {
+                  "description": "True only when the EK chain, both key certifications and the credential\nactivation all verified.",
+                  "type": "boolean"
+                },
+                "kind": {
+                  "const": "tpm_attestation",
+                  "type": "string"
+                },
+                "report": {
+                  "$ref": "#/$defs/AttestationReport"
+                }
+              },
+              "required": [
+                "kind",
+                "attested",
+                "report"
               ],
               "type": "object"
             },

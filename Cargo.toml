@@ -40,6 +40,12 @@ webpki-roots = { version = "1", optional = true }
 # (RustCrypto) primitives, and APG adds certificate-validity policy on top.
 pgp = { version = "=0.20.0", default-features = false, optional = true }
 rand_core = { version = "0.6", features = ["getrandom"], optional = true }
+# TPM attestation verification: IronCrypto RSA and rustls-webpki path validation
+# (with IronCrypto's signature algorithms) for endorsement-key certificate chains.
+ic-rsa = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c", optional = true }
+ic-pkix = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c", optional = true }
+webpki = { package = "rustls-webpki", version = "0.103", default-features = false, features = ["std"], optional = true }
+pki-types = { package = "rustls-pki-types", version = "1", optional = true }
 
 # TPM access: the system TPM2 software stack (tpm2-tss) on Linux, CNG's Platform
 # Crypto Provider on Windows (FFI isolated in crates/apg-cng).
@@ -59,7 +65,10 @@ default = []
 pkcs11 = ["dep:cryptoki", "dep:secrecy"]
 # TPM 2.0 identities: tpm2-tss (ESAPI) on Linux, linking libtss2 dynamically; the
 # Microsoft Platform Crypto Provider on Windows.
-tpm = ["dep:tss-esapi", "dep:apg-cng"]
+tpm = ["dep:tss-esapi", "dep:apg-cng", "attestation"]
+# Verify TPM key attestations (EK certificate chains, TPM2_Certify evidence and
+# credential activation) without a TPM.
+attestation = ["dep:ic-rsa", "dep:ic-pkix", "dep:webpki", "dep:pki-types", "dep:ic-rustls"]
 # AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
 kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
 # OpenPGP (RFC 9580 v4) keys, messages and signatures for GnuPG interoperability,

@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 43 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 47 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -49,9 +49,11 @@ cargo build --release --locked --features pkcs11 --target-dir target
 
 AWS KMS identities need the `kms` feature (still no C compilation: TLS uses rustls
 with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: on Linux it links the system tpm2-tss
-libraries (`libtss2-dev`); on Windows it uses the Platform Crypto Provider through the
-small `apg-cng` crate, the only code in APG with `unsafe`. See
-[hardware identities](docs/HARDWARE.md#tpm-20).
+libraries (`libtss2-dev`); on Windows it uses TPM Base Services through the small
+`apg-cng` crate, the only code in APG with `unsafe`. See
+[hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
+verifier holding only the manufacturer's root certificates; the verifier needs the
+`attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
 OpenPGP interoperability needs the `openpgp` feature. It uses the pure-Rust rPGP
 library, not IronCrypto, for OpenPGP packets and primitives; see
@@ -101,7 +103,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 43 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 47 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -144,6 +146,7 @@ apg knowledge search --query "openpgp"
 | Manage trust and lifecycle | `trust.*`, `key.revoke`, `key.validity`, certificate verification |
 | Identify native artifacts | `inspect` |
 | Hardware key custody (PKCS#11 tokens, HSMs, TPM 2.0) | `hardware.*` or `tpm.*`, then any key operation with the key file |
+| Prove keys are resident in a genuine TPM | `tpm.attest`, `tpm.attestation.challenge`, `tpm.attestation.respond`, `tpm.attestation.verify` |
 | Managed key custody (AWS KMS), optionally with composite ML-DSA-65 signatures | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity apg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
 | Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify` |
@@ -363,8 +366,11 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/provider.rs` | Key inputs, hardware references, PIN rules, host custody policy |
 | `src/pkcs11.rs` | PKCS#11 backend (`pkcs11` feature): token selection, key checks, signing and ECDH |
 | `src/tpm.rs` | TPM 2.0 backend (`tpm` feature, Linux): storage root, wrapped keys, HMAC sessions |
-| `src/cng.rs` | TPM 2.0 backend (`tpm` feature, Windows): Platform Crypto Provider keys |
-| `crates/apg-cng` | Minimal safe wrapper over Windows CNG; the only `unsafe` code |
+| `src/cng.rs` | Earlier Windows TPM keys (apg-cng-key-v1) through the Platform Crypto Provider |
+| `src/tpm2/` | APG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
+| `src/tpm_native.rs` | Windows TPM keys through TBS, and the attestation prover on every platform |
+| `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
+| `crates/apg-cng` | Minimal safe wrapper over Windows CNG and TBS; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary (`openpgp` feature): key file, rPGP operations and APG certificate policy |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
@@ -387,7 +393,9 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/hardware.rs` | Fail-closed hardware configuration, custody policy, pre-login checks |
 | `tests/pkcs11_live.rs` | Full hardware lifecycle against a real module (opt-in, disposable token) |
 | `tests/tpm_live.rs` | Full TPM lifecycle (opt-in; swtpm via `scripts/tpm-test.sh`) |
-| `tests/windows_tpm_live.rs` | Full lifecycle on the machine's real TPM (opt-in, self-cleaning) |
+| `tests/windows_tpm_live.rs` | apg-cng-key-v1 lifecycle on the machine's real TPM (opt-in, self-cleaning) |
+| `tests/tpm_attest_live.rs` | TPM identity and attestation round trip (swtpm or a real TPM, opt-in) |
+| `tests/attestation.rs` | Offline attestation verification and tamper rejection with swtpm evidence |
 | `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody and MCP exposure |
 | `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |

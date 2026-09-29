@@ -218,18 +218,30 @@ binding sessions to the endorsement key certificate would be needed for that.
 
 ### Windows
 
-On Windows, `tpm` builds use CNG's Microsoft Platform Crypto Provider instead of
-tpm2-tss; no configuration is needed. `tpm.key.generate` creates two persisted,
-non-exportable TPM-backed keys (ECDH P-384 and ECDSA P-384) in the user's key store
-and writes an `apg-cng-key-v1` file naming them. The usage authorization is SHA-256
-over the framed PIN, and the TPM's dictionary-attack lockout limits guessing. Each
-use checks the TPM vendor against the key file and requires the keys to match the
-pinned identity.
+On Windows, `tpm` builds reach the TPM through TPM Base Services (TBS) with APG's own
+TPM 2.0 command layer; no configuration or administrator rights are needed.
+`tpm.key.generate` creates the two keys (ECDH P-384 and ECDSA P-384) under the
+Windows storage root key (persistent handle `0x81000001`) and writes an
+`apg-tpm-key-v1` file with parent `windows-srk-81000001` holding their TPM-wrapped
+blobs, exactly like Linux key files. Nothing persists in the TPM: deleting every copy
+of the file destroys the identity. The key authorization derives from the PIN as on
+Linux, key operations run in HMAC sessions salted with the storage root key (with
+AES-128-CFB parameter encryption for key creation and ECDH), and the TPM's
+dictionary-attack lockout limits guessing. These keys can be attested; see
+[TPM key attestation](ATTESTATION.md).
 
-Unlike Linux key files, the keys themselves persist in the key store. Remove them
-with `apg tpm key delete --key alice.cng.json --passphrase-file pin.bin`; it checks
-the PIN and identity first, and deletion is irreversible. All FFI is isolated in
-the `apg-cng` crate, the only code in APG that uses `unsafe`.
+Identities created by earlier versions are `apg-cng-key-v1` files naming persisted
+Platform Crypto Provider keys. They keep working and can be removed with
+`apg tpm key delete --key alice.cng.json --passphrase-file pin.bin` (it checks the PIN
+and identity first; deletion is irreversible), but they cannot be attested. All FFI
+(CNG and TBS) is isolated in the `apg-cng` crate, the only code in APG that uses
+`unsafe`.
+
+### Attestation
+
+`tpm.attest` and the `tpm.attestation.*` operations let a verifier confirm that an
+identity's keys are resident, non-exportable keys of a manufacturer-certified TPM.
+See [TPM key attestation](ATTESTATION.md).
 
 ## AWS KMS
 
