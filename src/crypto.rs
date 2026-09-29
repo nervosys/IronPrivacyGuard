@@ -135,6 +135,14 @@ impl Suite {
             Self::Hybrid => 64 + mldsa::SIGNATURE_LEN,
         }
     }
+    /// Fingerprint length: SHA-256 for the original apg-public-v1 suite, SHA-384 for
+    /// the P-384 (CNSA-aligned) and hybrid post-quantum suites.
+    pub fn fingerprint_len(self) -> usize {
+        match self {
+            Self::Curve25519 => 32,
+            Self::P384 | Self::Hybrid => 48,
+        }
+    }
     /// Software secret format and protected seed length, if the suite has one.
     pub fn software_secret(self) -> Option<(&'static str, usize)> {
         match self {
@@ -174,7 +182,7 @@ pub struct PublicKey {
     pub encryption_key: String,
     #[schemars(schema_with = "crate::contract::public_key_bytes")]
     pub signing_key: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::fingerprint")]
     pub fingerprint: String,
 }
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -204,7 +212,7 @@ pub struct Envelope {
     pub format: String,
     #[schemars(schema_with = "crate::contract::suite")]
     pub suite: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::fingerprint")]
     pub recipient: String,
     #[schemars(schema_with = "crate::contract::ephemeral_bytes")]
     pub ephemeral_key: String,
@@ -221,7 +229,7 @@ pub struct Envelope {
 pub struct Signature {
     #[schemars(schema_with = "crate::contract::signature_format")]
     pub format: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::fingerprint")]
     pub signer: String,
     #[schemars(schema_with = "crate::contract::signature_algorithm")]
     pub algorithm: String,
@@ -273,7 +281,7 @@ impl Envelope {
             ));
         }
         let suite = Suite::from_envelope_suite(&self.suite)?;
-        bytes::<32>(&self.recipient)?;
+        check_fingerprint(&self.recipient)?;
         let ephemeral = hex_exact(&self.ephemeral_key, suite.ephemeral_len())?;
         if suite == Suite::P384 {
             p384_point(&ephemeral)?;
@@ -300,7 +308,7 @@ impl Signature {
             ));
         }
         let suite = Suite::from_algorithm(&self.algorithm)?;
-        bytes::<32>(&self.signer)?;
+        check_fingerprint(&self.signer)?;
         hex_exact(&self.signature, suite.signature_len())?;
         Ok(())
     }
@@ -357,10 +365,17 @@ pub(crate) fn frame(domain: &str, fields: &[&[u8]]) -> Vec<u8> {
     out
 }
 fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> String {
-    hex::encode(Sha256::digest(&frame(
-        suite.identity_domain(),
-        &[encryption, signing],
-    )))
+    let framed = frame(suite.identity_domain(), &[encryption, signing]);
+    match suite {
+        Suite::Curve25519 => hex::encode(Sha256::digest(&framed)),
+        Suite::P384 | Suite::Hybrid => hex::encode(Sha384::digest(&framed)),
+    }
+}
+/// Check a fingerprint field: 32-byte (apg-public-v1) or 48-byte (P-384 and hybrid)
+/// lowercase hexadecimal. Pins then compare exactly, so lengths never mix.
+pub fn check_fingerprint(fingerprint: &str) -> Result<()> {
+    let length = if fingerprint.len() == 96 { 48 } else { 32 };
+    hex_exact(fingerprint, length).map(|_| ())
 }
 /// Bind validated encryption and signing public keys into a fingerprinted identity.
 pub fn identity(suite: Suite, encryption: &[u8], signing: &[u8]) -> Result<PublicKey> {
@@ -1101,6 +1116,7 @@ mod tests {
         let key = alice();
         let public = key.public().clone();
         assert_eq!(public.format, P384_KEY_FORMAT);
+        assert_eq!(public.fingerprint.len(), 96, "SHA-384 fingerprint");
         let envelope = encrypt(&public, &public.fingerprint, b"secret payload").unwrap();
         assert_eq!(envelope.suite, P384_SUITE);
         assert_eq!(envelope.ephemeral_key.len(), 194);

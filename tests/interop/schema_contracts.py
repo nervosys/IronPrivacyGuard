@@ -60,6 +60,20 @@ def main():
     v1_public, p384_public = vectors["public"], p384["public"]
     check(schemas["formats"]["public_key"], {**v1_public, "format": "apg-public-p384-v1"}, False)
     check(schemas["formats"]["public_key"], {**p384_public, "format": "apg-public-v1"}, False)
+    # Python-style `$` matches before a final newline; variable-width fields must still refuse it.
+    for name, artifact, field in [("public_key", p384_public, "fingerprint"), ("public_key", p384_public, "signing_key"),
+                                  ("public_key", hybrid["public"], "encryption_key"),
+                                  ("signature", hybrid["messages"][0]["signature"], "signature"),
+                                  ("signature", hybrid["messages"][0]["signature"], "signer"),
+                                  ("envelope", hybrid["messages"][0]["envelope"], "ephemeral_key"),
+                                  ("secret_key", hybrid["secret"], "ciphertext")]:
+        check(schemas["formats"][name], {**artifact, field: artifact[field] + "\n"}, False)
+    check(schemas["formats"]["secret_key"],
+          {**vectors["secret"], "public": {**vectors["public"], "signing_key": vectors["public"]["signing_key"] + "\n"}}, False)
+    # Fingerprint width follows the suite: 64 hex for v1, 96 for P-384 and hybrid.
+    assert len(p384_public["fingerprint"]) == 96 and len(v1_public["fingerprint"]) == 64
+    check(schemas["formats"]["public_key"], {**p384_public, "fingerprint": p384_public["fingerprint"][:64]}, False)
+    check(schemas["formats"]["public_key"], {**v1_public, "fingerprint": v1_public["fingerprint"] + "00" * 16}, False)
     check(schemas["formats"]["public_key"], {**p384_public, "signing_key": "02" + p384_public["signing_key"][2:]}, False)
     check(schemas["formats"]["secret_key"], {**vectors["secret"], "public": p384_public}, False)
     p384_envelope, v1_envelope = p384["messages"][2]["envelope"], vectors["messages"][2]["envelope"]
@@ -89,6 +103,7 @@ def main():
     check(tpm_schema, {**tpm_key, "unknown": True}, False)
     check(tpm_schema, {**tpm_key, "encryption_key": {**tpm_key["encryption_key"], "private": "ABC"}}, False)
     check(tpm_schema, {**tpm_key, "tpm": {**tpm_key["tpm"], "manufacturer": "TOOLONG"}}, False)
+    check(tpm_schema, {**tpm_key, "signing_key": {**tpm_key["signing_key"], "public": tpm_key["signing_key"]["public"] + "\n"}}, False)
     kms_key = {"format": "apg-kms-key-v1", "public": p384_public, "region": "us-gov-west-1",
                "encryption_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/11111111-1111-1111-1111-111111111111",
                "signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/22222222-2222-2222-2222-222222222222"}
@@ -97,6 +112,8 @@ def main():
     check(kms_schema, {**kms_key, "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:alias/apg"}, False)
     check(kms_schema, {**kms_key, "region": "US-EAST-1"}, False)
     check(kms_schema, {**kms_key, "unknown": True}, False)
+    check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
+    check(kms_schema, {**kms_key, "signing_key_arn": kms_key["signing_key_arn"] + "\n"}, False)
     hardware = schemas["formats"]["hardware_key"]
     check(hardware, reference)
     check(hardware, {**reference, "unknown": True}, False)
@@ -152,7 +169,7 @@ def main():
                 check(tool_schema, {"query": query}, valid)
         for field in ["expected_fingerprint", "expected_digest"]:
             if field in values:
-                for bad in ["short", pin.upper(), "g" * 64, pin + "\n"]:
+                for bad in ["short", pin.upper(), "g" * 64, pin + "\n", ("ab" * 48) + "\n"]:
                     malformed = {**values, field: bad}
                     check(schemas["request"], malformed, False)
                     check(schemas["request"], {"operation": "plan", "request": malformed}, False)
@@ -166,7 +183,7 @@ def main():
                     check(tool_schema, {**arguments, field: bad}, False)
         for field in ["encryption_key_id", "signing_key_id"]:
             if field in values:
-                for bad in ["", "0", "AB", "ab" * 65]:
+                for bad in ["", "0", "AB", "ab" * 65, "abab\n"]:
                     check(tool_schema, {**arguments, field: bad}, False)
         if operation == "kms.key.bind":
             for bad in ["alias", "arn:aws:kms:us-east-1:123:key/1", "arn:aws:s3:us-east-1:123456789012:key/1"]:

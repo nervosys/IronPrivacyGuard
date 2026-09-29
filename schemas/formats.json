@@ -64,6 +64,9 @@
         "description": "Sender ephemeral public key in the envelope suite; hybrid envelopes prefix the ML-KEM-768 ciphertext.",
         "maxLength": 2240,
         "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$",
         "type": "string"
       },
@@ -78,9 +81,13 @@
         "type": "string"
       },
       "recipient": {
-        "maxLength": 64,
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "maxLength": 96,
         "minLength": 64,
-        "pattern": "^[0-9a-f]{64}$",
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
         "type": "string"
       },
       "suite": {
@@ -128,6 +135,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 }
@@ -146,6 +156,9 @@
               "properties": {
                 "encryption_key": {
                   "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
                 },
                 "signing_key": {
                   "pattern": "^04[0-9a-f]{192}$"
@@ -166,6 +179,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{2432}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{3968}$"
                 }
@@ -178,13 +194,20 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -199,6 +222,9 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           }
@@ -250,6 +276,9 @@
       "encryption_key_id": {
         "maxLength": 128,
         "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{2}){1,64}$",
         "type": "string"
       },
@@ -264,6 +293,9 @@
       "signing_key_id": {
         "maxLength": 128,
         "minLength": 2,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{2}){1,64}$",
         "type": "string"
       },
@@ -299,6 +331,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 }
@@ -317,6 +352,9 @@
               "properties": {
                 "encryption_key": {
                   "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
                 },
                 "signing_key": {
                   "pattern": "^04[0-9a-f]{192}$"
@@ -337,6 +375,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{2432}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{3968}$"
                 }
@@ -349,13 +390,20 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -370,6 +418,9 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           }
@@ -389,6 +440,9 @@
     "properties": {
       "encryption_key_arn": {
         "maxLength": 160,
+        "not": {
+          "pattern": "[^A-Za-z0-9:/-]"
+        },
         "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
         "type": "string"
       },
@@ -403,11 +457,17 @@
       "region": {
         "maxLength": 32,
         "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9-]"
+        },
         "pattern": "^[a-z0-9-]+$",
         "type": "string"
       },
       "signing_key_arn": {
         "maxLength": 160,
+        "not": {
+          "pattern": "[^A-Za-z0-9:/-]"
+        },
         "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
         "type": "string"
       }
@@ -516,6 +576,9 @@
             "encryption_key": {
               "pattern": "^[0-9a-f]{64}$"
             },
+            "fingerprint": {
+              "pattern": "^[0-9a-f]{64}$"
+            },
             "signing_key": {
               "pattern": "^[0-9a-f]{64}$"
             }
@@ -534,6 +597,9 @@
           "properties": {
             "encryption_key": {
               "pattern": "^04[0-9a-f]{192}$"
+            },
+            "fingerprint": {
+              "pattern": "^[0-9a-f]{96}$"
             },
             "signing_key": {
               "pattern": "^04[0-9a-f]{192}$"
@@ -554,6 +620,9 @@
             "encryption_key": {
               "pattern": "^[0-9a-f]{2432}$"
             },
+            "fingerprint": {
+              "pattern": "^[0-9a-f]{96}$"
+            },
             "signing_key": {
               "pattern": "^[0-9a-f]{3968}$"
             }
@@ -566,13 +635,20 @@
         "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
         "maxLength": 3968,
         "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
         "type": "string"
       },
       "fingerprint": {
-        "maxLength": 64,
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "maxLength": 96,
         "minLength": 64,
-        "pattern": "^[0-9a-f]{64}$",
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
         "type": "string"
       },
       "format": {
@@ -587,6 +663,9 @@
         "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
         "maxLength": 3968,
         "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
         "type": "string"
       }
@@ -674,9 +753,13 @@
         "type": "string"
       },
       "fingerprint": {
-        "maxLength": 64,
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "maxLength": 96,
         "minLength": 64,
-        "pattern": "^[0-9a-f]{64}$",
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
         "type": "string"
       },
       "format": {
@@ -693,6 +776,9 @@
       "signature": {
         "maxLength": 6746,
         "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
         "type": "string"
       }
@@ -763,6 +849,9 @@
       "ciphertext": {
         "maxLength": 320,
         "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{128}|[0-9a-f]{320})$",
         "type": "string"
       },
@@ -789,10 +878,16 @@
             "additionalProperties": false,
             "properties": {
               "encryption_key": {
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
                 "pattern": "^[0-9a-f]{64}$",
                 "type": "string"
               },
               "fingerprint": {
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
                 "pattern": "^[0-9a-f]{64}$",
                 "type": "string"
               },
@@ -801,6 +896,9 @@
                 "type": "string"
               },
               "signing_key": {
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
                 "pattern": "^[0-9a-f]{64}$",
                 "type": "string"
               }
@@ -817,11 +915,17 @@
             "additionalProperties": false,
             "properties": {
               "encryption_key": {
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
                 "pattern": "^[0-9a-f]{2432}$",
                 "type": "string"
               },
               "fingerprint": {
-                "pattern": "^[0-9a-f]{64}$",
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
+                "pattern": "^[0-9a-f]{96}$",
                 "type": "string"
               },
               "format": {
@@ -829,6 +933,9 @@
                 "type": "string"
               },
               "signing_key": {
+                "not": {
+                  "pattern": "[^0-9a-f]"
+                },
                 "pattern": "^[0-9a-f]{3968}$",
                 "type": "string"
               }
@@ -938,13 +1045,20 @@
       "signature": {
         "maxLength": 6746,
         "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
         "type": "string"
       },
       "signer": {
-        "maxLength": 64,
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "maxLength": 96,
         "minLength": 64,
-        "pattern": "^[0-9a-f]{64}$",
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
         "type": "string"
       }
     },
@@ -975,6 +1089,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 }
@@ -993,6 +1110,9 @@
               "properties": {
                 "encryption_key": {
                   "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
                 },
                 "signing_key": {
                   "pattern": "^04[0-9a-f]{192}$"
@@ -1013,6 +1133,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{2432}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{3968}$"
                 }
@@ -1025,13 +1148,20 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -1046,6 +1176,9 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           }
@@ -1084,12 +1217,18 @@
           "private": {
             "maxLength": 4096,
             "minLength": 2,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{2})+$",
             "type": "string"
           },
           "public": {
             "maxLength": 4096,
             "minLength": 2,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{2})+$",
             "type": "string"
           }
@@ -1156,6 +1295,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{64}$"
                 }
@@ -1174,6 +1316,9 @@
               "properties": {
                 "encryption_key": {
                   "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
                 },
                 "signing_key": {
                   "pattern": "^04[0-9a-f]{192}$"
@@ -1194,6 +1339,9 @@
                 "encryption_key": {
                   "pattern": "^[0-9a-f]{2432}$"
                 },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
                 "signing_key": {
                   "pattern": "^[0-9a-f]{3968}$"
                 }
@@ -1206,13 +1354,20 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -1227,6 +1382,9 @@
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
             "maxLength": 3968,
             "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
             "type": "string"
           }
@@ -1302,9 +1460,13 @@
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -1321,6 +1483,9 @@
           "signature": {
             "maxLength": 6746,
             "minLength": 128,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
             "type": "string"
           }
@@ -1438,9 +1603,13 @@
             "type": "string"
           },
           "fingerprint": {
-            "maxLength": 64,
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "maxLength": 96,
             "minLength": 64,
-            "pattern": "^[0-9a-f]{64}$",
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
             "type": "string"
           },
           "format": {
@@ -1466,6 +1635,9 @@
           "signature": {
             "maxLength": 6746,
             "minLength": 128,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
             "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
             "type": "string"
           }
@@ -1596,9 +1768,13 @@
         "type": "string"
       },
       "fingerprint": {
-        "maxLength": 64,
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "maxLength": 96,
         "minLength": 64,
-        "pattern": "^[0-9a-f]{64}$",
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
         "type": "string"
       },
       "format": {
@@ -1624,6 +1800,9 @@
       "signature": {
         "maxLength": 6746,
         "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
         "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
         "type": "string"
       }

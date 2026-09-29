@@ -614,7 +614,7 @@
       ],
       "label": "Hybrid post-quantum encryption against future quantum attacks",
       "limitations": [
-        "Fingerprints and snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
+        "Fingerprints use SHA-384 but trust-snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
         "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review",
         "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only",
         "Software secret keys only; hardware identities have no post-quantum suite"
@@ -2986,5 +2986,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.8.0"
+  "version": "1.9.0"
 }

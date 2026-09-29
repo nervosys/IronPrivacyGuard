@@ -51,7 +51,7 @@ def peer(encoded):
 def identity():
     encryption, signing = point(private(ENCRYPTION_SCALAR)), point(private(SIGNING_SCALAR))
     return {"format": KEY_FORMAT, "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha256(frame("APG identity p384 v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha384(frame("APG identity p384 v1", encryption, signing)).hexdigest()}
 
 
 def envelope_aad(envelope):

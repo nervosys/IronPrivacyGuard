@@ -15,7 +15,7 @@ pub const MAX_UNIX_TIME: u64 = 253_402_300_799;
 pub struct Validity {
     #[schemars(schema_with = "crate::contract::validity_format")]
     pub format: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::fingerprint")]
     pub fingerprint: String,
     #[schemars(schema_with = "crate::contract::scope")]
     pub scope: String,
@@ -41,7 +41,7 @@ impl Validity {
                 "Unsupported validity certificate or time window",
             ));
         }
-        crypto::bytes::<32>(&self.fingerprint)?;
+        crypto::check_fingerprint(&self.fingerprint)?;
         crypto::hex_exact(
             &self.signature,
             Suite::from_algorithm(&self.algorithm)?.signature_len(),
@@ -148,7 +148,7 @@ impl RevocationReason {
 pub struct Revocation {
     #[schemars(schema_with = "crate::contract::revocation_format")]
     pub format: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::fingerprint")]
     pub fingerprint: String,
     #[schemars(schema_with = "crate::contract::scope")]
     pub scope: String,
@@ -170,7 +170,7 @@ impl Revocation {
                 "Unsupported revocation format, scope or algorithm",
             ));
         }
-        crypto::bytes::<32>(&self.fingerprint)?;
+        crypto::check_fingerprint(&self.fingerprint)?;
         crypto::hex_exact(
             &self.signature,
             Suite::from_algorithm(&self.algorithm)?.signature_len(),

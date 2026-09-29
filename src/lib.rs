@@ -104,7 +104,7 @@ pub enum Request {
     KeyRewrap {
         key: String,
         output: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         passphrase_file: String,
         new_passphrase_file: String,
@@ -113,7 +113,7 @@ pub enum Request {
     KeyRevoke {
         key: String,
         output: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
         /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
@@ -126,7 +126,7 @@ pub enum Request {
     RevocationVerify {
         input: String,
         signer: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
     },
     #[serde(rename = "encrypt")]
@@ -134,7 +134,7 @@ pub enum Request {
         input: String,
         output: String,
         recipient: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         policy: Option<TrustPolicy>,
     },
@@ -166,7 +166,7 @@ pub enum Request {
         input: String,
         signature: String,
         signer: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         policy: Option<TrustPolicy>,
     },
@@ -174,7 +174,7 @@ pub enum Request {
     KeyValidity {
         key: String,
         output: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
         /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
@@ -190,7 +190,7 @@ pub enum Request {
     ValidityVerify {
         input: String,
         signer: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
     },
     #[serde(rename = "trust.validity")]
@@ -199,7 +199,7 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
         expected_digest: String,
         input: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         output: String,
     },
@@ -208,7 +208,7 @@ pub enum Request {
         store: String,
         #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
         expected_digest: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         #[schemars(schema_with = "crate::contract::unix_time")]
         at_time: u64,
@@ -232,7 +232,7 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
         expected_digest: String,
         public: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         output: String,
     },
@@ -242,7 +242,7 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
         expected_digest: String,
         input: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         output: String,
     },
@@ -251,7 +251,7 @@ pub enum Request {
         store: String,
         #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
         expected_digest: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
     },
     #[serde(rename = "hash")]
@@ -687,7 +687,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             expected_fingerprint,
             at_time,
         } => {
-            crypto::bytes::<32>(&expected_fingerprint)?;
+            crypto::check_fingerprint(&expected_fingerprint)?;
             let snapshot = trust::load(&TrustPolicy {
                 store,
                 expected_digest: expected_digest.clone(),
@@ -735,7 +735,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             expected_digest,
             expected_fingerprint,
         } => {
-            crypto::bytes::<32>(&expected_fingerprint)?;
+            crypto::check_fingerprint(&expected_fingerprint)?;
             let snapshot = trust::load(&TrustPolicy {
                 store,
                 expected_digest: expected_digest.clone(),
