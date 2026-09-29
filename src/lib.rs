@@ -297,6 +297,12 @@ pub enum Request {
         /// ECC_NIST_P384 SIGN_VERIFY key ARN.
         #[schemars(schema_with = "crate::contract::kms_key_arn")]
         signing_key_arn: String,
+        /// Optional ML_DSA_65 SIGN_VERIFY key ARN. With it the identity is
+        /// apg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384
+        /// plus ML-DSA-65; encryption stays P-384 (KMS has no ML-KEM keys).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_kms_key_arn")]
+        mldsa_signing_key_arn: Option<String>,
         output: String,
     },
     #[serde(rename = "tpm.key.generate")]
@@ -1116,11 +1122,16 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             region,
             encryption_key_arn,
             signing_key_arn,
+            mldsa_signing_key_arn,
             output,
         } => {
             require_absent(&output)?;
-            let (key, protection) =
-                provider::kms_bind(&region, &encryption_key_arn, &signing_key_arn)?;
+            let (key, protection) = provider::kms_bind(
+                &region,
+                &encryption_key_arn,
+                &signing_key_arn,
+                mldsa_signing_key_arn.as_deref(),
+            )?;
             write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
             Ok(Outcome::HardwareKey {
                 path: output,

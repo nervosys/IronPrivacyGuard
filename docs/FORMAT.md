@@ -63,7 +63,6 @@ Fingerprint = SHA-384 of `frame("APG identity hybrid v1", [encryption_key bytes,
 signing_key bytes])`, 48 bytes.
 
 The suite adds post-quantum confidentiality and composite post-quantum signatures.
-Trust-snapshot digests still use SHA-256.
 
 ### Composite signatures: ed25519-mldsa65
 
@@ -74,6 +73,28 @@ framed message. ML-DSA uses pure FIPS 204 signing with context string
 `APG ed25519-mldsa65 v1` and fresh randomness (hedged). Verification requires both
 halves. The algorithm name is part of every signed frame, so the Ed25519 half cannot
 be presented as an `ed25519` signature.
+
+## Public identity: apg-public-p384-mldsa65-v1
+
+Fields as in v1. `encryption_key` is a 97-byte uncompressed P-384 point, exactly as
+in `apg-public-p384-v1`, and envelopes to these identities use the
+`p384-x963kdf-sha384-aes256gcm` suite. `signing_key` is a 97-byte uncompressed P-384
+point followed by the 1952-byte ML-DSA-65 key (2049 bytes, 4098 hex characters).
+Fingerprint = SHA-384 of `frame("APG identity p384-mldsa65 v1", [encryption_key
+bytes, signing_key bytes])`, 48 bytes. The suite backs AWS KMS identities that add an
+ML-DSA key; it has no software secret format, and its encryption is not post-quantum.
+
+### Composite signatures: ecdsa-p384-mldsa65
+
+The signature is the 96-byte fixed-width low-s ECDSA P-384/SHA-384 signature
+followed by the 3309-byte ML-DSA-65 signature (3405 bytes), both over the same framed
+message. ML-DSA is pure FIPS 204 signing with context string
+`APG ecdsa-p384-mldsa65 v1`. A signer may compute the message representative
+`mu = SHAKE256(SHAKE256(pk, 64) || 0x00 || len(ctx) || ctx || M, 64)` and sign `mu`
+directly (external mu, as AWS KMS does); the signature is identical in form and
+verifies the same way. Verification requires both halves and low-s. The algorithm
+name is part of every signed frame, so the ECDSA half cannot be presented as an
+`ecdsa-p384-sha384` signature.
 
 ## Protected private identity: apg-secret-v1
 
@@ -244,11 +265,13 @@ matching public objects must equal the pinned identity. See [HARDWARE.md](HARDWA
 ## AWS KMS key: apg-kms-key-v1
 
 Fields in declared order: `format`, `public`, `region`, `encryption_key_arn`,
-`signing_key_arn`. `public` is an `apg-public-p384-v1` identity. Both ARNs must be
-exact KMS key ARNs (`arn:<partition>:kms:<region>:<account>:key/<id>`), distinct, in
-`region` and in one partition. The encryption key is an `ECC_NIST_P384`
-`KEY_AGREEMENT` key and the signing key an `ECC_NIST_P384` `SIGN_VERIFY` key. The
-file holds no secret. See [HARDWARE.md](HARDWARE.md#aws-kms).
+`signing_key_arn`, and optional `mldsa_signing_key_arn`. `public` is an
+`apg-public-p384-v1` identity, or an `apg-public-p384-mldsa65-v1` identity exactly
+when `mldsa_signing_key_arn` is present. All ARNs must be exact KMS key ARNs
+(`arn:<partition>:kms:<region>:<account>:key/<id>`), distinct, in `region` and in one
+partition. The encryption key is an `ECC_NIST_P384` `KEY_AGREEMENT` key, the signing
+key an `ECC_NIST_P384` `SIGN_VERIFY` key, and the ML-DSA key an `ML_DSA_65`
+`SIGN_VERIFY` key. The file holds no secret. See [HARDWARE.md](HARDWARE.md#aws-kms).
 
 ## Windows TPM key: apg-cng-key-v1
 

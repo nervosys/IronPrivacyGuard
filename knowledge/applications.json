@@ -161,10 +161,10 @@
     "keywords": ["pq signing", "quantum resistant signing", "ml dsa", "dilithium", "composite signing"],
     "goals": ["quantum-resistant-authenticity"],
     "support": "implemented",
-    "operations": ["key.generate", "sign", "verify"],
-    "prerequisites": ["A hybrid identity from key.generate identity apg-public-hybrid-v1", "The signer's hybrid public identity and independently trusted fingerprint"],
-    "limitations": ["Composite ed25519-mldsa65 only; no SLH-DSA or standalone ML-DSA", "Software keys only; PKCS#11, TPM and KMS identities sign with ECDSA P-384", "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL", "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"],
-    "guidance": "Sign with a hybrid identity; every signature, revocation and validity certificate then requires both Ed25519 and ML-DSA-65 to verify, so it stays unforgeable while either holds.",
+    "operations": ["key.generate", "kms.key.bind", "sign", "verify"],
+    "prerequisites": ["A hybrid identity from key.generate identity apg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)", "The signer's public identity and independently trusted fingerprint"],
+    "limitations": ["Composite ed25519-mldsa65 (software) or ecdsa-p384-mldsa65 (AWS KMS) only; no SLH-DSA or standalone ML-DSA", "PKCS#11 and TPM identities sign with ECDSA P-384 only", "KMS post-quantum identities keep P-384 encryption, since KMS has no ML-KEM", "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL", "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"],
+    "guidance": "Sign with a hybrid identity, or bind AWS KMS keys with mldsa_signing_key_arn for KMS custody; every signature, revocation and validity certificate then requires both the classical and the ML-DSA-65 signature to verify, so it stays unforgeable while either holds.",
     "sources": ["https://doi.org/10.6028/NIST.FIPS.204"]
   },
   {
@@ -186,7 +186,7 @@
     "goals": ["service-custody"],
     "support": "implemented",
     "operations": ["kms.key.bind", "key.public", "decrypt", "sign", "key.revoke", "key.validity"],
-    "prerequisites": ["An apg build with the kms feature", "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret", "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling"],
+    "prerequisites": ["An apg build with the kms feature", "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret", "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling; optionally an ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures"],
     "limitations": ["AWS KMS only; APG never creates KMS keys", "SSO profiles need a current `aws sso login`; APG never refreshes SSO tokens", "Every private-key operation is a billable network call to AWS", "Decryption releases one per-envelope shared secret into process memory"],
     "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set APG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
     "sources": ["https://docs.aws.amazon.com/kms/latest/APIReference/API_DeriveSharedSecret.html", "https://docs.aws.amazon.com/kms/latest/APIReference/API_Sign.html", "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv.html"]

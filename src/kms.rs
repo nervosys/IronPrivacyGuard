@@ -996,6 +996,40 @@ impl Client {
     }
 }
 
+/// DER SubjectPublicKeyInfo prefix for an ML-DSA-65 key (id-ml-dsa-65,
+/// 2.16.840.1.101.3.4.3.18, no parameters) followed by the 1952-byte key.
+const MLDSA65_SPKI_PREFIX: [u8; 22] = [
+    0x30, 0x82, 0x07, 0xb2, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03,
+    0x12, 0x03, 0x82, 0x07, 0xa1, 0x00,
+];
+const MLDSA65_PUBLIC_KEY_LEN: usize = 1952;
+const MLDSA65_SIGNATURE_LEN: usize = 3309;
+
+impl Client {
+    /// Fetch an ML_DSA_65 SIGN_VERIFY key's raw public key.
+    fn mldsa_public_key(&self, arn: &str) -> Result<Vec<u8>> {
+        let response = self.call("GetPublicKey", json!({"KeyId": arn}))?;
+        if response["KeySpec"] != "ML_DSA_65" {
+            return Err(Error::new(
+                "mechanism_unsupported",
+                "KMS key is not ML_DSA_65",
+            ));
+        }
+        if response["KeyUsage"] != "SIGN_VERIFY" {
+            return Err(Error::new(
+                "policy_mismatch",
+                "KMS key usage must be SIGN_VERIFY",
+            ));
+        }
+        let spki = unbase64(response["PublicKey"].as_str().unwrap_or(""))?;
+        let key = spki
+            .strip_prefix(&MLDSA65_SPKI_PREFIX[..])
+            .filter(|key| key.len() == MLDSA65_PUBLIC_KEY_LEN)
+            .ok_or_else(|| Error::new("provider_error", "Unexpected KMS ML-DSA key encoding"))?;
+        Ok(key.to_vec())
+    }
+}
+
 /// Decode a DER ECDSA signature into fixed-width 48-byte r || s.
 fn der_signature(der: &[u8]) -> Result<Vec<u8>> {
     let invalid = || Error::new("provider_error", "Malformed ECDSA signature from KMS");
@@ -1037,6 +1071,8 @@ pub struct KmsIdentity {
     client: Client,
     encryption_key: String,
     signing_key: String,
+    /// ML-DSA key ARN and raw public key, for composite signatures.
+    mldsa: Option<(String, Vec<u8>)>,
 }
 impl IdentityKey for KmsIdentity {
     fn public(&self) -> &PublicKey {
@@ -1051,7 +1087,28 @@ impl IdentityKey for KmsIdentity {
             json!({"KeyId": self.signing_key, "Message": base64(&crypto::p384_digest(message)),
                 "MessageType": "DIGEST", "SigningAlgorithm": "ECDSA_SHA_384"}),
         )?;
-        der_signature(&unbase64(response["Signature"].as_str().unwrap_or(""))?)
+        let mut signature =
+            der_signature(&unbase64(response["Signature"].as_str().unwrap_or(""))?)?;
+        if let Some((arn, public_key)) = &self.mldsa {
+            // KMS signs the FIPS 204 message representative (external mu), which
+            // carries APG's context; the result is a pure ML-DSA signature over the
+            // framed message.
+            let mu = crypto::mldsa_mu(public_key, crypto::P384_MLDSA_CONTEXT, message)?;
+            let response = self.client.call(
+                "Sign",
+                json!({"KeyId": arn, "Message": base64(&mu), "MessageType": "EXTERNAL_MU",
+                    "SigningAlgorithm": "ML_DSA_SHAKE_256"}),
+            )?;
+            let pq = unbase64(response["Signature"].as_str().unwrap_or(""))?;
+            if pq.len() != MLDSA65_SIGNATURE_LEN {
+                return Err(Error::new(
+                    "provider_error",
+                    "KMS returned an unexpected ML-DSA signature length",
+                ));
+            }
+            signature.extend_from_slice(&pq);
+        }
+        Ok(signature)
     }
     fn agree(&self, peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
         crypto::p384_point(peer)?;
@@ -1071,27 +1128,45 @@ impl IdentityKey for KmsIdentity {
     }
 }
 
-fn identity(region: &str, encryption_key: &str, signing_key: &str) -> Result<KmsIdentity> {
-    provider::check_kms_keys(region, encryption_key, signing_key)?;
+fn identity(
+    region: &str,
+    encryption_key: &str,
+    signing_key: &str,
+    mldsa_key: Option<&str>,
+) -> Result<KmsIdentity> {
+    provider::check_kms_keys(region, encryption_key, signing_key, mldsa_key)?;
     let client = Client {
         region: region.into(),
         partition: provider::parse_arn(encryption_key)?.partition,
     };
-    let public = crypto::identity(
-        Suite::P384,
-        &client.public_point(encryption_key, "KEY_AGREEMENT")?,
-        &client.public_point(signing_key, "SIGN_VERIFY")?,
-    )?;
+    let encryption = client.public_point(encryption_key, "KEY_AGREEMENT")?;
+    let mut signing = client.public_point(signing_key, "SIGN_VERIFY")?;
+    let mldsa = mldsa_key
+        .map(|arn| Ok::<_, Error>((arn.to_string(), client.mldsa_public_key(arn)?)))
+        .transpose()?;
+    let suite = match &mldsa {
+        Some((_, public_key)) => {
+            signing.extend_from_slice(public_key);
+            Suite::P384MlDsa
+        }
+        None => Suite::P384,
+    };
     Ok(KmsIdentity {
-        public,
+        public: crypto::identity(suite, &encryption, &signing)?,
         client,
         encryption_key: encryption_key.into(),
         signing_key: signing_key.into(),
+        mldsa,
     })
 }
 
 pub fn open(key: &KmsKey) -> Result<Box<dyn IdentityKey>> {
-    let identity = identity(&key.region, &key.encryption_key_arn, &key.signing_key_arn)?;
+    let identity = identity(
+        &key.region,
+        &key.encryption_key_arn,
+        &key.signing_key_arn,
+        key.mldsa_signing_key_arn.as_deref(),
+    )?;
     if identity.public != key.public {
         return Err(Error::new(
             "identity_mismatch",
@@ -1105,8 +1180,14 @@ pub fn bind(
     region: &str,
     encryption_key_arn: &str,
     signing_key_arn: &str,
+    mldsa_signing_key_arn: Option<&str>,
 ) -> Result<(KmsKey, Protection)> {
-    let identity = identity(region, encryption_key_arn, signing_key_arn)?;
+    let identity = identity(
+        region,
+        encryption_key_arn,
+        signing_key_arn,
+        mldsa_signing_key_arn,
+    )?;
     // GetPublicKey does not report key origin, so no generation claim is made.
     let protection = provider::prove_possession(&identity, false)?;
     let key = KmsKey {
@@ -1115,6 +1196,7 @@ pub fn bind(
         region: region.into(),
         encryption_key_arn: encryption_key_arn.into(),
         signing_key_arn: signing_key_arn.into(),
+        mldsa_signing_key_arn: mldsa_signing_key_arn.map(Into::into),
     };
     key.validate()?;
     Ok((key, protection))

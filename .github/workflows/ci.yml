@@ -31,6 +31,7 @@ jobs:
       - run: python tests/interop/crypto_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/p384_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/hybrid_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/p384_mldsa_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/kms_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       # GnuPG ships on the Linux and Windows runners (Git for Windows); macOS runners lack it.
       - if: runner.os != 'macOS'

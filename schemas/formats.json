@@ -69,21 +69,43 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
           "encryption_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -96,18 +118,19 @@
             "enum": [
               "apg-public-v1",
               "apg-public-p384-v1",
-              "apg-public-hybrid-v1"
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
           "signing_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           }
         },
@@ -247,7 +270,7 @@
         "type": "string"
       },
       "recipient": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -353,21 +376,43 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
           "encryption_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -380,18 +425,19 @@
             "enum": [
               "apg-public-v1",
               "apg-public-p384-v1",
-              "apg-public-hybrid-v1"
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
           "signing_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           }
         },
@@ -549,21 +595,43 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
           "encryption_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -576,18 +644,19 @@
             "enum": [
               "apg-public-v1",
               "apg-public-p384-v1",
-              "apg-public-hybrid-v1"
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
           "signing_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           }
         },
@@ -602,7 +671,7 @@
     },
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,
-    "description": "A P-384 identity whose private keys are two existing AWS KMS keys: an\nECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. The file is\npublic; using it requires the host's AWS credentials and KMS key permissions.",
+    "description": "A P-384 identity whose private keys are two existing AWS KMS keys: an\nECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. With a third,\nML_DSA_65 SIGN_VERIFY key it is an `apg-public-p384-mldsa65-v1` identity whose\nsignatures are composite ECDSA P-384 plus ML-DSA-65. The file is public; using it\nrequires the host's AWS credentials and KMS key permissions.",
     "properties": {
       "encryption_key_arn": {
         "maxLength": 160,
@@ -616,9 +685,21 @@
         "const": "apg-kms-key-v1",
         "type": "string"
       },
+      "mldsa_signing_key_arn": {
+        "description": "ML_DSA_65 SIGN_VERIFY key for the post-quantum half of composite signatures.",
+        "maxLength": 160,
+        "not": {
+          "pattern": "[^A-Za-z0-9:/-]"
+        },
+        "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+        "description": "apg-public-p384-v1, or apg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`\n(checked at runtime)."
       },
       "region": {
         "maxLength": 32,
@@ -897,21 +978,43 @@
             }
           }
         }
+      },
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-public-p384-mldsa65-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "encryption_key": {
+              "pattern": "^04[0-9a-f]{192}$"
+            },
+            "fingerprint": {
+              "pattern": "^[0-9a-f]{96}$"
+            },
+            "signing_key": {
+              "pattern": "^04[0-9a-f]{4096}$"
+            }
+          }
+        }
       }
     ],
     "properties": {
       "encryption_key": {
         "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-        "maxLength": 3968,
+        "maxLength": 4098,
         "minLength": 64,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -924,18 +1027,19 @@
         "enum": [
           "apg-public-v1",
           "apg-public-p384-v1",
-          "apg-public-hybrid-v1"
+          "apg-public-hybrid-v1",
+          "apg-public-p384-mldsa65-v1"
         ],
         "type": "string"
       },
       "signing_key": {
         "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-        "maxLength": 3968,
+        "maxLength": 4098,
         "minLength": 64,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
         "type": "string"
       }
     },
@@ -1009,6 +1113,22 @@
             }
           }
         }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6810}$"
+            }
+          }
+        }
       }
     ],
     "properties": {
@@ -1017,12 +1137,13 @@
         "enum": [
           "ed25519",
           "ecdsa-p384-sha384",
-          "ed25519-mldsa65"
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
         ],
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1043,12 +1164,12 @@
         "type": "string"
       },
       "signature": {
-        "maxLength": 6746,
+        "maxLength": 6810,
         "minLength": 128,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
         "type": "string"
       }
     },
@@ -1295,6 +1416,22 @@
             }
           }
         }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6810}$"
+            }
+          }
+        }
       }
     ],
     "properties": {
@@ -1303,7 +1440,8 @@
         "enum": [
           "ed25519",
           "ecdsa-p384-sha384",
-          "ed25519-mldsa65"
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
         ],
         "type": "string"
       },
@@ -1312,16 +1450,16 @@
         "type": "string"
       },
       "signature": {
-        "maxLength": 6746,
+        "maxLength": 6810,
         "minLength": 128,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
         "type": "string"
       },
       "signer": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1410,21 +1548,43 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
           "encryption_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -1437,18 +1597,19 @@
             "enum": [
               "apg-public-v1",
               "apg-public-p384-v1",
-              "apg-public-hybrid-v1"
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
           "signing_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           }
         },
@@ -1616,21 +1777,43 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
           "encryption_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -1643,18 +1826,19 @@
             "enum": [
               "apg-public-v1",
               "apg-public-p384-v1",
-              "apg-public-hybrid-v1"
+              "apg-public-hybrid-v1",
+              "apg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
           "signing_key": {
             "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
-            "maxLength": 3968,
+            "maxLength": 4098,
             "minLength": 64,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
             "type": "string"
           }
         },
@@ -1716,6 +1900,22 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6810}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
@@ -1724,12 +1924,13 @@
             "enum": [
               "ed25519",
               "ecdsa-p384-sha384",
-              "ed25519-mldsa65"
+              "ed25519-mldsa65",
+              "ecdsa-p384-mldsa65"
             ],
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -1750,12 +1951,12 @@
             "type": "string"
           },
           "signature": {
-            "maxLength": 6746,
+            "maxLength": 6810,
             "minLength": 128,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
             "type": "string"
           }
         },
@@ -1859,6 +2060,22 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6810}$"
+                }
+              }
+            }
           }
         ],
         "properties": {
@@ -1867,12 +2084,13 @@
             "enum": [
               "ed25519",
               "ecdsa-p384-sha384",
-              "ed25519-mldsa65"
+              "ed25519-mldsa65",
+              "ecdsa-p384-mldsa65"
             ],
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -1902,12 +2120,12 @@
             "type": "string"
           },
           "signature": {
-            "maxLength": 6746,
+            "maxLength": 6810,
             "minLength": 128,
             "not": {
               "pattern": "[^0-9a-f]"
             },
-            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
             "type": "string"
           }
         },
@@ -2026,6 +2244,22 @@
             }
           }
         }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6810}$"
+            }
+          }
+        }
       }
     ],
     "properties": {
@@ -2034,12 +2268,13 @@
         "enum": [
           "ed25519",
           "ecdsa-p384-sha384",
-          "ed25519-mldsa65"
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
         ],
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -2069,12 +2304,12 @@
         "type": "string"
       },
       "signature": {
-        "maxLength": 6746,
+        "maxLength": 6810,
         "minLength": 128,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
         "type": "string"
       }
     },

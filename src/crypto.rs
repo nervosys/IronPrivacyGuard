@@ -7,11 +7,14 @@
 //! software secrets.
 //! `apg-public-p384-v1` binds P-384 ECDH and ECDSA keys, the curve hardware tokens
 //! widely support; its private keys are held by a provider such as a PKCS#11 token.
+//! `apg-public-p384-mldsa65-v1` adds an ML-DSA-65 key to the P-384 signing key for
+//! composite post-quantum signatures, for providers such as AWS KMS that hold
+//! ML-DSA but not ML-KEM keys; its encryption is P-384 only.
 use crate::error::{Error, Result};
 use ic_cipher::{Aes256Gcm, ChaCha20Poly1305};
 use ic_core::traits::{Aead, Digest, Kdf, KeyAgreement, SignatureScheme};
 use ic_ec::{EcdhP384, EcdsaP384Sha384, Ed25519, X25519, nist::point::AffinePoint, p384::P384};
-use ic_hash::{Sha256, Sha384};
+use ic_hash::{Sha256, Sha384, Shake256};
 use ic_kdf::{Argon2Params, Hkdf, Variant, argon2};
 use ic_mac::HmacSha256;
 use ic_mldsa::sign as mldsa;
@@ -29,6 +32,7 @@ pub const HYBRID_SUITE: &str = "mlkem768-x25519-hkdf-sha256-chacha20poly1305";
 pub const KEY_FORMAT: &str = "apg-public-v1";
 pub const P384_KEY_FORMAT: &str = "apg-public-p384-v1";
 pub const HYBRID_KEY_FORMAT: &str = "apg-public-hybrid-v1";
+pub const P384_MLDSA_KEY_FORMAT: &str = "apg-public-p384-mldsa65-v1";
 pub const SECRET_FORMAT: &str = "apg-secret-v1";
 pub const HYBRID_SECRET_FORMAT: &str = "apg-secret-hybrid-v1";
 pub const ED25519: &str = "ed25519";
@@ -37,6 +41,13 @@ pub const ECDSA_P384: &str = "ecdsa-p384-sha384";
 pub const COMPOSITE: &str = "ed25519-mldsa65";
 /// FIPS 204 context string for the ML-DSA half of composite signatures.
 const MLDSA_CONTEXT: &[u8] = b"APG ed25519-mldsa65 v1";
+/// Composite ECDSA P-384 and ML-DSA-65 signatures; both must verify.
+pub const P384_MLDSA: &str = "ecdsa-p384-mldsa65";
+/// FIPS 204 context string for the ML-DSA half of `ecdsa-p384-mldsa65` signatures.
+pub const P384_MLDSA_CONTEXT: &[u8] = b"APG ecdsa-p384-mldsa65 v1";
+/// Length of the P-384 part of `ecdsa-p384-mldsa65` keys and signatures.
+const P384_POINT_LEN: usize = 97;
+const P384_SIGNATURE_LEN: usize = 96;
 
 /// An identity suite. Every artifact names its suite explicitly; nothing is inferred
 /// from key lengths and no suite is ever substituted for another.
@@ -46,6 +57,8 @@ pub enum Suite {
     P384,
     /// ML-KEM-768 and X25519 encryption with Ed25519 signatures.
     Hybrid,
+    /// P-384 ECDH encryption with composite ECDSA P-384 and ML-DSA-65 signatures.
+    P384MlDsa,
 }
 impl Suite {
     pub fn from_key_format(format: &str) -> Result<Self> {
@@ -53,6 +66,7 @@ impl Suite {
             KEY_FORMAT => Ok(Self::Curve25519),
             P384_KEY_FORMAT => Ok(Self::P384),
             HYBRID_KEY_FORMAT => Ok(Self::Hybrid),
+            P384_MLDSA_KEY_FORMAT => Ok(Self::P384MlDsa),
             _ => Err(Error::new(
                 "invalid_format",
                 "Public key fingerprint or format mismatch",
@@ -64,6 +78,7 @@ impl Suite {
             ED25519 => Ok(Self::Curve25519),
             ECDSA_P384 => Ok(Self::P384),
             COMPOSITE => Ok(Self::Hybrid),
+            P384_MLDSA => Ok(Self::P384MlDsa),
             _ => Err(Error::new(
                 "invalid_format",
                 "Unsupported signature algorithm",
@@ -86,13 +101,25 @@ impl Suite {
             Self::Curve25519 => KEY_FORMAT,
             Self::P384 => P384_KEY_FORMAT,
             Self::Hybrid => HYBRID_KEY_FORMAT,
+            Self::P384MlDsa => P384_MLDSA_KEY_FORMAT,
         }
     }
     pub fn envelope_suite(self) -> &'static str {
+        self.envelope().envelope_suite_name()
+    }
+    fn envelope_suite_name(self) -> &'static str {
         match self {
             Self::Curve25519 => SUITE,
-            Self::P384 => P384_SUITE,
+            Self::P384 | Self::P384MlDsa => P384_SUITE,
             Self::Hybrid => HYBRID_SUITE,
+        }
+    }
+    /// The suite whose envelope construction this identity uses: P-384 for
+    /// `apg-public-p384-mldsa65-v1`, whose encryption key is a P-384 point.
+    pub fn envelope(self) -> Self {
+        match self {
+            Self::P384MlDsa => Self::P384,
+            other => other,
         }
     }
     pub fn signature_algorithm(self) -> &'static str {
@@ -100,6 +127,7 @@ impl Suite {
             Self::Curve25519 => ED25519,
             Self::P384 => ECDSA_P384,
             Self::Hybrid => COMPOSITE,
+            Self::P384MlDsa => P384_MLDSA,
         }
     }
     /// Encoded encryption key: a raw X25519 key, an uncompressed SEC1 P-384 point,
@@ -107,7 +135,7 @@ impl Suite {
     pub fn encryption_key_len(self) -> usize {
         match self {
             Self::Curve25519 => 32,
-            Self::P384 => 97,
+            Self::P384 | Self::P384MlDsa => 97,
             Self::Hybrid => ENCAPS_KEY_LEN + 32,
         }
     }
@@ -117,6 +145,7 @@ impl Suite {
             Self::Curve25519 => 32,
             Self::P384 => 97,
             Self::Hybrid => 32 + mldsa::PUBLIC_KEY_LEN,
+            Self::P384MlDsa => P384_POINT_LEN + mldsa::PUBLIC_KEY_LEN,
         }
     }
     /// Envelope `ephemeral_key`: the sender's ephemeral public key, preceded by the
@@ -124,7 +153,7 @@ impl Suite {
     pub fn ephemeral_len(self) -> usize {
         match self {
             Self::Curve25519 => 32,
-            Self::P384 => 97,
+            Self::P384 | Self::P384MlDsa => 97,
             Self::Hybrid => CIPHERTEXT_LEN + 32,
         }
     }
@@ -133,6 +162,7 @@ impl Suite {
             Self::Curve25519 => 64,
             Self::P384 => 96,
             Self::Hybrid => 64 + mldsa::SIGNATURE_LEN,
+            Self::P384MlDsa => P384_SIGNATURE_LEN + mldsa::SIGNATURE_LEN,
         }
     }
     /// Fingerprint length: SHA-256 for the original apg-public-v1 suite, SHA-384 for
@@ -140,7 +170,7 @@ impl Suite {
     pub fn fingerprint_len(self) -> usize {
         match self {
             Self::Curve25519 => 32,
-            Self::P384 | Self::Hybrid => 48,
+            Self::P384 | Self::Hybrid | Self::P384MlDsa => 48,
         }
     }
     /// Software secret format and protected seed length, if the suite has one.
@@ -148,7 +178,7 @@ impl Suite {
         match self {
             Self::Curve25519 => Some((SECRET_FORMAT, 64)),
             Self::Hybrid => Some((HYBRID_SECRET_FORMAT, 160)),
-            Self::P384 => None,
+            Self::P384 | Self::P384MlDsa => None,
         }
     }
     fn identity_domain(self) -> &'static str {
@@ -156,6 +186,7 @@ impl Suite {
             Self::Curve25519 => "APG identity v1",
             Self::P384 => "APG identity p384 v1",
             Self::Hybrid => "APG identity hybrid v1",
+            Self::P384MlDsa => "APG identity p384-mldsa65 v1",
         }
     }
 }
@@ -369,7 +400,7 @@ fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> String {
     let framed = frame(suite.identity_domain(), &[encryption, signing]);
     match suite {
         Suite::Curve25519 => hex::encode(Sha256::digest(&framed)),
-        Suite::P384 | Suite::Hybrid => hex::encode(Sha384::digest(&framed)),
+        Suite::P384 | Suite::Hybrid | Suite::P384MlDsa => hex::encode(Sha384::digest(&framed)),
     }
 }
 /// Check a fingerprint field: 32-byte (apg-public-v1) or 48-byte (P-384 and hybrid)
@@ -464,6 +495,10 @@ impl PublicKey {
         if suite == Suite::P384 {
             p384_point(&enc)?;
             p384_point(&sig)?;
+        }
+        if suite == Suite::P384MlDsa {
+            p384_point(&enc)?;
+            p384_point(&sig[..P384_POINT_LEN])?;
         }
         if suite == Suite::Hybrid {
             // FIPS 203 modulus check: a non-canonical key would be reinterpreted.
@@ -601,6 +636,22 @@ pub fn unlock_identity(secret: &SecretKey, password: &[u8]) -> Result<SoftwareId
     })
 }
 
+/// FIPS 204 message representative for pure ML-DSA with a context string:
+/// `mu = SHAKE256(SHAKE256(pk, 64) || 0x00 || len(ctx) || ctx || M, 64)`. Providers
+/// such as AWS KMS sign `mu` directly (external mu), so large messages and APG's
+/// context never cross the provider interface, and the result verifies as an
+/// ordinary pure ML-DSA signature over `M` with that context.
+pub fn mldsa_mu(public_key: &[u8], context: &[u8], message: &[u8]) -> Result<[u8; 64]> {
+    let context_len = u8::try_from(context.len())
+        .map_err(|_| Error::new("invalid_request", "ML-DSA context exceeds 255 bytes"))?;
+    let mut tr = [0; 64];
+    Shake256::xof(public_key, &mut tr);
+    let input = [&tr[..], &[0, context_len], context, message].concat();
+    let mut mu = [0; 64];
+    Shake256::xof(&input, &mut mu);
+    Ok(mu)
+}
+
 /// SHA-384 of a framed message, the input a token signs with raw CKM_ECDSA. Signing
 /// the digest keeps large messages off the provider interface.
 pub fn p384_digest(message: &[u8]) -> Vec<u8> {
@@ -652,6 +703,30 @@ pub(crate) fn verify_message(
             }
             EcdsaP384Sha384::verify(&key, message, &signature)?
         }
+        Suite::P384MlDsa => {
+            // Both halves must verify over the same framed message.
+            let signature = hex_exact(signature, suite.signature_len())?;
+            let (ecdsa, pq) = signature.split_at(P384_SIGNATURE_LEN);
+            if !EcdsaP384Sha384::has_low_s(ecdsa)? {
+                return Err(Error::new(
+                    "authentication_failed",
+                    "ECDSA signature is not in canonical low-s form",
+                ));
+            }
+            EcdsaP384Sha384::verify(&key[..P384_POINT_LEN], message, ecdsa)?;
+            let valid = mldsa::verify(
+                key[P384_POINT_LEN..].try_into().expect("checked length"),
+                message,
+                P384_MLDSA_CONTEXT,
+                pq.try_into().expect("checked length"),
+            );
+            if !valid {
+                return Err(Error::new(
+                    "authentication_failed",
+                    "Cryptographic operation rejected its input",
+                ));
+            }
+        }
     }
     Ok(())
 }
@@ -675,8 +750,9 @@ pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<Stri
     if signature.len() != suite.signature_len() {
         return Err(failure());
     }
-    if suite == Suite::P384 {
-        EcdsaP384Sha384::normalize_s(&mut signature).map_err(|_| failure())?;
+    if matches!(suite, Suite::P384 | Suite::P384MlDsa) {
+        EcdsaP384Sha384::normalize_s(&mut signature[..P384_SIGNATURE_LEN])
+            .map_err(|_| failure())?;
     }
     let signature = hex::encode(signature);
     verify_message(public, suite.signature_algorithm(), message, &signature)
@@ -853,7 +929,7 @@ fn envelope_key(suite: Suite, shared: &[u8], e: &Envelope) -> Result<Zeroizing<[
             Hkdf::<HmacSha256>::derive(shared, b"APG encryption v1", &aad, key.as_mut())?;
             Ok(key)
         }
-        Suite::P384 => Ok(x963_kdf_sha384(shared, &p384_shared_info(&aad))),
+        Suite::P384 | Suite::P384MlDsa => Ok(x963_kdf_sha384(shared, &p384_shared_info(&aad))),
     }
 }
 fn seal(suite: Suite, key: &[u8], nonce: &[u8], aad: &[u8], data: &mut [u8]) -> Result<[u8; 16]> {
@@ -862,7 +938,9 @@ fn seal(suite: Suite, key: &[u8], nonce: &[u8], aad: &[u8], data: &mut [u8]) -> 
         Suite::Curve25519 | Suite::Hybrid => {
             ChaCha20Poly1305::new(key)?.seal_detached(nonce, aad, data, &mut tag)?
         }
-        Suite::P384 => Aes256Gcm::new(key)?.seal_detached(nonce, aad, data, &mut tag)?,
+        Suite::P384 | Suite::P384MlDsa => {
+            Aes256Gcm::new(key)?.seal_detached(nonce, aad, data, &mut tag)?
+        }
     }
     Ok(tag)
 }
@@ -878,7 +956,9 @@ fn open(
         Suite::Curve25519 | Suite::Hybrid => {
             ChaCha20Poly1305::new(key)?.open_detached(nonce, aad, data, tag)?
         }
-        Suite::P384 => Aes256Gcm::new(key)?.open_detached(nonce, aad, data, tag)?,
+        Suite::P384 | Suite::P384MlDsa => {
+            Aes256Gcm::new(key)?.open_detached(nonce, aad, data, tag)?
+        }
     }
     Ok(())
 }
@@ -892,7 +972,7 @@ pub(crate) fn ephemeral(suite: Suite) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
             X25519::public_key(secret.as_ref(), &mut public)?;
             Ok((Zeroizing::new(secret.to_vec()), public))
         }
-        Suite::P384 => {
+        Suite::P384 | Suite::P384MlDsa => {
             for _ in 0..16 {
                 let secret = random::<48>()?;
                 let mut public = vec![0; 97];
@@ -908,10 +988,17 @@ pub(crate) fn ephemeral(suite: Suite) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
     }
 }
 fn ephemeral_agree(suite: Suite, secret: &[u8], peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-    let mut shared = Zeroizing::new(vec![0; if suite == Suite::P384 { 48 } else { 32 }]);
+    let mut shared = Zeroizing::new(vec![
+        0;
+        if matches!(suite, Suite::P384 | Suite::P384MlDsa) {
+            48
+        } else {
+            32
+        }
+    ]);
     match suite {
         Suite::Curve25519 | Suite::Hybrid => X25519::agree(secret, peer, &mut shared)?,
-        Suite::P384 => EcdhP384::agree(secret, peer, &mut shared)?,
+        Suite::P384 | Suite::P384MlDsa => EcdhP384::agree(secret, peer, &mut shared)?,
     }
     Ok(shared)
 }
@@ -942,7 +1029,7 @@ fn encapsulate(suite: Suite, recipient: &[u8]) -> Result<(Vec<u8>, Zeroizing<Vec
 }
 pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> {
     p.pin(expected)?;
-    let suite = p.suite()?;
+    let suite = p.suite()?.envelope();
     let (epk, shared) = encapsulate(suite, &p.encryption_key_bytes()?)?;
     let nonce = random::<12>()?;
     let mut e = Envelope {
@@ -972,7 +1059,7 @@ pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> 
 pub(crate) fn check_envelope(public: &PublicKey, e: &Envelope) -> Result<Suite> {
     e.validate()?;
     public.pin(&e.recipient)?;
-    let suite = public.suite()?;
+    let suite = public.suite()?.envelope();
     if e.suite != suite.envelope_suite() {
         return Err(Error::new(
             "invalid_format",

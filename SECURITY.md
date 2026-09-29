@@ -62,8 +62,9 @@ dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); R
 used only for public operations. It does not verify signatures embedded in messages,
 and APG trust snapshots do not govern it. See [OpenPGP interoperability](docs/OPENPGP.md).
 No private-key keyring, native multi-recipient wrapping,
-identity certification, hardware attestation, post-quantum hardware keys or FIPS
-validation. Hardware identities release one ECDH shared secret per decrypted
+identity certification, hardware attestation, post-quantum PKCS#11 or TPM keys, or
+FIPS validation. AWS KMS identities can sign with composite ECDSA P-384 plus
+ML-DSA-65, but their encryption remains P-384 ECDH. Hardware identities release one ECDH shared secret per decrypted
 envelope into process memory; token protection flags are self-reported, not
 attested; PIN files are ordinary secrets on disk. No network services, keyservers or web-of-trust resolution. Metadata
 reveals public keys, fingerprints, ciphertext length and algorithm choices.

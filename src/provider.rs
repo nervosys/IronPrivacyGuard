@@ -184,14 +184,17 @@ impl TpmKey {
 }
 
 /// A P-384 identity whose private keys are two existing AWS KMS keys: an
-/// ECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. The file is
-/// public; using it requires the host's AWS credentials and KMS key permissions.
+/// ECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. With a third,
+/// ML_DSA_65 SIGN_VERIFY key it is an `apg-public-p384-mldsa65-v1` identity whose
+/// signatures are composite ECDSA P-384 plus ML-DSA-65. The file is public; using it
+/// requires the host's AWS credentials and KMS key permissions.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct KmsKey {
     #[schemars(schema_with = "crate::contract::kms_key_format")]
     pub format: String,
-    /// Always an apg-public-p384-v1 identity (checked at runtime).
+    /// apg-public-p384-v1, or apg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`
+    /// (checked at runtime).
     pub public: PublicKey,
     #[schemars(schema_with = "crate::contract::aws_region")]
     pub region: String,
@@ -199,6 +202,10 @@ pub struct KmsKey {
     pub encryption_key_arn: String,
     #[schemars(schema_with = "crate::contract::kms_key_arn")]
     pub signing_key_arn: String,
+    /// ML_DSA_65 SIGN_VERIFY key for the post-quantum half of composite signatures.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "crate::contract::optional_kms_key_arn")]
+    pub mldsa_signing_key_arn: Option<String>,
 }
 impl KmsKey {
     pub fn validate(&self) -> Result<()> {
@@ -206,16 +213,22 @@ impl KmsKey {
             return Err(Error::new("invalid_format", "Unsupported KMS key format"));
         }
         self.public.validate()?;
-        if self.public.suite()? != Suite::P384 {
+        let expected = if self.mldsa_signing_key_arn.is_some() {
+            Suite::P384MlDsa
+        } else {
+            Suite::P384
+        };
+        if self.public.suite()? != expected {
             return Err(Error::new(
                 "invalid_format",
-                "KMS keys bind only apg-public-p384-v1 identities",
+                "KMS keys bind apg-public-p384-v1 identities, or apg-public-p384-mldsa65-v1 identities with an ML-DSA key",
             ));
         }
         check_kms_keys(
             &self.region,
             &self.encryption_key_arn,
             &self.signing_key_arn,
+            self.mldsa_signing_key_arn.as_deref(),
         )
         .map_err(|e| Error::new("invalid_format", e.message))?;
         Ok(())
@@ -272,19 +285,31 @@ fn check_region(region: &str) -> Result<()> {
     Ok(())
 }
 /// Both keys must be distinct key ARNs in the stated region and one partition.
-pub fn check_kms_keys(region: &str, encryption_key_arn: &str, signing_key_arn: &str) -> Result<()> {
+pub fn check_kms_keys(
+    region: &str,
+    encryption_key_arn: &str,
+    signing_key_arn: &str,
+    mldsa_signing_key_arn: Option<&str>,
+) -> Result<()> {
     check_region(region)?;
-    let (encryption, signing) = (parse_arn(encryption_key_arn)?, parse_arn(signing_key_arn)?);
-    if encryption.region != region
-        || signing.region != region
-        || encryption.partition != signing.partition
+    let arns: Vec<&str> = [encryption_key_arn, signing_key_arn]
+        .into_iter()
+        .chain(mldsa_signing_key_arn)
+        .collect();
+    let parsed = arns
+        .iter()
+        .map(|arn| parse_arn(arn))
+        .collect::<Result<Vec<_>>>()?;
+    if parsed
+        .iter()
+        .any(|k| k.region != region || k.partition != parsed[0].partition)
     {
         return Err(Error::new(
             "invalid_request",
-            "Both KMS keys must be in the stated region and partition",
+            "All KMS keys must be in the stated region and partition",
         ));
     }
-    if encryption_key_arn == signing_key_arn {
+    if (1..arns.len()).any(|i| arns[..i].contains(&arns[i])) {
         return Err(Error::new(
             "invalid_request",
             "Encryption and signing need distinct KMS keys",
@@ -735,7 +760,7 @@ mod kms_backend {
     pub fn open(_: &KmsKey) -> Result<Box<dyn IdentityKey>> {
         Err(unavailable())
     }
-    pub fn bind(_: &str, _: &str, _: &str) -> Result<(KmsKey, Protection)> {
+    pub fn bind(_: &str, _: &str, _: &str, _: Option<&str>) -> Result<(KmsKey, Protection)> {
         Err(unavailable())
     }
 }
@@ -744,9 +769,20 @@ pub fn kms_bind(
     region: &str,
     encryption_key_arn: &str,
     signing_key_arn: &str,
+    mldsa_signing_key_arn: Option<&str>,
 ) -> Result<(KmsKey, Protection)> {
-    check_kms_keys(region, encryption_key_arn, signing_key_arn)?;
-    kms_backend::bind(region, encryption_key_arn, signing_key_arn)
+    check_kms_keys(
+        region,
+        encryption_key_arn,
+        signing_key_arn,
+        mldsa_signing_key_arn,
+    )?;
+    kms_backend::bind(
+        region,
+        encryption_key_arn,
+        signing_key_arn,
+        mldsa_signing_key_arn,
+    )
 }
 
 #[cfg(all(feature = "tpm", windows))]
