@@ -3,14 +3,14 @@
 //!
 //! APG has no software P-384 secret format; `FixtureToken` stands in for a PKCS#11
 //! token through the public provider interface, exactly as the hardware backend does.
-use apg::{
+use ic_core::traits::{KeyAgreement, SignatureScheme};
+use ic_ec::{EcdhP384, EcdsaP384Sha384};
+use iron_privacy_guardian::{
     artifact,
     crypto::{self, Custody, Envelope, IdentityKey, PublicKey, Signature},
     lifecycle::{self, Revocation, RevocationReason, Validity},
     trust::TrustStore,
 };
-use ic_core::traits::{KeyAgreement, SignatureScheme};
-use ic_ec::{EcdhP384, EcdsaP384Sha384};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use zeroize::Zeroizing;
@@ -46,12 +46,12 @@ impl IdentityKey for FixtureToken {
     fn custody(&self) -> Custody {
         Custody::Hardware
     }
-    fn sign_raw(&self, message: &[u8]) -> apg::error::Result<Vec<u8>> {
+    fn sign_raw(&self, message: &[u8]) -> iron_privacy_guardian::error::Result<Vec<u8>> {
         let mut signature = vec![0; 96];
         EcdsaP384Sha384::sign(&self.signing, message, &mut signature)?;
         Ok(signature)
     }
-    fn agree(&self, peer: &[u8]) -> apg::error::Result<Zeroizing<Vec<u8>>> {
+    fn agree(&self, peer: &[u8]) -> iron_privacy_guardian::error::Result<Zeroizing<Vec<u8>>> {
         let mut shared = Zeroizing::new(vec![0; 48]);
         EcdhP384::agree(&self.encryption, peer, &mut shared)?;
         Ok(shared)

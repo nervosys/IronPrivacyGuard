@@ -1,7 +1,7 @@
 //! Minimal safe wrapper over Windows CNG (NCrypt) for TPM-backed P-384 keys through
 //! the Microsoft Platform Crypto Provider.
 //!
-//! This is the only crate in Agentic Privacy Guard that contains `unsafe` code. It
+//! This is the only crate in IronPrivacyGuardian that contains `unsafe` code. It
 //! exposes owned handles that are freed on drop and byte-oriented operations; every
 //! FFI call checks its status and every buffer length is validated before use.
 #![cfg(windows)]

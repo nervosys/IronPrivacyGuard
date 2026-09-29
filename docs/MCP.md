@@ -17,8 +17,8 @@ For clients that accept an `mcpServers` object, use an absolute executable path:
 ```json
 {
   "mcpServers": {
-    "agentic-privacy-guard": {
-      "command": "C:/path/to/AgenticPrivacyGuard/target/release/apg.exe",
+    "iron-privacy-guardian": {
+      "command": "C:/path/to/IronPrivacyGuardian/target/release/apg.exe",
       "args": ["mcp", "--allow", "discover,schema,ontology,plan,hash,inspect"]
     }
   }

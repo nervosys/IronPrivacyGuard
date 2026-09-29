@@ -481,7 +481,7 @@ pub fn operation(id: &str) -> Value {
         "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked"]})
 }
 pub fn discover() -> Value {
-    json!({"name":"Agentic Privacy Guard", "binary":"apg", "version":env!("CARGO_PKG_VERSION"),
+    json!({"name":"IronPrivacyGuardian", "binary":"apg", "version":env!("CARGO_PKG_VERSION"),
         "protocol":"apg/1", "status":"experimental", "interaction":"noninteractive", "control_json":"unique decoded object member names at every depth; duplicates fail before dispatch",
         "transports":[{"command":"apg <operation> --field value", "format":"one JSON response"},{"command":"apg call", "format":"one Call JSON on stdin"},{"command":"apg serve", "format":"Call NDJSON on stdin; one response per line"},{"command":"apg mcp", "format":"MCP JSON-RPC on newline-delimited stdio", "protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"startup_flags":["--allow","--trust-store","--expected-store-digest","--key-custody"],"tool_calls_per_minute":crate::mcp::MAX_CALLS_PER_MINUTE}],
         "operations":OPERATIONS.iter().map(|o|operation(o.0)).collect::<Vec<_>>(),
@@ -1019,5 +1019,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.22.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.23.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

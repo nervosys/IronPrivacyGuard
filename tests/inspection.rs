@@ -1,11 +1,11 @@
-use apg::{artifact, crypto, handle_call, trust};
+use iron_privacy_guardian::{artifact, crypto, handle_call, trust};
 use serde_json::{Value, json};
 use std::{fs, sync::OnceLock};
 fn fixture() -> &'static Value {
     static V: OnceLock<Value> = OnceLock::new();
     V.get_or_init(|| serde_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
 }
-fn inspect(value: &Value) -> apg::error::Result<artifact::Metadata> {
+fn inspect(value: &Value) -> iron_privacy_guardian::error::Result<artifact::Metadata> {
     artifact::inspect(&serde_json::to_vec(value).unwrap())
 }
 fn artifacts() -> Vec<Value> {
@@ -129,10 +129,13 @@ fn byte_bounds_and_ciphertext_case_match_supported_formats() {
         "limit_exceeded"
     );
     assert_eq!(
-        artifact::inspect(&vec![b' '; apg::MAX_FILE_BYTES as usize + 1])
-            .err()
-            .unwrap()
-            .code,
+        artifact::inspect(&vec![
+            b' ';
+            iron_privacy_guardian::MAX_FILE_BYTES as usize + 1
+        ])
+        .err()
+        .unwrap()
+        .code,
         "limit_exceeded"
     );
     let mut envelope = fixture()["messages"][8]["envelope"].clone();

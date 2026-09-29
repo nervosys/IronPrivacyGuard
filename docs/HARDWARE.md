@@ -138,7 +138,7 @@ apg mcp --key-custody hardware --allow hardware.tokens,decrypt,sign,verify,encry
 
 Refused keys fail with `policy_mismatch`, including software `key.generate` and
 `key.rewrap` under the stricter settings. Public operations are unaffected. Callers
-cannot change this setting. In-process callers use `apg::execute_with` with
+cannot change this setting. In-process callers use `iron_privacy_guardian::execute_with` with
 `provider::Host { custody: CustodyPolicy::NonExportable }` or `Hardware`.
 
 ## Failure handling

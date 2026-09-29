@@ -1,4 +1,4 @@
-use apg::{
+use iron_privacy_guardian::{
     crypto,
     lifecycle::{self, RevocationReason},
     mcp::{self, Config, Server},
@@ -161,7 +161,10 @@ fn catalog_is_complete_with_resolvable_schemas_and_annotations() {
     }
     let catalog = mcp::tool_catalog(&Config::default());
     let tools = catalog["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), apg::ontology::OPERATIONS.len());
+    assert_eq!(
+        tools.len(),
+        iron_privacy_guardian::ontology::OPERATIONS.len()
+    );
     let names: BTreeSet<_> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     assert_eq!(names.len(), tools.len());
     for t in tools {
@@ -202,7 +205,10 @@ fn plan_tool_recursion_targets_full_request_not_tool_arguments() {
         .pointer(reference.strip_prefix('#').unwrap())
         .unwrap();
     let variants = request["oneOf"].as_array().unwrap();
-    assert_eq!(variants.len(), apg::ontology::OPERATIONS.len());
+    assert_eq!(
+        variants.len(),
+        iron_privacy_guardian::ontology::OPERATIONS.len()
+    );
     assert!(
         variants
             .iter()
@@ -391,22 +397,32 @@ fn startup_and_frame_errors_fail_closed() {
     assert_eq!(out.status.code(), Some(2));
     assert!(out.stdout.is_empty());
     assert!(!out.stderr.is_empty());
-    let data = vec![b'x'; apg::MAX_REQUEST_BYTES as usize + 1];
+    let data = vec![b'x'; iron_privacy_guardian::MAX_REQUEST_BYTES as usize + 1];
     let mut input = std::io::Cursor::new(data);
     assert_eq!(
-        apg::transport::read_frame(&mut input).unwrap_err().code,
+        iron_privacy_guardian::transport::read_frame(&mut input)
+            .unwrap_err()
+            .code,
         "limit_exceeded"
     );
     let mut input = std::io::Cursor::new(b"one\ntwo");
     assert_eq!(
-        apg::transport::read_frame(&mut input).unwrap().unwrap(),
+        iron_privacy_guardian::transport::read_frame(&mut input)
+            .unwrap()
+            .unwrap(),
         b"one\n"
     );
     assert_eq!(
-        apg::transport::read_frame(&mut input).unwrap().unwrap(),
+        iron_privacy_guardian::transport::read_frame(&mut input)
+            .unwrap()
+            .unwrap(),
         b"two"
     );
-    assert!(apg::transport::read_frame(&mut input).unwrap().is_none());
+    assert!(
+        iron_privacy_guardian::transport::read_frame(&mut input)
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
@@ -481,7 +497,10 @@ fn oversized_mcp_subprocess_frame_emits_protocol_error_and_exits() {
         .unwrap();
     let mut input = child.stdin.take().unwrap();
     // The server may close stdin while the final bytes are being written.
-    let _ = input.write_all(&vec![b'x'; apg::MAX_REQUEST_BYTES as usize + 1]);
+    let _ = input.write_all(&vec![
+        b'x';
+        iron_privacy_guardian::MAX_REQUEST_BYTES as usize + 1
+    ]);
     drop(input);
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(2));

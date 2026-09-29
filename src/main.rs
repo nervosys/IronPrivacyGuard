@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-use apg::{Request, error::Error};
+use iron_privacy_guardian::{Request, error::Error};
 use serde_json::{Map, Value};
 use std::io::{self, Write};
 
@@ -12,7 +12,9 @@ fn emit(value: &Value) -> io::Result<()> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().is_some_and(|s| s == "mcp") {
-        let mut server = match apg::mcp::Config::parse(&args[1..]).and_then(apg::mcp::Server::new) {
+        let mut server = match iron_privacy_guardian::mcp::Config::parse(&args[1..])
+            .and_then(iron_privacy_guardian::mcp::Server::new)
+        {
             Ok(server) => server,
             Err(error) => {
                 // Startup has no JSON-RPC request to answer. Keep stdout protocol-only.
@@ -25,7 +27,7 @@ fn main() {
         };
         let mut input = io::stdin().lock();
         loop {
-            match apg::transport::read_frame(&mut input) {
+            match iron_privacy_guardian::transport::read_frame(&mut input) {
                 Ok(Some(frame)) => {
                     if let Some(response) = server.handle(&frame) {
                         if emit(&response).is_err() {
@@ -35,7 +37,11 @@ fn main() {
                 }
                 Ok(None) => return,
                 Err(error) => {
-                    let _ = emit(&apg::mcp::rpc_error(Value::Null, -32600, &error.message));
+                    let _ = emit(&iron_privacy_guardian::mcp::rpc_error(
+                        Value::Null,
+                        -32600,
+                        &error.message,
+                    ));
                     std::process::exit(error.exit_code());
                 }
             }
@@ -45,35 +51,38 @@ fn main() {
         let stdin = io::stdin();
         let mut input = stdin.lock();
         loop {
-            let line = match apg::transport::read_frame(&mut input) {
+            let line = match iron_privacy_guardian::transport::read_frame(&mut input) {
                 Ok(Some(line)) => line,
                 Ok(None) => break,
                 Err(error) => {
-                    let (v, code) = apg::respond(None, Err(error));
+                    let (v, code) = iron_privacy_guardian::respond(None, Err(error));
                     let _ = emit(&v);
                     std::process::exit(code);
                 }
             };
-            if emit(&apg::handle_call(&line).0).is_err() {
+            if emit(&iron_privacy_guardian::handle_call(&line).0).is_err() {
                 std::process::exit(4);
             }
         }
         return;
     }
     let (value, code) = if args == ["call"] {
-        match apg::read_limited(io::stdin().lock(), apg::MAX_REQUEST_BYTES) {
-            Ok(data) => apg::handle_call(&data),
-            Err(e) => apg::respond(None, Err(e)),
+        match iron_privacy_guardian::read_limited(
+            io::stdin().lock(),
+            iron_privacy_guardian::MAX_REQUEST_BYTES,
+        ) {
+            Ok(data) => iron_privacy_guardian::handle_call(&data),
+            Err(e) => iron_privacy_guardian::respond(None, Err(e)),
         }
     } else {
-        apg::respond(None, parse(args).and_then(apg::execute))
+        iron_privacy_guardian::respond(None, parse(args).and_then(iron_privacy_guardian::execute))
     };
     if emit(&value).is_err() {
         std::process::exit(4);
     }
     std::process::exit(code);
 }
-fn parse(args: Vec<String>) -> apg::error::Result<Request> {
+fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
     if args.is_empty() || args == ["--help"] || args == ["help"] {
         return Ok(Request::Discover {});
     }
@@ -107,7 +116,7 @@ fn parse(args: Vec<String>) -> apg::error::Result<Request> {
                 | "not_after"
                 | "at_time"
         ) {
-            apg::control_json::parse(pair[1].as_bytes())?
+            iron_privacy_guardian::control_json::parse(pair[1].as_bytes())?
         } else {
             Value::String(pair[1].clone())
         };

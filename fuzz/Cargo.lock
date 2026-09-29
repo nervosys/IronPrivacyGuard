@@ -3,32 +3,10 @@
 version = 4
 
 [[package]]
-name = "agentic-privacy-guard"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "hex",
- "ic-cipher",
- "ic-core",
- "ic-ec",
- "ic-hash",
- "ic-kdf",
- "ic-mac",
- "ic-mldsa",
- "ic-mlkem",
- "ic-ontology",
- "schemars",
- "serde",
- "serde_json",
- "tempfile",
- "zeroize",
-]
-
-[[package]]
 name = "apg-fuzz-support"
 version = "0.0.0"
 dependencies = [
- "agentic-privacy-guard",
+ "iron-privacy-guardian",
  "libfuzzer-sys",
  "serde_json",
 ]
@@ -195,6 +173,28 @@ version = "0.1.3"
 source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
 dependencies = [
  "ic-core",
+]
+
+[[package]]
+name = "iron-privacy-guardian"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "hex",
+ "ic-cipher",
+ "ic-core",
+ "ic-ec",
+ "ic-hash",
+ "ic-kdf",
+ "ic-mac",
+ "ic-mldsa",
+ "ic-mlkem",
+ "ic-ontology",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "zeroize",
 ]
 
 [[package]]

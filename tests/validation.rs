@@ -1,4 +1,4 @@
-use apg::{handle_call, validation};
+use iron_privacy_guardian::{handle_call, validation};
 use serde_json::{Value, json};
 use std::{fs, process::Command};
 fn report(value: Value) -> Value {
@@ -69,8 +69,9 @@ fn bounded_validation_and_validation_of_validation() {
     }
     assert_eq!(report(deep)["issues"][0]["code"], "limit_exceeded");
     assert_eq!(
-        report(json!({"operation":"hash","input":"x".repeat(apg::MAX_REQUEST_BYTES as usize)}))["issues"]
-            [0]["code"],
+        report(
+            json!({"operation":"hash","input":"x".repeat(iron_privacy_guardian::MAX_REQUEST_BYTES as usize)})
+        )["issues"][0]["code"],
         "limit_exceeded"
     );
     // The validation operation accepts malformed candidate JSON as input by design.

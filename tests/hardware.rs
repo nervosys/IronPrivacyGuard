@@ -1,6 +1,6 @@
 //! Hardware-provider behavior that needs no token: fail-closed configuration, host
 //! custody policy, preflight and cheap checks that must run before any token login.
-use apg::{
+use iron_privacy_guardian::{
     Request, execute_with,
     mcp::{Config, Server},
     provider::{CustodyPolicy, HARDWARE_KEY_FORMAT, Host, MODULE_ENV},
@@ -81,9 +81,10 @@ fn references_fail_closed_after_cheap_checks() {
     assert!(!dir.path().join("sig").exists());
 
     // Envelope recipient checks happen before any PIN is read or token opened.
-    let other = apg::crypto::generate(PASSWORD).unwrap();
+    let other = iron_privacy_guardian::crypto::generate(PASSWORD).unwrap();
     let envelope =
-        apg::crypto::encrypt(&other.public, &other.public.fingerprint, b"secret").unwrap();
+        iron_privacy_guardian::crypto::encrypt(&other.public, &other.public.fingerprint, b"secret")
+            .unwrap();
     fs::write(path("envelope"), serde_json::to_vec(&envelope).unwrap()).unwrap();
     let decrypted = execute_with(
         request(
@@ -174,14 +175,15 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     ] {
         let mut altered = key.clone();
         altered[field] = bad;
-        let error = apg::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
-            .err()
-            .unwrap();
+        let error =
+            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
+                .err()
+                .unwrap();
         assert_eq!(error.code, "invalid_format", "{field}");
     }
     let mut odd = key.clone();
     odd["signing_key"]["private"] = "abc".into();
-    assert!(apg::artifact::inspect(&serde_json::to_vec(&odd).unwrap()).is_err());
+    assert!(iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&odd).unwrap()).is_err());
 }
 
 #[test]
@@ -195,7 +197,8 @@ fn kms_keys_fail_closed_and_refuse_pins() {
     fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
     fs::write(path("input"), b"data").unwrap();
     fs::write(path("pin"), b"1234").unwrap();
-    let inspected = apg::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+    let inspected =
+        iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(inspected.fingerprint.unwrap(), v["public"]["fingerprint"]);
     let host = Host::default();
     // A credential file is refused before any network access.
@@ -242,11 +245,12 @@ fn kms_keys_fail_closed_and_refuse_pins() {
         let mut altered = key.clone();
         altered[field] = bad.into();
         assert!(
-            apg::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
+            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
+                .is_err(),
             "{field}"
         );
     }
-    let software = apg::crypto::generate(PASSWORD).unwrap();
+    let software = iron_privacy_guardian::crypto::generate(PASSWORD).unwrap();
     fs::write(path("software"), serde_json::to_vec(&software).unwrap()).unwrap();
     let missing = execute_with(
         request(
@@ -265,7 +269,8 @@ fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
         "provider":"Microsoft Platform Crypto Provider","vendor":"AMD",
         "encryption_key_name":format!("apg-{}-enc", "0".repeat(32)),
         "signing_key_name":format!("apg-{}-sig", "0".repeat(32))});
-    let metadata = apg::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+    let metadata =
+        iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(metadata.fingerprint.unwrap(), v["public"]["fingerprint"]);
     for (field, bad) in [
         ("provider", json!("Microsoft Software Key Storage Provider")),
@@ -278,7 +283,8 @@ fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
         let mut altered = key.clone();
         altered[field] = bad;
         assert!(
-            apg::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
+            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
+                .is_err(),
             "{field}"
         );
     }

@@ -1,4 +1,4 @@
-use apg::{
+use iron_privacy_guardian::{
     control_json, handle_call,
     mcp::{Config, Server},
 };
@@ -48,7 +48,7 @@ fn ordinary_json_numbers_strings_and_limits_remain_compatible() {
         assert!(control_json::parse(data.as_bytes()).is_err());
     }
     let mut exact = b"null".to_vec();
-    exact.resize(apg::MAX_REQUEST_BYTES as usize, b' ');
+    exact.resize(iron_privacy_guardian::MAX_REQUEST_BYTES as usize, b' ');
     assert!(control_json::parse(&exact).is_ok());
     exact.push(b' ');
     assert_eq!(

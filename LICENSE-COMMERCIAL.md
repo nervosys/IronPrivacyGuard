@@ -1,10 +1,10 @@
-# Commercial License for Agentic Privacy Guard
+# Commercial License for IronPrivacyGuardian
 
 Copyright (C) 2026 NERVOSYS. All rights reserved.
 
 ## Dual Licensing
 
-Agentic Privacy Guard (APG) is available under two licensing options:
+IronPrivacyGuardian (APG) is available under two licensing options:
 
 ### 1. GNU Affero General Public License v3 (AGPL-3.0-or-later)
 
