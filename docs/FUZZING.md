@@ -20,7 +20,7 @@ KDFs, OS randomness, every cryptographic primitive, or external policy managemen
 
 Inputs are bounded at 65,537 bytes for requests/MCP, 65,536 for artifacts and
 131,074 for framing (individual frames still have the 65,536-byte limit).
-The checked-in seeds include all artifact types and both snapshot versions,
+The checked-in seeds include all artifact types and all three snapshot versions,
 protocol errors, duplicate native fields, plans and MCP lifecycle sequences.
 Artifact seeds use only the public test keys from the independent vector corpus.
 

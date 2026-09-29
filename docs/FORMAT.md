@@ -201,11 +201,12 @@ certificate requests permanent retirement of both keys. It contains no trusted
 time or proof of distribution. No active-key status can be inferred from the
 absence of a certificate. See [lifecycle semantics](LIFECYCLE.md).
 
-## Trust snapshots: apg-trust-v1 and apg-trust-v2
+## Trust snapshots: apg-trust-v1, apg-trust-v2 and apg-trust-v3
 
 The public-identity and revocation collection format, canonical snapshot digest,
 and enforcement rules are specified in [TRUST.md](TRUST.md). Every snapshot is a
-new artifact and requires an external digest pin when used as policy.
+new artifact and requires an external digest pin when used as policy. APG writes
+v3 (SHA-384 digest, 96 hex characters); v1 and v2 (SHA-256, 64 hex) remain readable.
 
 ## Validity certificate: apg-validity-v1
 

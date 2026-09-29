@@ -60,7 +60,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "trust.validity",
-        "Import or narrow signed validity into a new v2 snapshot",
+        "Import or narrow signed validity into a new snapshot",
         &["TrustStore", "TrustDigest", "Validity", "Fingerprint"],
         &["TrustStore", "TrustDigest"],
         &["read_file", "create_file"],
@@ -628,7 +628,7 @@ pub fn export() -> Value {
         ),
         (
             "TrustDigest",
-            "Externally pinned SHA-256 commitment to a canonical trust snapshot; not a signature or freshness proof",
+            "Externally pinned commitment to a canonical trust snapshot: SHA-384 for apg-trust-v3, SHA-256 for legacy v1 and v2; not a signature or freshness proof",
             "control",
         ),
         (
@@ -1019,5 +1019,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.21.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.22.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

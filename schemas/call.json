@@ -549,9 +549,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "maxLength": 64,
+              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "expected_fingerprint": {
@@ -597,9 +601,13 @@
               "type": "integer"
             },
             "expected_digest": {
-              "maxLength": 64,
+              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "expected_fingerprint": {
@@ -696,9 +704,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "maxLength": 64,
+              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "expected_fingerprint": {
@@ -739,9 +751,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "maxLength": 64,
+              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "expected_fingerprint": {
@@ -782,9 +798,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "maxLength": 64,
+              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "expected_fingerprint": {
@@ -1079,9 +1099,13 @@
       "additionalProperties": false,
       "properties": {
         "expected_digest": {
-          "maxLength": 64,
+          "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+          "maxLength": 96,
           "minLength": 64,
-          "pattern": "^[0-9a-f]{64}$",
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
           "type": "string"
         },
         "store": {

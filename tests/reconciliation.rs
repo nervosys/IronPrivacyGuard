@@ -147,10 +147,15 @@ fn comparison_reports_removal_widening_replacement_and_order() {
     }
     let retired = revoked(RevocationReason::Retired);
     let compromised = revoked(RevocationReason::Compromised);
-    assert!(matches!(
-        reconciliation::compare(&retired, &store()).unwrap().changes[0],
-        Change::RevocationRemoved { .. }
-    ));
+    // The fixture store is v1, so the comparison also reports the format change.
+    let downgraded = reconciliation::compare(&retired, &store()).unwrap();
+    assert!(!downgraded.compatible_extension);
+    assert!(
+        downgraded
+            .changes
+            .iter()
+            .any(|c| matches!(c, Change::RevocationRemoved { .. }))
+    );
     assert!(matches!(
         reconciliation::compare(&retired, &compromised)
             .unwrap()
@@ -171,8 +176,12 @@ fn comparison_reports_removal_widening_replacement_and_order() {
     let public = distinct_public(42);
     two.add(public.clone(), &public.fingerprint).unwrap();
     let added = reconciliation::compare(&store(), &two).unwrap();
+    // Adding also upgrades the v1 fixture to v3, which is a compatible change.
     assert!(added.compatible_extension);
-    assert!(matches!(added.changes[0], Change::IdentityAdded { .. }));
+    assert!(matches!(
+        &added.changes[..],
+        [Change::FormatChanged { .. }, Change::IdentityAdded { .. }]
+    ));
     let mut reversed = two.clone();
     reversed.entries.reverse();
     let report = reconciliation::compare(&two, &reversed).unwrap();

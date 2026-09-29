@@ -187,12 +187,18 @@ pub fn artifacts(data: &[u8]) {
                     && comparison.compatible_extension
                     && comparison.changes.is_empty()
             );
-            assert_eq!(
-                apg::reconciliation::merge(&store, &roundtrip)
+            // Self-merge only upgrades the format, so a v3 snapshot keeps its digest.
+            let merged = apg::reconciliation::merge(&store, &roundtrip).unwrap();
+            let mut upgraded = store.clone();
+            upgraded.format = trust::FORMAT.into();
+            assert!(merged == upgraded);
+            if store.format == trust::FORMAT {
+                assert_eq!(merged.digest().unwrap(), digest);
+            }
+            assert!(
+                apg::reconciliation::compare(&store, &merged)
                     .unwrap()
-                    .digest()
-                    .unwrap(),
-                digest
+                    .compatible_extension
             );
         }
     }

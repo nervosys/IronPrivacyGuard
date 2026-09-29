@@ -1856,9 +1856,11 @@
         "type": "array"
       },
       "format": {
+        "description": "APG writes apg-trust-v3; v1 and v2 snapshots remain readable.",
         "enum": [
           "apg-trust-v1",
-          "apg-trust-v2"
+          "apg-trust-v2",
+          "apg-trust-v3"
         ],
         "type": "string"
       }

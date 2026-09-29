@@ -117,11 +117,11 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
         }
     }
     if let Some(pin) = map.get("expected_digest").and_then(Value::as_str) {
-        if crypto::bytes::<32>(pin).is_err() {
+        if crate::trust::check_digest(pin).is_err() {
             report.issue(
                 format!("{path}/expected_digest"),
                 "invalid_format",
-                "Expected exactly 64 lowercase hexadecimal characters",
+                "Expected exactly 64 or 96 lowercase hexadecimal characters",
             );
         }
     }
