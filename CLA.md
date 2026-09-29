@@ -1,8 +1,8 @@
 # Contributor License Agreement (CLA)
 
-## Agentic Privacy Guard — Individual Contributor License Agreement v1.0
+## IronPrivacyGuardian — Individual Contributor License Agreement v1.0
 
-Thank you for your interest in contributing to **Agentic Privacy Guard** (the
+Thank you for your interest in contributing to **IronPrivacyGuardian** (the
 "Project"), owned and maintained by **NERVOSYS** (the "Organization").
 
 By submitting a contribution (including but not limited to code, documentation,

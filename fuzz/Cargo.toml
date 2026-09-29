@@ -9,7 +9,7 @@ edition = "2024"
 cargo-fuzz = true
 
 [dependencies]
-agentic-privacy-guard = { path = ".." }
+iron-privacy-guardian = { path = ".." }
 serde_json = "1"
 libfuzzer-sys = "=0.4.13"
 

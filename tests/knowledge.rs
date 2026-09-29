@@ -1,10 +1,10 @@
-use apg::knowledge::{self, Support};
+use iron_privacy_guardian::knowledge::{self, Support};
 use serde_json::{Value, json};
 use std::{collections::HashSet, process::Command};
 
 #[test]
 fn catalog_links_resolve_and_support_matches_tools() {
-    let graph = apg::ontology::export();
+    let graph = iron_privacy_guardian::ontology::export();
     let nodes = graph["@graph"].as_array().unwrap();
     let ids: HashSet<_> = nodes.iter().map(|n| n["@id"].as_str().unwrap()).collect();
     assert_eq!(ids.len(), nodes.len());
@@ -20,7 +20,7 @@ fn catalog_links_resolve_and_support_matches_tools() {
         );
         for op in app.operations {
             assert!(ids.contains(format!("apg:operation/{op}").as_str()));
-            assert!(!apg::ontology::operation(&op).is_null());
+            assert!(!iron_privacy_guardian::ontology::operation(&op).is_null());
         }
     }
     for node in nodes {
@@ -92,7 +92,7 @@ fn invalid_queries_fail_execution_and_preflight() {
             "invalid_request"
         );
         let candidate = json!({"operation":"knowledge.search","query":query});
-        let report = apg::validation::validate(candidate);
+        let report = iron_privacy_guardian::validation::validate(candidate);
         let report = serde_json::to_value(report).unwrap();
         assert_eq!(report["valid"], false);
         assert_eq!(report["issues"][0]["path"], "/query");
@@ -120,7 +120,7 @@ fn cli_and_native_calls_expose_knowledge() {
         result["result"]["document"]["matches"][0]["tools"][0]["id"],
         "hash"
     );
-    let (result, code) = apg::handle_call(
+    let (result, code) = iron_privacy_guardian::handle_call(
         br#"{"protocol":"apg/1","id":"knowledge","request":{"operation":"knowledge"}}"#,
     );
     assert_eq!(code, 0);

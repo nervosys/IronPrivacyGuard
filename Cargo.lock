@@ -3,35 +3,6 @@
 version = 4
 
 [[package]]
-name = "agentic-privacy-guard"
-version = "0.1.0"
-dependencies = [
- "apg-cng",
- "cryptoki",
- "getrandom 0.3.4",
- "hex",
- "ic-cipher",
- "ic-core",
- "ic-ec",
- "ic-hash",
- "ic-kdf",
- "ic-mac",
- "ic-mldsa",
- "ic-mlkem",
- "ic-ontology",
- "ic-rustls",
- "rustls",
- "schemars",
- "secrecy",
- "serde",
- "serde_json",
- "tempfile",
- "tss-esapi",
- "webpki-roots",
- "zeroize",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,6 +310,35 @@ dependencies = [
  "ic-pkix",
  "ic-rsa",
  "rustls",
+]
+
+[[package]]
+name = "iron-privacy-guardian"
+version = "0.1.0"
+dependencies = [
+ "apg-cng",
+ "cryptoki",
+ "getrandom 0.3.4",
+ "hex",
+ "ic-cipher",
+ "ic-core",
+ "ic-ec",
+ "ic-hash",
+ "ic-kdf",
+ "ic-mac",
+ "ic-mldsa",
+ "ic-mlkem",
+ "ic-ontology",
+ "ic-rustls",
+ "rustls",
+ "schemars",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tss-esapi",
+ "webpki-roots",
+ "zeroize",
 ]
 
 [[package]]

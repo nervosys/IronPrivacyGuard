@@ -3938,5 +3938,5 @@
   ],
   "@id": "apg:ontology",
   "scope": "Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.22.0"
+  "version": "1.23.0"
 }

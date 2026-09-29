@@ -1,4 +1,4 @@
-use apg::{
+use iron_privacy_guardian::{
     crypto, handle_call,
     lifecycle::{self, RevocationReason},
     trust::{self, TrustPolicy, TrustStore},

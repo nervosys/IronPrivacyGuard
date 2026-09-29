@@ -1,4 +1,4 @@
-# Contributing to Agentic Privacy Guard
+# Contributing to IronPrivacyGuardian
 
 ## Contributor License Agreement (CLA)
 

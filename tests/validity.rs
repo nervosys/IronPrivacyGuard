@@ -1,4 +1,4 @@
-use apg::{
+use iron_privacy_guardian::{
     crypto,
     lifecycle::{self, RevocationReason, Validity},
     trust::{self, Eligibility, TrustPolicy, TrustStore},
@@ -148,7 +148,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
         String::from_utf8_lossy(&cli.stdout)
     );
     let run = |request: Value| {
-        apg::handle_call(
+        iron_privacy_guardian::handle_call(
             &serde_json::to_vec(&json!({"protocol":"apg/1","id":"expiry","request":request}))
                 .unwrap(),
         )

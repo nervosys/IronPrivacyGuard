@@ -1,7 +1,9 @@
-# Agentic Privacy Guard
+# IronPrivacyGuardian
 
-`apg` is an agent-first privacy tool written in Rust, built on
-[IronCrypto](https://github.com/nervosys/IronCrypto). It provides a working native
+IronPrivacyGuardian (APG) is an agent-first privacy tool written in Rust, built on
+[IronCrypto](https://github.com/nervosys/IronCrypto). Its command is `apg`, its Rust
+library is `iron_privacy_guardian`, and its file formats, MCP tools and protocol keep
+the `apg` prefix. It provides a working native
 alternative for core GPG workflows: generate identities, export public keys,
 encrypt/decrypt files, and sign/verify exact bytes. Every operation is described by
 machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use

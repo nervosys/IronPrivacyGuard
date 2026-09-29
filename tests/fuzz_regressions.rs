@@ -34,7 +34,7 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
 
 #[test]
 fn frame_limits_hold_across_fragment_sizes_and_line_endings() {
-    let limit = apg::MAX_REQUEST_BYTES as usize;
+    let limit = iron_privacy_guardian::MAX_REQUEST_BYTES as usize;
     for size in [limit - 1, limit, limit + 1] {
         let data = vec![b'x'; size];
         harness::framing(&data);
@@ -55,12 +55,12 @@ fn frame_limits_hold_across_fragment_sizes_and_line_endings() {
 #[test]
 fn direct_native_calls_enforce_request_size_before_parsing() {
     let mut request = br#"{"protocol":"apg/1","id":"bounded","request":{"operation":"plan","request":{"operation":"hash","input":"MUST-NOT-BE-READ"}}}"#.to_vec();
-    request.resize(apg::MAX_REQUEST_BYTES as usize, b' ');
-    assert!(apg::parse_call(&request).is_ok());
-    assert_eq!(apg::handle_call(&request).1, 0);
+    request.resize(iron_privacy_guardian::MAX_REQUEST_BYTES as usize, b' ');
+    assert!(iron_privacy_guardian::parse_call(&request).is_ok());
+    assert_eq!(iron_privacy_guardian::handle_call(&request).1, 0);
     request.push(b' ');
     harness::requests(&request);
-    let (response, status) = apg::handle_call(&request);
+    let (response, status) = iron_privacy_guardian::handle_call(&request);
     assert_eq!(status, 2);
     assert_eq!(response["error"]["code"], "limit_exceeded");
     assert!(response["id"].is_null());
@@ -73,7 +73,7 @@ fn deeply_nested_untrusted_json_is_rejected_without_execution() {
         harness::requests(data.as_bytes());
         harness::mcp(data.as_bytes());
         harness::artifacts(data.as_bytes());
-        assert!(apg::parse_call(data.as_bytes()).is_err());
+        assert!(iron_privacy_guardian::parse_call(data.as_bytes()).is_err());
     }
 }
 
@@ -91,7 +91,7 @@ fn nested_plan_requests_are_bounded_without_executing_inner_work() {
         );
         harness::mcp(rpc.as_bytes());
         if depth >= 128 {
-            assert!(apg::parse_call(call.as_bytes()).is_err());
+            assert!(iron_privacy_guardian::parse_call(call.as_bytes()).is_err());
         }
     }
 }

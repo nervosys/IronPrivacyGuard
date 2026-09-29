@@ -301,7 +301,7 @@ impl Server {
             return Some(success(
                 id,
                 json!({"protocolVersion":negotiated,"capabilities":{"tools":{"listChanged":false}},
-                "serverInfo":{"name":"agentic-privacy-guard","version":env!("CARGO_PKG_VERSION")},
+                "serverInfo":{"name":"iron-privacy-guardian","version":env!("CARGO_PKG_VERSION")},
                 "instructions":instructions(&self.config)}),
             ));
         }

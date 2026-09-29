@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "AGPL-3.0-or-later"
-description = "Minimal safe wrapper over Windows CNG for TPM-backed P-384 keys (Agentic Privacy Guard)"
+description = "Minimal safe wrapper over Windows CNG for TPM-backed P-384 keys (IronPrivacyGuardian)"
 publish = false
 
 [target.'cfg(windows)'.dependencies]

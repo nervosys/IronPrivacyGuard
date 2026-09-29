@@ -1,4 +1,4 @@
-use apg::{
+use iron_privacy_guardian::{
     crypto,
     lifecycle::{self, RevocationReason},
     reconciliation::{self, Change, WindowRelation},
@@ -195,11 +195,13 @@ fn union_order_capacity_and_invalid_inputs_are_checked() {
     let mut incoming = TrustStore::default();
     for index in 0..256 {
         let public = distinct_public(index);
-        incoming.entries.push(apg::trust::TrustEntry {
-            public,
-            revocation: None,
-            validity: None,
-        });
+        incoming
+            .entries
+            .push(iron_privacy_guardian::trust::TrustEntry {
+                public,
+                revocation: None,
+                validity: None,
+            });
     }
     let original = incoming.digest().unwrap();
     assert_eq!(
@@ -259,7 +261,7 @@ fn cli_pins_no_clobber_and_conflict_publication() {
         expected_digest: response["result"]["digest"].as_str().unwrap().into(),
     };
     let call = |r: Value| {
-        apg::handle_call(
+        iron_privacy_guardian::handle_call(
             &serde_json::to_vec(&json!({"protocol":"apg/1","id":"merge","request":r})).unwrap(),
         )
     };
