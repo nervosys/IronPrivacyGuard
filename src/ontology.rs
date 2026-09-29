@@ -664,7 +664,7 @@ pub fn export() -> Value {
         ),
         (
             "Fingerprint",
-            "SHA-256 of a suite-specific domain-separated length-framed pair of public keys",
+            "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384 and hybrid identities",
             "public",
         ),
         (
@@ -828,7 +828,7 @@ pub fn export() -> Value {
         ),
         (
             "hybrid-post-quantum",
-            "Hybrid identities (key.generate identity apg-public-hybrid-v1) receive envelopes keyed by HKDF over both an ML-KEM-768 and an X25519 shared secret, binding both ciphertexts, and sign with composite ed25519-mldsa65 signatures that verify only if both halves verify over the same framed message. Confidentiality and authenticity hold while either component of each pair is unbroken. Fingerprints and snapshot digests use SHA-256. Suites follow the identity; there is no negotiation, downgrade or stripping to Ed25519.",
+            "Hybrid identities (key.generate identity apg-public-hybrid-v1) receive envelopes keyed by HKDF over both an ML-KEM-768 and an X25519 shared secret, binding both ciphertexts, and sign with composite ed25519-mldsa65 signatures that verify only if both halves verify over the same framed message. Confidentiality and authenticity hold while either component of each pair is unbroken. Fingerprints use SHA-384; snapshot digests use SHA-256. Suites follow the identity; there is no negotiation, downgrade or stripping to Ed25519.",
         ),
         (
             "software-key-only",
@@ -992,5 +992,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.19.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.20.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

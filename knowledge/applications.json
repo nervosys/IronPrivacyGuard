@@ -151,7 +151,7 @@
     "support": "implemented",
     "operations": ["key.generate", "key.public", "encrypt", "decrypt"],
     "prerequisites": ["Generate the recipient with key.generate identity apg-public-hybrid-v1", "Recipient hybrid public identity and independently trusted fingerprint"],
-    "limitations": ["Fingerprints and snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)", "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review", "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only", "Software secret keys only; hardware identities have no post-quantum suite"],
+    "limitations": ["Fingerprints use SHA-384 but trust-snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)", "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review", "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only", "Software secret keys only; hardware identities have no post-quantum suite"],
     "guidance": "Create a hybrid identity with apg key generate --identity apg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
     "sources": ["https://doi.org/10.6028/NIST.FIPS.203", "https://www.rfc-editor.org/rfc/rfc7748", "https://www.rfc-editor.org/rfc/rfc5869"]
   },

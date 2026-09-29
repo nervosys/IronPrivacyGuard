@@ -183,9 +183,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "key": {
@@ -219,9 +223,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "key": {
@@ -258,9 +266,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -286,9 +298,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -402,9 +418,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -444,9 +464,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "key": {
@@ -493,9 +517,13 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -527,9 +555,13 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -571,9 +603,13 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "operation": {
@@ -666,9 +702,13 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "operation": {
@@ -705,9 +745,13 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "input": {
@@ -744,9 +788,13 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "maxLength": 64,
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+              "maxLength": 96,
               "minLength": 64,
-              "pattern": "^[0-9a-f]{64}$",
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
               "type": "string"
             },
             "operation": {
@@ -854,6 +902,9 @@
             "encryption_key_id": {
               "maxLength": 128,
               "minLength": 2,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
               "pattern": "^([0-9a-f]{2}){1,64}$",
               "type": "string"
             },
@@ -871,6 +922,9 @@
             "signing_key_id": {
               "maxLength": 128,
               "minLength": 2,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
               "pattern": "^([0-9a-f]{2}){1,64}$",
               "type": "string"
             },
@@ -910,6 +964,9 @@
             "encryption_key_arn": {
               "description": "ECC_NIST_P384 KEY_AGREEMENT key ARN.",
               "maxLength": 160,
+              "not": {
+                "pattern": "[^A-Za-z0-9:/-]"
+              },
               "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
               "type": "string"
             },
@@ -923,12 +980,18 @@
             "region": {
               "maxLength": 32,
               "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9-]"
+              },
               "pattern": "^[a-z0-9-]+$",
               "type": "string"
             },
             "signing_key_arn": {
               "description": "ECC_NIST_P384 SIGN_VERIFY key ARN.",
               "maxLength": 160,
+              "not": {
+                "pattern": "[^A-Za-z0-9:/-]"
+              },
               "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
               "type": "string"
             }

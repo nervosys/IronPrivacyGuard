@@ -19,12 +19,12 @@ fixed!(tpm_parent, crate::provider::TPM_PARENT);
 fixed!(kms_key_format, crate::provider::KMS_KEY_FORMAT);
 
 pub fn aws_region(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":1, "maxLength":32, "pattern":"^[a-z0-9-]+$"})
+    json_schema!({"type":"string", "minLength":1, "maxLength":32, "pattern":"^[a-z0-9-]+$", "not":{"pattern":"[^a-z0-9-]"}})
 }
 /// A KMS key ARN; aliases are refused because they can be repointed.
 pub fn kms_key_arn(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "maxLength":160,
-        "pattern":"^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$"})
+        "pattern":"^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$", "not":{"pattern":"[^A-Za-z0-9:/-]"}})
 }
 fixed!(kdf, "argon2id-m65536-t3-p4");
 fixed!(scope, "entire-identity");
@@ -44,6 +44,15 @@ const COMPOSITE_SIGNATURE: &str = "^[0-9a-f]{6746}$";
 /// ML-KEM-768 ciphertext (1088 bytes) followed by an X25519 ephemeral key.
 const HYBRID_EPHEMERAL: &str = "^[0-9a-f]{2240}$";
 
+/// SHA-256 (apg-public-v1) or SHA-384 (P-384 and hybrid) identity fingerprint.
+pub fn fingerprint(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":64, "maxLength":96,
+        "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$", "not":{"pattern":"[^0-9a-f]"},
+        "description":"64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities."})
+}
+const FINGERPRINT_256: &str = "^[0-9a-f]{64}$";
+const FINGERPRINT_384: &str = "^[0-9a-f]{96}$";
+
 pub fn public_format(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "enum":[KEY_FORMAT, P384_KEY_FORMAT, HYBRID_KEY_FORMAT]})
 }
@@ -54,31 +63,31 @@ pub fn secret_format(_: &mut SchemaGenerator) -> Schema {
 /// ML-KEM-768 plus X25519 encryption and Ed25519 plus ML-DSA-65 signing keys.
 pub fn public_key_bytes(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":64, "maxLength":3968,
-        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$", "not":{"pattern":"[^0-9a-f]"},
         "description":"Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime)."})
 }
 pub fn ephemeral_bytes(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":64, "maxLength":2240,
-        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$",
+        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$", "not":{"pattern":"[^0-9a-f]"},
         "description":"Sender ephemeral public key in the envelope suite; hybrid envelopes prefix the ML-KEM-768 ciphertext."})
 }
 /// Protected seeds: 64 bytes for apg-secret-v1, 160 for apg-secret-hybrid-v1.
 pub fn seed_ciphertext(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":128, "maxLength":320,
-        "pattern":"^([0-9a-f]{128}|[0-9a-f]{320})$"})
+        "pattern":"^([0-9a-f]{128}|[0-9a-f]{320})$", "not":{"pattern":"[^0-9a-f]"}})
 }
 /// Software secret keys bind the Curve25519 or hybrid identity suites.
 pub fn software_public_key(_: &mut SchemaGenerator) -> Schema {
-    let identity = |format: &str, encryption: &str, signing: &str| {
+    let identity = |format: &str, encryption: &str, signing: &str, fingerprint: &str| {
         serde_json::json!({"type":"object", "additionalProperties":false,
             "required":["format","encryption_key","signing_key","fingerprint"],
             "properties":{"format":{"type":"string","const":format},
-                "encryption_key":{"type":"string","pattern":encryption},
-                "signing_key":{"type":"string","pattern":signing},
-                "fingerprint":{"type":"string","pattern":CURVE25519_KEY}}})
+                "encryption_key":{"type":"string","pattern":encryption,"not":{"pattern":"[^0-9a-f]"}},
+                "signing_key":{"type":"string","pattern":signing,"not":{"pattern":"[^0-9a-f]"}},
+                "fingerprint":{"type":"string","pattern":fingerprint,"not":{"pattern":"[^0-9a-f]"}}}})
     };
-    json_schema!({"oneOf":[identity(KEY_FORMAT, CURVE25519_KEY, CURVE25519_KEY),
-        identity(HYBRID_KEY_FORMAT, HYBRID_KEY, HYBRID_SIGNING_KEY)]})
+    json_schema!({"oneOf":[identity(KEY_FORMAT, CURVE25519_KEY, CURVE25519_KEY, FINGERPRINT_256),
+        identity(HYBRID_KEY_FORMAT, HYBRID_KEY, HYBRID_SIGNING_KEY, FINGERPRINT_384)]})
 }
 fn pattern(value: &str) -> serde_json::Value {
     serde_json::json!({"pattern":value})
@@ -90,9 +99,9 @@ pub fn public_suite(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
         serde_json::json!([
-            when("format", KEY_FORMAT, serde_json::json!({"encryption_key":pattern(CURVE25519_KEY),"signing_key":pattern(CURVE25519_KEY)})),
-            when("format", P384_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_KEY)})),
-            when("format", HYBRID_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(HYBRID_KEY),"signing_key":pattern(HYBRID_SIGNING_KEY)})),
+            when("format", KEY_FORMAT, serde_json::json!({"encryption_key":pattern(CURVE25519_KEY),"signing_key":pattern(CURVE25519_KEY),"fingerprint":pattern(FINGERPRINT_256)})),
+            when("format", P384_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
+            when("format", HYBRID_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(HYBRID_KEY),"signing_key":pattern(HYBRID_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
         ]),
     );
 }
@@ -139,7 +148,7 @@ pub fn signature_algorithm(_: &mut SchemaGenerator) -> Schema {
 /// composite Ed25519 plus ML-DSA-65 signatures.
 pub fn signature_bytes(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":128, "maxLength":6746,
-        "pattern":"^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$"})
+        "pattern":"^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$", "not":{"pattern":"[^0-9a-f]"}})
 }
 pub fn signature_suite(schema: &mut Schema) {
     schema.insert(
@@ -165,7 +174,7 @@ pub fn signature_suite(schema: &mut Schema) {
 }
 /// PKCS#11 CKA_ID values. Generated IDs use 16 random bytes.
 pub fn key_id(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":2, "maxLength":128, "pattern":"^([0-9a-f]{2}){1,64}$"})
+    json_schema!({"type":"string", "minLength":2, "maxLength":128, "pattern":"^([0-9a-f]{2}){1,64}$", "not":{"pattern":"[^0-9a-f]"}})
 }
 /// A PKCS#11 token-information text field, blank padding removed.
 pub fn token_text<const N: usize>(_: &mut SchemaGenerator) -> Schema {
@@ -219,5 +228,5 @@ pub fn trust_version(schema: &mut Schema) {
 }
 /// A marshalled TPM2B structure, 1..2048 bytes of lowercase hex.
 pub fn tpm_blob(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":2, "maxLength":4096, "pattern":"^([0-9a-f]{2})+$"})
+    json_schema!({"type":"string", "minLength":2, "maxLength":4096, "pattern":"^([0-9a-f]{2})+$", "not":{"pattern":"[^0-9a-f]"}})
 }

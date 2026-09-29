@@ -55,7 +55,7 @@ def identity(seeds):
         dsa_private(seeds).public_key().public_bytes_raw()
     encryption = kem_key + x25519
     return {"format": KEY_FORMAT, "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha256(frame("APG identity hybrid v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha384(frame("APG identity hybrid v1", encryption, signing)).hexdigest()}
 
 
 def secret_aad(public, salt, nonce):

@@ -46,10 +46,12 @@ Both keys are 97-byte SEC1 uncompressed P-384 points (`04 || X || Y`), 194 lower
 hex characters. Compressed points, the identity and off-curve points are rejected.
 P-384 has cofactor one, so on-curve points are in the prime-order group.
 
-Fingerprint = lowercase hex of SHA-256 of
-`frame("APG identity p384 v1", [encryption point, signing point])`. Fingerprints
-stay 32 bytes in every suite, so pins, trust snapshots and certificates share one
-shape. The domain differs from v1, so equal key bytes cannot collide across suites.
+Fingerprint = lowercase hex of SHA-384 of
+`frame("APG identity p384 v1", [encryption point, signing point])`: 48 bytes, 96 hex
+characters, as CNSA 1.0 expects for P-384. `apg-public-v1` keeps 32-byte SHA-256
+fingerprints for compatibility. Every fingerprint field accepts either length and
+pins compare exactly, so the two never mix. The domain differs from v1, so equal
+key bytes cannot collide across suites.
 
 ## Public identity: apg-public-hybrid-v1
 
@@ -57,11 +59,11 @@ Fields as in v1. `encryption_key` is the 1184-byte ML-KEM-768 encapsulation key
 followed by the 32-byte X25519 public key (1216 bytes, 2432 hex characters).
 `signing_key` is the 32-byte Ed25519 key followed by the 1952-byte ML-DSA-65 key
 (1984 bytes). The encapsulation key must pass the FIPS 203 modulus check.
-Fingerprint = SHA-256 of `frame("APG identity hybrid v1", [encryption_key bytes,
-signing_key bytes])`.
+Fingerprint = SHA-384 of `frame("APG identity hybrid v1", [encryption_key bytes,
+signing_key bytes])`, 48 bytes.
 
 The suite adds post-quantum confidentiality and composite post-quantum signatures.
-Fingerprints and trust-snapshot digests use SHA-256.
+Trust-snapshot digests still use SHA-256.
 
 ### Composite signatures: ed25519-mldsa65
 

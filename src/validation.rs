@@ -107,15 +107,22 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
             }
         }
     }
-    for name in ["expected_fingerprint", "expected_digest"] {
-        if let Some(pin) = map.get(name).and_then(Value::as_str) {
-            if crypto::bytes::<32>(pin).is_err() {
-                report.issue(
-                    format!("{path}/{name}"),
-                    "invalid_format",
-                    "Expected exactly 64 lowercase hexadecimal characters",
-                );
-            }
+    if let Some(pin) = map.get("expected_fingerprint").and_then(Value::as_str) {
+        if crypto::check_fingerprint(pin).is_err() {
+            report.issue(
+                format!("{path}/expected_fingerprint"),
+                "invalid_format",
+                "Expected exactly 64 or 96 lowercase hexadecimal characters",
+            );
+        }
+    }
+    if let Some(pin) = map.get("expected_digest").and_then(Value::as_str) {
+        if crypto::bytes::<32>(pin).is_err() {
+            report.issue(
+                format!("{path}/expected_digest"),
+                "invalid_format",
+                "Expected exactly 64 lowercase hexadecimal characters",
+            );
         }
     }
     for name in ["encryption_key_id", "signing_key_id"] {
