@@ -1,5 +1,45 @@
 {
   "$defs": {
+    "Algorithm": {
+      "description": "Key shape for `openpgp.key.generate`.",
+      "oneOf": [
+        {
+          "const": "ed25519",
+          "description": "Ed25519 primary key (certify, sign) and Curve25519 ECDH subkey, as GnuPG\ncreates by default. Signatures use SHA-512.",
+          "type": "string"
+        },
+        {
+          "const": "p384",
+          "description": "ECDSA P-384 primary key and ECDH P-384 subkey with SHA-384 and AES-256\n(CNSA-aligned).",
+          "type": "string"
+        }
+      ]
+    },
+    "Recipient": {
+      "additionalProperties": false,
+      "description": "An encryption recipient: a certificate file and its independently trusted\nprimary-key fingerprint.",
+      "properties": {
+        "certificate": {
+          "description": "OpenPGP certificate file, ASCII-armored or binary, holding exactly one certificate.",
+          "type": "string"
+        },
+        "expected_openpgp_fingerprint": {
+          "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
+          "maxLength": 40,
+          "minLength": 40,
+          "not": {
+            "pattern": "[^0-9A-Fa-f]"
+          },
+          "pattern": "^[0-9A-Fa-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "certificate",
+        "expected_openpgp_fingerprint"
+      ],
+      "type": "object"
+    },
     "Request": {
       "description": "The complete executable request vocabulary. Unknown fields fail closed.",
       "oneOf": [
@@ -1067,6 +1107,206 @@
             "operation",
             "key",
             "passphrase_file"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": {
+              "$ref": "#/$defs/Algorithm",
+              "default": "ed25519"
+            },
+            "operation": {
+              "const": "openpgp.key.generate",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": "string"
+            },
+            "user_id": {
+              "description": "OpenPGP User ID, for example \"Alice <alice@example.org>\"; self-asserted.",
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "output",
+            "passphrase_file",
+            "user_id"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "description": "An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.cert.export",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "key",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "description": "OpenPGP certificate file, ASCII-armored or binary.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.cert.inspect",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.encrypt",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "recipients": {
+              "items": {
+                "$ref": "#/$defs/Recipient"
+              },
+              "maxItems": 32,
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "recipients"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "description": "OpenPGP message, ASCII-armored or binary.",
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.decrypt",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "key",
+            "passphrase_file"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.sign",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "key",
+            "passphrase_file"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "certificate": {
+              "description": "Signer's OpenPGP certificate file.",
+              "type": "string"
+            },
+            "expected_openpgp_fingerprint": {
+              "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
+              "maxLength": 40,
+              "minLength": 40,
+              "not": {
+                "pattern": "[^0-9A-Fa-f]"
+              },
+              "pattern": "^[0-9A-Fa-f]{40}$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.verify",
+              "type": "string"
+            },
+            "signature": {
+              "description": "Detached OpenPGP signature, ASCII-armored or binary.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "signature",
+            "certificate",
+            "expected_openpgp_fingerprint"
           ],
           "type": "object"
         }

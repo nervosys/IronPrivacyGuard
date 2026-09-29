@@ -20,8 +20,12 @@ implemented surface, not feature parity with decades of GPG development.
    stdio interoperability suite in CI. Generated tools, host allowlists and
    mandatory host trust policy are implemented; HTTP, tasks and active cancellation
    remain unsupported. Filesystem authorization remains the host's responsibility.
-5. Introduce OpenPGP import/export through a separately specified compatibility
-   boundary. Never silently reinterpret native APG data as OpenPGP.
+5. Extend the OpenPGP compatibility boundary ([OPENPGP.md](OPENPGP.md)). v4 key
+   generation, certificate export and inspection, multi-recipient encryption,
+   decryption and detached signatures interoperate with GnuPG through rPGP. v6 keys
+   and SEIPDv2, verification of embedded signatures, secret-key import and export,
+   and OpenPGP keys on hardware remain. Never silently reinterpret native APG data
+   as OpenPGP.
 6. Extend post-quantum and hardware coverage. Hybrid ML-KEM-768 + X25519
    confidentiality and composite Ed25519 + ML-DSA-65 signatures are implemented for
    software identities; post-quantum hardware, TPM and KMS keys remain. P-384

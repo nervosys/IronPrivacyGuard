@@ -172,13 +172,13 @@ impl TrustStore {
                 )
             })?;
         lifecycle::verify_validity(&entry.public, expected, &certificate)?;
-        if let Some(old) = &entry.validity {
-            if certificate.not_before < old.not_before || certificate.not_after > old.not_after {
-                return Err(Error::new(
-                    "policy_mismatch",
-                    "Validity windows may only be narrowed",
-                ));
-            }
+        if let Some(old) = &entry.validity
+            && (certificate.not_before < old.not_before || certificate.not_after > old.not_after)
+        {
+            return Err(Error::new(
+                "policy_mismatch",
+                "Validity windows may only be narrowed",
+            ));
         }
         entry.validity = Some(certificate);
         self.upgrade();

@@ -12,6 +12,7 @@ pub mod knowledge;
 pub mod lifecycle;
 pub mod mcp;
 pub mod ontology;
+pub mod openpgp;
 #[cfg(feature = "pkcs11")]
 mod pkcs11;
 pub mod provider;
@@ -311,6 +312,59 @@ pub enum Request {
         /// The keys' PIN; deletion is refused without it.
         passphrase_file: String,
     },
+    #[serde(rename = "openpgp.key.generate")]
+    OpenpgpKeyGenerate {
+        output: String,
+        passphrase_file: String,
+        /// OpenPGP User ID, for example "Alice <alice@example.org>"; self-asserted.
+        #[schemars(schema_with = "crate::contract::openpgp_user_id")]
+        user_id: String,
+        #[serde(default)]
+        algorithm: openpgp::Algorithm,
+    },
+    #[serde(rename = "openpgp.cert.export")]
+    OpenpgpCertExport {
+        /// An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.
+        key: String,
+        output: String,
+    },
+    #[serde(rename = "openpgp.cert.inspect")]
+    OpenpgpCertInspect {
+        /// OpenPGP certificate file, ASCII-armored or binary.
+        input: String,
+    },
+    #[serde(rename = "openpgp.encrypt")]
+    OpenpgpEncrypt {
+        input: String,
+        output: String,
+        #[schemars(length(min = 1, max = 32))]
+        recipients: Vec<openpgp::Recipient>,
+    },
+    #[serde(rename = "openpgp.decrypt")]
+    OpenpgpDecrypt {
+        /// OpenPGP message, ASCII-armored or binary.
+        input: String,
+        output: String,
+        key: String,
+        passphrase_file: String,
+    },
+    #[serde(rename = "openpgp.sign")]
+    OpenpgpSign {
+        input: String,
+        output: String,
+        key: String,
+        passphrase_file: String,
+    },
+    #[serde(rename = "openpgp.verify")]
+    OpenpgpVerify {
+        input: String,
+        /// Detached OpenPGP signature, ASCII-armored or binary.
+        signature: String,
+        /// Signer's OpenPGP certificate file.
+        certificate: String,
+        #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
+        expected_openpgp_fingerprint: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -412,6 +466,45 @@ pub enum Outcome {
         fingerprint: Option<String>,
         authenticated: bool,
     },
+    OpenpgpKey {
+        path: String,
+        #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
+        fingerprint: String,
+        algorithm: openpgp::Algorithm,
+        user_id: String,
+    },
+    /// A certificate evaluated under APG policy; `path` is set when one was written.
+    OpenpgpCertificate {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        certificate: openpgp::Certificate,
+    },
+    OpenpgpEncrypted {
+        path: String,
+        recipients: Vec<openpgp::RecipientKeys>,
+    },
+    OpenpgpDecrypted {
+        path: String,
+        #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
+        fingerprint: String,
+        /// The message carried OpenPGP signatures.
+        signed: bool,
+        /// Always false: embedded signatures are not verified; use openpgp.verify
+        /// with a detached signature.
+        signatures_verified: bool,
+    },
+    OpenpgpSigned {
+        path: String,
+        #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
+        fingerprint: String,
+        #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
+        signing_key: String,
+        hash_algorithm: String,
+    },
+    OpenpgpVerified {
+        valid: bool,
+        verification: openpgp::Verification,
+    },
 }
 
 impl Request {
@@ -453,6 +546,13 @@ impl Request {
             Self::KmsKeyBind { .. } => "kms.key.bind",
             Self::TpmKeyGenerate { .. } => "tpm.key.generate",
             Self::TpmKeyDelete { .. } => "tpm.key.delete",
+            Self::OpenpgpKeyGenerate { .. } => "openpgp.key.generate",
+            Self::OpenpgpCertExport { .. } => "openpgp.cert.export",
+            Self::OpenpgpCertInspect { .. } => "openpgp.cert.inspect",
+            Self::OpenpgpEncrypt { .. } => "openpgp.encrypt",
+            Self::OpenpgpDecrypt { .. } => "openpgp.decrypt",
+            Self::OpenpgpSign { .. } => "openpgp.sign",
+            Self::OpenpgpVerify { .. } => "openpgp.verify",
         }
     }
 }
@@ -616,7 +716,7 @@ pub fn schemas() -> Value {
         "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
         "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
         "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),
+        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),
         "knowledge_application":schemars::schema_for!(knowledge::Application)}})
 }
 
@@ -1030,6 +1130,114 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 custody: Custody::Service,
                 protection,
                 attested: false,
+            })
+        }
+        Request::OpenpgpKeyGenerate {
+            output,
+            passphrase_file,
+            user_id,
+            algorithm,
+        } => {
+            host.permit(Custody::Software)?;
+            require_absent(&output)?;
+            let key = openpgp::generate(&user_id, algorithm, &password(&passphrase_file)?)?;
+            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            Ok(Outcome::OpenpgpKey {
+                path: output,
+                fingerprint: key.fingerprint,
+                algorithm,
+                user_id,
+            })
+        }
+        Request::OpenpgpCertExport { key, output } => {
+            let key: openpgp::KeyFile = load(&key)?;
+            let (armored, certificate) = openpgp::export(&key)?;
+            write_new(&output, armored.as_bytes())?;
+            Ok(Outcome::OpenpgpCertificate {
+                path: Some(output),
+                certificate,
+            })
+        }
+        Request::OpenpgpCertInspect { input } => Ok(Outcome::OpenpgpCertificate {
+            path: None,
+            certificate: openpgp::inspect(&read_limited(
+                File::open(&input)?,
+                openpgp::MAX_CERTIFICATE_BYTES,
+            )?)?,
+        }),
+        Request::OpenpgpEncrypt {
+            input,
+            output,
+            recipients,
+        } => {
+            let certificates = recipients
+                .into_iter()
+                .map(|r| {
+                    Ok((
+                        read_limited(File::open(&r.certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                        r.expected_openpgp_fingerprint,
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let data = read_limited(File::open(&input)?, openpgp::MAX_PLAINTEXT_BYTES)?;
+            let (armored, recipients) = openpgp::encrypt(&data, &certificates)?;
+            write_new(&output, armored.as_bytes())?;
+            Ok(Outcome::OpenpgpEncrypted {
+                path: output,
+                recipients,
+            })
+        }
+        Request::OpenpgpDecrypt {
+            input,
+            output,
+            key,
+            passphrase_file,
+        } => {
+            host.permit(Custody::Software)?;
+            let key: openpgp::KeyFile = load(&key)?;
+            let message = read(&input)?;
+            let decrypted = openpgp::decrypt(&key, &password(&passphrase_file)?, &message)?;
+            write_new(&output, &decrypted.plaintext)?;
+            Ok(Outcome::OpenpgpDecrypted {
+                path: output,
+                fingerprint: key.fingerprint,
+                signed: decrypted.signed,
+                signatures_verified: false,
+            })
+        }
+        Request::OpenpgpSign {
+            input,
+            output,
+            key,
+            passphrase_file,
+        } => {
+            host.permit(Custody::Software)?;
+            let key: openpgp::KeyFile = load(&key)?;
+            let credential = password(&passphrase_file)?;
+            let signed = openpgp::sign(&key, &credential, &read(&input)?)?;
+            write_new(&output, signed.armored.as_bytes())?;
+            Ok(Outcome::OpenpgpSigned {
+                path: output,
+                fingerprint: key.fingerprint,
+                signing_key: signed.signing_key,
+                hash_algorithm: signed.hash_algorithm,
+            })
+        }
+        Request::OpenpgpVerify {
+            input,
+            signature,
+            certificate,
+            expected_openpgp_fingerprint,
+        } => {
+            let verification = openpgp::verify(
+                &read_limited(File::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &expected_openpgp_fingerprint,
+                &read_limited(File::open(&signature)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &read(&input)?,
+            )?;
+            Ok(Outcome::OpenpgpVerified {
+                valid: true,
+                verification,
             })
         }
         Request::TpmKeyDelete {

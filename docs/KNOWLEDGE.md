@@ -59,8 +59,9 @@ The catalog links to [ChaCha20-Poly1305](https://www.rfc-editor.org/rfc/rfc8439)
 [Argon2](https://www.rfc-editor.org/rfc/rfc9106),
 [X25519](https://www.rfc-editor.org/rfc/rfc7748), and
 [HKDF](https://www.rfc-editor.org/rfc/rfc5869).
-[OpenPGP](https://www.rfc-editor.org/rfc/rfc9580) and
-[TLS](https://www.rfc-editor.org/rfc/rfc8446) references describe separate protocols
+The [OpenPGP](https://www.rfc-editor.org/rfc/rfc9580) application is implemented by
+the optional `openpgp` feature through rPGP, not IronCrypto. The
+[TLS](https://www.rfc-editor.org/rfc/rfc8446) reference describes a separate protocol
 that APG does not implement. These references do not certify APG's implementation.
 The catalog is curated application guidance, not an exhaustive cryptography
 encyclopedia or a claim of independent security review.

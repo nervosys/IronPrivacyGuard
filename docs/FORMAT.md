@@ -261,6 +261,12 @@ persisted, non-exportable ECDH P-384 and ECDSA P-384 keys whose usage authorizat
 is SHA-256 of `frame("APG CNG authorization v1", [PIN])`. See
 [HARDWARE.md](HARDWARE.md#windows).
 
+## OpenPGP key: apg-openpgp-key-v1
+
+An APG-held v4 OpenPGP key with its transferable secret key sealed under a
+passphrase. It is an OpenPGP-boundary artifact, never a native identity; see
+[OPENPGP.md](OPENPGP.md#key-file) for its fields and sealing.
+
 ## TPM key: apg-tpm-key-v1
 
 Fields in declared order: `format`, `public`, `tpm`, `parent`, `encryption_key`,

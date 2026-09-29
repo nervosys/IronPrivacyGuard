@@ -56,7 +56,12 @@ callers; a successful write is not a backup policy.
 
 ## Known limits
 
-No OpenPGP support, private-key keyring, multi-recipient wrapping,
+OpenPGP support is an optional boundary (`openpgp` feature) built on rPGP rather
+than IronCrypto. It holds only Ed25519 and P-384 secret keys, because rPGP's RSA
+dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); RSA is
+used only for public operations. It does not verify signatures embedded in messages,
+and APG trust snapshots do not govern it. See [OpenPGP interoperability](docs/OPENPGP.md).
+No private-key keyring, native multi-recipient wrapping,
 identity certification, hardware attestation, post-quantum hardware keys or FIPS
 validation. Hardware identities release one ECDH shared secret per decrypted
 envelope into process memory; token protection flags are self-reported, not

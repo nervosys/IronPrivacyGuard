@@ -100,12 +100,12 @@
     "label": "Exchange OpenPGP messages or GPG keys",
     "keywords": ["pgp", "gpg", "openpgp", "import", "email", "compatibility"],
     "goals": ["protocol-interoperability"],
-    "support": "external_required",
-    "operations": [],
-    "prerequisites": ["A separately evaluated OpenPGP implementation"],
-    "limitations": ["APG native envelopes, signatures and keys are not OpenPGP packets"],
-    "guidance": "Select an OpenPGP implementation for this application; APG has no compatible command.",
-    "sources": ["https://www.rfc-editor.org/rfc/rfc9580"]
+    "support": "implemented",
+    "operations": ["openpgp.key.generate", "openpgp.cert.export", "openpgp.cert.inspect", "openpgp.encrypt", "openpgp.decrypt", "openpgp.sign", "openpgp.verify"],
+    "prerequisites": ["An apg build with the openpgp feature", "Each correspondent's OpenPGP certificate and its independently trusted 40-hex fingerprint", "An MCP host that pins a trust policy must name the openpgp operations in --allow"],
+    "limitations": ["Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review", "v4 keys only; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys", "Signatures embedded in messages are not verified; exchange detached signatures", "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply", "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected", "APG native envelopes, signatures and keys are never OpenPGP packets"],
+    "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), share the certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify.",
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9580", "https://github.com/rpgp/rpgp"]
   },
   {
     "id": "secure-network-channel",
@@ -139,8 +139,8 @@
     "support": "external_required",
     "operations": [],
     "prerequisites": ["An implementation with an explicit multi-recipient format and policy"],
-    "limitations": ["APG envelopes support exactly one recipient"],
-    "guidance": "Use a protocol implementation designed for multiple recipients; APG provides no group-envelope command.",
+    "limitations": ["Native APG envelopes support exactly one recipient", "OpenPGP messages from openpgp.encrypt can have up to 32 recipients (see openpgp-interoperability)"],
+    "guidance": "For native APG envelopes, use a protocol designed for multiple recipients or encrypt separately to each recipient. For OpenPGP interoperability, openpgp.encrypt produces one message for up to 32 pinned certificates.",
     "sources": []
   },
   {

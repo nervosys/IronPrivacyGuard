@@ -10,19 +10,21 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 36 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 43 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
 snapshots.
 
 **Version 0.1 is experimental.** It is not an audited or drop-in GPG replacement.
-It does not read OpenPGP packets or GPG keys. The native APG protocol needs
-independent cryptographic review before high-value production use.
+Native APG keys, envelopes and signatures are not OpenPGP. A separate, optional
+[OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
+signatures with GnuPG. The native APG protocol needs independent cryptographic
+review before high-value production use.
 
 ## Build
 
-Requires Rust 1.85 or later and Cargo.
+Requires Rust 1.88 or later and Cargo.
 
 ```sh
 cargo build --release --locked --target-dir target
@@ -33,8 +35,8 @@ cargo clippy --locked --all-targets --target-dir target -- -D warnings
 The executable is `target/release/apg` (`apg.exe` on Windows). To install it:
 `cargo install --path . --locked`. IronCrypto is pinned to commit
 `5dba9b6ac402ee294509d89f9f61326e6ad0fa9c`; Cargo.lock pins the remaining graph.
-All cryptographic primitives use IronCrypto. There is no OpenSSL, C compilation,
-GPG subprocess, or external cryptographic executable. OS entropy and filesystem
+All native cryptographic primitives use IronCrypto. There is no OpenSSL, C
+compilation, GPG subprocess, or external cryptographic executable. OS entropy and filesystem
 access use platform APIs through Rust crates.
 
 Hardware-backed identities need the optional `pkcs11` feature, which loads a
@@ -50,6 +52,14 @@ with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: on Linux
 libraries (`libtss2-dev`); on Windows it uses the Platform Crypto Provider through the
 small `apg-cng` crate, the only code in APG with `unsafe`. See
 [hardware identities](docs/HARDWARE.md#tpm-20).
+
+OpenPGP interoperability needs the `openpgp` feature. It uses the pure-Rust rPGP
+library, not IronCrypto, for OpenPGP packets and primitives; see
+[OpenPGP interoperability](docs/OPENPGP.md):
+
+```sh
+cargo build --release --locked --features openpgp --target-dir target
+```
 
 An external MCP integration test uses the official Python SDK to exercise the
 release binary; Python is test tooling only. See [the interoperability check](docs/MCP.md#external-client-interoperability)
@@ -91,7 +101,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 36 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 43 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -136,7 +146,8 @@ apg knowledge search --query "openpgp"
 | Hardware key custody (PKCS#11 tokens, HSMs, TPM 2.0) | `hardware.*` or `tpm.*`, then any key operation with the key file |
 | Managed key custody (AWS KMS) | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity apg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
-| OpenPGP, TLS, password-verifier storage, multi-recipient envelopes, FIPS validation | `external_required`; no executable APG tools |
+| Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify` |
+| TLS, password-verifier storage, multi-recipient native envelopes, FIPS validation | `external_required`; no executable APG tools |
 
 Search returns matches under `result.document.matches`. Each match contains an
 `application` and its `tools`. Check `application.support`, `prerequisites` and
@@ -310,6 +321,26 @@ Requests can never name a module, APG proves token possession before writing a r
 `apg mcp --key-custody non-exportable` (or `hardware`) refuses weaker keys for a session. Token
 attributes are self-reported, not attested. See [hardware identities](docs/HARDWARE.md).
 
+## OpenPGP interoperability
+
+With the `openpgp` feature, APG generates v4 OpenPGP keys (Ed25519, or P-384 for
+CNSA-aligned use), exports their certificates, encrypts to up to 32 pinned
+certificates, decrypts, and creates and verifies detached signatures. Output
+interoperates with GnuPG 2.2 and later.
+
+```sh
+apg openpgp key generate --output me.json --passphrase-file pass.bin --user-id "Me <me@example.org>" --algorithm p384
+apg openpgp cert export --key me.json --output me.asc
+apg openpgp cert inspect --input them.asc
+apg openpgp verify --input report.pdf --signature report.pdf.asc --certificate them.asc --expected-openpgp-fingerprint <40-hex>
+```
+
+Certificates are pinned by fingerprint in `expected_openpgp_fingerprint`; APG trust
+snapshots do not apply to them. APG enforces its own certificate policy: valid
+binding and back signatures, expiry, revocation, and no SHA-1, weak RSA, DSA or
+ElGamal. OpenPGP secret keys stay in APG; they cannot be imported or exported. See
+[OpenPGP interoperability](docs/OPENPGP.md).
+
 ## Ontology and implementation
 
 The ontology covers every implemented operation and its inputs, outputs, effects,
@@ -335,6 +366,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/cng.rs` | TPM 2.0 backend (`tpm` feature, Windows): Platform Crypto Provider keys |
 | `crates/apg-cng` | Minimal safe wrapper over Windows CNG; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
+| `src/openpgp/` | OpenPGP boundary (`openpgp` feature): key file, rPGP operations and APG certificate policy |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
 | `src/reconciliation.rs` | Pinned snapshot comparison and conservative merging |
@@ -356,6 +388,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/pkcs11_live.rs` | Full hardware lifecycle against a real module (opt-in, disposable token) |
 | `tests/tpm_live.rs` | Full TPM lifecycle (opt-in; swtpm via `scripts/tpm-test.sh`) |
 | `tests/windows_tpm_live.rs` | Full lifecycle on the machine's real TPM (opt-in, self-cleaning) |
+| `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody and MCP exposure |
+| `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |
 | `tests/vectors_p384.rs` | PyCA-generated P-384 suite vectors |
 
