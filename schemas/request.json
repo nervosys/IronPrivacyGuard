@@ -63,6 +63,30 @@
         }
       ]
     },
+    "StreamRecipient": {
+      "additionalProperties": false,
+      "description": "A stream recipient: a public identity file and its independently trusted fingerprint.",
+      "properties": {
+        "expected_fingerprint": {
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "public": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "public",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
     "TrustPolicy": {
       "additionalProperties": false,
       "properties": {
@@ -1166,6 +1190,81 @@
         "operation",
         "key",
         "passphrase_file"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "stream.encrypt",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional trust snapshot every recipient must satisfy."
+        },
+        "recipients": {
+          "description": "1..64 recipients, each a public identity file and its trusted fingerprint.",
+          "items": {
+            "$ref": "#/$defs/StreamRecipient"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "recipients"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "description": "An apg-stream-v1 file.",
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "stream.decrypt",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "key"
       ],
       "type": "object"
     },

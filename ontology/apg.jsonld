@@ -138,6 +138,12 @@
       "sensitivity": "control"
     },
     {
+      "@id": "apg:StreamCiphertext",
+      "@type": "apg:Entity",
+      "description": "apg-stream-v1: a binary stream with a header wrapping one content key for each of 1..64 recipients and authenticated 64 KiB chunks; does not identify a sender",
+      "sensitivity": "ciphertext"
+    },
+    {
       "@id": "apg:TpmEvidence",
       "@type": "apg:Entity",
       "description": "apg-tpm-evidence-v1: the identity, the TPM's EK public area and certificates, its attestation key and two TPM2_Certify certifications; public, and not a proof until verified with a credential challenge",
@@ -2559,6 +2565,158 @@
       "retry": "Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."
     },
     {
+      "@id": "apg:operation/stream.encrypt",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdh-p384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768",
+        "ic:sha2-256",
+        "ic:ed25519"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/stream-envelope",
+        "apg:constraint/no-sender-authentication",
+        "apg:constraint/no-clobber",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Encrypt a file of any size to 1..64 pinned recipients as an apg-stream-v1 stream of authenticated 64 KiB chunks",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "stream.encrypt",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_stream_encrypt",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:StreamCiphertext"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "stream.encrypt"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/stream.decrypt",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:argon2id",
+        "ic:ecdh-p384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/authenticate-before-release",
+        "apg:constraint/stream-envelope",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Decrypt an apg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "stream.decrypt",
+      "inputs": [
+        "apg:StreamCiphertext",
+        "apg:SecretKey",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_stream_decrypt",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Plaintext"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "stream.decrypt"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
       "@id": "apg:operation/tpm.attest",
       "@type": "apg:Operation",
       "algorithms": [
@@ -3310,6 +3468,12 @@
       "severity": "critical"
     },
     {
+      "@id": "apg:constraint/stream-envelope",
+      "@type": "apg:Constraint",
+      "requirement": "apg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an apg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
+      "severity": "critical"
+    },
+    {
       "@id": "apg:constraint/tpm-attestation",
       "@type": "apg:Constraint",
       "requirement": "TPM attestation proves that an apg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. apg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
@@ -3873,6 +4037,20 @@
           },
           {
             "@id": "apg:operation/decrypt"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "apg:workflow/group-transfer",
+      "@type": "apg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "apg:operation/stream.encrypt"
+          },
+          {
+            "@id": "apg:operation/stream.decrypt"
           }
         ]
       }
@@ -4475,25 +4653,31 @@
       "goals": [
         "apg:goal/confidentiality"
       ],
-      "guidance": "For native APG envelopes, use a protocol designed for multiple recipients or encrypt separately to each recipient. For OpenPGP interoperability, openpgp.encrypt produces one message for up to 32 pinned certificates.",
+      "guidance": "Use stream.encrypt with a recipients list of {public, expected_fingerprint} objects; each recipient decrypts with stream.decrypt and its own key file. Streams handle files of any size in 64 KiB authenticated chunks and release plaintext only after the last chunk verifies. openpgp.encrypt covers multi-recipient OpenPGP messages.",
       "id": "multi-recipient-encryption",
       "keywords": [
         "group",
         "multi recipient",
         "many recipients",
-        "shared envelope"
+        "shared envelope",
+        "streaming",
+        "chunked"
       ],
       "label": "Encrypt one shared envelope for multiple recipients",
       "limitations": [
-        "Native APG envelopes support exactly one recipient",
-        "OpenPGP messages from openpgp.encrypt can have up to 32 recipients (see openpgp-interoperability)"
+        "No sender authentication: any recipient could re-encrypt other content to the others; sign streams when origin matters",
+        "Streams are binary files; apg-envelope-v1 (encrypt) stays single-recipient JSON",
+        "Post-quantum confidentiality holds only for hybrid recipients; the stream is only as strong as each recipient's wrap for that recipient"
       ],
       "prerequisites": [
-        "An implementation with an explicit multi-recipient format and policy"
+        "Each recipient's public identity and independently trusted fingerprint (1..64 recipients, any suite)"
       ],
       "sources": [],
-      "support": "external_required",
-      "tools": []
+      "support": "implemented",
+      "tools": [
+        "apg:operation/stream.encrypt",
+        "apg:operation/stream.decrypt"
+      ]
     },
     {
       "@id": "apg:application/post-quantum-protection",
@@ -4831,5 +5015,5 @@
   ],
   "@id": "apg:ontology",
   "scope": "Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.26.0"
+  "version": "1.27.0"
 }

@@ -83,6 +83,8 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | trust.add | store, expected_digest, public, expected_fingerprint, output |
 | trust.revoke | store, expected_digest, input, expected_fingerprint, output |
 | trust.status | store, expected_digest, expected_fingerprint |
+| stream.encrypt | input, output, recipients (1..64 of public, expected_fingerprint), optional policy |
+| stream.decrypt | input, output, key (passphrase_file for software keys and PINs) |
 | openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384) |
 | openpgp.cert.export | key, output |
 | openpgp.cert.inspect | input |

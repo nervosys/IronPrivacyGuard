@@ -178,6 +178,41 @@ There is one recipient per envelope. File names and paths are not embedded.
 Empty content is valid. Encryption provides no sender authentication, traffic
 padding, replay prevention, or forward secrecy after recipient private-key loss.
 
+## Multi-recipient stream: apg-stream-v1
+
+A binary file for any number of bytes and 1..64 recipients:
+
+```text
+"APGSTRM1" (8 bytes) || header length (u32 big-endian, 1..1048576) || header || chunks
+```
+
+The header is compact JSON with fields in declared order, and only that canonical
+encoding is accepted: `format` (`apg-stream-v1`), `content_cipher`
+(`aes-256-gcm` when every recipient is `apg-public-p384-v1` or
+`apg-public-p384-mldsa65-v1`, otherwise `chacha20-poly1305`), `chunk_size`
+(65536), `stream_id` (16 random bytes, hex), `nonce_prefix` (7 random bytes, hex) and
+`recipients`: one `apg-envelope-v1` per recipient, distinct by fingerprint, whose
+plaintext is `stream_id || content key` (48 bytes). The content key is 32 random
+bytes. Any identity suite and key provider can therefore be a recipient.
+
+Each chunk is up to 65536 plaintext bytes encrypted with the content key, followed by
+its 16-byte tag. Every chunk but the last is full; the last may be empty only when
+the whole plaintext is. Chunk `i` (from 0) uses nonce
+`nonce_prefix || i as u32 big-endian || last` where `last` is 1 for the final chunk
+and 0 otherwise, and associated data SHA-384 of
+`frame("APG stream v1", [header bytes])`. A reader knows a chunk is final only
+because input ends after it.
+
+Decrypting finds the envelope for the key's fingerprint, opens it, requires its
+first 16 bytes to equal `stream_id`, and authenticates every chunk before APG
+publishes the plaintext file. Reordered, truncated, extended or altered chunks, and
+any change to the header (including adding or removing a recipient), fail
+authentication.
+
+The stream does not identify or authenticate a sender. Every recipient learns the
+content key and could produce different content for the others; sign the plaintext
+when its origin matters.
+
 ## Detached signature: apg-signature-v1
 
 Fields: `format`, `signer`, `algorithm`, `signature`.

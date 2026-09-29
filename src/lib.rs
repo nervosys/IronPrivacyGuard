@@ -20,6 +20,7 @@ pub mod openpgp;
 mod pkcs11;
 pub mod provider;
 pub mod reconciliation;
+pub mod stream;
 #[cfg(all(feature = "tpm", target_os = "linux"))]
 mod tpm;
 #[cfg(feature = "attestation")]
@@ -325,6 +326,26 @@ pub enum Request {
         /// The keys' PIN; deletion is refused without it.
         passphrase_file: String,
     },
+    #[serde(rename = "stream.encrypt")]
+    StreamEncrypt {
+        input: String,
+        output: String,
+        /// 1..64 recipients, each a public identity file and its trusted fingerprint.
+        #[schemars(length(min = 1, max = 64))]
+        recipients: Vec<StreamRecipient>,
+        /// Optional trust snapshot every recipient must satisfy.
+        #[serde(default)]
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "stream.decrypt")]
+    StreamDecrypt {
+        /// An apg-stream-v1 file.
+        input: String,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+    },
     #[serde(rename = "tpm.attest")]
     TpmAttest {
         /// An apg-tpm-key-v1 file (Linux or Windows).
@@ -421,6 +442,15 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
         expected_openpgp_fingerprint: String,
     },
+}
+
+/// A stream recipient: a public identity file and its independently trusted fingerprint.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StreamRecipient {
+    pub public: String,
+    #[schemars(schema_with = "crate::contract::fingerprint")]
+    pub expected_fingerprint: String,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -521,6 +551,22 @@ pub enum Outcome {
         format: String,
         fingerprint: Option<String>,
         authenticated: bool,
+    },
+    StreamEncrypted {
+        path: String,
+        /// Recipient fingerprints, in header order.
+        recipients: Vec<String>,
+        content_cipher: stream::Cipher,
+        policy_digest: Option<String>,
+        policy_checked_at: Option<u64>,
+    },
+    StreamDecrypted {
+        path: String,
+        fingerprint: String,
+        /// Plaintext bytes released after every chunk authenticated.
+        bytes: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        custody: Option<Custody>,
     },
     TpmEvidence {
         path: String,
@@ -624,6 +670,8 @@ impl Request {
             Self::KmsKeyBind { .. } => "kms.key.bind",
             Self::TpmKeyGenerate { .. } => "tpm.key.generate",
             Self::TpmKeyDelete { .. } => "tpm.key.delete",
+            Self::StreamEncrypt { .. } => "stream.encrypt",
+            Self::StreamDecrypt { .. } => "stream.decrypt",
             Self::TpmAttest { .. } => "tpm.attest",
             Self::TpmAttestationChallenge { .. } => "tpm.attestation.challenge",
             Self::TpmAttestationRespond { .. } => "tpm.attestation.respond",
@@ -742,7 +790,7 @@ fn save_reference(
 }
 /// Fail before token work when the destination already exists. Publication still
 /// uses create-new semantics, so a racing writer cannot be replaced.
-fn require_absent(path: &str) -> Result<()> {
+pub(crate) fn require_absent(path: &str) -> Result<()> {
     if Path::new(path).exists() {
         return Err(Error::new(
             "already_exists",
@@ -798,7 +846,7 @@ pub fn schemas() -> Value {
         "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
         "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
         "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),
+        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),"stream_header":schemars::schema_for!(stream::Header),
         "knowledge_application":schemars::schema_for!(knowledge::Application)}})
 }
 
@@ -1156,6 +1204,19 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             digest: hex::encode(Sha256::digest(&read(&input)?)),
         }),
         Request::Inspect { input } => {
+            // Streams can exceed the artifact limit; only their header is read.
+            let mut file = File::open(&input)?;
+            let mut magic = [0u8; 8];
+            let is_stream = file.read(&mut magic)? == 8 && &magic == stream::MAGIC;
+            if is_stream {
+                let (_, _) = stream::read_header(&mut File::open(&input)?)?;
+                return Ok(Outcome::Inspection {
+                    structurally_valid: true,
+                    format: stream::FORMAT.into(),
+                    fingerprint: None,
+                    authenticated: false,
+                });
+            }
             let metadata = artifact::inspect(&read(&input)?)?;
             Ok(Outcome::Inspection {
                 structurally_valid: true,
@@ -1217,6 +1278,69 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 custody: Custody::Service,
                 protection,
                 attested: false,
+            })
+        }
+        Request::StreamEncrypt {
+            input,
+            output,
+            recipients,
+            policy,
+        } => {
+            require_absent(&output)?;
+            let mut publics = Vec::with_capacity(recipients.len());
+            let mut evidence = None;
+            for recipient in &recipients {
+                let public: PublicKey = load(&recipient.public)?;
+                public.pin(&recipient.expected_fingerprint)?;
+                if let Some(checked) = trust::enforce(policy.as_ref(), &public)? {
+                    evidence = Some(checked);
+                }
+                publics.push(public);
+            }
+            let header = stream::encrypt_file(&publics, &input, &output)?;
+            Ok(Outcome::StreamEncrypted {
+                path: output,
+                recipients: header
+                    .recipients
+                    .iter()
+                    .map(|e| e.recipient.clone())
+                    .collect(),
+                content_cipher: header.content_cipher,
+                policy_checked_at: evidence.as_ref().map(|e| e.checked_at),
+                policy_digest: evidence.map(|e| e.digest),
+            })
+        }
+        Request::StreamDecrypt {
+            input,
+            output,
+            key,
+            passphrase_file,
+        } => {
+            require_absent(&output)?;
+            let key = load_key(&key)?;
+            // Check the header and recipient before any passphrase work or token login.
+            let (header, _) = stream::read_header(&mut File::open(&input)?)?;
+            if !header
+                .recipients
+                .iter()
+                .any(|e| e.recipient == key.public().fingerprint)
+            {
+                return Err(Error::new(
+                    "identity_mismatch",
+                    "The stream is not encrypted to this key",
+                ));
+            }
+            let identity = provider::open(
+                &key,
+                credential(passphrase_file)?.as_deref().map(Vec::as_slice),
+                host,
+            )?;
+            let bytes = stream::decrypt_file(&*identity, &input, &output)?;
+            Ok(Outcome::StreamDecrypted {
+                path: output,
+                fingerprint: key.public().fingerprint.clone(),
+                bytes,
+                custody: (identity.custody() != Custody::Software).then_some(identity.custody()),
             })
         }
         Request::TpmAttest {

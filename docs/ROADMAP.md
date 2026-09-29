@@ -14,8 +14,9 @@ implemented surface, not feature parity with decades of GPG development.
    enforcement, pinned comparison and conservative branch merging are implemented.
    Latest-pin management, publication concurrency control and rollback protection
    remain external orchestrator duties.
-3. Design a reviewed multi-recipient and streaming envelope protocol with
-   authenticated finalization, bounded chunks and truncation detection.
+3. Have the multi-recipient streaming format (`apg-stream-v1`: 64 KiB chunks,
+   STREAM nonces with a final-chunk flag, header-committed associated data) reviewed
+   independently, and add streaming signatures for files beyond the in-memory limit.
 4. Expand MCP testing beyond the official Python SDK 2.2.0, now covered by a real
    stdio interoperability suite in CI. Generated tools, host allowlists and
    mandatory host trust policy are implemented; HTTP, tasks and active cancellation

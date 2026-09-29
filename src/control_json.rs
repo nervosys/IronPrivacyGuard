@@ -79,5 +79,9 @@ pub fn parse(data: &[u8]) -> Result<Value> {
     if data.len() > crate::MAX_REQUEST_BYTES as usize {
         return Err(Error::new("limit_exceeded", "Request exceeds frame limit"));
     }
+    parse_unbounded(data)
+}
+/// As [`parse`], for callers that enforce their own size limit.
+pub(crate) fn parse_unbounded(data: &[u8]) -> Result<Value> {
     Ok(serde_json::from_slice::<Unique>(data)?.0)
 }

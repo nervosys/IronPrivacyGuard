@@ -1478,6 +1478,181 @@
     "title": "Signature",
     "type": "object"
   },
+  "stream_header": {
+    "$defs": {
+      "Cipher": {
+        "enum": [
+          "chacha20-poly1305",
+          "aes-256-gcm"
+        ],
+        "type": "string"
+      },
+      "Envelope": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "x25519-hkdf-sha256-chacha20poly1305"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "p384-x963kdf-sha384-aes256gcm"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^[0-9a-f]{2240}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "ciphertext": {
+            "not": {
+              "pattern": "[^0-9a-fA-F]"
+            },
+            "pattern": "^([0-9a-fA-F]{2})*$",
+            "type": "string"
+          },
+          "ephemeral_key": {
+            "description": "Sender ephemeral public key in the envelope suite; hybrid envelopes prefix the ML-KEM-768 ciphertext.",
+            "maxLength": 2240,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$",
+            "type": "string"
+          },
+          "format": {
+            "const": "apg-envelope-v1",
+            "type": "string"
+          },
+          "nonce": {
+            "maxLength": 24,
+            "minLength": 24,
+            "pattern": "^[0-9a-f]{24}$",
+            "type": "string"
+          },
+          "recipient": {
+            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "suite": {
+            "enum": [
+              "x25519-hkdf-sha256-chacha20poly1305",
+              "p384-x963kdf-sha384-aes256gcm",
+              "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+            ],
+            "type": "string"
+          },
+          "tag": {
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "suite",
+          "recipient",
+          "ephemeral_key",
+          "nonce",
+          "ciphertext",
+          "tag"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "The stream header. Canonical bytes are its compact JSON in declared order.",
+    "properties": {
+      "chunk_size": {
+        "const": 65536,
+        "type": "integer"
+      },
+      "content_cipher": {
+        "$ref": "#/$defs/Cipher"
+      },
+      "format": {
+        "const": "apg-stream-v1",
+        "type": "string"
+      },
+      "nonce_prefix": {
+        "maxLength": 14,
+        "minLength": 14,
+        "pattern": "^[0-9a-f]{14}$",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "One `apg-envelope-v1` per recipient over `stream_id || content key`.",
+        "items": {
+          "$ref": "#/$defs/Envelope"
+        },
+        "maxItems": 64,
+        "minItems": 1,
+        "type": "array"
+      },
+      "stream_id": {
+        "description": "16 random bytes binding the recipients' key wraps to this stream.",
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "content_cipher",
+      "chunk_size",
+      "stream_id",
+      "nonce_prefix",
+      "recipients"
+    ],
+    "title": "Header",
+    "type": "object"
+  },
   "tpm_challenge": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,
