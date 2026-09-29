@@ -131,8 +131,9 @@ def certificate(seeds, *, reason=None, start=1700000000, end=1900000000):
 
 
 def snapshot_digest(snapshot):
-    version = {"apg-trust-v1": "v1", "apg-trust-v2": "v2"}[snapshot["format"]]
-    return hashlib.sha256(frame("APG trust snapshot " + version, compact(snapshot))).hexdigest()
+    version = {"apg-trust-v1": "v1", "apg-trust-v2": "v2", "apg-trust-v3": "v3"}[snapshot["format"]]
+    digest = hashlib.sha384 if version == "v3" else hashlib.sha256
+    return digest(frame("APG trust snapshot " + version, compact(snapshot))).hexdigest()
 
 
 def vectors():

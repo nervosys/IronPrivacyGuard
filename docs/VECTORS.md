@@ -46,7 +46,7 @@ scalars a token would hold; APG itself has no software P-384 secret format. It
 records the identity and fingerprint, nine messages with AES-256-GCM envelopes
 (ephemeral scalar, ECDH secret, ANSI X9.63 SHA-384 KDF key and AAD for each), RFC 6979
 signatures canonicalized to low-s, all three revocation reasons, a validity window,
-and four snapshot commitments.
+and seven snapshot commitments (v1 and v2 with SHA-256, v3 with SHA-384).
 
 `tests/vectors_p384.rs` implements APG's public `IdentityKey` interface over the
 fixture scalars, exactly as the PKCS#11 backend does over a token. It decrypts every
@@ -54,7 +54,7 @@ envelope with matching intermediates, reproduces every signature and certificate
 byte-for-byte (IronCrypto and PyCA both use RFC 6979 nonces), checks snapshot
 digests, and rejects tampered fields and cross-suite relabeling. With `--apg`, the
 oracle makes 32 CLI calls: PyCA decrypts APG envelopes, APG verifies PyCA
-signatures and certificates and rejects their high-s twins, APG-built snapshots
+signatures and certificates and rejects their high-s twins, APG-built v3 snapshots
 match oracle digests, and a hardware reference fails closed without a module.
 
 ```powershell

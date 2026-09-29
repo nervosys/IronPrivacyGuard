@@ -331,3 +331,54 @@ fn snapshot_limits_are_enforced() {
     };
     assert_eq!(store.validate().unwrap_err().code, "limit_exceeded");
 }
+
+#[test]
+fn v3_writes_sha384_pins_and_legacy_pins_still_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = |name: &str| dir.path().join(name).display().to_string();
+    let load = |name: &str, digest: &str| {
+        trust::load(&TrustPolicy {
+            store: path(name),
+            expected_digest: digest.into(),
+        })
+    };
+    let current = enrolled();
+    assert_eq!(current.format, trust::FORMAT);
+    let digest = current.digest().unwrap();
+    assert_eq!(digest.len(), 96);
+    fs::write(path("v3"), serde_json::to_vec(&current).unwrap()).unwrap();
+    load("v3", &digest).unwrap();
+
+    let mut legacy = current.clone();
+    legacy.format = "apg-trust-v2".into();
+    let legacy_digest = legacy.digest().unwrap();
+    assert_eq!(legacy_digest.len(), 64);
+    fs::write(path("v2"), serde_json::to_vec(&legacy).unwrap()).unwrap();
+    load("v2", &legacy_digest).unwrap();
+
+    // A pin of the wrong algorithm never matches; malformed pins fail before reading.
+    assert_eq!(
+        load("v3", &legacy_digest).err().unwrap().code,
+        "policy_mismatch"
+    );
+    assert_eq!(load("v2", &digest).err().unwrap().code, "policy_mismatch");
+    assert_eq!(
+        load("missing", &digest[..95]).err().unwrap().code,
+        "invalid_format"
+    );
+
+    // Updating a legacy snapshot publishes v3 with a SHA-384 digest.
+    let fingerprint = &key().public.fingerprint;
+    let revocation =
+        lifecycle::revoke(key(), fingerprint, PASSWORD, RevocationReason::Retired).unwrap();
+    fs::write(path("revocation"), serde_json::to_vec(&revocation).unwrap()).unwrap();
+    let updated = ok(
+        json!({"operation":"trust.revoke","store":path("v2"),"expected_digest":legacy_digest,"input":path("revocation"),"expected_fingerprint":fingerprint,"output":path("updated")}),
+    );
+    let updated_digest = updated["digest"].as_str().unwrap();
+    assert_eq!(updated_digest.len(), 96);
+    assert_eq!(
+        load("updated", updated_digest).unwrap().format,
+        trust::FORMAT
+    );
+}

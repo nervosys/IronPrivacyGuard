@@ -5,7 +5,7 @@ use crate::{
     lifecycle::{self, Revocation, Validity},
 };
 use ic_core::traits::Digest;
-use ic_hash::Sha256;
+use ic_hash::{Sha256, Sha384};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs::File};
@@ -13,12 +13,36 @@ use std::{collections::HashSet, fs::File};
 pub const MAX_IDENTITIES: usize = 256;
 /// Sized for 256 hybrid identities, whose composite certificates are ~7 KB each.
 pub const MAX_STORE_BYTES: u64 = 8 * 1024 * 1024;
+/// Format of every snapshot APG writes. v1 and v2 remain readable, with SHA-256 digests.
+pub const FORMAT: &str = "apg-trust-v3";
+
+/// Snapshot version; v1 forbids validity windows, v3 commits with SHA-384.
+fn version(format: &str) -> Result<u8> {
+    match format {
+        "apg-trust-v1" => Ok(1),
+        "apg-trust-v2" => Ok(2),
+        "apg-trust-v3" => Ok(3),
+        _ => Err(Error::new(
+            "invalid_format",
+            "Unsupported trust snapshot format",
+        )),
+    }
+}
+/// Validate a pinned snapshot digest: 64 hex for v1/v2 snapshots, 96 for v3.
+pub fn check_digest(digest: &str) -> Result<()> {
+    crypto::check_fingerprint(digest).map_err(|_| {
+        Error::new(
+            "invalid_format",
+            "Snapshot digest must be 64 or 96 lowercase hexadecimal characters",
+        )
+    })
+}
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TrustPolicy {
     pub store: String,
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::trust_digest")]
     pub expected_digest: String,
 }
 
@@ -43,19 +67,14 @@ pub struct TrustStore {
 impl Default for TrustStore {
     fn default() -> Self {
         Self {
-            format: "apg-trust-v1".into(),
+            format: FORMAT.into(),
             entries: Vec::new(),
         }
     }
 }
 impl TrustStore {
     pub fn validate(&self) -> Result<()> {
-        if !matches!(self.format.as_str(), "apg-trust-v1" | "apg-trust-v2") {
-            return Err(Error::new(
-                "invalid_format",
-                "Unsupported trust snapshot format",
-            ));
-        }
+        let version = version(&self.format)?;
         if self.entries.len() > MAX_IDENTITIES {
             return Err(Error::new(
                 "limit_exceeded",
@@ -69,10 +88,10 @@ impl TrustStore {
                 return Err(Error::new("invalid_format", "Duplicate trust identity"));
             }
             if let Some(validity) = &entry.validity {
-                if self.format == "apg-trust-v1" {
+                if version == 1 {
                     return Err(Error::new(
                         "invalid_format",
-                        "Validity requires trust snapshot v2",
+                        "Validity requires trust snapshot v2 or later",
                     ));
                 }
                 lifecycle::verify_validity(&entry.public, &entry.public.fingerprint, validity)?;
@@ -85,14 +104,28 @@ impl TrustStore {
     }
     pub fn digest(&self) -> Result<String> {
         self.validate()?;
-        Ok(hex::encode(Sha256::digest(&crypto::frame(
-            if self.format == "apg-trust-v1" {
-                "APG trust snapshot v1"
-            } else {
-                "APG trust snapshot v2"
-            },
-            &[&serde_json::to_vec(self)?],
-        ))))
+        let body = serde_json::to_vec(self)?;
+        Ok(match version(&self.format)? {
+            1 => hex::encode(Sha256::digest(&crypto::frame(
+                "APG trust snapshot v1",
+                &[&body],
+            ))),
+            2 => hex::encode(Sha256::digest(&crypto::frame(
+                "APG trust snapshot v2",
+                &[&body],
+            ))),
+            _ => hex::encode(Sha384::digest(&crypto::frame(
+                "APG trust snapshot v3",
+                &[&body],
+            ))),
+        })
+    }
+    /// Snapshots are rewritten in the current format whenever they change.
+    pub(crate) fn upgrade(&mut self) {
+        self.format = FORMAT.into();
+    }
+    pub(crate) fn rank(&self) -> Result<u8> {
+        version(&self.format)
     }
     pub fn entry(&self, fingerprint: &str) -> Result<&TrustEntry> {
         self.entries
@@ -108,6 +141,7 @@ impl TrustStore {
     pub fn add(&mut self, public: PublicKey, expected: &str) -> Result<()> {
         self.validate()?;
         public.pin(expected)?;
+        self.upgrade();
         if self
             .entries
             .iter()
@@ -147,7 +181,7 @@ impl TrustStore {
             }
         }
         entry.validity = Some(certificate);
-        self.format = "apg-trust-v2".into();
+        self.upgrade();
         Ok(())
     }
     pub fn evaluate(&self, fingerprint: &str, at_time: u64) -> Result<Eligibility> {
@@ -194,12 +228,13 @@ impl TrustStore {
         if entry.revocation.is_none() {
             entry.revocation = Some(certificate);
         }
+        self.upgrade();
         Ok(())
     }
 }
 
 pub fn load(policy: &TrustPolicy) -> Result<TrustStore> {
-    crypto::bytes::<32>(&policy.expected_digest)?;
+    check_digest(&policy.expected_digest)?;
     let bytes = crate::read_limited(File::open(&policy.store)?, MAX_STORE_BYTES)?;
     let store: TrustStore = serde_json::from_slice(&bytes)?;
     if store.digest()? != policy.expected_digest {

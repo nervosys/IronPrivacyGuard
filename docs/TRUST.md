@@ -1,7 +1,7 @@
 # Immutable trust snapshots
 
 APG stores explicitly enrolled public identities and authenticated self-revocation
-certificates in `apg-trust-v1` snapshots. A snapshot is an immutable file. Every
+certificates in `apg-trust-v3` snapshots. A snapshot is an immutable file. Every
 update reads a pinned input and publishes a complete new file with no-clobber
 semantics. There is no global keyring, mutable head pointer, or implicit default
 policy.
@@ -83,7 +83,7 @@ retroactively cancel work authorized against an earlier snapshot.
 `apg-trust-v1` has `format` and ordered `entries`. Each entry contains `public`
 (the APG public-key object) and `revocation` (a certificate or null). Unknown
 fields, duplicate identities, mismatched keys and invalid certificates fail.
-The maximum is 256 identities; policy reads are bounded at 1 MiB.
+The maximum is 256 identities; policy reads are bounded at 8 MiB.
 
 Digest = lowercase SHA-256 hex of
 `frame("APG trust snapshot v1", [canonical snapshot JSON bytes])`, using the
@@ -105,11 +105,11 @@ with `policy_applied: false`.
 
 `trust.validity` accepts `store`, `expected_digest`, `input`,
 `expected_fingerprint`, and `output`. It verifies the certificate against the
-enrolled public identity and publishes `apg-trust-v2`. Subsequent windows may only
+enrolled public identity and publishes a new snapshot. Subsequent windows may only
 narrow: start cannot decrease and end cannot increase. There is no clear/extend
 command; provision a new identity for a new lifetime. Revocation is retained and
 always takes precedence. Enrollment never removes validity. Entries without a
-certificate have no time restriction, including entries newly added to v2.
+certificate have no time restriction.
 
 `trust.evaluate` accepts `store`, `expected_digest`, `expected_fingerprint`, and
 `at_time`; it reports `permitted`, `revoked`, `not_yet_valid`, or `expired`, with
@@ -124,10 +124,24 @@ decryption remains available after expiry.
 V2 uses domain `APG trust snapshot v2` for its commitment. Entry field order is
 `public, revocation, validity`; absent validity is omitted (not emitted as null).
 Validity fields use the declared order in FORMAT.md. V1 rejects non-null validity;
-its canonical bytes and digest are unchanged. `trust.init` still creates v1.
+its canonical bytes and digest are unchanged.
 Old snapshot/pin pairs remain usable, so authoritative pin retention is essential.
 `trust.status` continues to report revocation only; use `trust.evaluate` to assess
 all eligibility constraints at a specified time.
+
+## v3 snapshots: SHA-384 commitments
+
+`apg-trust-v3` has exactly the v2 structure and canonical JSON rules, but its
+digest is lowercase SHA-384 hex (96 characters) of
+`frame("APG trust snapshot v3", [canonical snapshot JSON bytes])`. This matches
+the SHA-384 fingerprints of P-384 and hybrid identities, so a CNSA-style P-384
+deployment uses SHA-384 throughout.
+
+`trust.init` creates v3, and every operation that writes a snapshot (`trust.add`,
+`trust.revoke`, `trust.validity`, `trust.merge`) publishes v3, even from a v1 or v2
+input; the result returns the new 96-character digest to pin. Pins of 64
+characters still load and enforce existing v1 and v2 snapshots. A pin whose length
+does not match the snapshot's digest algorithm fails with `policy_mismatch`.
 
 ## Comparing and reconciling branches
 
@@ -147,7 +161,8 @@ the digest without changing any identity's eligibility.
 
 `compatible_extension` is a conservative structural check: all base identities and
 original revocation certificates must remain, base validity windows cannot be
-removed or widened, and v2 cannot downgrade to v1. Reordering, new revocations,
+removed or widened, and the format cannot downgrade (v3 to v2 or v1, v2 to v1).
+Upgrades to a later format are compatible. Reordering, new revocations,
 validity narrowing, equivalent signed validity replacement and added identities
 are compatible. **This flag does not authorize added identities**, establish
 ancestry, prove freshness, or mean the candidate is the current policy. In
@@ -172,12 +187,12 @@ Merge rules:
   even for revoked identities. APG never fabricates an unsigned intersection.
   A signer can resolve an overlap by issuing a window contained in both and
   importing it into one branch. Disjoint windows require a new identity.
-- Keep v2 if either input is v2; otherwise retain v1. Existing canonical formats
-  and their commitment rules do not change.
+- Publish v3 regardless of the input formats. Existing canonical formats and their
+  commitment rules do not change.
 
 Both inputs remain unchanged on success or failure. All conflicts and validation
 failures occur before publication; an existing output is never overwritten.
-Merging a snapshot with itself preserves its digest, but publication still fails
+Merging a v3 snapshot with itself preserves its digest, but publication still fails
 if the output path exists. Merge order can affect entry ordering and the retained
 revocation reason, so reversed arguments need not produce the same digest.
 

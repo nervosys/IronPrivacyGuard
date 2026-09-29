@@ -198,7 +198,7 @@ pub enum Request {
     #[serde(rename = "trust.validity")]
     TrustValidity {
         store: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::trust_digest")]
         expected_digest: String,
         input: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
@@ -208,7 +208,7 @@ pub enum Request {
     #[serde(rename = "trust.evaluate")]
     TrustEvaluate {
         store: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::trust_digest")]
         expected_digest: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
@@ -231,7 +231,7 @@ pub enum Request {
     #[serde(rename = "trust.add")]
     TrustAdd {
         store: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::trust_digest")]
         expected_digest: String,
         public: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
@@ -241,7 +241,7 @@ pub enum Request {
     #[serde(rename = "trust.revoke")]
     TrustRevoke {
         store: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::trust_digest")]
         expected_digest: String,
         input: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
@@ -251,7 +251,7 @@ pub enum Request {
     #[serde(rename = "trust.status")]
     TrustStatus {
         store: String,
-        #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+        #[schemars(schema_with = "crate::contract::trust_digest")]
         expected_digest: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,

@@ -149,7 +149,9 @@ def vectors():
     validity = certificate()
     snapshots = []
     for fmt, revoked, window in [("apg-trust-v1", False, None), ("apg-trust-v1", True, None),
-                                 ("apg-trust-v2", False, validity), ("apg-trust-v2", True, validity)]:
+                                 ("apg-trust-v2", False, validity), ("apg-trust-v2", True, validity),
+                                 ("apg-trust-v3", False, None), ("apg-trust-v3", False, validity),
+                                 ("apg-trust-v3", True, validity)]:
         entry = {"public": public, "revocation": revocations[0] if revoked else None}
         if window:
             entry["validity"] = window
@@ -230,14 +232,14 @@ def exercise(executable, fixture, directory):
     digest = call("trust.init", output=store)["digest"]
     added = call("trust.add", store=store, expected_digest=digest, public=public_path,
                  expected_fingerprint=fingerprint, output=str(directory / "store-1"))
-    assert added["digest"] == fixture["snapshots"][0]["digest"]
+    assert added["digest"] == fixture["snapshots"][4]["digest"]
     windowed = call("trust.validity", store=str(directory / "store-1"), expected_digest=added["digest"],
                     input=validity_path, expected_fingerprint=fingerprint, output=str(directory / "store-2"))
-    assert windowed["digest"] == fixture["snapshots"][2]["digest"]
+    assert windowed["digest"] == fixture["snapshots"][5]["digest"]
     revoked = call("trust.revoke", store=str(directory / "store-2"), expected_digest=windowed["digest"],
                    input=put("revocation-import", fixture["revocations"][0]), expected_fingerprint=fingerprint,
                    output=str(directory / "store-3"))
-    assert revoked["digest"] == fixture["snapshots"][3]["digest"]
+    assert revoked["digest"] == fixture["snapshots"][6]["digest"]
 
     # A hardware reference is public data; without a configured module it cannot sign.
     reference = {"format": "apg-pkcs11-key-v1", "public": public,

@@ -104,7 +104,7 @@
     {
       "@id": "ic:sha2-256",
       "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "File digests, identity fingerprints and canonical trust snapshot digests",
+      "apg_usage": "File digests, apg-public-v1 fingerprints and legacy v1/v2 trust snapshot digests",
       "label": "SHA-256",
       "limitations": [
         "Unkeyed hashing does not prove origin",
@@ -161,7 +161,7 @@
     {
       "@id": "ic:sha2-384",
       "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
+      "apg_usage": "P-384 and hybrid identity fingerprints, apg-trust-v3 snapshot digests, the message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
       "label": "SHA-384",
       "limitations": [
         "No authenticity on its own",
@@ -614,7 +614,7 @@
       ],
       "label": "Hybrid post-quantum encryption against future quantum attacks",
       "limitations": [
-        "Fingerprints use SHA-384 but trust-snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
+        "Fingerprints and trust-snapshot digests use SHA-384; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
         "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review",
         "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only",
         "Software secret keys only; hardware identities have no post-quantum suite"
@@ -1296,7 +1296,7 @@
         "apg:constraint/snapshot-policy",
         "apg:constraint/validity-window"
       ],
-      "description": "Import or narrow signed validity into a new v2 snapshot",
+      "description": "Import or narrow signed validity into a new snapshot",
       "deterministic": true,
       "effects": [
         "read_file",
@@ -3044,5 +3044,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.10.0"
+  "version": "1.11.0"
 }

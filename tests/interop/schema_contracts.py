@@ -146,6 +146,8 @@ def main():
     store["format"] = "apg-trust-v2"
     check(schemas["formats"]["trust_store"], store)
     store["format"] = "apg-trust-v3"
+    check(schemas["formats"]["trust_store"], store)
+    store["format"] = "apg-trust-v4"
     check(schemas["formats"]["trust_store"], store, False)
     store["format"] = "apg-trust-v2"
     # Shape-only fixtures: identity uniqueness is a semantic runtime check.

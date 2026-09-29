@@ -252,7 +252,8 @@ apg trust status --store trust-revoked.json --expected-digest <revoked-digest> -
 ```
 
 Every update creates a new file and returns a new digest; no update clears an
-existing revocation. `encrypt`, `sign`, and `verify` accept an optional `policy`
+existing revocation. Snapshots are written as `apg-trust-v3` with SHA-384 digests;
+older v1 and v2 snapshots and their SHA-256 pins remain readable. `encrypt`, `sign`, and `verify` accept an optional `policy`
 object containing `store` and `expected_digest`:
 
 ```json
@@ -272,7 +273,7 @@ remain usable. Decryption stays available for historical data. Read
 
 ### Expiry policies
 Create signed validity with `key.validity`, authenticate it with `validity.verify`,
-and import it using `trust.validity`. Imports publish pinned v2 snapshots and can
+and import it using `trust.validity`. Imports publish new pinned snapshots and can
 only narrow existing windows. `trust.evaluate --store snapshot.json
 --expected-digest DIGEST --expected-fingerprint FINGERPRINT --at-time 1800000000`
 is advisory. Governed encrypt/sign/verify use host time and report

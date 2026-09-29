@@ -80,7 +80,7 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.fingerprint)
         }
-        "apg-trust-v1" | "apg-trust-v2" => {
+        "apg-trust-v1" | "apg-trust-v2" | "apg-trust-v3" => {
             if data.len() > MAX_STORE_BYTES as usize {
                 return Err(Error::new(
                     "limit_exceeded",

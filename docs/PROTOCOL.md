@@ -91,7 +91,8 @@ certificate without changing trust state. Unsupported reasons fail during reques
 or artifact parsing. `inspect` never applies trust policy.
 
 `encrypt`, `sign`, and `verify` also accept optional `policy`:
-`{"store":"snapshot.json","expected_digest":"<64 lowercase hex characters>"}`.
+`{"store":"snapshot.json","expected_digest":"<96 lowercase hex characters>"}`
+(64 for legacy v1 and v2 snapshots).
 The CLI accepts `--policy` followed by that JSON string. Both fields are required
 when the object is present. Omitting policy or supplying null is explicitly
 ungoverned. Successful artifacts and verification results include `policy_digest`

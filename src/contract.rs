@@ -222,7 +222,13 @@ pub fn time_end(_: &mut SchemaGenerator) -> Schema {
         "description":"Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime)."})
 }
 pub fn trust_format(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "enum":["apg-trust-v1", "apg-trust-v2"]})
+    json_schema!({"type":"string", "enum":["apg-trust-v1", "apg-trust-v2", "apg-trust-v3"],
+        "description":"APG writes apg-trust-v3; v1 and v2 snapshots remain readable."})
+}
+pub fn trust_digest(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":64, "maxLength":96,
+        "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$", "not":{"pattern":"[^0-9a-f]"},
+        "description":"SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2."})
 }
 pub fn entries(generator: &mut SchemaGenerator) -> Schema {
     let item = generator.subschema_for::<crate::trust::TrustEntry>();

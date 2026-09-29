@@ -192,8 +192,8 @@ pub fn compare(base: &TrustStore, candidate: &TrustStore) -> Result<Comparison> 
             });
         }
     }
-    // A v2 -> v1 downgrade is not an extension, even when no validity is present.
-    if base.format == "apg-trust-v2" && candidate.format == "apg-trust-v1" {
+    // A format downgrade is not an extension, even when no validity is present.
+    if candidate.rank()? < base.rank()? {
         compatible = false;
     }
     Ok(Comparison {
@@ -252,9 +252,7 @@ pub fn merge(base: &TrustStore, incoming: &TrustStore) -> Result<TrustStore> {
             _ => {} // Keep base certificate when unchanged, absent or broader incoming.
         }
     }
-    if incoming.format == "apg-trust-v2" {
-        merged.format = "apg-trust-v2".into();
-    }
+    merged.upgrade();
     merged.validate()?;
     Ok(merged)
 }

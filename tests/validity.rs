@@ -58,7 +58,7 @@ fn windows_are_half_open_and_updates_only_narrow() {
     let fp = &key().public.fingerprint;
     let old = s.digest().unwrap();
     s.set_validity(certificate(100, 200), fp).unwrap();
-    assert_eq!(s.format, "apg-trust-v2");
+    assert_eq!(s.format, "apg-trust-v3");
     assert_ne!(s.digest().unwrap(), old);
     for (at, status) in [
         (99, Eligibility::NotYetValid),
@@ -91,8 +91,20 @@ fn windows_are_half_open_and_updates_only_narrow() {
 #[test]
 fn legacy_snapshot_commitment_is_unchanged() {
     use ic_core::traits::Digest;
-    use ic_hash::Sha256;
-    let s = store();
+    use ic_hash::{Sha256, Sha384};
+    let mut s = store();
+    // v3 has the v2 canonical bytes but commits with SHA-384.
+    let current = format!(
+        "{{\"format\":\"apg-trust-v3\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
+        serde_json::to_string(&key().public).unwrap()
+    );
+    assert_eq!(serde_json::to_string(&s).unwrap(), current);
+    let mut frame = b"APG trust snapshot v3".to_vec();
+    frame.extend_from_slice(&(current.len() as u64).to_be_bytes());
+    frame.extend_from_slice(current.as_bytes());
+    assert_eq!(s.digest().unwrap(), hex::encode(Sha384::digest(&frame)));
+
+    s.format = "apg-trust-v1".into();
     let legacy = format!(
         "{{\"format\":\"apg-trust-v1\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
         serde_json::to_string(&key().public).unwrap()
