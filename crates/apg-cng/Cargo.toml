@@ -1,0 +1,16 @@
+[package]
+name = "apg-cng"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "AGPL-3.0-or-later"
+description = "Minimal safe wrapper over Windows CNG for TPM-backed P-384 keys (Agentic Privacy Guard)"
+publish = false
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography"] }
+
+[dev-dependencies]
+ic-core = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-ec = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-hash = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }

@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 pub mod artifact;
+#[cfg(all(feature = "tpm", windows))]
+mod cng;
 mod contract;
 pub mod control_json;
 pub mod crypto;
@@ -302,6 +304,13 @@ pub enum Request {
         /// PIN authorizing the new keys; exact file bytes, 1..255.
         pin_file: String,
     },
+    #[serde(rename = "tpm.key.delete")]
+    TpmKeyDelete {
+        /// An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.
+        key: String,
+        /// The keys' PIN; deletion is refused without it.
+        passphrase_file: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -360,6 +369,10 @@ pub enum Outcome {
     },
     TpmInfo {
         info: provider::TpmInfo,
+    },
+    KeyDeleted {
+        fingerprint: String,
+        provider: String,
     },
     HardwareKey {
         path: String,
@@ -439,6 +452,7 @@ impl Request {
             Self::TpmInfo {} => "tpm.info",
             Self::KmsKeyBind { .. } => "kms.key.bind",
             Self::TpmKeyGenerate { .. } => "tpm.key.generate",
+            Self::TpmKeyDelete { .. } => "tpm.key.delete",
         }
     }
 }
@@ -473,10 +487,12 @@ fn load_key(path: &str) -> Result<KeyFile> {
 fn software_secret(key: KeyFile) -> Result<crypto::SecretKey> {
     match key {
         KeyFile::Software(secret) => Ok(secret),
-        KeyFile::Hardware(_) | KeyFile::Tpm(_) | KeyFile::Kms(_) => Err(Error::new(
-            "invalid_request",
-            "Operation applies only to software keys; manage token PINs with the token's administration tooling",
-        )),
+        KeyFile::Hardware(_) | KeyFile::Tpm(_) | KeyFile::Cng(_) | KeyFile::Kms(_) => {
+            Err(Error::new(
+                "invalid_request",
+                "Operation applies only to software keys; manage token PINs with the token's administration tooling",
+            ))
+        }
     }
 }
 
@@ -600,7 +616,7 @@ pub fn schemas() -> Value {
         "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
         "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
         "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),
+        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),
         "knowledge_application":schemars::schema_for!(knowledge::Application)}})
 }
 
@@ -1016,18 +1032,45 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 attested: false,
             })
         }
+        Request::TpmKeyDelete {
+            key,
+            passphrase_file,
+        } => match load_key(&key)? {
+            KeyFile::Cng(cng) => {
+                host.permit(Custody::Hardware)?;
+                provider::tpm_delete(&cng, &password(&passphrase_file)?)?;
+                Ok(Outcome::KeyDeleted {
+                    fingerprint: cng.public.fingerprint,
+                    provider: "tpm".into(),
+                })
+            }
+            KeyFile::Tpm(_) => Err(Error::new(
+                "invalid_request",
+                "apg-tpm-key-v1 keys exist only in their key file; delete every copy of the file",
+            )),
+            _ => Err(Error::new(
+                "invalid_request",
+                "tpm.key.delete applies only to apg-cng-key-v1 keys",
+            )),
+        },
         Request::TpmInfo {} => Ok(Outcome::TpmInfo {
             info: provider::tpm_info()?,
         }),
         Request::TpmKeyGenerate { output, pin_file } => {
             require_absent(&output)?;
             let (key, protection) = provider::tpm_generate(&password(&pin_file)?)?;
-            // The file is the only copy of the wrapped keys. The TPM keeps no persistent
-            // object, so a failed write leaves no TPM state behind.
-            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            // Linux: the file is the only copy of the wrapped keys and the TPM keeps no
+            // persistent object. Windows: the keys persist in the TPM key store, so a
+            // failed write reports their names for tpm.key.delete-equivalent cleanup.
+            write_new(&output, &key.to_json()?).map_err(|error| {
+                Error::new(
+                    error.code,
+                    format!("{} ({})", error.message, key.cleanup_hint()),
+                )
+            })?;
             Ok(Outcome::HardwareKey {
                 path: output,
-                fingerprint: key.public.fingerprint,
+                fingerprint: key.public().fingerprint.clone(),
                 provider: "tpm".into(),
                 token_serial: None,
                 custody: Custody::Hardware,

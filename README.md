@@ -8,7 +8,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 35 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 36 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -44,8 +44,10 @@ cargo build --release --locked --features pkcs11 --target-dir target
 ```
 
 AWS KMS identities need the `kms` feature (still no C compilation: TLS uses rustls
-with IronCrypto's provider). TPM 2.0 identities need the Linux-only `tpm` feature, which links the system
-tpm2-tss libraries (`libtss2-dev`); see [hardware identities](docs/HARDWARE.md#tpm-20).
+with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: on Linux it links the system tpm2-tss
+libraries (`libtss2-dev`); on Windows it uses the Platform Crypto Provider through the
+small `apg-cng` crate, the only code in APG with `unsafe`. See
+[hardware identities](docs/HARDWARE.md#tpm-20).
 
 An external MCP integration test uses the official Python SDK to exercise the
 release binary; Python is test tooling only. See [the interoperability check](docs/MCP.md#external-client-interoperability)
@@ -87,7 +89,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 35 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 36 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -327,6 +329,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/provider.rs` | Key inputs, hardware references, PIN rules, host custody policy |
 | `src/pkcs11.rs` | PKCS#11 backend (`pkcs11` feature): token selection, key checks, signing and ECDH |
 | `src/tpm.rs` | TPM 2.0 backend (`tpm` feature, Linux): storage root, wrapped keys, HMAC sessions |
+| `src/cng.rs` | TPM 2.0 backend (`tpm` feature, Windows): Platform Crypto Provider keys |
+| `crates/apg-cng` | Minimal safe wrapper over Windows CNG; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
@@ -348,6 +352,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/hardware.rs` | Fail-closed hardware configuration, custody policy, pre-login checks |
 | `tests/pkcs11_live.rs` | Full hardware lifecycle against a real module (opt-in, disposable token) |
 | `tests/tpm_live.rs` | Full TPM lifecycle (opt-in; swtpm via `scripts/tpm-test.sh`) |
+| `tests/windows_tpm_live.rs` | Full lifecycle on the machine's real TPM (opt-in, self-cleaning) |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |
 | `tests/vectors_p384.rs` | PyCA-generated P-384 suite vectors |
 

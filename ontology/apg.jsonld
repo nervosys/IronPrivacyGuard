@@ -132,6 +132,12 @@
       "sensitivity": "secret"
     },
     {
+      "@id": "apg:KeyDeletion",
+      "@type": "apg:Entity",
+      "description": "Confirmation that a TPM-backed identity's persisted keys were permanently deleted",
+      "sensitivity": "control"
+    },
+    {
       "@id": "apg:KmsKeyFile",
       "@type": "apg:Entity",
       "description": "Public apg-kms-key-v1 file binding a P-384 identity to two AWS KMS key ARNs in one region; using it needs host AWS credentials",
@@ -158,7 +164,7 @@
     {
       "@id": "apg:TpmKeyFile",
       "@type": "apg:Entity",
-      "description": "apg-tpm-key-v1 file holding a P-384 identity and TPM-wrapped fixedTPM key blobs that only the originating TPM can load; deleting every copy destroys the identity",
+      "description": "Host TPM key file for a P-384 identity: apg-tpm-key-v1 (Linux) holds TPM-wrapped fixedTPM blobs only the originating TPM can load, so deleting every copy destroys the identity; apg-cng-key-v1 (Windows) names persisted Platform Crypto Provider keys, removed with tpm.key.delete",
       "sensitivity": "encrypted-secret"
     },
     {
@@ -2365,11 +2371,12 @@
         "apg:constraint/no-attestation",
         "apg:constraint/no-clobber"
       ],
-      "description": "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs",
+      "description": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file",
       "deterministic": false,
       "effects": [
         "load_provider",
         "read_pin",
+        "create_token_object",
         "create_file"
       ],
       "errors": [
@@ -2408,7 +2415,63 @@
         "command": "apg schema",
         "operation_const": "tpm.key.generate"
       },
-      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+      "retry": "Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."
+    },
+    {
+      "@id": "apg:operation/tpm.key.delete",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/irreversible-deletion"
+      ],
+      "description": "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "delete_token_object"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.key.delete",
+      "inputs": [
+        "apg:TpmKeyFile",
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_key_delete",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:KeyDeletion"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.key.delete"
+      },
+      "retry": "Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."
     },
     {
       "@id": "apg:constraint/knowledge-advisory",
@@ -2519,9 +2582,15 @@
       "severity": "critical"
     },
     {
+      "@id": "apg:constraint/irreversible-deletion",
+      "@type": "apg:Constraint",
+      "requirement": "Deleting TPM keys destroys the identity permanently: nothing encrypted to it can be decrypted and it can never sign again. APG checks the PIN and the pinned identity first. Publish a revocation beforehand if others trust the identity.",
+      "severity": "critical"
+    },
+    {
       "@id": "apg:constraint/tpm-provider",
       "@type": "apg:Constraint",
-      "requirement": "The TPM connection comes only from the host's APG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Requires a Linux build with the tpm feature and the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
+      "requirement": "On Windows, tpm builds use the Microsoft Platform Crypto Provider through CNG: keys persist in the user's TPM key store, are non-exportable, and are authorized by a PIN-derived usage authorization under the TPM's dictionary-attack lockout. On Linux, the TPM connection comes only from the host's APG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Linux builds need the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
       "severity": "critical"
     },
     {
@@ -2945,6 +3014,23 @@
           },
           {
             "@id": "apg:operation/trust.add"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "apg:workflow/retire-windows-tpm-identity",
+      "@type": "apg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "apg:operation/key.revoke"
+          },
+          {
+            "@id": "apg:operation/trust.revoke"
+          },
+          {
+            "@id": "apg:operation/tpm.key.delete"
           }
         ]
       }
@@ -3676,7 +3762,7 @@
       ],
       "prerequisites": [
         "PKCS#11: an apg build with the pkcs11 feature, host-set APG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
-        "TPM: a Linux apg build with the tpm feature, host-set APG_TPM_TCTI, a TPM 2.0 supporting P-384 and an owner hierarchy with empty authorization",
+        "TPM: an apg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set APG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider",
         "PIN in an access-controlled file"
       ],
       "sources": [
@@ -3692,6 +3778,7 @@
         "apg:operation/hardware.key.bind",
         "apg:operation/tpm.info",
         "apg:operation/tpm.key.generate",
+        "apg:operation/tpm.key.delete",
         "apg:operation/key.public",
         "apg:operation/decrypt",
         "apg:operation/sign",
@@ -3851,5 +3938,5 @@
   ],
   "@id": "apg:ontology",
   "scope": "Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.20.0"
+  "version": "1.21.0"
 }

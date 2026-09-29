@@ -209,13 +209,27 @@ How it works:
   manufacturer and vendor strings against the key file and requires the loaded keys
   to equal the pinned identity.
 
-Limits: Linux only (Windows TPMs need the CNG Platform Crypto Provider, not yet
-supported); TPMs without P-384 report no usable suite; no TPM attestation (the
+Limits: TPMs without P-384 report no usable suite; no TPM attestation (the
 `attested` flag is always false). Sessions are salted with the storage root key, so a
 passive observer of the TPM interface cannot read the new key's authorization during
 `tpm.key.generate` or ECDH results later. The storage root's public key is read from
 the same interface, so an active interposer that substitutes it is not stopped;
 binding sessions to the endorsement key certificate would be needed for that.
+
+### Windows
+
+On Windows, `tpm` builds use CNG's Microsoft Platform Crypto Provider instead of
+tpm2-tss; no configuration is needed. `tpm.key.generate` creates two persisted,
+non-exportable TPM-backed keys (ECDH P-384 and ECDSA P-384) in the user's key store
+and writes an `apg-cng-key-v1` file naming them. The usage authorization is SHA-256
+over the framed PIN, and the TPM's dictionary-attack lockout limits guessing. Each
+use checks the TPM vendor against the key file and requires the keys to match the
+pinned identity.
+
+Unlike Linux key files, the keys themselves persist in the key store. Remove them
+with `apg tpm key delete --key alice.cng.json --passphrase-file pin.bin`; it checks
+the PIN and identity first, and deletion is irreversible. All FFI is isolated in
+the `apg-cng` crate, the only code in APG that uses `unsafe`.
 
 ## AWS KMS
 
@@ -295,6 +309,11 @@ FIPS-mode HSM, run against a disposable partition with
 ```sh
 APG_TEST_PKCS11_REQUIRE_IN_TOKEN=1 cargo test --locked --features pkcs11 --lib in_token -- --nocapture
 ```
+
+`tests/windows_tpm_live.rs` runs the lifecycle against the machine's real TPM when
+`APG_TEST_WINDOWS_TPM=1` (it always deletes its keys; the wrong-PIN check also needs
+`APG_TEST_WINDOWS_TPM_WRONG_PIN=1`, since failures count toward the TPM lockout).
+`crates/apg-cng` has an ignored probe test for the raw provider behavior.
 
 `tests/tpm_live.rs` runs a full TPM lifecycle when `APG_TEST_TPM_TCTI` is set;
 `scripts/tpm-test.sh` starts a throwaway swtpm software TPM and runs it:

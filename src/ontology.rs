@@ -254,10 +254,22 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "tpm.key.generate",
-        "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs",
+        "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file",
         &["TokenPin"],
         &["TpmKeyFile"],
-        &["load_provider", "read_pin", "create_file"],
+        &[
+            "load_provider",
+            "read_pin",
+            "create_token_object",
+            "create_file",
+        ],
+    ),
+    (
+        "tpm.key.delete",
+        "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN",
+        &["TpmKeyFile", "TokenPin"],
+        &["KeyDeletion"],
+        &["load_provider", "read_pin", "delete_token_object"],
     ),
 ];
 
@@ -316,6 +328,7 @@ pub fn operation(id: &str) -> Value {
         "inspect" => vec!["untrusted-metadata"],
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
+        "tpm.key.delete" => vec!["tpm-provider", "pin-channel", "irreversible-deletion"],
         "kms.key.bind" => vec![
             "kms-provider",
             "non-exportable-key",
@@ -436,6 +449,7 @@ pub fn operation(id: &str) -> Value {
                     | "hardware.key.bind"
                     | "tpm.info"
                     | "tpm.key.generate"
+                    | "tpm.key.delete"
                     | "kms.key.bind"
             ));
     let mut conditional_effects = Vec::new();
@@ -460,7 +474,7 @@ pub fn operation(id: &str) -> Value {
         "optional_inputs":if governed {vec!["apg:TrustPolicy"]} else {vec![]},
         "key_inputs":if key_provider {vec!["apg:SecretKey","apg:HardwareKeyReference","apg:TpmKeyFile","apg:KmsKeyFile"]} else {vec![]},
         "conditional_effects":conditional_effects,
-        "retry": if effects.contains(&"create_token_object") {"Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."} else if effects.contains(&"create_file") {"Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."} else if effects.contains(&"load_provider") || key_provider {"Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."} else {"Safe to retry if inputs are unchanged."},
+        "retry": if effects.contains(&"delete_token_object") {"Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."} else if effects.contains(&"create_token_object") {"Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."} else if effects.contains(&"create_file") {"Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."} else if effects.contains(&"load_provider") || key_provider {"Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."} else {"Safe to retry if inputs are unchanged."},
         "constraints":constraints.iter().map(|s|format!("apg:constraint/{s}")).collect::<Vec<_>>(),
         "algorithms":algorithms.iter().map(|s|format!("ic:{s}")).collect::<Vec<_>>(),
         "request_schema":{"command":"apg schema", "operation_const":id},
@@ -568,6 +582,11 @@ pub fn export() -> Value {
             "secret",
         ),
         (
+            "KeyDeletion",
+            "Confirmation that a TPM-backed identity's persisted keys were permanently deleted",
+            "control",
+        ),
+        (
             "KmsKeyFile",
             "Public apg-kms-key-v1 file binding a P-384 identity to two AWS KMS key ARNs in one region; using it needs host AWS credentials",
             "public",
@@ -589,7 +608,7 @@ pub fn export() -> Value {
         ),
         (
             "TpmKeyFile",
-            "apg-tpm-key-v1 file holding a P-384 identity and TPM-wrapped fixedTPM key blobs that only the originating TPM can load; deleting every copy destroys the identity",
+            "Host TPM key file for a P-384 identity: apg-tpm-key-v1 (Linux) holds TPM-wrapped fixedTPM blobs only the originating TPM can load, so deleting every copy destroys the identity; apg-cng-key-v1 (Windows) names persisted Platform Crypto Provider keys, removed with tpm.key.delete",
             "encrypted-secret",
         ),
         (
@@ -799,8 +818,12 @@ pub fn export() -> Value {
             "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key with infrastructure tooling and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
+            "irreversible-deletion",
+            "Deleting TPM keys destroys the identity permanently: nothing encrypted to it can be decrypted and it can never sign again. APG checks the PIN and the pinned identity first. Publish a revocation beforehand if others trust the identity.",
+        ),
+        (
             "tpm-provider",
-            "The TPM connection comes only from the host's APG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Requires a Linux build with the tpm feature and the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
+            "On Windows, tpm builds use the Microsoft Platform Crypto Provider through CNG: keys persist in the user's TPM key store, are non-exportable, and are authorized by a PIN-derived usage authorization under the TPM's dictionary-attack lockout. On Linux, the TPM connection comes only from the host's APG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Linux builds need the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
         ),
         (
             "pin-channel",
@@ -981,6 +1004,10 @@ pub fn export() -> Value {
             "create-tpm-identity",
             vec!["tpm.info", "tpm.key.generate", "key.public", "trust.add"],
         ),
+        (
+            "retire-windows-tpm-identity",
+            vec!["key.revoke", "trust.revoke", "tpm.key.delete"],
+        ),
         ("confidential-transfer", vec!["encrypt", "decrypt"]),
         ("authenticate-content", vec!["sign", "verify"]),
         (
@@ -992,5 +1019,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.20.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.21.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

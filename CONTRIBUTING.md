@@ -26,6 +26,12 @@ Hardware-provider tests run against a real PKCS#11 module when
 `APG_TEST_PKCS11_MODULE` is set, and against a TPM when `APG_TEST_TPM_TCTI` is set
 (Linux, `--features tpm`); see [docs/HARDWARE.md](docs/HARDWARE.md#testing).
 
+## Unsafe code
+
+The main crate is `#![forbid(unsafe_code)]`. Windows CNG calls live in
+`crates/apg-cng`, which must stay minimal: owned handles freed on drop, checked
+statuses and validated buffer lengths, with a `SAFETY` comment on every block.
+
 ## Contract discipline
 
 Formats, operations, schemas and the ontology change together. After changing

@@ -1069,6 +1069,29 @@
         "pin_file"
       ],
       "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+          "type": "string"
+        },
+        "operation": {
+          "const": "tpm.key.delete",
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "The keys' PIN; deletion is refused without it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "passphrase_file"
+      ],
+      "type": "object"
     }
   ],
   "title": "Request"

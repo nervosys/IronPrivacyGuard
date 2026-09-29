@@ -249,6 +249,17 @@ exact KMS key ARNs (`arn:<partition>:kms:<region>:<account>:key/<id>`), distinct
 `KEY_AGREEMENT` key and the signing key an `ECC_NIST_P384` `SIGN_VERIFY` key. The
 file holds no secret. See [HARDWARE.md](HARDWARE.md#aws-kms).
 
+## Windows TPM key: apg-cng-key-v1
+
+Fields in declared order: `format`, `public`, `provider`, `vendor`,
+`encryption_key_name`, `signing_key_name`. `public` is an `apg-public-p384-v1`
+identity, `provider` is exactly `Microsoft Platform Crypto Provider`, and `vendor` is
+the TPM vendor from the provider's platform description. Key names are
+`apg-<32 hex>-enc` and `apg-<32 hex>-sig` with the same random prefix. The keys are
+persisted, non-exportable ECDH P-384 and ECDSA P-384 keys whose usage authorization
+is SHA-256 of `frame("APG CNG authorization v1", [PIN])`. See
+[HARDWARE.md](HARDWARE.md#windows).
+
 ## TPM key: apg-tpm-key-v1
 
 Fields in declared order: `format`, `public`, `tpm`, `parent`, `encryption_key`,

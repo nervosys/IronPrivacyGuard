@@ -1041,6 +1041,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -1542,6 +1565,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -1552,7 +1579,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -1570,7 +1601,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -1880,6 +1911,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -3165,6 +3216,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -3674,6 +3748,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -3684,7 +3762,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -3702,7 +3784,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -4012,6 +4094,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -5297,6 +5399,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -5802,6 +5927,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -5812,7 +5941,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -5830,7 +5963,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -6140,6 +6273,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -7425,6 +7578,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -7936,6 +8112,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -7946,7 +8126,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -7964,7 +8148,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -8274,6 +8458,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -9559,6 +9763,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -10074,6 +10301,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -10084,7 +10315,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -10102,7 +10337,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -10412,6 +10647,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -11697,6 +11952,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -12240,6 +12518,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -12250,7 +12532,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -12268,7 +12554,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -12578,6 +12864,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -13863,6 +14169,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -14385,6 +14714,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -14395,7 +14728,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -14413,7 +14750,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -14723,6 +15060,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -16008,6 +16365,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -16541,6 +16921,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -16551,7 +16935,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -16569,7 +16957,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -16879,6 +17267,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -18164,6 +18572,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -18695,6 +19126,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -18705,7 +19140,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -18723,7 +19162,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -19033,6 +19472,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -20318,6 +20777,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -20825,6 +21307,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -20835,7 +21321,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -20853,7 +21343,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -21163,6 +21653,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -22448,6 +22958,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -22981,6 +23514,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -22991,7 +23528,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -23009,7 +23550,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -23319,6 +23860,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -24604,6 +25165,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -25137,6 +25721,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -25147,7 +25735,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -25165,7 +25757,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -25475,6 +26067,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -26760,6 +27372,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -27285,6 +27920,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -27295,7 +27934,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -27313,7 +27956,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -27623,6 +28266,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -28908,6 +29571,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -29409,6 +30095,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -29419,7 +30109,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -29437,7 +30131,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -29747,6 +30441,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -31032,6 +31746,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -31533,6 +32270,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -31543,7 +32284,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -31561,7 +32306,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -31871,6 +32616,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -33156,6 +33921,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -33657,6 +34445,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -33667,7 +34459,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -33685,7 +34481,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -33995,6 +34791,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -35280,6 +36096,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -35781,6 +36620,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -35791,7 +36634,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -35809,7 +36656,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -36119,6 +36966,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -37404,6 +38271,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -37911,6 +38801,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -37921,7 +38815,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -37939,7 +38837,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -38249,6 +39147,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -39534,6 +40452,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -40056,6 +40997,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -40066,7 +41011,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -40084,7 +41033,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -40394,6 +41343,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -41679,6 +42648,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -42197,6 +43189,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -42207,7 +43203,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -42225,7 +43225,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -42535,6 +43535,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -43820,6 +44840,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -44356,6 +45399,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -44366,7 +45413,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -44384,7 +45435,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -44694,6 +45745,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -45979,6 +47050,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -46509,6 +47603,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -46519,7 +47617,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -46537,7 +47639,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -46847,6 +47949,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -48132,6 +49254,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -48665,6 +49810,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -48675,7 +49824,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -48693,7 +49846,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -49003,6 +50156,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -50288,6 +51461,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -50810,6 +52006,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -50820,7 +52020,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -50838,7 +52042,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -51148,6 +52352,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -52433,6 +53657,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -52955,6 +54202,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -52965,7 +54216,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -52983,7 +54238,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -53293,6 +54548,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -54578,6 +55853,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -55110,6 +56408,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -55120,7 +56422,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -55138,7 +56444,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -55448,6 +56754,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -56733,6 +58059,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -57269,6 +58618,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -57279,7 +58632,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -57297,7 +58654,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -57607,6 +58964,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -58892,6 +60269,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -59399,6 +60799,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -59409,7 +60813,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -59427,7 +60835,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -59737,6 +61145,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -61022,6 +62450,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -61529,6 +62980,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -61539,7 +62994,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -61557,7 +63016,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -61867,6 +63326,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -63152,6 +64631,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -63653,6 +65155,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -63663,7 +65169,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -63681,7 +65191,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -63991,6 +65501,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -65276,6 +66806,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -65802,6 +67355,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -65812,7 +67369,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -65830,7 +67391,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -66140,6 +67701,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -67425,6 +69006,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -67964,6 +69568,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -67974,7 +69582,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -67992,7 +69604,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -68302,6 +69914,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -69587,6 +71219,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -70124,6 +71779,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -70134,7 +71793,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -70152,7 +71815,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -70462,6 +72125,26 @@
                     "required": [
                       "kind",
                       "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
                     ],
                     "type": "object"
                   },
@@ -71747,6 +73430,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -72248,6 +73954,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -72258,7 +73968,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -72276,7 +73990,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -72591,6 +74305,26 @@
                   },
                   {
                     "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
                       "attested": {
                         "description": "Always false: token attributes are self-reported, not vendor attestation.",
                         "type": "boolean"
@@ -72842,7 +74576,7 @@
         "openWorldHint": true,
         "readOnlyHint": false
       },
-      "description": "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs. Consult apg_ontology for constraints and apg_plan before mutation. Files resolve relative to the server working directory.",
+      "description": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file. Consult apg_ontology for constraints and apg_plan before mutation. Files resolve relative to the server working directory.",
       "inputSchema": {
         "$defs": {
           "ApgFullRequest": {
@@ -73871,6 +75605,29 @@
                   "pin_file"
                 ],
                 "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
               }
             ],
             "title": "Request"
@@ -74383,6 +76140,10 @@
           "TpmInfo": {
             "description": "TPM properties relevant to APG identities.",
             "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
               "curves": {
                 "items": {
                   "type": "string"
@@ -74393,7 +76154,11 @@
                 "type": "string"
               },
               "owner_auth_empty": {
-                "type": "boolean"
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               },
               "suites": {
                 "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
@@ -74411,7 +76176,7 @@
               "firmware_version",
               "curves",
               "suites",
-              "owner_auth_empty"
+              "backend"
             ],
             "type": "object"
           },
@@ -74726,6 +76491,26 @@
                   },
                   {
                     "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
                       "attested": {
                         "description": "Always false: token attributes are self-reported, not vendor attestation.",
                         "type": "boolean"
@@ -74963,7 +76748,2194 @@
         ],
         "type": "object"
       },
-      "title": "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs"
+      "title": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file"
+    },
+    {
+      "_meta": {
+        "apg/keyCustody": "any",
+        "apg/operation": "tpm.key.delete",
+        "apg/requiredPolicy": null
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "description": "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN. Consult apg_ontology for constraints and apg_plan before mutation. Files resolve relative to the server working directory.",
+      "inputSchema": {
+        "$defs": {
+          "ApgFullRequest": {
+            "description": "The complete executable request vocabulary. Unknown fields fail closed.",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "discover",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "schema",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "ontology",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "algorithms",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "knowledge",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "knowledge.search",
+                    "type": "string"
+                  },
+                  "query": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "query"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "request.validate",
+                    "type": "string"
+                  },
+                  "request": true
+                },
+                "required": [
+                  "operation",
+                  "request"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "plan",
+                    "type": "string"
+                  },
+                  "request": {
+                    "$ref": "#/$defs/ApgFullRequest"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "request"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "identity": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/SoftwareIdentity"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Identity suite; omitted means apg-public-v1."
+                  },
+                  "operation": {
+                    "const": "key.generate",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "output",
+                  "passphrase_file"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "key.public",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "new_passphrase_file": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "key.rewrap",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "output",
+                  "expected_fingerprint",
+                  "passphrase_file",
+                  "new_passphrase_file"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "key.revoke",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
+                    "$ref": "#/$defs/RevocationReason"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "output",
+                  "expected_fingerprint",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "revocation.verify",
+                    "type": "string"
+                  },
+                  "signer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "signer",
+                  "expected_fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "encrypt",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "recipient": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "output",
+                  "recipient",
+                  "expected_fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "input": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "decrypt",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "output",
+                  "key"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "input": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "sign",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "output",
+                  "key"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "verify",
+                    "type": "string"
+                  },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "signature": {
+                    "type": "string"
+                  },
+                  "signer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "signature",
+                  "signer",
+                  "expected_fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "not_after": {
+                    "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+                    "maximum": 253402300799,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "not_before": {
+                    "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+                    "maximum": 253402300798,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "operation": {
+                    "const": "key.validity",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "output",
+                  "expected_fingerprint",
+                  "not_before",
+                  "not_after"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "validity.verify",
+                    "type": "string"
+                  },
+                  "signer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input",
+                  "signer",
+                  "expected_fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_digest": {
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "trust.validity",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "store": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "store",
+                  "expected_digest",
+                  "input",
+                  "expected_fingerprint",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "at_time": {
+                    "maximum": 253402300799,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "expected_digest": {
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "trust.evaluate",
+                    "type": "string"
+                  },
+                  "store": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "store",
+                  "expected_digest",
+                  "expected_fingerprint",
+                  "at_time"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "base": {
+                    "$ref": "#/$defs/TrustPolicy"
+                  },
+                  "candidate": {
+                    "$ref": "#/$defs/TrustPolicy"
+                  },
+                  "operation": {
+                    "const": "trust.compare",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "base",
+                  "candidate"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "base": {
+                    "$ref": "#/$defs/TrustPolicy"
+                  },
+                  "incoming": {
+                    "$ref": "#/$defs/TrustPolicy"
+                  },
+                  "operation": {
+                    "const": "trust.merge",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "base",
+                  "incoming",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "trust.init",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_digest": {
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "trust.add",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "public": {
+                    "type": "string"
+                  },
+                  "store": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "store",
+                  "expected_digest",
+                  "public",
+                  "expected_fingerprint",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_digest": {
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "trust.revoke",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "store": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "store",
+                  "expected_digest",
+                  "input",
+                  "expected_fingerprint",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_digest": {
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "expected_fingerprint": {
+                    "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+                    "maxLength": 96,
+                    "minLength": 64,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "trust.status",
+                    "type": "string"
+                  },
+                  "store": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "store",
+                  "expected_digest",
+                  "expected_fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "hash",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "input": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "inspect",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "input"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "hardware.tokens",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "description": "CKA_LABEL for both generated key pairs; informational, never used for lookup",
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "hardware.key.generate",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "pin_file": {
+                    "description": "Token user PIN; exact file bytes, 1..255.",
+                    "type": "string"
+                  },
+                  "token_serial": {
+                    "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+                    "maxLength": 16,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "token_serial",
+                  "label",
+                  "output",
+                  "pin_file"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "encryption_key_id": {
+                    "maxLength": 128,
+                    "minLength": 2,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{2}){1,64}$",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "hardware.key.bind",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "pin_file": {
+                    "description": "Token user PIN; exact file bytes, 1..255.",
+                    "type": "string"
+                  },
+                  "signing_key_id": {
+                    "maxLength": 128,
+                    "minLength": 2,
+                    "not": {
+                      "pattern": "[^0-9a-f]"
+                    },
+                    "pattern": "^([0-9a-f]{2}){1,64}$",
+                    "type": "string"
+                  },
+                  "token_serial": {
+                    "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+                    "maxLength": 16,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "token_serial",
+                  "encryption_key_id",
+                  "signing_key_id",
+                  "output",
+                  "pin_file"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "tpm.info",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "encryption_key_arn": {
+                    "description": "ECC_NIST_P384 KEY_AGREEMENT key ARN.",
+                    "maxLength": 160,
+                    "not": {
+                      "pattern": "[^A-Za-z0-9:/-]"
+                    },
+                    "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "kms.key.bind",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "region": {
+                    "maxLength": 32,
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "[^a-z0-9-]"
+                    },
+                    "pattern": "^[a-z0-9-]+$",
+                    "type": "string"
+                  },
+                  "signing_key_arn": {
+                    "description": "ECC_NIST_P384 SIGN_VERIFY key ARN.",
+                    "maxLength": 160,
+                    "not": {
+                      "pattern": "[^A-Za-z0-9:/-]"
+                    },
+                    "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "region",
+                  "encryption_key_arn",
+                  "signing_key_arn",
+                  "output"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "const": "tpm.key.generate",
+                    "type": "string"
+                  },
+                  "output": {
+                    "type": "string"
+                  },
+                  "pin_file": {
+                    "description": "PIN authorizing the new keys; exact file bytes, 1..255.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "output",
+                  "pin_file"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+                    "type": "string"
+                  },
+                  "operation": {
+                    "const": "tpm.key.delete",
+                    "type": "string"
+                  },
+                  "passphrase_file": {
+                    "description": "The keys' PIN; deletion is refused without it.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "key",
+                  "passphrase_file"
+                ],
+                "type": "object"
+              }
+            ],
+            "title": "Request"
+          },
+          "RevocationReason": {
+            "enum": [
+              "compromised",
+              "superseded",
+              "retired"
+            ],
+            "type": "string"
+          },
+          "SoftwareIdentity": {
+            "description": "Identity suites that have software secret keys.",
+            "oneOf": [
+              {
+                "const": "apg-public-v1",
+                "description": "X25519 and Ed25519.",
+                "type": "string"
+              },
+              {
+                "const": "apg-public-hybrid-v1",
+                "description": "ML-KEM-768 with X25519 for post-quantum confidentiality, and Ed25519 signatures.",
+                "type": "string"
+              }
+            ]
+          },
+          "TrustPolicy": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_digest": {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "store": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "store",
+              "expected_digest"
+            ],
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+            "type": "string"
+          },
+          "passphrase_file": {
+            "description": "The keys' PIN; deletion is refused without it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "passphrase_file"
+        ],
+        "type": "object"
+      },
+      "name": "apg_tpm_key_delete",
+      "outputSchema": {
+        "$defs": {
+          "Change": {
+            "oneOf": [
+              {
+                "properties": {
+                  "after": {
+                    "type": "string"
+                  },
+                  "before": {
+                    "type": "string"
+                  },
+                  "change": {
+                    "const": "format_changed",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "before",
+                  "after"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "identity_order_changed",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "validity_certificate_replaced",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "identity_added",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "identity_removed",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "revocation_added",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "revocation_removed",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "change": {
+                    "const": "revocation_replaced",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "after": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/Window"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "before": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/Window"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "change": {
+                    "const": "validity_changed",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "type": "string"
+                  },
+                  "relation": {
+                    "$ref": "#/$defs/WindowRelation"
+                  }
+                },
+                "required": [
+                  "change",
+                  "fingerprint",
+                  "relation"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "Comparison": {
+            "properties": {
+              "base_digest": {
+                "type": "string"
+              },
+              "candidate_digest": {
+                "type": "string"
+              },
+              "changes": {
+                "items": {
+                  "$ref": "#/$defs/Change"
+                },
+                "type": "array"
+              },
+              "compatible_extension": {
+                "description": "Structural extension only, not authorization to enroll added identities.",
+                "type": "boolean"
+              },
+              "same_digest": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "base_digest",
+              "candidate_digest",
+              "same_digest",
+              "compatible_extension",
+              "changes"
+            ],
+            "type": "object"
+          },
+          "Custody": {
+            "description": "Where a private-key operation ran. Reported only as evidence from this process;\ncounterparties cannot verify it from public artifacts.",
+            "oneOf": [
+              {
+                "enum": [
+                  "software"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "hardware",
+                "description": "A local PKCS#11 token or TPM.",
+                "type": "string"
+              },
+              {
+                "const": "service",
+                "description": "A managed key service (AWS KMS); keys never leave the service.",
+                "type": "string"
+              }
+            ]
+          },
+          "Eligibility": {
+            "enum": [
+              "permitted",
+              "revoked",
+              "not_yet_valid",
+              "expired"
+            ],
+            "type": "string"
+          },
+          "Inventory": {
+            "properties": {
+              "library": {
+                "$ref": "#/$defs/LibraryInfo"
+              },
+              "tokens": {
+                "items": {
+                  "$ref": "#/$defs/TokenReport"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "library",
+              "tokens"
+            ],
+            "type": "object"
+          },
+          "Issue": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "path": {
+                "description": "JSON Pointer relative to the candidate Request; empty means its root.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "LibraryInfo": {
+            "properties": {
+              "cryptoki_version": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "library_version": {
+                "type": "string"
+              },
+              "manufacturer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "manufacturer",
+              "library_version",
+              "cryptoki_version"
+            ],
+            "type": "object"
+          },
+          "MechanismSupport": {
+            "properties": {
+              "ec_key_pair_generation": {
+                "type": "boolean"
+              },
+              "ecdh_derive": {
+                "type": "boolean"
+              },
+              "ecdsa": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ec_key_pair_generation",
+              "ecdsa",
+              "ecdh_derive"
+            ],
+            "type": "object"
+          },
+          "Protection": {
+            "description": "Evidence read from the token about both private keys. Never an attestation:\nthe token itself reports these attributes.",
+            "properties": {
+              "generated_on_token": {
+                "description": "CKA_LOCAL, CKA_ALWAYS_SENSITIVE and CKA_NEVER_EXTRACTABLE are all true.",
+                "type": "boolean"
+              },
+              "non_exportable": {
+                "description": "CKA_SENSITIVE is true and CKA_EXTRACTABLE is false for both private keys.",
+                "type": "boolean"
+              },
+              "possession_verified": {
+                "description": "Token signed and agreed keys matching the bound public identity.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "non_exportable",
+              "generated_on_token",
+              "possession_verified"
+            ],
+            "type": "object"
+          },
+          "RevocationReason": {
+            "enum": [
+              "compromised",
+              "superseded",
+              "retired"
+            ],
+            "type": "string"
+          },
+          "TokenBinding": {
+            "additionalProperties": false,
+            "description": "Token identity copied from PKCS#11 token information, trailing blanks removed.\nEvery field must match before a reference is used.",
+            "properties": {
+              "label": {
+                "maxLength": 32,
+                "type": "string"
+              },
+              "manufacturer": {
+                "maxLength": 32,
+                "type": "string"
+              },
+              "model": {
+                "maxLength": 16,
+                "type": "string"
+              },
+              "serial": {
+                "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+                "maxLength": 16,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "serial",
+              "label",
+              "manufacturer",
+              "model"
+            ],
+            "type": "object"
+          },
+          "TokenReport": {
+            "properties": {
+              "hardware_slot": {
+                "type": "boolean"
+              },
+              "login_required": {
+                "type": "boolean"
+              },
+              "mechanisms": {
+                "$ref": "#/$defs/MechanismSupport"
+              },
+              "removable": {
+                "type": "boolean"
+              },
+              "slot": {
+                "format": "uint64",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "suites": {
+                "description": "Identity formats whose mechanisms the token advertises. Advisory: curve and\npolicy restrictions are only discovered when keys are created or used.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "token": {
+                "$ref": "#/$defs/TokenBinding"
+              },
+              "token_initialized": {
+                "type": "boolean"
+              },
+              "user_pin_initialized": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "slot",
+              "token",
+              "token_initialized",
+              "user_pin_initialized",
+              "login_required",
+              "hardware_slot",
+              "removable",
+              "mechanisms",
+              "suites"
+            ],
+            "type": "object"
+          },
+          "TpmBinding": {
+            "additionalProperties": false,
+            "description": "TPM identification read from its properties. Informational: the wrapped blobs\nthemselves only load under the storage root of the TPM that created them.",
+            "properties": {
+              "manufacturer": {
+                "maxLength": 4,
+                "type": "string"
+              },
+              "vendor": {
+                "maxLength": 16,
+                "type": "string"
+              }
+            },
+            "required": [
+              "manufacturer",
+              "vendor"
+            ],
+            "type": "object"
+          },
+          "TpmInfo": {
+            "description": "TPM properties relevant to APG identities.",
+            "properties": {
+              "backend": {
+                "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+                "type": "string"
+              },
+              "curves": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "firmware_version": {
+                "type": "string"
+              },
+              "owner_auth_empty": {
+                "description": "Linux only: whether the owner hierarchy has empty authorization.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "suites": {
+                "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "tpm": {
+                "$ref": "#/$defs/TpmBinding"
+              }
+            },
+            "required": [
+              "tpm",
+              "firmware_version",
+              "curves",
+              "suites",
+              "backend"
+            ],
+            "type": "object"
+          },
+          "Validation": {
+            "properties": {
+              "execution": {
+                "type": "boolean"
+              },
+              "issues": {
+                "items": {
+                  "$ref": "#/$defs/Issue"
+                },
+                "type": "array"
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "valid": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "valid",
+              "issues",
+              "truncated",
+              "execution"
+            ],
+            "type": "object"
+          },
+          "Window": {
+            "properties": {
+              "not_after": {
+                "format": "uint64",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "not_before": {
+                "format": "uint64",
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "not_before",
+              "not_after"
+            ],
+            "type": "object"
+          },
+          "WindowRelation": {
+            "enum": [
+              "unchanged",
+              "added",
+              "removed",
+              "narrowed",
+              "widened",
+              "incomparable"
+            ],
+            "type": "string"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ok": {
+                "const": true
+              },
+              "protocol": {
+                "const": "apg/1"
+              },
+              "result": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "oneOf": [
+                  {
+                    "properties": {
+                      "kind": {
+                        "const": "request_validation",
+                        "type": "string"
+                      },
+                      "validation": {
+                        "$ref": "#/$defs/Validation"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "validation"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "comparison": {
+                        "$ref": "#/$defs/Comparison"
+                      },
+                      "kind": {
+                        "const": "trust_comparison",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "comparison"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "authenticated": {
+                        "type": "boolean"
+                      },
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "validity_verified",
+                        "type": "string"
+                      },
+                      "not_after": {
+                        "format": "uint64",
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "not_before": {
+                        "format": "uint64",
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "policy_applied": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "not_before",
+                      "not_after",
+                      "authenticated",
+                      "policy_applied"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "advisory": {
+                        "type": "boolean"
+                      },
+                      "at_time": {
+                        "format": "uint64",
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "digest": {
+                        "type": "string"
+                      },
+                      "eligibility": {
+                        "$ref": "#/$defs/Eligibility"
+                      },
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "trust_evaluation",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "digest",
+                      "at_time",
+                      "eligibility",
+                      "advisory"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "digest": {
+                        "type": "string"
+                      },
+                      "identities": {
+                        "format": "uint",
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "kind": {
+                        "const": "trust_snapshot",
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "digest",
+                      "identities"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "digest": {
+                        "type": "string"
+                      },
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "trust_status",
+                        "type": "string"
+                      },
+                      "revoked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "revoked",
+                      "digest"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "authenticated": {
+                        "type": "boolean"
+                      },
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "revocation_verified",
+                        "type": "string"
+                      },
+                      "policy_applied": {
+                        "type": "boolean"
+                      },
+                      "reason": {
+                        "$ref": "#/$defs/RevocationReason"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "reason",
+                      "authenticated",
+                      "policy_applied"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "document": true,
+                      "kind": {
+                        "const": "document",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "document"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "inventory": {
+                        "$ref": "#/$defs/Inventory"
+                      },
+                      "kind": {
+                        "const": "hardware_inventory",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "inventory"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "info": {
+                        "$ref": "#/$defs/TpmInfo"
+                      },
+                      "kind": {
+                        "const": "tpm_info",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "info"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "key_deleted",
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "fingerprint",
+                      "provider"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "attested": {
+                        "description": "Always false: token attributes are self-reported, not vendor attestation.",
+                        "type": "boolean"
+                      },
+                      "custody": {
+                        "$ref": "#/$defs/Custody"
+                      },
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "hardware_key",
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "protection": {
+                        "$ref": "#/$defs/Protection"
+                      },
+                      "provider": {
+                        "description": "\"pkcs11\", \"tpm\" or \"kms\".",
+                        "type": "string"
+                      },
+                      "token_serial": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "fingerprint",
+                      "provider",
+                      "custody",
+                      "protection",
+                      "attested"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "artifact_type": {
+                        "type": "string"
+                      },
+                      "custody": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/Custody"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "\"hardware\" or \"service\" when a device or KMS performed the private-key operation."
+                      },
+                      "fingerprint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "kind": {
+                        "const": "artifact",
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "policy_checked_at": {
+                        "format": "uint64",
+                        "minimum": 0,
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "policy_digest": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "artifact_type"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fingerprint": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "verified",
+                        "type": "string"
+                      },
+                      "policy_checked_at": {
+                        "format": "uint64",
+                        "minimum": 0,
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "policy_digest": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valid": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "valid",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "algorithm": {
+                        "type": "string"
+                      },
+                      "digest": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "digest",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "algorithm",
+                      "digest"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "authenticated": {
+                        "type": "boolean"
+                      },
+                      "fingerprint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "format": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "const": "inspection",
+                        "type": "string"
+                      },
+                      "structurally_valid": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "structurally_valid",
+                      "format",
+                      "authenticated"
+                    ],
+                    "type": "object"
+                  }
+                ],
+                "title": "Outcome"
+              }
+            },
+            "required": [
+              "protocol",
+              "id",
+              "ok",
+              "result"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "error": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ],
+                "title": "Error",
+                "type": "object"
+              },
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ok": {
+                "const": false
+              },
+              "protocol": {
+                "const": "apg/1"
+              }
+            },
+            "required": [
+              "protocol",
+              "id",
+              "ok",
+              "error"
+            ],
+            "type": "object"
+          }
+        ],
+        "type": "object"
+      },
+      "title": "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN"
     }
   ]
 }
