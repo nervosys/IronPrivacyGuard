@@ -61,7 +61,9 @@ than IronCrypto. It holds only Ed25519 and P-384 secret keys, because rPGP's RSA
 dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); RSA is
 used only for public operations. It does not verify signatures embedded in messages,
 and APG trust snapshots do not govern it. See [OpenPGP interoperability](docs/OPENPGP.md).
-No private-key keyring, native multi-recipient wrapping,
+Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
+but do not authenticate the sender; any recipient could re-encrypt other content to
+the rest. No private-key keyring,
 identity certification, PKCS#11 or KMS attestation, post-quantum PKCS#11 or TPM keys,
 or FIPS validation. TPM identities can be attested (`docs/ATTESTATION.md`); EK
 certificates are not checked for revocation, and on Windows the final step needs an

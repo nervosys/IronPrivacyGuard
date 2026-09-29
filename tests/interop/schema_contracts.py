@@ -118,6 +118,18 @@ def main():
     check(kms_schema, {**kms_key, "unknown": True}, False)
     check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
     check(kms_schema, {**kms_key, "signing_key_arn": kms_key["signing_key_arn"] + "\n"}, False)
+    # Stream headers from the independent oracle's fixture streams.
+    streams = json.loads((ROOT / "tests/vectors/stream-v1.json").read_text())
+    header_schema = schemas["formats"]["stream_header"]
+    for case in streams["cases"]:
+        raw = bytes.fromhex(case["stream_hex"])
+        header = json.loads(raw[12:12 + int.from_bytes(raw[8:12], "big")])
+        check(header_schema, header)
+        for field, bad in [("chunk_size", 1024), ("content_cipher", "aes-128-gcm"), ("format", "apg-stream-v2"),
+                           ("nonce_prefix", "00" * 8), ("stream_id", "AB" * 16), ("recipients", [])]:
+            check(header_schema, {**header, field: bad}, False)
+        check(header_schema, {**header, "recipients": header["recipients"] * 65}, False)
+        check(header_schema, {**header, "unknown": 1}, False)
     # TPM attestation evidence captured from swtpm, and the protocol messages.
     evidence = json.loads((ROOT / "tests/vectors/tpm-attestation-swtpm/evidence.json").read_text())
     evidence_schema = schemas["formats"]["tpm_evidence"]
@@ -219,6 +231,8 @@ def main():
         for field in variant["required"]:
             if field != "operation":
                 values[field] = defaults.get(field, "path")
+        if operation == "stream.encrypt":
+            values["recipients"] = [{"public": "path", "expected_fingerprint": pin}]
         check(schemas["request"], values)
         call = {"protocol": "apg/1", "id": "schema", "request": values}
         check(schemas["call"], call)
@@ -257,7 +271,13 @@ def main():
             check(tool_schema, {**arguments, "expected_openpgp_fingerprint": "ab" * 20})
             for bad in ["ab" * 32, "g" * 40, ("ab" * 20) + "\n", " ".join(["ABCD"] * 10), "ab" * 19]:
                 check(tool_schema, {**arguments, "expected_openpgp_fingerprint": bad}, False)
-        if "recipients" in values:
+        if operation == "stream.encrypt":
+            recipient = values["recipients"][0]
+            check(tool_schema, {**arguments, "recipients": [recipient] * 64})
+            for bad in [[], [recipient] * 65, [{"public": "path"}], [{**recipient, "expected_fingerprint": "AB" * 32}],
+                        [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]]:
+                check(tool_schema, {**arguments, "recipients": bad}, False)
+        if operation == "openpgp.encrypt":
             recipient = values["recipients"][0]
             for bad in [[], [recipient] * 33, [{"certificate": "path"}], [{**recipient, "extra": 1}],
                         [{**recipient, "expected_openpgp_fingerprint": "ab" * 32}]]:

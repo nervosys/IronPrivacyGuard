@@ -272,6 +272,20 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["load_provider", "read_pin", "delete_token_object"],
     ),
     (
+        "stream.encrypt",
+        "Encrypt a file of any size to 1..64 pinned recipients as an apg-stream-v1 stream of authenticated 64 KiB chunks",
+        &["Plaintext", "PublicKey", "Fingerprint"],
+        &["StreamCiphertext"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "stream.decrypt",
+        "Decrypt an apg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
+        &["StreamCiphertext", "SecretKey", "Passphrase"],
+        &["Plaintext"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
         "tpm.attest",
         "Certify an identity's TPM keys with the TPM's attestation key and write evidence for a verifier",
         &["TpmKeyFile", "TokenPin"],
@@ -367,6 +381,7 @@ pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "key.revoke",
     "key.validity",
     "decrypt",
+    "stream.decrypt",
     "sign",
 ];
 
@@ -417,6 +432,18 @@ pub fn operation(id: &str) -> Value {
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
         "tpm.key.delete" => vec!["tpm-provider", "pin-channel", "irreversible-deletion"],
+        "stream.encrypt" => vec![
+            "identity-pin",
+            "stream-envelope",
+            "no-sender-authentication",
+            "no-clobber",
+        ],
+        "stream.decrypt" => vec![
+            "authenticate-before-release",
+            "stream-envelope",
+            "secret-channel",
+            "no-clobber",
+        ],
         "tpm.attest" => vec![
             "tpm-provider",
             "pin-channel",
@@ -509,7 +536,15 @@ pub fn operation(id: &str) -> Value {
     }
     if matches!(
         *id,
-        "key.generate" | "encrypt" | "decrypt" | "sign" | "verify" | "key.revoke" | "key.validity"
+        "key.generate"
+            | "encrypt"
+            | "decrypt"
+            | "stream.encrypt"
+            | "stream.decrypt"
+            | "sign"
+            | "verify"
+            | "key.revoke"
+            | "key.validity"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -531,6 +566,14 @@ pub fn operation(id: &str) -> Value {
         ],
         "encrypt" => vec!["x25519", "hkdf-sha2-256", "chacha20-poly1305"],
         "decrypt" => vec!["x25519", "hkdf-sha2-256", "chacha20-poly1305", "argon2id"],
+        "stream.encrypt" => vec!["x25519", "hkdf-sha2-256", "chacha20-poly1305", "sha2-384"],
+        "stream.decrypt" => vec![
+            "x25519",
+            "hkdf-sha2-256",
+            "chacha20-poly1305",
+            "sha2-384",
+            "argon2id",
+        ],
         "sign" | "key.revoke" | "key.validity" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
         "verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "hash" => vec!["sha2-256"],
@@ -553,7 +596,9 @@ pub fn operation(id: &str) -> Value {
         _ => vec![],
     };
     let p384: &[&str] = match *id {
-        "encrypt" | "decrypt" => &["ecdh-p384", "sha2-384", "aes-256-gcm", "ml-kem-768"],
+        "encrypt" | "decrypt" | "stream.encrypt" | "stream.decrypt" => {
+            &["ecdh-p384", "sha2-384", "aes-256-gcm", "ml-kem-768"]
+        }
         "key.public" => &[
             "ecdh-p384",
             "ecdsa-p384-sha384",
@@ -574,7 +619,7 @@ pub fn operation(id: &str) -> Value {
             algorithms.push(algorithm);
         }
     }
-    let governed = matches!(*id, "encrypt" | "sign" | "verify");
+    let governed = matches!(*id, "encrypt" | "stream.encrypt" | "sign" | "verify");
     if governed {
         constraints.push("snapshot-policy");
         constraints.push("validity-window");
@@ -651,7 +696,7 @@ pub fn discover() -> Value {
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4],"generated_keys":["ed25519","p384"],"encryption":"SEIPDv1 with AES-256","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","streaming signatures","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -745,6 +790,11 @@ pub fn export() -> Value {
             "KeyDeletion",
             "Confirmation that a TPM-backed identity's persisted keys were permanently deleted",
             "control",
+        ),
+        (
+            "StreamCiphertext",
+            "apg-stream-v1: a binary stream with a header wrapping one content key for each of 1..64 recipients and authenticated 64 KiB chunks; does not identify a sender",
+            "ciphertext",
         ),
         (
             "TpmEvidence",
@@ -1048,6 +1098,10 @@ pub fn export() -> Value {
             "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; APG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with APG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
+            "stream-envelope",
+            "apg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an apg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
+        ),
+        (
             "tpm-attestation",
             "TPM attestation proves that an apg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. apg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
         ),
@@ -1293,6 +1347,7 @@ pub fn export() -> Value {
             ],
         ),
         ("confidential-transfer", vec!["encrypt", "decrypt"]),
+        ("group-transfer", vec!["stream.encrypt", "stream.decrypt"]),
         ("authenticate-content", vec!["sign", "verify"]),
         (
             "agent-bootstrap",
@@ -1303,5 +1358,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.26.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.27.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

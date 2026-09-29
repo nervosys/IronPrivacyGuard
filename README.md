@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 47 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 49 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -103,7 +103,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 47 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 49 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -140,6 +140,7 @@ apg knowledge search --query "openpgp"
 | Application | APG tools or support status |
 | --- | --- |
 | Confidential file transfer | `encrypt`, `decrypt` |
+| Large files or several recipients | `stream.encrypt`, `stream.decrypt` |
 | Authenticate file contents | `sign`, `verify` |
 | File digest | `hash` |
 | Protect private identities | `key.generate`, `key.public`, `key.rewrap` |
@@ -150,7 +151,7 @@ apg knowledge search --query "openpgp"
 | Managed key custody (AWS KMS), optionally with composite ML-DSA-65 signatures | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity apg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
 | Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify` |
-| TLS, password-verifier storage, multi-recipient native envelopes, FIPS validation | `external_required`; no executable APG tools |
+| TLS, password-verifier storage, FIPS validation | `external_required`; no executable APG tools |
 
 Search returns matches under `result.document.matches`. Each match contains an
 `application` and its `tools`. Check `application.support`, `prerequisites` and
@@ -226,6 +227,22 @@ The `<trusted-fingerprint>` notation is a placeholder, not literal shell syntax.
 Existing output paths are never replaced. There is intentionally no `--force`.
 Passphrases and private keys are never returned in JSON responses. Decryption
 writes plaintext only after successful authentication.
+
+## Large files and multiple recipients
+
+`encrypt` writes a single-recipient JSON envelope. For files of any size or up to 64
+recipients, `stream.encrypt` writes an `apg-stream-v1` stream of authenticated 64 KiB
+chunks; each recipient decrypts with `stream.decrypt` and its own key:
+
+```sh
+apg stream encrypt --input backup.tar --output backup.apgs --recipients '[{"public":"alice.public.json","expected_fingerprint":"<alice>"},{"public":"ops.public.json","expected_fingerprint":"<ops>"}]'
+apg stream decrypt --input backup.apgs --output backup.tar --key alice.json --passphrase-file pass.bin
+```
+
+Plaintext is written to a temporary file and published only after the last chunk
+authenticates, so truncated or altered streams never produce output. Recipients may
+mix identity suites and key providers. Streams do not authenticate the sender; see
+[the stream format](docs/FORMAT.md#multi-recipient-stream-apg-stream-v1).
 
 ## Key lifecycle
 
@@ -370,6 +387,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tpm2/` | APG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
 | `src/tpm_native.rs` | Windows TPM keys through TBS, and the attestation prover on every platform |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
+| `src/stream.rs` | apg-stream-v1: multi-recipient streaming encryption |
 | `crates/apg-cng` | Minimal safe wrapper over Windows CNG and TBS; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary (`openpgp` feature): key file, rPGP operations and APG certificate policy |
@@ -396,6 +414,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/windows_tpm_live.rs` | apg-cng-key-v1 lifecycle on the machine's real TPM (opt-in, self-cleaning) |
 | `tests/tpm_attest_live.rs` | TPM identity and attestation round trip (swtpm or a real TPM, opt-in) |
 | `tests/attestation.rs` | Offline attestation verification and tamper rejection with swtpm evidence |
+| `tests/stream.rs`, `tests/vectors_stream.rs` | Stream round trips, chunk boundaries, tampering, and PyCA-made streams |
 | `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody and MCP exposure |
 | `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |

@@ -134,13 +134,13 @@
   {
     "id": "multi-recipient-encryption",
     "label": "Encrypt one shared envelope for multiple recipients",
-    "keywords": ["group", "multi recipient", "many recipients", "shared envelope"],
+    "keywords": ["group", "multi recipient", "many recipients", "shared envelope", "streaming", "chunked"],
     "goals": ["confidentiality"],
-    "support": "external_required",
-    "operations": [],
-    "prerequisites": ["An implementation with an explicit multi-recipient format and policy"],
-    "limitations": ["Native APG envelopes support exactly one recipient", "OpenPGP messages from openpgp.encrypt can have up to 32 recipients (see openpgp-interoperability)"],
-    "guidance": "For native APG envelopes, use a protocol designed for multiple recipients or encrypt separately to each recipient. For OpenPGP interoperability, openpgp.encrypt produces one message for up to 32 pinned certificates.",
+    "support": "implemented",
+    "operations": ["stream.encrypt", "stream.decrypt"],
+    "prerequisites": ["Each recipient's public identity and independently trusted fingerprint (1..64 recipients, any suite)"],
+    "limitations": ["No sender authentication: any recipient could re-encrypt other content to the others; sign streams when origin matters", "Streams are binary files; apg-envelope-v1 (encrypt) stays single-recipient JSON", "Post-quantum confidentiality holds only for hybrid recipients; the stream is only as strong as each recipient's wrap for that recipient"],
+    "guidance": "Use stream.encrypt with a recipients list of {public, expected_fingerprint} objects; each recipient decrypts with stream.decrypt and its own key file. Streams handle files of any size in 64 KiB authenticated chunks and release plaintext only after the last chunk verifies. openpgp.encrypt covers multi-recipient OpenPGP messages.",
     "sources": []
   },
   {

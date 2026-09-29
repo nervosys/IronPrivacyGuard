@@ -52,6 +52,10 @@ fixed!(evidence_format, "apg-tpm-evidence-v1");
 fixed!(challenge_format, "apg-tpm-challenge-v1");
 fixed!(challenge_secret_format, "apg-tpm-challenge-secret-v1");
 fixed!(response_format, "apg-tpm-response-v1");
+fixed!(stream_format, crate::stream::FORMAT);
+pub fn stream_chunk_size(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "const":crate::stream::CHUNK_SIZE})
+}
 /// A marshalled TPM structure (public area, attestation, signature or credential
 /// blob) as lowercase hex, 1..1024 bytes.
 pub fn tpm_structure(_: &mut SchemaGenerator) -> Schema {
