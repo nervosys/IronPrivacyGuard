@@ -28,8 +28,10 @@ implemented surface, not feature parity with decades of GPG development.
    as OpenPGP.
 6. Extend post-quantum and hardware coverage. Hybrid ML-KEM-768 + X25519
    confidentiality and composite Ed25519 + ML-DSA-65 signatures are implemented for
-   software identities; post-quantum hardware, TPM and KMS keys remain. P-384
-   identities are implemented on PKCS#11 tokens, Linux and Windows TPMs and AWS KMS
+   software identities, and composite ECDSA P-384 plus ML-DSA-65 signatures for AWS
+   KMS identities; post-quantum PKCS#11 and TPM keys remain, and KMS has no ML-KEM for
+   post-quantum encryption. P-384 identities are implemented on PKCS#11 tokens, Linux
+   and Windows TPMs and AWS KMS
    ([HARDWARE.md](HARDWARE.md)), with SHA-384 fingerprints and SHA-384
    (`apg-trust-v3`) trust-snapshot digests. Remaining work includes vendor
    attestation, other cloud KMS providers and live testing of in-token decryption

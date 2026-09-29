@@ -188,7 +188,7 @@
     {
       "@id": "apg:KmsKeyFile",
       "@type": "apg:Entity",
-      "description": "Public apg-kms-key-v1 file binding a P-384 identity to two AWS KMS key ARNs in one region; using it needs host AWS credentials",
+      "description": "Public apg-kms-key-v1 file binding an identity to AWS KMS key ARNs in one region: two P-384 keys (apg-public-p384-v1), plus an ML_DSA_65 key for composite post-quantum signatures (apg-public-p384-mldsa65-v1); using it needs host AWS credentials",
       "sensitivity": "public"
     },
     {
@@ -290,7 +290,7 @@
     {
       "@id": "apg:PublicKey",
       "@type": "apg:Entity",
-      "description": "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (apg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (apg-public-hybrid-v1), or P-384 ECDH and ECDSA (apg-public-p384-v1)",
+      "description": "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (apg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (apg-public-hybrid-v1), P-384 ECDH and ECDSA (apg-public-p384-v1), or P-384 ECDH with ECDSA P-384 plus ML-DSA-65 (apg-public-p384-mldsa65-v1)",
       "sensitivity": "public"
     },
     {
@@ -302,7 +302,7 @@
     {
       "@id": "apg:Fingerprint",
       "@type": "apg:Entity",
-      "description": "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384 and hybrid identities",
+      "description": "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384, P-384 plus ML-DSA-65 and hybrid identities",
       "sensitivity": "public"
     },
     {
@@ -314,7 +314,7 @@
     {
       "@id": "apg:Signature",
       "@type": "apg:Entity",
-      "description": "Detached Ed25519, low-s ECDSA P-384 or composite Ed25519 plus ML-DSA-65 signature over a framed signer fingerprint and content",
+      "description": "Detached Ed25519, low-s ECDSA P-384, composite Ed25519 plus ML-DSA-65, or composite ECDSA P-384 plus ML-DSA-65 signature over a framed signer fingerprint and content; both halves of a composite must verify",
       "sensitivity": "public"
     },
     {
@@ -2296,7 +2296,8 @@
         "ic:ecdh-p384",
         "ic:ecdsa-p384-sha384",
         "ic:sha2-384",
-        "ic:sha2-256"
+        "ic:sha2-256",
+        "ic:ml-dsa-65"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -2306,7 +2307,7 @@
         "apg:constraint/no-attestation",
         "apg:constraint/no-clobber"
       ],
-      "description": "Adopt two existing AWS KMS ECC_NIST_P384 keys as an identity after proving possession",
+      "description": "Adopt two existing AWS KMS ECC_NIST_P384 keys, plus an optional ML_DSA_65 key for composite post-quantum signatures, as an identity after proving possession",
       "deterministic": false,
       "effects": [
         "load_provider",
@@ -3032,7 +3033,7 @@
     {
       "@id": "apg:constraint/kms-provider",
       "@type": "apg:Constraint",
-      "requirement": "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key with infrastructure tooling and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
+      "requirement": "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; APG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with APG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
       "severity": "critical"
     },
     {
@@ -4235,7 +4236,7 @@
       "goals": [
         "apg:goal/quantum-resistant-authenticity"
       ],
-      "guidance": "Sign with a hybrid identity; every signature, revocation and validity certificate then requires both Ed25519 and ML-DSA-65 to verify, so it stays unforgeable while either holds.",
+      "guidance": "Sign with a hybrid identity, or bind AWS KMS keys with mldsa_signing_key_arn for KMS custody; every signature, revocation and validity certificate then requires both the classical and the ML-DSA-65 signature to verify, so it stays unforgeable while either holds.",
       "id": "quantum-resistant-signing",
       "keywords": [
         "pq signing",
@@ -4246,14 +4247,15 @@
       ],
       "label": "Require quantum-resistant signing",
       "limitations": [
-        "Composite ed25519-mldsa65 only; no SLH-DSA or standalone ML-DSA",
-        "Software keys only; PKCS#11, TPM and KMS identities sign with ECDSA P-384",
+        "Composite ed25519-mldsa65 (software) or ecdsa-p384-mldsa65 (AWS KMS) only; no SLH-DSA or standalone ML-DSA",
+        "PKCS#11 and TPM identities sign with ECDSA P-384 only",
+        "KMS post-quantum identities keep P-384 encryption, since KMS has no ML-KEM",
         "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL",
         "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"
       ],
       "prerequisites": [
-        "A hybrid identity from key.generate identity apg-public-hybrid-v1",
-        "The signer's hybrid public identity and independently trusted fingerprint"
+        "A hybrid identity from key.generate identity apg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)",
+        "The signer's public identity and independently trusted fingerprint"
       ],
       "sources": [
         "https://doi.org/10.6028/NIST.FIPS.204"
@@ -4261,6 +4263,7 @@
       "support": "implemented",
       "tools": [
         "apg:operation/key.generate",
+        "apg:operation/kms.key.bind",
         "apg:operation/sign",
         "apg:operation/verify"
       ]
@@ -4348,7 +4351,7 @@
       "prerequisites": [
         "An apg build with the kms feature",
         "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret",
-        "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling"
+        "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling; optionally an ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures"
       ],
       "sources": [
         "https://docs.aws.amazon.com/kms/latest/APIReference/API_DeriveSharedSecret.html",
@@ -4474,5 +4477,5 @@
   ],
   "@id": "apg:ontology",
   "scope": "Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.24.0"
+  "version": "1.25.0"
 }

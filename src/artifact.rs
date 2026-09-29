@@ -28,7 +28,10 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
     }
     let header: Header = serde_json::from_slice(data)?;
     let fingerprint = match header.format.as_str() {
-        "apg-public-v1" | "apg-public-p384-v1" | "apg-public-hybrid-v1" => {
+        "apg-public-v1"
+        | "apg-public-p384-v1"
+        | "apg-public-hybrid-v1"
+        | "apg-public-p384-mldsa65-v1" => {
             let value: PublicKey = serde_json::from_slice(data)?;
             value.validate()?;
             Some(value.fingerprint)

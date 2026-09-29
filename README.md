@@ -144,7 +144,7 @@ apg knowledge search --query "openpgp"
 | Manage trust and lifecycle | `trust.*`, `key.revoke`, `key.validity`, certificate verification |
 | Identify native artifacts | `inspect` |
 | Hardware key custody (PKCS#11 tokens, HSMs, TPM 2.0) | `hardware.*` or `tpm.*`, then any key operation with the key file |
-| Managed key custody (AWS KMS) | `kms.key.bind`, then any key operation with the key file |
+| Managed key custody (AWS KMS), optionally with composite ML-DSA-65 signatures | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity apg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
 | Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify` |
 | TLS, password-verifier storage, multi-recipient native envelopes, FIPS validation | `external_required`; no executable APG tools |

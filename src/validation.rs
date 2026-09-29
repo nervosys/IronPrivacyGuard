@@ -156,7 +156,13 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
             map.get("encryption_key_arn").and_then(Value::as_str),
             map.get("signing_key_arn").and_then(Value::as_str),
         )
-        && crate::provider::check_kms_keys(region, encryption, signing).is_err()
+        && crate::provider::check_kms_keys(
+            region,
+            encryption,
+            signing,
+            map.get("mldsa_signing_key_arn").and_then(Value::as_str),
+        )
+        .is_err()
     {
         report.issue(
             format!("{path}/encryption_key_arn"),

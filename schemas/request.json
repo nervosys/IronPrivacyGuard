@@ -270,7 +270,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -310,7 +310,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -353,7 +353,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -385,7 +385,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -505,7 +505,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -551,7 +551,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -604,7 +604,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -646,7 +646,7 @@
           "type": "string"
         },
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -698,7 +698,7 @@
           "type": "string"
         },
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -801,7 +801,7 @@
           "type": "string"
         },
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -848,7 +848,7 @@
           "type": "string"
         },
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -895,7 +895,7 @@
           "type": "string"
         },
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities.",
+          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -1076,6 +1076,18 @@
           },
           "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
           "type": "string"
+        },
+        "mldsa_signing_key_arn": {
+          "description": "Optional ML_DSA_65 SIGN_VERIFY key ARN. With it the identity is\napg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384\nplus ML-DSA-65; encryption stays P-384 (KMS has no ML-KEM keys).",
+          "maxLength": 160,
+          "not": {
+            "pattern": "[^A-Za-z0-9:/-]"
+          },
+          "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "operation": {
           "const": "kms.key.bind",

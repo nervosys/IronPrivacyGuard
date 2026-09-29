@@ -44,6 +44,10 @@ def main():
     artifacts += [("public_key", hybrid["public"]), ("secret_key", hybrid["secret"]),
                   ("revocation", hybrid["revocation"]), ("validity", hybrid["validity"])]
     artifacts += [(name, item[name]) for item in hybrid["messages"] for name in ["envelope", "signature"]]
+    pq = json.loads((ROOT / "tests/vectors/native-p384-mldsa65-v1.json").read_text())
+    artifacts += [("public_key", pq["public"]), ("validity", pq["validity"]), ("envelope", pq["envelope"])]
+    artifacts += [("revocation", value) for value in pq["revocations"]]
+    artifacts += [("signature", item["signature"]) for item in pq["messages"]]
     for name, artifact in artifacts:
         schema = schemas["formats"][name]
         check(schema, artifact)
@@ -114,6 +118,20 @@ def main():
     check(kms_schema, {**kms_key, "unknown": True}, False)
     check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
     check(kms_schema, {**kms_key, "signing_key_arn": kms_key["signing_key_arn"] + "\n"}, False)
+    # The optional ML-DSA key: an exact key ARN or absent.
+    pq_kms = {**kms_key, "public": pq["public"],
+              "mldsa_signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/33333333-3333-3333-3333-333333333333"}
+    check(kms_schema, pq_kms)
+    check(kms_schema, {**pq_kms, "mldsa_signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:alias/pq"}, False)
+    check(kms_schema, {**pq_kms, "mldsa_signing_key_arn": pq_kms["mldsa_signing_key_arn"] + "\n"}, False)
+    # The composite suite's widths: its keys and signatures fit no other suite.
+    pq_public, pq_signature = pq["public"], pq["messages"][0]["signature"]
+    for fmt in ["apg-public-p384-v1", "apg-public-hybrid-v1"]:
+        check(schemas["formats"]["public_key"], {**pq_public, "format": fmt}, False)
+    check(schemas["formats"]["public_key"], {**p384_public, "format": "apg-public-p384-mldsa65-v1"}, False)
+    for algorithm in ["ecdsa-p384-sha384", "ed25519-mldsa65"]:
+        check(schemas["formats"]["signature"], {**pq_signature, "algorithm": algorithm}, False)
+    check(schemas["formats"]["signature"], {**pq_signature, "signature": pq_signature["signature"][:192]}, False)
     cng_key = {"format": "apg-cng-key-v1", "public": p384_public, "provider": "Microsoft Platform Crypto Provider",
                "vendor": "AMD", "encryption_key_name": "apg-" + "0" * 32 + "-enc", "signing_key_name": "apg-" + "0" * 32 + "-sig"}
     cng_schema = schemas["formats"]["cng_key"]
@@ -208,6 +226,8 @@ def main():
         if operation == "kms.key.bind":
             for bad in ["alias", "arn:aws:kms:us-east-1:123:key/1", "arn:aws:s3:us-east-1:123456789012:key/1"]:
                 check(tool_schema, {**arguments, "encryption_key_arn": bad}, False)
+                check(tool_schema, {**arguments, "mldsa_signing_key_arn": bad}, False)
+            check(tool_schema, {**arguments, "mldsa_signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/3"})
         if "expected_openpgp_fingerprint" in values:
             # Either case is valid; APG fingerprints, spaces and trailing newlines are not.
             check(tool_schema, {**arguments, "expected_openpgp_fingerprint": "ab" * 20})

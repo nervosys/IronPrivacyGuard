@@ -242,8 +242,10 @@ Create the keys with your infrastructure tooling, not with APG:
 
 * one `ECC_NIST_P384` key with usage `KEY_AGREEMENT` (encryption);
 * one `ECC_NIST_P384` key with usage `SIGN_VERIFY` (signing);
+* optionally, one `ML_DSA_65` key with usage `SIGN_VERIFY` for post-quantum
+  signatures (see below);
 * an identity policy allowing only `kms:GetPublicKey`, `kms:Sign` and
-  `kms:DeriveSharedSecret` on those two ARNs.
+  `kms:DeriveSharedSecret` on those ARNs.
 
 ```sh
 cargo build --release --locked --features kms
@@ -280,6 +282,34 @@ TPM providers do. KMS error codes map onto APG's: access or signature errors to
 `authentication_failed`, missing keys to `hardware_not_found`, disabled keys to
 `policy_mismatch`, and throttling or AWS internal errors to retryable
 `provider_error`.
+
+### Post-quantum signatures with ML-DSA
+
+AWS KMS holds ML-DSA keys but not ML-KEM, X25519 or Ed25519 keys, so a KMS identity
+cannot use the software hybrid suite. Bind a third key instead:
+
+```sh
+apg kms key bind --region us-gov-west-1 --encryption-key-arn <ECDH key> --signing-key-arn <ECDSA key> --mldsa-signing-key-arn <ML_DSA_65 key> --output ops-pq.kms.json
+```
+
+The identity is then `apg-public-p384-mldsa65-v1`: every signature, revocation and
+validity certificate is a composite `ecdsa-p384-mldsa65` signature that verifies
+only if both the ECDSA P-384 and the ML-DSA-65 halves do, so it stays unforgeable
+while either algorithm holds. APG computes the FIPS 204 message representative μ
+itself, with context `APG ecdsa-p384-mldsa65 v1`, and asks KMS to sign it
+(`MessageType` `EXTERNAL_MU`, `SigningAlgorithm` `ML_DSA_SHAKE_256`). The message
+therefore never reaches KMS, has no 4 KiB limit, and the result is a standard pure
+ML-DSA-65 signature over the framed message. Each signature is two KMS calls.
+
+**Encryption stays P-384 ECDH.** Data encrypted to these identities is not protected
+against an adversary who records it now and later gains a quantum computer. For
+post-quantum confidentiality, use a software hybrid identity (`apg-public-hybrid-v1`).
+
+The ML-DSA key must be `ML_DSA_65` with usage `SIGN_VERIFY`, in the same region and
+partition, and distinct from the other two. The key file records it in
+`mldsa_signing_key_arn`; removing that field cannot downgrade the identity, because
+the public identity's format then no longer matches. APG's KMS request fields follow
+AWS's published API and are tested against a local emulator, not live AWS.
 
 ## Testing
 

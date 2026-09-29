@@ -240,7 +240,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "kms.key.bind",
-        "Adopt two existing AWS KMS ECC_NIST_P384 keys as an identity after proving possession",
+        "Adopt two existing AWS KMS ECC_NIST_P384 keys, plus an optional ML_DSA_65 key for composite post-quantum signatures, as an identity after proving possession",
         &["AwsRegion", "KmsKeyArn"],
         &["KmsKeyFile"],
         &["load_provider", "network", "create_file"],
@@ -489,9 +489,16 @@ pub fn operation(id: &str) -> Value {
         "openpgp.key.generate" | "openpgp.decrypt" | "openpgp.sign" => {
             vec!["argon2id", "chacha20-poly1305"]
         }
-        "hardware.key.generate" | "hardware.key.bind" | "tpm.key.generate" | "kms.key.bind" => {
+        "hardware.key.generate" | "hardware.key.bind" | "tpm.key.generate" => {
             vec!["ecdh-p384", "ecdsa-p384-sha384", "sha2-384", "sha2-256"]
         }
+        "kms.key.bind" => vec![
+            "ecdh-p384",
+            "ecdsa-p384-sha384",
+            "sha2-384",
+            "sha2-256",
+            "ml-dsa-65",
+        ],
         _ => vec![],
     };
     let p384: &[&str] = match *id {
@@ -586,10 +593,10 @@ pub fn discover() -> Value {
         "limits":{"request_bytes":crate::MAX_REQUEST_BYTES,"file_bytes":crate::MAX_FILE_BYTES,"plaintext_encryption_bytes":(crate::MAX_FILE_BYTES-4096)/2,"passphrase_bytes_min":16,"passphrase_bytes_max":4096,"trust_store_bytes":crate::trust::MAX_STORE_BYTES,"trust_identities":crate::trust::MAX_IDENTITIES,"pin_bytes_min":crate::provider::PIN_BYTES_MIN,"pin_bytes_max":crate::provider::PIN_BYTES_MAX,"key_label_bytes_max":crate::provider::LABEL_BYTES_MAX,"unix_seconds_max":crate::lifecycle::MAX_UNIX_TIME,"preflight_depth":crate::validation::MAX_DEPTH,"preflight_issues":crate::validation::MAX_ISSUES},
         "policy":{"mode":"explicit immutable snapshot", "operations":["encrypt","sign","verify"], "without_policy":"no revocation or expiry enforcement", "clock":"host Unix seconds; caller times are advisory only", "rollback_protection":"caller must retain the latest snapshot digest externally"},
         "schema_validation":{"static":"field shape, fixed versions and algorithms, fixed-length lowercase hex, time bounds and trust capacity", "runtime":"identity binding, certificate authentication, unique identities and cross-field ordering", "plan":"typed shape only; not full JSON Schema validation"},
-        "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
+        "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4],"generated_keys":["ed25519","p384"],"encryption":"SEIPDv1 with AES-256","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","hardware attestation","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum hardware, TPM or KMS keys","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","multi-recipient native APG envelopes","keyservers","web of trust","automatic revocation distribution","global policy enforcement","hardware attestation","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -726,7 +733,7 @@ pub fn export() -> Value {
         ),
         (
             "KmsKeyFile",
-            "Public apg-kms-key-v1 file binding a P-384 identity to two AWS KMS key ARNs in one region; using it needs host AWS credentials",
+            "Public apg-kms-key-v1 file binding an identity to AWS KMS key ARNs in one region: two P-384 keys (apg-public-p384-v1), plus an ML_DSA_65 key for composite post-quantum signatures (apg-public-p384-mldsa65-v1); using it needs host AWS credentials",
             "public",
         ),
         (
@@ -811,7 +818,7 @@ pub fn export() -> Value {
         ),
         (
             "PublicKey",
-            "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (apg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (apg-public-hybrid-v1), or P-384 ECDH and ECDSA (apg-public-p384-v1)",
+            "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (apg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (apg-public-hybrid-v1), P-384 ECDH and ECDSA (apg-public-p384-v1), or P-384 ECDH with ECDSA P-384 plus ML-DSA-65 (apg-public-p384-mldsa65-v1)",
             "public",
         ),
         (
@@ -821,7 +828,7 @@ pub fn export() -> Value {
         ),
         (
             "Fingerprint",
-            "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384 and hybrid identities",
+            "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384, P-384 plus ML-DSA-65 and hybrid identities",
             "public",
         ),
         (
@@ -831,7 +838,7 @@ pub fn export() -> Value {
         ),
         (
             "Signature",
-            "Detached Ed25519, low-s ECDSA P-384 or composite Ed25519 plus ML-DSA-65 signature over a framed signer fingerprint and content",
+            "Detached Ed25519, low-s ECDSA P-384, composite Ed25519 plus ML-DSA-65, or composite ECDSA P-384 plus ML-DSA-65 signature over a framed signer fingerprint and content; both halves of a composite must verify",
             "public",
         ),
         (
@@ -953,7 +960,7 @@ pub fn export() -> Value {
         ),
         (
             "kms-provider",
-            "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key with infrastructure tooling and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
+            "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; APG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with APG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
             "openpgp-boundary",
@@ -1193,5 +1200,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.24.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"apg:ontology", "version":"1.25.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

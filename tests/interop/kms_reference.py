@@ -1,7 +1,8 @@
 """Exercise APG's AWS KMS provider against a local emulator with AWS semantics.
 
-The emulator implements GetPublicKey, Sign (ECDSA_SHA_384 over a DIGEST) and
-DeriveSharedSecret (ECDH returning the raw shared secret, as AWS documents). It
+The emulator implements GetPublicKey, Sign (ECDSA_SHA_384 over a DIGEST, and
+ML_DSA_SHAKE_256 over a RAW message or an EXTERNAL_MU representative, for ML_DSA_65
+keys) and DeriveSharedSecret (ECDH returning the raw shared secret, as AWS documents). It
 verifies every request's SigV4 signature with botocore, AWS's own signer, and
 rejects requests whose signature, credentials or key usage are wrong.
 
@@ -24,8 +25,8 @@ from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.utils import Prehashed, decode_dss_signature
+from cryptography.hazmat.primitives.asymmetric import ec, mldsa
+from cryptography.hazmat.primitives.asymmetric.utils import Prehashed, decode_dss_signature, encode_dss_signature
 
 ACCESS_KEY, SECRET_KEY = "AKIAAPGTESTEXAMPLE01", "apg/test/secret/key/for/local/emulator/only"
 REGION, ACCOUNT = "us-gov-west-1", "123456789012"
@@ -47,9 +48,10 @@ class Emulator:
         self.keys = {}
         self.calls = []
 
-    def create(self, usage):
+    def create(self, usage, spec="ECC_NIST_P384"):
         arn = f"arn:aws-us-gov:kms:{REGION}:{ACCOUNT}:key/{uuid.uuid4()}"
-        self.keys[arn] = {"usage": usage, "key": ec.generate_private_key(ec.SECP384R1())}
+        key = mldsa.MLDSA65PrivateKey.generate() if spec == "ML_DSA_65" else ec.generate_private_key(ec.SECP384R1())
+        self.keys[arn] = {"usage": usage, "spec": spec, "key": key}
         return arn
 
     def public_der(self, arn):
@@ -62,8 +64,19 @@ class Emulator:
         if key is None:
             return 400, {"__type": "NotFoundException", "message": "Key not found"}
         if target == "GetPublicKey":
-            return 200, {"KeyId": body["KeyId"], "KeySpec": "ECC_NIST_P384", "KeyUsage": key["usage"],
+            return 200, {"KeyId": body["KeyId"], "KeySpec": key["spec"], "KeyUsage": key["usage"],
                          "PublicKey": base64.b64encode(self.public_der(body["KeyId"])).decode()}
+        if target == "Sign" and key["spec"] == "ML_DSA_65":
+            # RAW messages are signed with an empty context; EXTERNAL_MU is the 64-byte
+            # FIPS 204 representative, which may carry any context.
+            message, kind = base64.b64decode(body["Message"]), body.get("MessageType")
+            if body.get("SigningAlgorithm") != "ML_DSA_SHAKE_256" or kind not in ("RAW", "EXTERNAL_MU") \
+                    or (kind == "RAW" and len(message) > 4096) or (kind == "EXTERNAL_MU" and len(message) != 64):
+                return 400, {"__type": "ValidationException", "message": "Invalid ML-DSA signing request"}
+            self.calls.append(f"Sign/{kind}")
+            signature = key["key"].sign(message) if kind == "RAW" else key["key"].sign_mu(message)
+            return 200, {"KeyId": body["KeyId"], "Signature": base64.b64encode(signature).decode(),
+                         "SigningAlgorithm": "ML_DSA_SHAKE_256"}
         if target == "Sign":
             if key["usage"] != "SIGN_VERIFY" or body.get("SigningAlgorithm") != "ECDSA_SHA_384" \
                     or body.get("MessageType") != "DIGEST":
@@ -238,7 +251,6 @@ def exercise(executable, emulator, port, directory):
     signature = json.loads((directory / "signature").read_text())
     raw = bytes.fromhex(signature["signature"])
     r, s = int.from_bytes(raw[:48], "big"), int.from_bytes(raw[48:], "big")
-    from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
     framed = b"APG detached signature v1 ecdsa-p384-sha384" + len(fingerprint).to_bytes(8, "big") + \
         fingerprint.encode() + len(message).to_bytes(8, "big") + message
     serialization.load_der_public_key(emulator.public_der(sign)).verify(
@@ -247,6 +259,58 @@ def exercise(executable, emulator, port, directory):
          reason="superseded")
     call("revocation.verify", input=str(directory / "revocation"), signer=str(directory / "public"),
          expected_fingerprint=fingerprint)
+
+    # Post-quantum signatures: a third ML_DSA_65 key makes a composite identity.
+    pq = emulator.create("SIGN_VERIFY", "ML_DSA_65")
+    pq_key = str(directory / "kms-pq.json")
+    bound = call("kms.key.bind", region=REGION, encryption_key_arn=agree, signing_key_arn=sign,
+                 mldsa_signing_key_arn=pq, output=pq_key)
+    pq_fingerprint = bound["fingerprint"]
+    assert pq_fingerprint != fingerprint and bound["protection"]["possession_verified"] is True
+    pq_public = call("key.public", key=pq_key, output=str(directory / "pq-public"))
+    assert json.loads((directory / "pq-public").read_text())["format"] == "apg-public-p384-mldsa65-v1"
+    assert pq_public["custody"] == "service"
+    large = put("large", bytes(range(256)) * 64)  # 16 KiB: above KMS's 4 KiB RAW limit
+    before = emulator.calls.count("Sign/EXTERNAL_MU")
+    call("sign", input=large, output=str(directory / "pq-signature"), key=pq_key)
+    assert emulator.calls.count("Sign/EXTERNAL_MU") == before + 1
+    call("verify", input=large, signature=str(directory / "pq-signature"), signer=str(directory / "pq-public"),
+         expected_fingerprint=pq_fingerprint)
+    # Both halves verify independently: ECDSA with the KMS P-384 key, and ML-DSA as an
+    # ordinary pure FIPS 204 signature with APG's context over the framed message.
+    pq_signature = json.loads((directory / "pq-signature").read_text())
+    assert pq_signature["algorithm"] == "ecdsa-p384-mldsa65"
+    raw = bytes.fromhex(pq_signature["signature"])
+    content = Path(large).read_bytes()
+    framed = b"APG detached signature v1 ecdsa-p384-mldsa65" + len(pq_fingerprint).to_bytes(8, "big") + \
+        pq_fingerprint.encode() + len(content).to_bytes(8, "big") + content
+    serialization.load_der_public_key(emulator.public_der(sign)).verify(
+        encode_dss_signature(int.from_bytes(raw[:48], "big"), int.from_bytes(raw[48:96], "big")),
+        framed, ec.ECDSA(hashes.SHA384()))
+    emulator.keys[pq]["key"].public_key().verify(raw[96:], framed, b"APG ecdsa-p384-mldsa65 v1")
+    # Encryption is unchanged P-384 ECDH in KMS.
+    call("encrypt", input=str(directory / "plain"), output=str(directory / "pq-envelope"),
+         recipient=str(directory / "pq-public"), expected_fingerprint=pq_fingerprint)
+    call("decrypt", input=str(directory / "pq-envelope"), output=str(directory / "pq-decrypted"), key=pq_key)
+    assert (directory / "pq-decrypted").read_bytes() == message
+    call("key.revoke", key=pq_key, output=str(directory / "pq-revocation"), expected_fingerprint=pq_fingerprint,
+         reason="retired")
+    call("revocation.verify", input=str(directory / "pq-revocation"), signer=str(directory / "pq-public"),
+         expected_fingerprint=pq_fingerprint)
+    # The ML-DSA slot requires an ML_DSA_65 key, the P-384 slots refuse one, and keys are distinct.
+    for arguments, code in [
+        ({"signing_key_arn": sign, "mldsa_signing_key_arn": emulator.create("SIGN_VERIFY")}, "mechanism_unsupported"),
+        ({"signing_key_arn": pq, "mldsa_signing_key_arn": pq}, "invalid_request"),
+        ({"signing_key_arn": pq}, "mechanism_unsupported"),
+    ]:
+        refused = call("kms.key.bind", False, region=REGION, encryption_key_arn=agree,
+                       output=str(directory / "never"), **arguments)
+        assert refused["code"] == code, (arguments, refused)
+    # Dropping the ML-DSA key from the file cannot downgrade the identity.
+    downgraded = json.loads(Path(pq_key).read_text())
+    del downgraded["mldsa_signing_key_arn"]
+    assert call("sign", False, input=str(directory / "plain"), output=str(directory / "never"),
+                key=put("downgraded", downgraded))["code"] == "invalid_format"
 
     # Refusals.
     bad = dict(environment, AWS_SECRET_ACCESS_KEY="wrong-secret")

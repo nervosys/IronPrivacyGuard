@@ -34,6 +34,11 @@ pub fn aws_region(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":1, "maxLength":32, "pattern":"^[a-z0-9-]+$", "not":{"pattern":"[^a-z0-9-]"}})
 }
 /// A KMS key ARN; aliases are refused because they can be repointed.
+pub fn optional_kms_key_arn(generator: &mut SchemaGenerator) -> Schema {
+    let mut schema = kms_key_arn(generator);
+    schema.insert("type".into(), serde_json::json!(["string", "null"]));
+    schema
+}
 pub fn kms_key_arn(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "maxLength":160,
         "pattern":"^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$", "not":{"pattern":"[^A-Za-z0-9:/-]"}})
@@ -70,7 +75,8 @@ fixed!(scope, "entire-identity");
 
 use crate::crypto::{
     COMPOSITE, ECDSA_P384, ED25519, HYBRID_KEY_FORMAT, HYBRID_SECRET_FORMAT, HYBRID_SUITE,
-    KEY_FORMAT, P384_KEY_FORMAT, P384_SUITE, SECRET_FORMAT, SUITE,
+    KEY_FORMAT, P384_KEY_FORMAT, P384_MLDSA, P384_MLDSA_KEY_FORMAT, P384_SUITE, SECRET_FORMAT,
+    SUITE,
 };
 const CURVE25519_KEY: &str = "^[0-9a-f]{64}$";
 const P384_KEY: &str = "^04[0-9a-f]{192}$";
@@ -80,6 +86,10 @@ const HYBRID_KEY: &str = "^[0-9a-f]{2432}$";
 const HYBRID_SIGNING_KEY: &str = "^[0-9a-f]{3968}$";
 /// Ed25519 signature followed by an ML-DSA-65 signature (3309 bytes).
 const COMPOSITE_SIGNATURE: &str = "^[0-9a-f]{6746}$";
+/// Uncompressed P-384 point followed by an ML-DSA-65 key (1952 bytes).
+const P384_MLDSA_SIGNING_KEY: &str = "^04[0-9a-f]{4096}$";
+/// Fixed-width low-s ECDSA P-384 r||s followed by an ML-DSA-65 signature.
+const P384_MLDSA_SIGNATURE: &str = "^[0-9a-f]{6810}$";
 /// ML-KEM-768 ciphertext (1088 bytes) followed by an X25519 ephemeral key.
 const HYBRID_EPHEMERAL: &str = "^[0-9a-f]{2240}$";
 
@@ -87,13 +97,13 @@ const HYBRID_EPHEMERAL: &str = "^[0-9a-f]{2240}$";
 pub fn fingerprint(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":64, "maxLength":96,
         "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$", "not":{"pattern":"[^0-9a-f]"},
-        "description":"64 hex characters for apg-public-v1 identities, 96 for P-384 and hybrid identities."})
+        "description":"64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities."})
 }
 const FINGERPRINT_256: &str = "^[0-9a-f]{64}$";
 const FINGERPRINT_384: &str = "^[0-9a-f]{96}$";
 
 pub fn public_format(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "enum":[KEY_FORMAT, P384_KEY_FORMAT, HYBRID_KEY_FORMAT]})
+    json_schema!({"type":"string", "enum":[KEY_FORMAT, P384_KEY_FORMAT, HYBRID_KEY_FORMAT, P384_MLDSA_KEY_FORMAT]})
 }
 pub fn secret_format(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "enum":[SECRET_FORMAT, HYBRID_SECRET_FORMAT]})
@@ -101,8 +111,8 @@ pub fn secret_format(_: &mut SchemaGenerator) -> Schema {
 /// 32-byte Curve25519 keys, 97-byte uncompressed SEC1 P-384 points, or hybrid
 /// ML-KEM-768 plus X25519 encryption and Ed25519 plus ML-DSA-65 signing keys.
 pub fn public_key_bytes(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":64, "maxLength":3968,
-        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$", "not":{"pattern":"[^0-9a-f]"},
+    json_schema!({"type":"string", "minLength":64, "maxLength":4098,
+        "pattern":"^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$", "not":{"pattern":"[^0-9a-f]"},
         "description":"Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime)."})
 }
 pub fn ephemeral_bytes(_: &mut SchemaGenerator) -> Schema {
@@ -141,6 +151,7 @@ pub fn public_suite(schema: &mut Schema) {
             when("format", KEY_FORMAT, serde_json::json!({"encryption_key":pattern(CURVE25519_KEY),"signing_key":pattern(CURVE25519_KEY),"fingerprint":pattern(FINGERPRINT_256)})),
             when("format", P384_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
             when("format", HYBRID_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(HYBRID_KEY),"signing_key":pattern(HYBRID_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
+            when("format", P384_MLDSA_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_MLDSA_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
         ]),
     );
 }
@@ -180,14 +191,14 @@ pub fn envelope_suite(schema: &mut Schema) {
     );
 }
 pub fn signature_algorithm(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "enum":[ED25519, ECDSA_P384, COMPOSITE],
+    json_schema!({"type":"string", "enum":[ED25519, ECDSA_P384, COMPOSITE, P384_MLDSA],
         "description":"Must be the signer identity suite's algorithm (checked at runtime)."})
 }
-/// 64-byte Ed25519, 96-byte fixed-width low-s ECDSA P-384 r||s, or 3373-byte
-/// composite Ed25519 plus ML-DSA-65 signatures.
+/// 64-byte Ed25519, 96-byte fixed-width low-s ECDSA P-384 r||s, 3373-byte composite
+/// Ed25519 plus ML-DSA-65, or 3405-byte composite ECDSA P-384 plus ML-DSA-65 signatures.
 pub fn signature_bytes(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":128, "maxLength":6746,
-        "pattern":"^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$", "not":{"pattern":"[^0-9a-f]"}})
+    json_schema!({"type":"string", "minLength":128, "maxLength":6810,
+        "pattern":"^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$", "not":{"pattern":"[^0-9a-f]"}})
 }
 pub fn signature_suite(schema: &mut Schema) {
     schema.insert(
@@ -207,6 +218,11 @@ pub fn signature_suite(schema: &mut Schema) {
                 "algorithm",
                 COMPOSITE,
                 serde_json::json!({"signature":pattern(COMPOSITE_SIGNATURE)})
+            ),
+            when(
+                "algorithm",
+                P384_MLDSA,
+                serde_json::json!({"signature":pattern(P384_MLDSA_SIGNATURE)})
             ),
         ]),
     );
