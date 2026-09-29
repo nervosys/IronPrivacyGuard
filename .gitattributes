@@ -1,0 +1,9 @@
+# Store and check out text with LF on every platform, so shell scripts and
+# generated contracts behave the same in Windows checkouts and Linux containers.
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Test data must stay byte-exact: fuzz seeds exercise line endings deliberately,
+# and frozen vectors are compared against independently generated values.
+fuzz/seeds/** -text
+tests/vectors/** -text

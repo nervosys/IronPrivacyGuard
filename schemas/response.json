@@ -1,0 +1,1027 @@
+{
+  "$defs": {
+    "Change": {
+      "oneOf": [
+        {
+          "properties": {
+            "after": {
+              "type": "string"
+            },
+            "before": {
+              "type": "string"
+            },
+            "change": {
+              "const": "format_changed",
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "before",
+            "after"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "identity_order_changed",
+              "type": "string"
+            }
+          },
+          "required": [
+            "change"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "validity_certificate_replaced",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "identity_added",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "identity_removed",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "revocation_added",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "revocation_removed",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "change": {
+              "const": "revocation_replaced",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "after": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Window"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "before": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Window"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "change": {
+              "const": "validity_changed",
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            },
+            "relation": {
+              "$ref": "#/$defs/WindowRelation"
+            }
+          },
+          "required": [
+            "change",
+            "fingerprint",
+            "relation"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Comparison": {
+      "properties": {
+        "base_digest": {
+          "type": "string"
+        },
+        "candidate_digest": {
+          "type": "string"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/Change"
+          },
+          "type": "array"
+        },
+        "compatible_extension": {
+          "description": "Structural extension only, not authorization to enroll added identities.",
+          "type": "boolean"
+        },
+        "same_digest": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "base_digest",
+        "candidate_digest",
+        "same_digest",
+        "compatible_extension",
+        "changes"
+      ],
+      "type": "object"
+    },
+    "Custody": {
+      "description": "Where a private-key operation ran. Reported only as evidence from this process;\ncounterparties cannot verify it from public artifacts.",
+      "oneOf": [
+        {
+          "enum": [
+            "software"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "hardware",
+          "description": "A local PKCS#11 token or TPM.",
+          "type": "string"
+        },
+        {
+          "const": "service",
+          "description": "A managed key service (AWS KMS); keys never leave the service.",
+          "type": "string"
+        }
+      ]
+    },
+    "Eligibility": {
+      "enum": [
+        "permitted",
+        "revoked",
+        "not_yet_valid",
+        "expired"
+      ],
+      "type": "string"
+    },
+    "Inventory": {
+      "properties": {
+        "library": {
+          "$ref": "#/$defs/LibraryInfo"
+        },
+        "tokens": {
+          "items": {
+            "$ref": "#/$defs/TokenReport"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "library",
+        "tokens"
+      ],
+      "type": "object"
+    },
+    "Issue": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "description": "JSON Pointer relative to the candidate Request; empty means its root.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "LibraryInfo": {
+      "properties": {
+        "cryptoki_version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "library_version": {
+          "type": "string"
+        },
+        "manufacturer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "manufacturer",
+        "library_version",
+        "cryptoki_version"
+      ],
+      "type": "object"
+    },
+    "MechanismSupport": {
+      "properties": {
+        "ec_key_pair_generation": {
+          "type": "boolean"
+        },
+        "ecdh_derive": {
+          "type": "boolean"
+        },
+        "ecdsa": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ec_key_pair_generation",
+        "ecdsa",
+        "ecdh_derive"
+      ],
+      "type": "object"
+    },
+    "Protection": {
+      "description": "Evidence read from the token about both private keys. Never an attestation:\nthe token itself reports these attributes.",
+      "properties": {
+        "generated_on_token": {
+          "description": "CKA_LOCAL, CKA_ALWAYS_SENSITIVE and CKA_NEVER_EXTRACTABLE are all true.",
+          "type": "boolean"
+        },
+        "non_exportable": {
+          "description": "CKA_SENSITIVE is true and CKA_EXTRACTABLE is false for both private keys.",
+          "type": "boolean"
+        },
+        "possession_verified": {
+          "description": "Token signed and agreed keys matching the bound public identity.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "non_exportable",
+        "generated_on_token",
+        "possession_verified"
+      ],
+      "type": "object"
+    },
+    "RevocationReason": {
+      "enum": [
+        "compromised",
+        "superseded",
+        "retired"
+      ],
+      "type": "string"
+    },
+    "TokenBinding": {
+      "additionalProperties": false,
+      "description": "Token identity copied from PKCS#11 token information, trailing blanks removed.\nEvery field must match before a reference is used.",
+      "properties": {
+        "label": {
+          "maxLength": 32,
+          "type": "string"
+        },
+        "manufacturer": {
+          "maxLength": 32,
+          "type": "string"
+        },
+        "model": {
+          "maxLength": 16,
+          "type": "string"
+        },
+        "serial": {
+          "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+          "maxLength": 16,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "serial",
+        "label",
+        "manufacturer",
+        "model"
+      ],
+      "type": "object"
+    },
+    "TokenReport": {
+      "properties": {
+        "hardware_slot": {
+          "type": "boolean"
+        },
+        "login_required": {
+          "type": "boolean"
+        },
+        "mechanisms": {
+          "$ref": "#/$defs/MechanismSupport"
+        },
+        "removable": {
+          "type": "boolean"
+        },
+        "slot": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "suites": {
+          "description": "Identity formats whose mechanisms the token advertises. Advisory: curve and\npolicy restrictions are only discovered when keys are created or used.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "token": {
+          "$ref": "#/$defs/TokenBinding"
+        },
+        "token_initialized": {
+          "type": "boolean"
+        },
+        "user_pin_initialized": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "slot",
+        "token",
+        "token_initialized",
+        "user_pin_initialized",
+        "login_required",
+        "hardware_slot",
+        "removable",
+        "mechanisms",
+        "suites"
+      ],
+      "type": "object"
+    },
+    "TpmBinding": {
+      "additionalProperties": false,
+      "description": "TPM identification read from its properties. Informational: the wrapped blobs\nthemselves only load under the storage root of the TPM that created them.",
+      "properties": {
+        "manufacturer": {
+          "maxLength": 4,
+          "type": "string"
+        },
+        "vendor": {
+          "maxLength": 16,
+          "type": "string"
+        }
+      },
+      "required": [
+        "manufacturer",
+        "vendor"
+      ],
+      "type": "object"
+    },
+    "TpmInfo": {
+      "description": "TPM properties relevant to APG identities.",
+      "properties": {
+        "curves": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "firmware_version": {
+          "type": "string"
+        },
+        "owner_auth_empty": {
+          "type": "boolean"
+        },
+        "suites": {
+          "description": "Identity formats this TPM can hold; empty when P-384 is unsupported.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tpm": {
+          "$ref": "#/$defs/TpmBinding"
+        }
+      },
+      "required": [
+        "tpm",
+        "firmware_version",
+        "curves",
+        "suites",
+        "owner_auth_empty"
+      ],
+      "type": "object"
+    },
+    "Validation": {
+      "properties": {
+        "execution": {
+          "type": "boolean"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "type": "array"
+        },
+        "operation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid",
+        "issues",
+        "truncated",
+        "execution"
+      ],
+      "type": "object"
+    },
+    "Window": {
+      "properties": {
+        "not_after": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_before": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "not_before",
+        "not_after"
+      ],
+      "type": "object"
+    },
+    "WindowRelation": {
+      "enum": [
+        "unchanged",
+        "added",
+        "removed",
+        "narrowed",
+        "widened",
+        "incomparable"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ok": {
+          "const": true
+        },
+        "protocol": {
+          "const": "apg/1"
+        },
+        "result": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "oneOf": [
+            {
+              "properties": {
+                "kind": {
+                  "const": "request_validation",
+                  "type": "string"
+                },
+                "validation": {
+                  "$ref": "#/$defs/Validation"
+                }
+              },
+              "required": [
+                "kind",
+                "validation"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "comparison": {
+                  "$ref": "#/$defs/Comparison"
+                },
+                "kind": {
+                  "const": "trust_comparison",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "comparison"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "authenticated": {
+                  "type": "boolean"
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "validity_verified",
+                  "type": "string"
+                },
+                "not_after": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "not_before": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "policy_applied": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "fingerprint",
+                "not_before",
+                "not_after",
+                "authenticated",
+                "policy_applied"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "advisory": {
+                  "type": "boolean"
+                },
+                "at_time": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "eligibility": {
+                  "$ref": "#/$defs/Eligibility"
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "trust_evaluation",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "fingerprint",
+                "digest",
+                "at_time",
+                "eligibility",
+                "advisory"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "digest": {
+                  "type": "string"
+                },
+                "identities": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "trust_snapshot",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "digest",
+                "identities"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "digest": {
+                  "type": "string"
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "trust_status",
+                  "type": "string"
+                },
+                "revoked": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "fingerprint",
+                "revoked",
+                "digest"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "authenticated": {
+                  "type": "boolean"
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "revocation_verified",
+                  "type": "string"
+                },
+                "policy_applied": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "$ref": "#/$defs/RevocationReason"
+                }
+              },
+              "required": [
+                "kind",
+                "fingerprint",
+                "reason",
+                "authenticated",
+                "policy_applied"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "document": true,
+                "kind": {
+                  "const": "document",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "document"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "inventory": {
+                  "$ref": "#/$defs/Inventory"
+                },
+                "kind": {
+                  "const": "hardware_inventory",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "inventory"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "info": {
+                  "$ref": "#/$defs/TpmInfo"
+                },
+                "kind": {
+                  "const": "tpm_info",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "info"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "attested": {
+                  "description": "Always false: token attributes are self-reported, not vendor attestation.",
+                  "type": "boolean"
+                },
+                "custody": {
+                  "$ref": "#/$defs/Custody"
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "hardware_key",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "protection": {
+                  "$ref": "#/$defs/Protection"
+                },
+                "provider": {
+                  "description": "\"pkcs11\", \"tpm\" or \"kms\".",
+                  "type": "string"
+                },
+                "token_serial": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "provider",
+                "custody",
+                "protection",
+                "attested"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "artifact_type": {
+                  "type": "string"
+                },
+                "custody": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Custody"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "\"hardware\" or \"service\" when a device or KMS performed the private-key operation."
+                },
+                "fingerprint": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "const": "artifact",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "policy_checked_at": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "policy_digest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "artifact_type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "verified",
+                  "type": "string"
+                },
+                "policy_checked_at": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "policy_digest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "valid": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "valid",
+                "fingerprint"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "algorithm": {
+                  "type": "string"
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "digest",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "algorithm",
+                "digest"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "authenticated": {
+                  "type": "boolean"
+                },
+                "fingerprint": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "format": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "inspection",
+                  "type": "string"
+                },
+                "structurally_valid": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "structurally_valid",
+                "format",
+                "authenticated"
+              ],
+              "type": "object"
+            }
+          ],
+          "title": "Outcome"
+        }
+      },
+      "required": [
+        "protocol",
+        "id",
+        "ok",
+        "result"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "title": "Error",
+          "type": "object"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ok": {
+          "const": false
+        },
+        "protocol": {
+          "const": "apg/1"
+        }
+      },
+      "required": [
+        "protocol",
+        "id",
+        "ok",
+        "error"
+      ],
+      "type": "object"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"operation":"key.validity","key":"MUST-NOT-BE-READ","output":"MUST-NOT-BE-WRITTEN","passphrase_file":"MUST-NOT-BE-READ","expected_fingerprint":"abababababababababababababababababababababababababababababababab","not_before":100,"not_after":99}

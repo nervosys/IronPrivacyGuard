@@ -1,0 +1,5 @@
+# External test clients only; not dependencies of the Rust application.
+mcp==2.2.0
+jsonschema==4.26.0
+cryptography==50.0.1
+botocore==1.43.104

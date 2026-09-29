@@ -1,0 +1,60 @@
+[package]
+name = "agentic-privacy-guard"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "AGPL-3.0-or-later"
+description = "Agent-first privacy CLI and discoverable cryptographic workflows on IronCrypto"
+keywords = ["cryptography", "agents", "mcp", "pkcs11", "hsm"]
+
+[lib]
+name = "apg"
+
+[[bin]]
+name = "apg"
+path = "src/main.rs"
+
+[dependencies]
+ic-core = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-cipher = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-ec = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-hash = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-kdf = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-mac = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-mlkem = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-mldsa = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-ontology = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+getrandom = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+hex = "0.4"
+zeroize = { version = "1", features = ["derive"] }
+tempfile = "3"
+cryptoki = { version = "0.12", optional = true }
+secrecy = { version = "0.10", optional = true }
+ic-rustls = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c", optional = true }
+rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
+webpki-roots = { version = "1", optional = true }
+
+# TPM access links the system TPM2 software stack (tpm2-tss); Linux only.
+[target.'cfg(target_os = "linux")'.dependencies]
+tss-esapi = { version = "7", optional = true }
+
+[features]
+default = []
+# Hardware-backed identities through a host-configured PKCS#11 module. Loads
+# vendor code at runtime only; no C compilation and no effect on contracts.
+pkcs11 = ["dep:cryptoki", "dep:secrecy"]
+# TPM 2.0 identities through tpm2-tss (ESAPI). Linux only; links libtss2 dynamically.
+tpm = ["dep:tss-esapi"]
+# AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
+kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
+
+[profile.release]
+lto = true
+strip = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 2

@@ -1,0 +1,110 @@
+[
+  {
+    "@id": "ic:x25519",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "X25519",
+    "role": "Key agreement",
+    "apg_usage": "Ephemeral sender key agreement with the recipient public key inside the native envelope suite",
+    "limitations": ["Not encryption on its own", "Does not authenticate the sender", "Not post-quantum"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc7748"]
+  },
+  {
+    "@id": "ic:hkdf-sha2-256",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "HKDF-SHA-256",
+    "role": "Key derivation from keying material",
+    "apg_usage": "Derive the envelope encryption key from the X25519 shared secret with protocol context",
+    "limitations": ["Not a password-hardening function", "No standalone APG derivation command"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc5869"]
+  },
+  {
+    "@id": "ic:chacha20-poly1305",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "ChaCha20-Poly1305",
+    "role": "Authenticated encryption with associated data",
+    "apg_usage": "Protect envelope plaintext and wrapped private seeds; authenticate before releasing plaintext",
+    "limitations": ["Nonce reuse under the same key is unsafe", "Ciphertext authentication is not proof of sender identity"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc8439"]
+  },
+  {
+    "@id": "ic:ed25519",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "Ed25519",
+    "role": "Digital signature",
+    "apg_usage": "Domain-separated content signatures and signed identity lifecycle certificates",
+    "limitations": ["No confidentiality", "Key identity needs an independent trust binding", "Not post-quantum"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc8032"]
+  },
+  {
+    "@id": "ic:argon2id",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "Argon2id",
+    "role": "Memory-hard password-based derivation",
+    "apg_usage": "Derive private-key wrapping keys using the fixed APG v1 profile: 65536 KiB memory, 3 iterations, 4 lanes",
+    "limitations": ["No APG password-verifier API", "APG profile is a protocol choice, not a universal password policy"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9106"]
+  },
+  {
+    "@id": "ic:sha2-256",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "SHA-256",
+    "role": "Cryptographic digest",
+    "apg_usage": "File digests, identity fingerprints and canonical trust snapshot digests",
+    "limitations": ["Unkeyed hashing does not prove origin", "Fast hashing is not password hardening"],
+    "sources": []
+  },
+  {
+    "@id": "ic:ecdh-p384",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "ECDH P-384",
+    "role": "Key agreement",
+    "apg_usage": "Ephemeral sender key agreement with a P-384 identity; tokens run CKM_ECDH1_DERIVE, preferably with the X9.63 KDF so the shared secret never leaves them",
+    "limitations": ["Not encryption on its own", "Does not authenticate the sender", "Not post-quantum", "Points must be validated uncompressed curve points"],
+    "sources": ["https://doi.org/10.6028/NIST.SP.800-56Ar3"]
+  },
+  {
+    "@id": "ic:aes-256-gcm",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "AES-256-GCM",
+    "role": "Authenticated encryption with associated data",
+    "apg_usage": "Protect P-384 envelope plaintext; authenticate before releasing plaintext",
+    "limitations": ["Nonce reuse under the same key is catastrophic", "Ciphertext authentication is not proof of sender identity"],
+    "sources": ["https://doi.org/10.6028/NIST.SP.800-38D"]
+  },
+  {
+    "@id": "ic:ecdsa-p384-sha384",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "ECDSA P-384 with SHA-384",
+    "role": "Digital signature",
+    "apg_usage": "Hardware identity signatures, certificates and possession checks; tokens sign the SHA-384 digest with CKM_ECDSA and APG canonicalizes to low-s",
+    "limitations": ["Randomized signatures differ per run", "Signatures are malleable unless low-s is enforced, which APG does", "Not post-quantum"],
+    "sources": ["https://doi.org/10.6028/NIST.FIPS.186-5"]
+  },
+  {
+    "@id": "ic:sha2-384",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "SHA-384",
+    "role": "Cryptographic hash",
+    "apg_usage": "Message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
+    "limitations": ["No authenticity on its own", "Not a password-hardening function", "No standalone APG sha2-384 digest command"],
+    "sources": ["https://doi.org/10.6028/NIST.FIPS.180-4"]
+  },
+  {
+    "@id": "ic:ml-kem-768",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "ML-KEM-768",
+    "role": "Post-quantum key encapsulation",
+    "apg_usage": "Encapsulates a second shared secret to hybrid identities; combined with X25519 by HKDF so either component alone protects the envelope",
+    "limitations": ["Encapsulation only, not encryption or authentication", "Marked experimental in IronCrypto; interoperability checked against PyCA and OpenSSL", "Not used for signatures"],
+    "sources": ["https://doi.org/10.6028/NIST.FIPS.203"]
+  },
+  {
+    "@id": "ic:ml-dsa-65",
+    "@type": "apg:CryptographicPrimitive",
+    "label": "ML-DSA-65",
+    "role": "Post-quantum digital signature",
+    "apg_usage": "Second half of composite ed25519-mldsa65 signatures and certificates for hybrid identities; hedged signing with a fixed APG context string",
+    "limitations": ["Used only in composite with Ed25519", "Marked experimental in IronCrypto; interoperability checked against PyCA and OpenSSL", "Large signatures (3309 bytes)"],
+    "sources": ["https://doi.org/10.6028/NIST.FIPS.204"]
+  }
+]

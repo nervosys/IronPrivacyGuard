@@ -1,0 +1,45 @@
+[package]
+name = "apg-fuzz-support"
+version = "0.0.0"
+publish = false
+license = "AGPL-3.0-or-later"
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+agentic-privacy-guard = { path = ".." }
+serde_json = "1"
+libfuzzer-sys = "=0.4.13"
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "requests"
+path = "fuzz_targets/requests.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "framing"
+path = "fuzz_targets/framing.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "artifacts"
+path = "fuzz_targets/artifacts.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mcp"
+path = "fuzz_targets/mcp.rs"
+test = false
+doc = false
+bench = false

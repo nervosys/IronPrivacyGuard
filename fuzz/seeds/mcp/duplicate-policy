@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apg_plan","arguments":{"request":{"operation":"sign","input":"x","output":"y","key":"k","passphrase_file":"p","policy":{"store":"one","store":"two","expected_digest":"bad"}}}}}

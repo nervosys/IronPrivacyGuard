@@ -1,0 +1,2990 @@
+{
+  "@context": {
+    "@vocab": "urn:apg:v1:",
+    "algorithms": {
+      "@type": "@id"
+    },
+    "apg": "urn:apg:v1:",
+    "constraints": {
+      "@type": "@id"
+    },
+    "goals": {
+      "@type": "@id"
+    },
+    "ic": "urn:ironcrypto:algorithm:",
+    "inputs": {
+      "@type": "@id"
+    },
+    "optional_inputs": {
+      "@type": "@id"
+    },
+    "outputs": {
+      "@type": "@id"
+    },
+    "sources": {
+      "@type": "@id"
+    },
+    "tools": {
+      "@type": "@id"
+    }
+  },
+  "@graph": [
+    {
+      "@id": "ic:x25519",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Ephemeral sender key agreement with the recipient public key inside the native envelope suite",
+      "label": "X25519",
+      "limitations": [
+        "Not encryption on its own",
+        "Does not authenticate the sender",
+        "Not post-quantum"
+      ],
+      "role": "Key agreement",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc7748"
+      ]
+    },
+    {
+      "@id": "ic:hkdf-sha2-256",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Derive the envelope encryption key from the X25519 shared secret with protocol context",
+      "label": "HKDF-SHA-256",
+      "limitations": [
+        "Not a password-hardening function",
+        "No standalone APG derivation command"
+      ],
+      "role": "Key derivation from keying material",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc5869"
+      ]
+    },
+    {
+      "@id": "ic:chacha20-poly1305",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Protect envelope plaintext and wrapped private seeds; authenticate before releasing plaintext",
+      "label": "ChaCha20-Poly1305",
+      "limitations": [
+        "Nonce reuse under the same key is unsafe",
+        "Ciphertext authentication is not proof of sender identity"
+      ],
+      "role": "Authenticated encryption with associated data",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8439"
+      ]
+    },
+    {
+      "@id": "ic:ed25519",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Domain-separated content signatures and signed identity lifecycle certificates",
+      "label": "Ed25519",
+      "limitations": [
+        "No confidentiality",
+        "Key identity needs an independent trust binding",
+        "Not post-quantum"
+      ],
+      "role": "Digital signature",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8032"
+      ]
+    },
+    {
+      "@id": "ic:argon2id",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Derive private-key wrapping keys using the fixed APG v1 profile: 65536 KiB memory, 3 iterations, 4 lanes",
+      "label": "Argon2id",
+      "limitations": [
+        "No APG password-verifier API",
+        "APG profile is a protocol choice, not a universal password policy"
+      ],
+      "role": "Memory-hard password-based derivation",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9106"
+      ]
+    },
+    {
+      "@id": "ic:sha2-256",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "File digests, identity fingerprints and canonical trust snapshot digests",
+      "label": "SHA-256",
+      "limitations": [
+        "Unkeyed hashing does not prove origin",
+        "Fast hashing is not password hardening"
+      ],
+      "role": "Cryptographic digest",
+      "sources": []
+    },
+    {
+      "@id": "ic:ecdh-p384",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Ephemeral sender key agreement with a P-384 identity; tokens run CKM_ECDH1_DERIVE, preferably with the X9.63 KDF so the shared secret never leaves them",
+      "label": "ECDH P-384",
+      "limitations": [
+        "Not encryption on its own",
+        "Does not authenticate the sender",
+        "Not post-quantum",
+        "Points must be validated uncompressed curve points"
+      ],
+      "role": "Key agreement",
+      "sources": [
+        "https://doi.org/10.6028/NIST.SP.800-56Ar3"
+      ]
+    },
+    {
+      "@id": "ic:aes-256-gcm",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Protect P-384 envelope plaintext; authenticate before releasing plaintext",
+      "label": "AES-256-GCM",
+      "limitations": [
+        "Nonce reuse under the same key is catastrophic",
+        "Ciphertext authentication is not proof of sender identity"
+      ],
+      "role": "Authenticated encryption with associated data",
+      "sources": [
+        "https://doi.org/10.6028/NIST.SP.800-38D"
+      ]
+    },
+    {
+      "@id": "ic:ecdsa-p384-sha384",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Hardware identity signatures, certificates and possession checks; tokens sign the SHA-384 digest with CKM_ECDSA and APG canonicalizes to low-s",
+      "label": "ECDSA P-384 with SHA-384",
+      "limitations": [
+        "Randomized signatures differ per run",
+        "Signatures are malleable unless low-s is enforced, which APG does",
+        "Not post-quantum"
+      ],
+      "role": "Digital signature",
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.186-5"
+      ]
+    },
+    {
+      "@id": "ic:sha2-384",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
+      "label": "SHA-384",
+      "limitations": [
+        "No authenticity on its own",
+        "Not a password-hardening function",
+        "No standalone APG sha2-384 digest command"
+      ],
+      "role": "Cryptographic hash",
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.180-4"
+      ]
+    },
+    {
+      "@id": "ic:ml-kem-768",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Encapsulates a second shared secret to hybrid identities; combined with X25519 by HKDF so either component alone protects the envelope",
+      "label": "ML-KEM-768",
+      "limitations": [
+        "Encapsulation only, not encryption or authentication",
+        "Marked experimental in IronCrypto; interoperability checked against PyCA and OpenSSL",
+        "Not used for signatures"
+      ],
+      "role": "Post-quantum key encapsulation",
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.203"
+      ]
+    },
+    {
+      "@id": "ic:ml-dsa-65",
+      "@type": "apg:CryptographicPrimitive",
+      "apg_usage": "Second half of composite ed25519-mldsa65 signatures and certificates for hybrid identities; hedged signing with a fixed APG context string",
+      "label": "ML-DSA-65",
+      "limitations": [
+        "Used only in composite with Ed25519",
+        "Marked experimental in IronCrypto; interoperability checked against PyCA and OpenSSL",
+        "Large signatures (3309 bytes)"
+      ],
+      "role": "Post-quantum digital signature",
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.204"
+      ]
+    },
+    {
+      "@id": "apg:application/confidential-file-transfer",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/confidentiality",
+        "apg:goal/ciphertext-integrity"
+      ],
+      "guidance": "The envelope suite follows the recipient identity: X25519/ChaCha20-Poly1305 for apg-public-v1, P-384/AES-256-GCM for apg-public-p384-v1. Inspect discover limits before transferring data.",
+      "id": "confidential-file-transfer",
+      "keywords": [
+        "encryption",
+        "decryption",
+        "confidentiality",
+        "backup",
+        "at rest",
+        "X25519",
+        "HKDF",
+        "ChaCha20 Poly1305",
+        "P-384",
+        "AES-GCM"
+      ],
+      "label": "Encrypt and decrypt a file for one recipient",
+      "limitations": [
+        "One recipient and native APG format only; bounded in-memory files",
+        "Encryption does not authenticate the sender",
+        "No forward secrecy against later recipient private-key compromise",
+        "Decryption remains available for recovery without trust policy enforcement"
+      ],
+      "prerequisites": [
+        "Recipient public identity and independently trusted fingerprint",
+        "Recipient secret key and passphrase file, or hardware key reference and PIN file, for decryption",
+        "Supply a pinned trust policy to encrypt when revocation and expiry must be enforced"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8439",
+        "https://www.rfc-editor.org/rfc/rfc7748",
+        "https://www.rfc-editor.org/rfc/rfc5869",
+        "https://doi.org/10.6028/NIST.SP.800-38D"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/encrypt",
+        "apg:operation/decrypt"
+      ]
+    },
+    {
+      "@id": "apg:application/authenticate-file",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/content-authenticity",
+        "apg:goal/content-integrity"
+      ],
+      "guidance": "Verify against the expected signer and exact original bytes before consuming content.",
+      "id": "authenticate-file",
+      "keywords": [
+        "signature",
+        "signing",
+        "authenticity",
+        "artifact",
+        "release",
+        "Ed25519",
+        "ECDSA"
+      ],
+      "label": "Sign and verify exact file bytes",
+      "limitations": [
+        "Native detached APG signatures; no OpenPGP or platform code-signing compatibility",
+        "No confidentiality, trusted timestamp, replay prevention or automatic authorization"
+      ],
+      "prerequisites": [
+        "Signer secret key and passphrase, or hardware key reference and PIN file, for signing",
+        "Public signer identity and independently trusted fingerprint for verification",
+        "Supply a pinned policy for revocation and expiry enforcement"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8032",
+        "https://doi.org/10.6028/NIST.FIPS.186-5"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/sign",
+        "apg:operation/verify"
+      ]
+    },
+    {
+      "@id": "apg:application/file-digest",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/content-identification"
+      ],
+      "guidance": "Compare digests for byte identity; use sign and verify when signer authentication is needed.",
+      "id": "file-digest",
+      "keywords": [
+        "hash",
+        "checksum",
+        "fingerprint",
+        "deduplication",
+        "sha256"
+      ],
+      "label": "Compute a SHA-256 file digest",
+      "limitations": [
+        "An unkeyed digest does not authenticate a sender",
+        "Not a password storage or password derivation interface"
+      ],
+      "prerequisites": [
+        "An independently authenticated expected digest if using the result to detect malicious substitution"
+      ],
+      "sources": [],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/hash"
+      ]
+    },
+    {
+      "@id": "apg:application/protect-private-identity",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/secret-protection"
+      ],
+      "guidance": "APG internally derives a wrapping key with Argon2id and encrypts private seeds; no raw KDF endpoint is exposed.",
+      "id": "protect-private-identity",
+      "keywords": [
+        "key generation",
+        "private key",
+        "secret key",
+        "password",
+        "rewrap",
+        "Argon2id"
+      ],
+      "label": "Create an identity and change its protective passphrase",
+      "limitations": [
+        "Rewrapping does not rotate the identity or invalidate old copies",
+        "Host filesystem permissions and secret-file cleanup remain caller responsibilities"
+      ],
+      "prerequisites": [
+        "Access-controlled passphrase file of 16..4096 bytes",
+        "New destinations; APG never overwrites files",
+        "Expected identity fingerprint when rewrapping"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9106",
+        "https://www.rfc-editor.org/rfc/rfc8439"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/key.generate",
+        "apg:operation/key.public",
+        "apg:operation/key.rewrap"
+      ]
+    },
+    {
+      "@id": "apg:application/manage-trust",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/identity-policy"
+      ],
+      "guidance": "Publish immutable snapshots and explicitly supply the approved pin to governed operations or MCP host configuration.",
+      "id": "manage-trust",
+      "keywords": [
+        "trust",
+        "policy",
+        "enrollment",
+        "allowlist",
+        "compare",
+        "merge"
+      ],
+      "label": "Enroll identities and reconcile trust snapshots",
+      "limitations": [
+        "Comparison and merge do not approve policy",
+        "No automatic revocation distribution or rollback protection; retain latest digest externally"
+      ],
+      "prerequisites": [
+        "Independently trusted identity fingerprints",
+        "Externally pinned snapshot digests and explicit approval of newly produced snapshots"
+      ],
+      "sources": [],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/trust.init",
+        "apg:operation/trust.add",
+        "apg:operation/trust.status",
+        "apg:operation/trust.compare",
+        "apg:operation/trust.merge"
+      ]
+    },
+    {
+      "@id": "apg:application/revoke-identity",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/identity-policy"
+      ],
+      "guidance": "Import the authenticated certificate into a new snapshot, then distribute and explicitly adopt its digest.",
+      "id": "revoke-identity",
+      "keywords": [
+        "revocation",
+        "compromise",
+        "retire",
+        "incident"
+      ],
+      "label": "Revoke an identity and enforce the revocation",
+      "limitations": [
+        "Certificate creation or verification alone does not enforce revocation",
+        "Existing ciphertext and signatures are not erased"
+      ],
+      "prerequisites": [
+        "Identity private key and passphrase to self-revoke",
+        "Pinned public identity and trust snapshot to import the certificate"
+      ],
+      "sources": [],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/key.revoke",
+        "apg:operation/revocation.verify",
+        "apg:operation/trust.revoke",
+        "apg:operation/trust.status"
+      ]
+    },
+    {
+      "@id": "apg:application/identity-validity",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/identity-policy"
+      ],
+      "guidance": "Issue a signed window, import it into a snapshot, and apply that policy to encrypt, sign and verify.",
+      "id": "identity-validity",
+      "keywords": [
+        "expiry",
+        "expiration",
+        "time",
+        "validity",
+        "schedule"
+      ],
+      "label": "Constrain an identity to a signed validity window",
+      "limitations": [
+        "trust.evaluate is advisory; caller-selected times never authorize execution",
+        "Enforcement uses the host clock",
+        "Validity imports can narrow existing windows only"
+      ],
+      "prerequisites": [
+        "Signer secret key and passphrase",
+        "Unix seconds with not_before strictly less than not_after",
+        "Pinned policy adopted by governed operations"
+      ],
+      "sources": [],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/key.validity",
+        "apg:operation/validity.verify",
+        "apg:operation/trust.validity",
+        "apg:operation/trust.evaluate"
+      ]
+    },
+    {
+      "@id": "apg:application/inspect-artifact",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/structural-validation"
+      ],
+      "guidance": "Use inspect to route an artifact, then explicitly invoke the appropriate authentication operation.",
+      "id": "inspect-artifact",
+      "keywords": [
+        "inspect",
+        "format",
+        "metadata",
+        "parse"
+      ],
+      "label": "Identify a native artifact and validate its structure",
+      "limitations": [
+        "Inspection does not authenticate the artifact or trust embedded metadata"
+      ],
+      "prerequisites": [
+        "Bounded native APG artifact file"
+      ],
+      "sources": [],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/inspect"
+      ]
+    },
+    {
+      "@id": "apg:application/openpgp-interoperability",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/protocol-interoperability"
+      ],
+      "guidance": "Select an OpenPGP implementation for this application; APG has no compatible command.",
+      "id": "openpgp-interoperability",
+      "keywords": [
+        "pgp",
+        "gpg",
+        "openpgp",
+        "import",
+        "email",
+        "compatibility"
+      ],
+      "label": "Exchange OpenPGP messages or GPG keys",
+      "limitations": [
+        "APG native envelopes, signatures and keys are not OpenPGP packets"
+      ],
+      "prerequisites": [
+        "A separately evaluated OpenPGP implementation"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9580"
+      ],
+      "support": "external_required",
+      "tools": []
+    },
+    {
+      "@id": "apg:application/secure-network-channel",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/channel-security"
+      ],
+      "guidance": "Use a complete transport protocol implementation; do not assemble a channel from APG file commands.",
+      "id": "secure-network-channel",
+      "keywords": [
+        "tls",
+        "https",
+        "network",
+        "transport",
+        "channel",
+        "session"
+      ],
+      "label": "Secure a live client-server connection",
+      "limitations": [
+        "APG file encryption is not a TLS handshake or record protocol"
+      ],
+      "prerequisites": [
+        "A separately evaluated TLS stack and peer authentication policy"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8446"
+      ],
+      "support": "external_required",
+      "tools": []
+    },
+    {
+      "@id": "apg:application/password-verifier-storage",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/password-verification"
+      ],
+      "guidance": "Use a dedicated salted password verifier API; do not use APG hash or treat key wrapping as login verification.",
+      "id": "password-verifier-storage",
+      "keywords": [
+        "password hashing",
+        "password database",
+        "login",
+        "credential",
+        "Argon2id"
+      ],
+      "label": "Store and verify user login passwords",
+      "limitations": [
+        "APG uses Argon2id internally but exposes no password verifier interface",
+        "APG hash is a fast file digest, not password hashing"
+      ],
+      "prerequisites": [
+        "A password hashing and verification implementation with application-specific resource policy"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9106"
+      ],
+      "support": "external_required",
+      "tools": []
+    },
+    {
+      "@id": "apg:application/multi-recipient-encryption",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/confidentiality"
+      ],
+      "guidance": "Use a protocol implementation designed for multiple recipients; APG provides no group-envelope command.",
+      "id": "multi-recipient-encryption",
+      "keywords": [
+        "group",
+        "multi recipient",
+        "many recipients",
+        "shared envelope"
+      ],
+      "label": "Encrypt one shared envelope for multiple recipients",
+      "limitations": [
+        "APG envelopes support exactly one recipient"
+      ],
+      "prerequisites": [
+        "An implementation with an explicit multi-recipient format and policy"
+      ],
+      "sources": [],
+      "support": "external_required",
+      "tools": []
+    },
+    {
+      "@id": "apg:application/post-quantum-protection",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/post-quantum-security",
+        "apg:goal/confidentiality"
+      ],
+      "guidance": "Create a hybrid identity with apg key generate --identity apg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
+      "id": "post-quantum-protection",
+      "keywords": [
+        "post quantum",
+        "pqc",
+        "quantum resistant",
+        "harvest now decrypt later",
+        "ml kem",
+        "kyber",
+        "hybrid",
+        "encryption"
+      ],
+      "label": "Hybrid post-quantum encryption against future quantum attacks",
+      "limitations": [
+        "Fingerprints and snapshot digests use SHA-256; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
+        "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review",
+        "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only",
+        "Software secret keys only; hardware identities have no post-quantum suite"
+      ],
+      "prerequisites": [
+        "Generate the recipient with key.generate identity apg-public-hybrid-v1",
+        "Recipient hybrid public identity and independently trusted fingerprint"
+      ],
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.203",
+        "https://www.rfc-editor.org/rfc/rfc7748",
+        "https://www.rfc-editor.org/rfc/rfc5869"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/key.generate",
+        "apg:operation/key.public",
+        "apg:operation/encrypt",
+        "apg:operation/decrypt"
+      ]
+    },
+    {
+      "@id": "apg:application/quantum-resistant-signing",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/quantum-resistant-authenticity"
+      ],
+      "guidance": "Sign with a hybrid identity; every signature, revocation and validity certificate then requires both Ed25519 and ML-DSA-65 to verify, so it stays unforgeable while either holds.",
+      "id": "quantum-resistant-signing",
+      "keywords": [
+        "pq signing",
+        "quantum resistant signing",
+        "ml dsa",
+        "dilithium",
+        "composite signing"
+      ],
+      "label": "Require quantum-resistant signing",
+      "limitations": [
+        "Composite ed25519-mldsa65 only; no SLH-DSA or standalone ML-DSA",
+        "Software keys only; PKCS#11, TPM and KMS identities sign with ECDSA P-384",
+        "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL",
+        "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"
+      ],
+      "prerequisites": [
+        "A hybrid identity from key.generate identity apg-public-hybrid-v1",
+        "The signer's hybrid public identity and independently trusted fingerprint"
+      ],
+      "sources": [
+        "https://doi.org/10.6028/NIST.FIPS.204"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/key.generate",
+        "apg:operation/sign",
+        "apg:operation/verify"
+      ]
+    },
+    {
+      "@id": "apg:application/hardware-key-custody",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/hardware-custody"
+      ],
+      "guidance": "Create the identity on a token with hardware.key.generate, bind vendor-generated keys with hardware.key.bind, or create TPM keys with tpm.key.generate; then use the resulting file as the key input. MCP hosts can add --key-custody hardware to refuse software keys.",
+      "id": "hardware-key-custody",
+      "keywords": [
+        "hardware",
+        "hsm",
+        "token",
+        "smartcard",
+        "pkcs11",
+        "cryptoki",
+        "tpm",
+        "trusted platform module",
+        "non exportable",
+        "P-384",
+        "ECDSA",
+        "ECDH"
+      ],
+      "label": "Keep private keys in a hardware token or HSM",
+      "limitations": [
+        "P-384 identities only; APG never substitutes another curve",
+        "Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others, TPMs and KMS release one per-envelope ECDH shared secret into process memory",
+        "Protection flags are self-reported token attributes, not vendor attestation; counterparties cannot see custody",
+        "The module runs inside the APG process with its privileges",
+        "No token PIN, object or policy administration",
+        "TPM key files are the only copy of the wrapped keys and load only in the originating TPM; tpm2-pkcs11 tokens lack ECDH and cannot decrypt through PKCS#11"
+      ],
+      "prerequisites": [
+        "PKCS#11: an apg build with the pkcs11 feature, host-set APG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
+        "TPM: a Linux apg build with the tpm feature, host-set APG_TPM_TCTI, a TPM 2.0 supporting P-384 and an owner hierarchy with empty authorization",
+        "PIN in an access-controlled file"
+      ],
+      "sources": [
+        "https://docs.oasis-open.org/pkcs11/pkcs11-spec/v3.1/pkcs11-spec-v3.1.html",
+        "https://trustedcomputinggroup.org/resource/tpm-library-specification/",
+        "https://doi.org/10.6028/NIST.FIPS.186-5",
+        "https://doi.org/10.6028/NIST.SP.800-56Ar3"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/hardware.tokens",
+        "apg:operation/hardware.key.generate",
+        "apg:operation/hardware.key.bind",
+        "apg:operation/tpm.info",
+        "apg:operation/tpm.key.generate",
+        "apg:operation/key.public",
+        "apg:operation/decrypt",
+        "apg:operation/sign",
+        "apg:operation/key.revoke",
+        "apg:operation/key.validity"
+      ]
+    },
+    {
+      "@id": "apg:application/managed-kms-custody",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/service-custody"
+      ],
+      "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set APG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
+      "id": "managed-kms-custody",
+      "keywords": [
+        "aws kms",
+        "kms",
+        "cloud key",
+        "managed key",
+        "key management service",
+        "govcloud"
+      ],
+      "label": "Keep private keys in a cloud key management service",
+      "limitations": [
+        "AWS KMS only; APG never creates KMS keys",
+        "SSO profiles need a current `aws sso login`; APG never refreshes SSO tokens",
+        "Every private-key operation is a billable network call to AWS",
+        "Decryption releases one per-envelope shared secret into process memory"
+      ],
+      "prerequisites": [
+        "An apg build with the kms feature",
+        "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret",
+        "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling"
+      ],
+      "sources": [
+        "https://docs.aws.amazon.com/kms/latest/APIReference/API_DeriveSharedSecret.html",
+        "https://docs.aws.amazon.com/kms/latest/APIReference/API_Sign.html",
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv.html"
+      ],
+      "support": "implemented",
+      "tools": [
+        "apg:operation/kms.key.bind",
+        "apg:operation/key.public",
+        "apg:operation/decrypt",
+        "apg:operation/sign",
+        "apg:operation/key.revoke",
+        "apg:operation/key.validity"
+      ]
+    },
+    {
+      "@id": "apg:application/validated-cryptographic-module",
+      "@type": "apg:CryptographicApplication",
+      "goals": [
+        "apg:goal/validated-module"
+      ],
+      "guidance": "Do not infer validation from an algorithm name; APG has no validated mode. Hardware identities keep private-key operations in the PKCS#11 module, whose own validation status and approved-mode configuration must be verified separately.",
+      "id": "validated-cryptographic-module",
+      "keywords": [
+        "fips",
+        "validated",
+        "compliance",
+        "certified"
+      ],
+      "label": "Require a FIPS-validated cryptographic module",
+      "limitations": [
+        "APG makes no FIPS validation claim",
+        "Outside in-token decryption, the envelope KDF and AES-GCM for hardware identities run in IronCrypto, which holds no CMVP certificate"
+      ],
+      "prerequisites": [
+        "Independent verification of the required module validation and exact deployment configuration"
+      ],
+      "sources": [],
+      "support": "external_required",
+      "tools": []
+    },
+    {
+      "@id": "apg:goal/channel-security",
+      "@type": "apg:SecurityGoal",
+      "label": "channel-security"
+    },
+    {
+      "@id": "apg:goal/ciphertext-integrity",
+      "@type": "apg:SecurityGoal",
+      "label": "ciphertext-integrity"
+    },
+    {
+      "@id": "apg:goal/confidentiality",
+      "@type": "apg:SecurityGoal",
+      "label": "confidentiality"
+    },
+    {
+      "@id": "apg:goal/content-authenticity",
+      "@type": "apg:SecurityGoal",
+      "label": "content-authenticity"
+    },
+    {
+      "@id": "apg:goal/content-identification",
+      "@type": "apg:SecurityGoal",
+      "label": "content-identification"
+    },
+    {
+      "@id": "apg:goal/content-integrity",
+      "@type": "apg:SecurityGoal",
+      "label": "content-integrity"
+    },
+    {
+      "@id": "apg:goal/hardware-custody",
+      "@type": "apg:SecurityGoal",
+      "label": "hardware-custody"
+    },
+    {
+      "@id": "apg:goal/identity-policy",
+      "@type": "apg:SecurityGoal",
+      "label": "identity-policy"
+    },
+    {
+      "@id": "apg:goal/password-verification",
+      "@type": "apg:SecurityGoal",
+      "label": "password-verification"
+    },
+    {
+      "@id": "apg:goal/post-quantum-security",
+      "@type": "apg:SecurityGoal",
+      "label": "post-quantum-security"
+    },
+    {
+      "@id": "apg:goal/protocol-interoperability",
+      "@type": "apg:SecurityGoal",
+      "label": "protocol-interoperability"
+    },
+    {
+      "@id": "apg:goal/quantum-resistant-authenticity",
+      "@type": "apg:SecurityGoal",
+      "label": "quantum-resistant-authenticity"
+    },
+    {
+      "@id": "apg:goal/secret-protection",
+      "@type": "apg:SecurityGoal",
+      "label": "secret-protection"
+    },
+    {
+      "@id": "apg:goal/service-custody",
+      "@type": "apg:SecurityGoal",
+      "label": "service-custody"
+    },
+    {
+      "@id": "apg:goal/structural-validation",
+      "@type": "apg:SecurityGoal",
+      "label": "structural-validation"
+    },
+    {
+      "@id": "apg:goal/validated-module",
+      "@type": "apg:SecurityGoal",
+      "label": "validated-module"
+    },
+    {
+      "@id": "apg:operation/knowledge",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/knowledge-advisory"
+      ],
+      "description": "Read the centralized cryptography application knowledgebase and selection ontology",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "knowledge",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_knowledge",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:KnowledgeBase"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "knowledge"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/knowledge.search",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/knowledge-advisory"
+      ],
+      "description": "Find application guidance by keywords or application ID; advisory only, no execution",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "knowledge.search",
+      "inputs": [
+        "apg:KnowledgeQuery"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_knowledge_search",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:KnowledgeSelection"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "knowledge.search"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/request.validate",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/preflight-only"
+      ],
+      "description": "Preflight candidate Request JSON without execution, filesystem access or authentication",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "request.validate",
+      "inputs": [
+        "apg:CandidateRequest"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_request_validate",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:RequestValidation"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "request.validate"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/trust.compare",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/snapshot-reconciliation"
+      ],
+      "description": "Compare two pinned snapshots without approving or publishing either",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.compare",
+      "inputs": [
+        "apg:TrustPolicy"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_compare",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustComparison"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.compare"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/trust.merge",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/snapshot-reconciliation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Reconcile two pinned snapshots, retaining revocations and nested validity restrictions",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.merge",
+      "inputs": [
+        "apg:TrustPolicy"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_merge",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.merge"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/key.validity",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/certificate-not-enforcement",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Sign an identity validity window in Unix seconds",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.validity",
+      "inputs": [
+        "apg:SecretKey",
+        "apg:Passphrase",
+        "apg:Fingerprint",
+        "apg:UnixTime"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_key_validity",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Validity"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "key.validity"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/validity.verify",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/certificate-not-enforcement"
+      ],
+      "description": "Authenticate a validity certificate without applying policy",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "validity.verify",
+      "inputs": [
+        "apg:Validity",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_validity_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:ValidityVerification"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "validity.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/trust.validity",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/no-clobber",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Import or narrow signed validity into a new v2 snapshot",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.validity",
+      "inputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest",
+        "apg:Validity",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_validity",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.validity"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/trust.evaluate",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Advisory evaluation at an explicit Unix time; never authorizes operations",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.evaluate",
+      "inputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest",
+        "apg:Fingerprint",
+        "apg:UnixTime"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_evaluate",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustEvaluation"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.evaluate"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/trust.init",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/no-clobber",
+        "apg:constraint/snapshot-policy"
+      ],
+      "description": "Create an empty immutable trust snapshot",
+      "deterministic": true,
+      "effects": [
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.init",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_init",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.init"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/trust.add",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/no-clobber",
+        "apg:constraint/snapshot-policy"
+      ],
+      "description": "Enroll a pinned identity into a new trust snapshot",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.add",
+      "inputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_add",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.add"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/trust.revoke",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/no-clobber",
+        "apg:constraint/snapshot-policy"
+      ],
+      "description": "Retain a verified revocation in a new trust snapshot",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.revoke",
+      "inputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest",
+        "apg:Revocation",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_revoke",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.revoke"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/trust.status",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256",
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/snapshot-policy"
+      ],
+      "description": "Report enrollment and revocation in the pinned snapshot",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "trust.status",
+      "inputs": [
+        "apg:TrustStore",
+        "apg:TrustDigest",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_trust_status",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TrustStatus"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "trust.status"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/discover",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Discover capabilities and contracts",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "discover",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_discover",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:CapabilityCatalog"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "discover"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/schema",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Get request, result and artifact JSON Schemas",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "schema",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_schema",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Schema"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "schema"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/ontology",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Get the complete APG JSON-LD graph",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "ontology",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_ontology",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Ontology"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "ontology"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/algorithms",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Get the upstream IronCrypto algorithm ontology",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "algorithms",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_algorithms",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:AlgorithmCatalog"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "algorithms"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/plan",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Describe a request without accessing files",
+      "deterministic": true,
+      "effects": [],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "plan",
+      "inputs": [
+        "apg:Request"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_plan",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Plan"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "plan"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/key.generate",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-256",
+        "ic:ml-kem-768",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/software-key-only",
+        "apg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Generate independent encryption and signing keys",
+      "deterministic": false,
+      "effects": [
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.generate",
+      "inputs": [
+        "apg:Passphrase"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_key_generate",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:SecretKey"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "key.generate"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/key.public",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-256",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-kem-768",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/key-provider"
+      ],
+      "description": "Unlock and export the public identity",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.public",
+      "inputs": [
+        "apg:SecretKey",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_key_public",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:PublicKey"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "key.public"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/encrypt",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:ecdh-p384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768",
+        "ic:sha2-256",
+        "ic:ed25519"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/no-clobber",
+        "apg:constraint/no-sender-authentication",
+        "apg:constraint/size-bound",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Encrypt for one explicitly pinned recipient",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "encrypt",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_encrypt",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:Envelope"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "encrypt"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/key.rewrap",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-256",
+        "ic:ml-kem-768",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/old-copies-remain",
+        "apg:constraint/software-key-only"
+      ],
+      "description": "Protect the same identity with a new passphrase in a new file",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.rewrap",
+      "inputs": [
+        "apg:SecretKey",
+        "apg:Passphrase",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_key_rewrap",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:SecretKey"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "key.rewrap"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/key.revoke",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/certificate-not-enforcement",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Create a signed self-revocation certificate for the entire identity",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.revoke",
+      "inputs": [
+        "apg:SecretKey",
+        "apg:Passphrase",
+        "apg:Fingerprint",
+        "apg:RevocationReason"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_key_revoke",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Revocation"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "key.revoke"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/revocation.verify",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/certificate-not-enforcement"
+      ],
+      "description": "Authenticate a self-revocation certificate without applying policy",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "revocation.verify",
+      "inputs": [
+        "apg:Revocation",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_revocation_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:RevocationVerification"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "revocation.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/decrypt",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:argon2id",
+        "ic:ecdh-p384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/authenticate-before-release",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Authenticate before releasing plaintext",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "decrypt",
+      "inputs": [
+        "apg:Envelope",
+        "apg:SecretKey",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_decrypt",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Plaintext"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "decrypt"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/sign",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Create a domain-separated detached signature",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "sign",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:SecretKey",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_sign",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:Signature"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "sign"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/verify",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/exact-bytes",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Verify exact bytes against a pinned signer",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "verify",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:Signature",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_verify",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:Verification"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/hash",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [],
+      "description": "Compute a SHA-256 content digest",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "hash",
+      "inputs": [
+        "apg:Plaintext"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_hash",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Digest"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "hash"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/inspect",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/untrusted-metadata"
+      ],
+      "description": "Validate artifact structure and read metadata without establishing external trust",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "inspect",
+      "inputs": [
+        "apg:Artifact"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_inspect",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Inspection"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "inspect"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/hardware.tokens",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/host-provider"
+      ],
+      "description": "List tokens behind the host-configured PKCS#11 module and their P-384 mechanism support",
+      "deterministic": false,
+      "effects": [
+        "load_provider"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "hardware.tokens",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_hardware_tokens",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TokenInventory"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "hardware.tokens"
+      },
+      "retry": "Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."
+    },
+    {
+      "@id": "apg:operation/hardware.key.generate",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/host-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/non-exportable-key",
+        "apg:constraint/possession-check",
+        "apg:constraint/token-objects-persist",
+        "apg:constraint/no-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Generate non-exportable P-384 encryption and signing key pairs on a token and write a public reference",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "create_token_object",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "hardware.key.generate",
+      "inputs": [
+        "apg:TokenSerial",
+        "apg:KeyLabel",
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_hardware_key_generate",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:HardwareKeyReference"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "hardware.key.generate"
+      },
+      "retry": "Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."
+    },
+    {
+      "@id": "apg:operation/hardware.key.bind",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/host-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/non-exportable-key",
+        "apg:constraint/possession-check",
+        "apg:constraint/no-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Reference existing non-exportable P-384 token keys after proving possession",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "hardware.key.bind",
+      "inputs": [
+        "apg:TokenSerial",
+        "apg:KeyId",
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_hardware_key_bind",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:HardwareKeyReference"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "hardware.key.bind"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/kms.key.bind",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/kms-provider",
+        "apg:constraint/non-exportable-key",
+        "apg:constraint/possession-check",
+        "apg:constraint/no-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Adopt two existing AWS KMS ECC_NIST_P384 keys as an identity after proving possession",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "network",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "kms.key.bind",
+      "inputs": [
+        "apg:AwsRegion",
+        "apg:KmsKeyArn"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_kms_key_bind",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:KmsKeyFile"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "kms.key.bind"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/tpm.info",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider"
+      ],
+      "description": "Report the host TPM's identification, P-384 support and owner-hierarchy readiness",
+      "deterministic": false,
+      "effects": [
+        "load_provider"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.info",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_info",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TpmInventory"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.info"
+      },
+      "retry": "Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."
+    },
+    {
+      "@id": "apg:operation/tpm.key.generate",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/tpm-provider",
+        "apg:constraint/pin-channel",
+        "apg:constraint/non-exportable-key",
+        "apg:constraint/possession-check",
+        "apg:constraint/no-attestation",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Create non-exportable P-384 encryption and signing keys in the TPM and write their wrapped blobs",
+      "deterministic": false,
+      "effects": [
+        "load_provider",
+        "read_pin",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "tpm.key.generate",
+      "inputs": [
+        "apg:TokenPin"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_tpm_key_generate",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:TpmKeyFile"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "tpm.key.generate"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    }
+  ],
+  "@id": "apg:knowledgebase",
+  "advisory": true,
+  "execution": false,
+  "reviewed": "2026-09-28",
+  "scope": "Curated APG application guidance, not exhaustive cryptography coverage",
+  "search": {
+    "no_match": "No recommendation; consult catalog or refine keywords",
+    "operation": "knowledge.search",
+    "ordering": "catalog order; no suitability ranking",
+    "query": "1..256 Unicode characters, at least one alphanumeric token; case-insensitive AND substring matching over IDs, labels, keywords, goals and operation names"
+  },
+  "upstream_algorithms": {
+    "meaning": "Primitive availability does not imply APG protocol support",
+    "operation": "algorithms"
+  },
+  "version": "1.8.0"
+}

@@ -1,0 +1,182 @@
+"""Exercise exported APG constraints with an independent Draft 2020-12 validator."""
+import copy
+import json
+from pathlib import Path
+from jsonschema import Draft202012Validator
+
+ROOT = Path(__file__).resolve().parents[2]
+CHECKS = 0
+
+
+def check(schema, value, expected=True):
+    global CHECKS
+    actual = Draft202012Validator(schema).is_valid(value)
+    assert actual == expected, (value, list(Draft202012Validator(schema).iter_errors(value)))
+    CHECKS += 1
+
+
+def main():
+    schemas = {name: json.loads((ROOT / f"schemas/{name}.json").read_text()) for name in ["call", "request", "response", "outcome", "formats", "mcp-tools"]}
+    for name, schema in schemas.items():
+        if name == "formats":
+            for value in schema.values():
+                Draft202012Validator.check_schema(value)
+        elif name == "mcp-tools":
+            for tool in schema["tools"]:
+                Draft202012Validator.check_schema(tool["inputSchema"])
+                Draft202012Validator.check_schema(tool["outputSchema"])
+        else:
+            Draft202012Validator.check_schema(schema)
+    vectors = json.loads((ROOT / "tests/vectors/native-v1.json").read_text())
+    for application in json.loads((ROOT / "knowledge/applications.json").read_text()):
+        check(schemas["formats"]["knowledge_application"], application)
+        check(schemas["formats"]["knowledge_application"], {**application, "support": "maybe"}, False)
+    artifacts = [("public_key", vectors["public"]), ("secret_key", vectors["secret"]), ("validity", vectors["validity"])]
+    artifacts += [("revocation", value) for value in vectors["revocations"]]
+    artifacts += [(name, item[name]) for item in vectors["messages"] for name in ["envelope", "signature"]]
+    artifacts += [("trust_store", item["snapshot"]) for item in vectors["snapshots"]]
+    p384 = json.loads((ROOT / "tests/vectors/native-p384-v1.json").read_text())
+    artifacts += [("public_key", p384["public"]), ("validity", p384["validity"])]
+    artifacts += [("revocation", value) for value in p384["revocations"]]
+    artifacts += [(name, item[name]) for item in p384["messages"] for name in ["envelope", "signature"]]
+    artifacts += [("trust_store", item["snapshot"]) for item in p384["snapshots"]]
+    hybrid = json.loads((ROOT / "tests/vectors/native-hybrid-v1.json").read_text())
+    artifacts += [("public_key", hybrid["public"]), ("secret_key", hybrid["secret"]),
+                  ("revocation", hybrid["revocation"]), ("validity", hybrid["validity"])]
+    artifacts += [(name, item[name]) for item in hybrid["messages"] for name in ["envelope", "signature"]]
+    for name, artifact in artifacts:
+        schema = schemas["formats"][name]
+        check(schema, artifact)
+        extra = {**artifact, "unknown": True}
+        check(schema, extra, False)
+        for field, rule in schema["properties"].items():
+            if "const" in rule:
+                check(schema, {**artifact, field: "unsupported"}, False)
+            if "minLength" in rule:
+                width = rule["minLength"]
+                for bad in ["0" * (width - 1), "0" * (width + 1), "G" * width, "A" * width, "0" * (width - 1) + "\n"]:
+                    check(schema, {**artifact, field: bad}, False)
+    # Suite-conditional encodings: each suite accepts only its own key and signature widths.
+    v1_public, p384_public = vectors["public"], p384["public"]
+    check(schemas["formats"]["public_key"], {**v1_public, "format": "apg-public-p384-v1"}, False)
+    check(schemas["formats"]["public_key"], {**p384_public, "format": "apg-public-v1"}, False)
+    check(schemas["formats"]["public_key"], {**p384_public, "signing_key": "02" + p384_public["signing_key"][2:]}, False)
+    check(schemas["formats"]["secret_key"], {**vectors["secret"], "public": p384_public}, False)
+    p384_envelope, v1_envelope = p384["messages"][2]["envelope"], vectors["messages"][2]["envelope"]
+    check(schemas["formats"]["envelope"], {**p384_envelope, "suite": v1_envelope["suite"]}, False)
+    check(schemas["formats"]["envelope"], {**v1_envelope, "suite": p384_envelope["suite"]}, False)
+    for name, value in [("signature", p384["messages"][2]["signature"]), ("validity", p384["validity"]), ("revocation", p384["revocations"][0])]:
+        check(schemas["formats"][name], {**value, "algorithm": "ed25519"}, False)
+        check(schemas["formats"][name], {**value, "algorithm": "ecdsa-p256-sha256"}, False)
+    # Each secret format binds exactly its own identity suite and seed length.
+    check(schemas["formats"]["secret_key"], {**hybrid["secret"], "format": "apg-secret-v1"}, False)
+    check(schemas["formats"]["secret_key"], {**vectors["secret"], "format": "apg-secret-hybrid-v1"}, False)
+    check(schemas["formats"]["secret_key"], {**hybrid["secret"], "public": v1_public}, False)
+    check(schemas["formats"]["public_key"], {**hybrid["public"], "format": "apg-public-v1"}, False)
+    composite = hybrid["messages"][2]["signature"]
+    check(schemas["formats"]["signature"], {**composite, "algorithm": "ed25519"}, False)
+    check(schemas["formats"]["signature"], {**composite, "signature": composite["signature"][:128]}, False)
+    hybrid_envelope = hybrid["messages"][2]["envelope"]
+    check(schemas["formats"]["envelope"], {**hybrid_envelope, "suite": v1_envelope["suite"]}, False)
+    check(schemas["formats"]["envelope"], {**v1_envelope, "suite": hybrid_envelope["suite"]}, False)
+    reference = {"format": "apg-pkcs11-key-v1", "public": p384_public,
+                 "token": {"serial": "0123456789abcdef", "label": "apg-test", "manufacturer": "Test", "model": "Oracle"},
+                 "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16}
+    tpm_key = json.loads((ROOT / "tests/vectors/tpm-key-swtpm.json").read_text())
+    tpm_schema = schemas["formats"]["tpm_key"]
+    check(tpm_schema, tpm_key)
+    check(tpm_schema, {**tpm_key, "parent": "another-template"}, False)
+    check(tpm_schema, {**tpm_key, "unknown": True}, False)
+    check(tpm_schema, {**tpm_key, "encryption_key": {**tpm_key["encryption_key"], "private": "ABC"}}, False)
+    check(tpm_schema, {**tpm_key, "tpm": {**tpm_key["tpm"], "manufacturer": "TOOLONG"}}, False)
+    kms_key = {"format": "apg-kms-key-v1", "public": p384_public, "region": "us-gov-west-1",
+               "encryption_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/11111111-1111-1111-1111-111111111111",
+               "signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/22222222-2222-2222-2222-222222222222"}
+    kms_schema = schemas["formats"]["kms_key"]
+    check(kms_schema, kms_key)
+    check(kms_schema, {**kms_key, "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:alias/apg"}, False)
+    check(kms_schema, {**kms_key, "region": "US-EAST-1"}, False)
+    check(kms_schema, {**kms_key, "unknown": True}, False)
+    hardware = schemas["formats"]["hardware_key"]
+    check(hardware, reference)
+    check(hardware, {**reference, "unknown": True}, False)
+    check(hardware, {**reference, "format": "apg-pkcs11-key-v2"}, False)
+    for field, bad in [("encryption_key_id", ""), ("encryption_key_id", "0"), ("encryption_key_id", "AB"), ("signing_key_id", "ab" * 65)]:
+        check(hardware, {**reference, field: bad}, False)
+    for field, bad in [("serial", ""), ("serial", "x" * 17), ("model", "x" * 17), ("label", "x" * 33)]:
+        check(hardware, {**reference, "token": {**reference["token"], field: bad}}, False)
+    envelope = vectors["messages"][-1]["envelope"]
+    for valid in ["", "00", "abCD", envelope["ciphertext"].upper()]:
+        check(schemas["formats"]["envelope"], {**envelope, "ciphertext": valid})
+    for bad in ["0", "gg", "00\n", "00\r\n", " 00", "00 ", "éé"]:
+        check(schemas["formats"]["envelope"], {**envelope, "ciphertext": bad}, False)
+    for name in ["validity"]:
+        for field, lower, upper in [("not_before", 0, 253402300798), ("not_after", 1, 253402300799)]:
+            for value in [lower, upper]:
+                check(schemas["formats"][name], {**vectors[name], field: value})
+            for value in [lower - 1, upper + 1, "123", 1.5, None]:
+                check(schemas["formats"][name], {**vectors[name], field: value}, False)
+    store = copy.deepcopy(vectors["snapshots"][0]["snapshot"])
+    store["entries"][0]["validity"] = vectors["validity"]
+    check(schemas["formats"]["trust_store"], store, False)
+    store["format"] = "apg-trust-v2"
+    check(schemas["formats"]["trust_store"], store)
+    store["format"] = "apg-trust-v3"
+    check(schemas["formats"]["trust_store"], store, False)
+    store["format"] = "apg-trust-v2"
+    # Shape-only fixtures: identity uniqueness is a semantic runtime check.
+    store["entries"] *= 256
+    check(schemas["formats"]["trust_store"], store)
+    store["entries"].append(store["entries"][0])
+    check(schemas["formats"]["trust_store"], store, False)
+    tools = {tool["name"]: tool["inputSchema"] for tool in schemas["mcp-tools"]["tools"]}
+    pin = "ab" * 32
+    policy = {"store": "snapshot", "expected_digest": pin}
+    operations = 0
+    for variant in schemas["request"]["oneOf"]:
+        operation = variant["properties"]["operation"]["const"]
+        values = {"operation": operation}
+        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2"}
+        for field in variant["required"]:
+            if field != "operation":
+                values[field] = defaults.get(field, "path")
+        check(schemas["request"], values)
+        call = {"protocol": "apg/1", "id": "schema", "request": values}
+        check(schemas["call"], call)
+        check(schemas["call"], {**call, "protocol": "apg/2"}, False)
+        arguments = {k: v for k, v in values.items() if k != "operation"}
+        tool_schema = tools["apg_" + operation.replace(".", "_")]
+        check(tool_schema, arguments)
+        if operation == "knowledge.search":
+            for query, valid in [("", False), ("a" * 257, False), ("é" * 256, True), ("file digest", True)]:
+                check(tool_schema, {"query": query}, valid)
+        for field in ["expected_fingerprint", "expected_digest"]:
+            if field in values:
+                for bad in ["short", pin.upper(), "g" * 64, pin + "\n"]:
+                    malformed = {**values, field: bad}
+                    check(schemas["request"], malformed, False)
+                    check(schemas["request"], {"operation": "plan", "request": malformed}, False)
+                    check(tool_schema, {**arguments, field: bad}, False)
+        for field in ["base", "candidate", "incoming", "policy"]:
+            if field in variant["properties"]:
+                check(tool_schema, {**arguments, field: {"store": "snapshot", "expected_digest": "bad"}}, False)
+        for field in ["not_before", "not_after", "at_time"]:
+            if field in values:
+                for bad in [-1, 253402300800, "123", 1.5]:
+                    check(tool_schema, {**arguments, field: bad}, False)
+        for field in ["encryption_key_id", "signing_key_id"]:
+            if field in values:
+                for bad in ["", "0", "AB", "ab" * 65]:
+                    check(tool_schema, {**arguments, field: bad}, False)
+        if operation == "kms.key.bind":
+            for bad in ["alias", "arn:aws:kms:us-east-1:123:key/1", "arn:aws:s3:us-east-1:123456789012:key/1"]:
+                check(tool_schema, {**arguments, "encryption_key_arn": bad}, False)
+        if "token_serial" in values:
+            for bad in ["", "x" * 17]:
+                check(tool_schema, {**arguments, "token_serial": bad}, False)
+        operations += 1
+    print(json.dumps({"ok": True, "schema_checks": CHECKS, "operations": operations}))
+
+
+if __name__ == "__main__":
+    main()

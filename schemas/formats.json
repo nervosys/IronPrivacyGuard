@@ -1,0 +1,1643 @@
+{
+  "envelope": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "suite": {
+              "const": "x25519-hkdf-sha256-chacha20poly1305"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ephemeral_key": {
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "suite": {
+              "const": "p384-x963kdf-sha384-aes256gcm"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ephemeral_key": {
+              "pattern": "^04[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "suite": {
+              "const": "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ephemeral_key": {
+              "pattern": "^[0-9a-f]{2240}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "ciphertext": {
+        "not": {
+          "pattern": "[^0-9a-fA-F]"
+        },
+        "pattern": "^([0-9a-fA-F]{2})*$",
+        "type": "string"
+      },
+      "ephemeral_key": {
+        "description": "Sender ephemeral public key in the envelope suite; hybrid envelopes prefix the ML-KEM-768 ciphertext.",
+        "maxLength": 2240,
+        "minLength": 64,
+        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-envelope-v1",
+        "type": "string"
+      },
+      "nonce": {
+        "maxLength": 24,
+        "minLength": 24,
+        "pattern": "^[0-9a-f]{24}$",
+        "type": "string"
+      },
+      "recipient": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "suite": {
+        "enum": [
+          "x25519-hkdf-sha256-chacha20poly1305",
+          "p384-x963kdf-sha384-aes256gcm",
+          "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+        ],
+        "type": "string"
+      },
+      "tag": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "suite",
+      "recipient",
+      "ephemeral_key",
+      "nonce",
+      "ciphertext",
+      "tag"
+    ],
+    "title": "Envelope",
+    "type": "object"
+  },
+  "hardware_key": {
+    "$defs": {
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "apg-public-v1",
+              "apg-public-p384-v1",
+              "apg-public-hybrid-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      },
+      "TokenBinding": {
+        "additionalProperties": false,
+        "description": "Token identity copied from PKCS#11 token information, trailing blanks removed.\nEvery field must match before a reference is used.",
+        "properties": {
+          "label": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "manufacturer": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "model": {
+            "maxLength": 16,
+            "type": "string"
+          },
+          "serial": {
+            "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+            "maxLength": 16,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "serial",
+          "label",
+          "manufacturer",
+          "model"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "A non-secret reference to one P-384 ECDH key pair and one P-384 ECDSA key pair\non a specific token. Possession of this file grants nothing without the PIN.",
+    "properties": {
+      "encryption_key_id": {
+        "maxLength": 128,
+        "minLength": 2,
+        "pattern": "^([0-9a-f]{2}){1,64}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-pkcs11-key-v1",
+        "type": "string"
+      },
+      "public": {
+        "$ref": "#/$defs/PublicKey",
+        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+      },
+      "signing_key_id": {
+        "maxLength": 128,
+        "minLength": 2,
+        "pattern": "^([0-9a-f]{2}){1,64}$",
+        "type": "string"
+      },
+      "token": {
+        "$ref": "#/$defs/TokenBinding"
+      }
+    },
+    "required": [
+      "format",
+      "public",
+      "token",
+      "encryption_key_id",
+      "signing_key_id"
+    ],
+    "title": "HardwareKey",
+    "type": "object"
+  },
+  "kms_key": {
+    "$defs": {
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "apg-public-v1",
+              "apg-public-p384-v1",
+              "apg-public-hybrid-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "A P-384 identity whose private keys are two existing AWS KMS keys: an\nECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. The file is\npublic; using it requires the host's AWS credentials and KMS key permissions.",
+    "properties": {
+      "encryption_key_arn": {
+        "maxLength": 160,
+        "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-kms-key-v1",
+        "type": "string"
+      },
+      "public": {
+        "$ref": "#/$defs/PublicKey",
+        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+      },
+      "region": {
+        "maxLength": 32,
+        "minLength": 1,
+        "pattern": "^[a-z0-9-]+$",
+        "type": "string"
+      },
+      "signing_key_arn": {
+        "maxLength": 160,
+        "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "public",
+      "region",
+      "encryption_key_arn",
+      "signing_key_arn"
+    ],
+    "title": "KmsKey",
+    "type": "object"
+  },
+  "knowledge_application": {
+    "$defs": {
+      "Support": {
+        "enum": [
+          "implemented",
+          "external_required"
+        ],
+        "type": "string"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "goals": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "guidance": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "keywords": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "label": {
+        "type": "string"
+      },
+      "limitations": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "operations": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "prerequisites": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "sources": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "support": {
+        "$ref": "#/$defs/Support"
+      }
+    },
+    "required": [
+      "id",
+      "label",
+      "keywords",
+      "goals",
+      "support",
+      "operations",
+      "prerequisites",
+      "limitations",
+      "guidance",
+      "sources"
+    ],
+    "title": "Application",
+    "type": "object"
+  },
+  "public_key": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-public-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "encryption_key": {
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "signing_key": {
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-public-p384-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "encryption_key": {
+              "pattern": "^04[0-9a-f]{192}$"
+            },
+            "signing_key": {
+              "pattern": "^04[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-public-hybrid-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "encryption_key": {
+              "pattern": "^[0-9a-f]{2432}$"
+            },
+            "signing_key": {
+              "pattern": "^[0-9a-f]{3968}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "encryption_key": {
+        "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+        "maxLength": 3968,
+        "minLength": 64,
+        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+        "type": "string"
+      },
+      "fingerprint": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "format": {
+        "enum": [
+          "apg-public-v1",
+          "apg-public-p384-v1",
+          "apg-public-hybrid-v1"
+        ],
+        "type": "string"
+      },
+      "signing_key": {
+        "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+        "maxLength": 3968,
+        "minLength": 64,
+        "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "encryption_key",
+      "signing_key",
+      "fingerprint"
+    ],
+    "title": "PublicKey",
+    "type": "object"
+  },
+  "revocation": {
+    "$defs": {
+      "RevocationReason": {
+        "enum": [
+          "compromised",
+          "superseded",
+          "retired"
+        ],
+        "type": "string"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{128}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-sha384"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6746}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65"
+        ],
+        "type": "string"
+      },
+      "fingerprint": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-revocation-v1",
+        "type": "string"
+      },
+      "reason": {
+        "$ref": "#/$defs/RevocationReason"
+      },
+      "scope": {
+        "const": "entire-identity",
+        "type": "string"
+      },
+      "signature": {
+        "maxLength": 6746,
+        "minLength": 128,
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "fingerprint",
+      "scope",
+      "reason",
+      "algorithm",
+      "signature"
+    ],
+    "title": "Revocation",
+    "type": "object"
+  },
+  "secret_key": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-secret-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ciphertext": {
+              "pattern": "^[0-9a-f]{128}$"
+            },
+            "public": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-secret-hybrid-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ciphertext": {
+              "pattern": "^[0-9a-f]{320}$"
+            },
+            "public": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "ciphertext": {
+        "maxLength": 320,
+        "minLength": 128,
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{320})$",
+        "type": "string"
+      },
+      "format": {
+        "enum": [
+          "apg-secret-v1",
+          "apg-secret-hybrid-v1"
+        ],
+        "type": "string"
+      },
+      "kdf": {
+        "const": "argon2id-m65536-t3-p4",
+        "type": "string"
+      },
+      "nonce": {
+        "maxLength": 24,
+        "minLength": 24,
+        "pattern": "^[0-9a-f]{24}$",
+        "type": "string"
+      },
+      "public": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "encryption_key": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "format": {
+                "const": "apg-public-v1",
+                "type": "string"
+              },
+              "signing_key": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "format",
+              "encryption_key",
+              "signing_key",
+              "fingerprint"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "encryption_key": {
+                "pattern": "^[0-9a-f]{2432}$",
+                "type": "string"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "format": {
+                "const": "apg-public-hybrid-v1",
+                "type": "string"
+              },
+              "signing_key": {
+                "pattern": "^[0-9a-f]{3968}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "format",
+              "encryption_key",
+              "signing_key",
+              "fingerprint"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "salt": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "tag": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "public",
+      "kdf",
+      "salt",
+      "nonce",
+      "ciphertext",
+      "tag"
+    ],
+    "title": "SecretKey",
+    "type": "object"
+  },
+  "signature": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{128}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-sha384"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6746}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65"
+        ],
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-signature-v1",
+        "type": "string"
+      },
+      "signature": {
+        "maxLength": 6746,
+        "minLength": 128,
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "type": "string"
+      },
+      "signer": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "signer",
+      "algorithm",
+      "signature"
+    ],
+    "title": "Signature",
+    "type": "object"
+  },
+  "tpm_key": {
+    "$defs": {
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "apg-public-v1",
+              "apg-public-p384-v1",
+              "apg-public-hybrid-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      },
+      "TpmBinding": {
+        "additionalProperties": false,
+        "description": "TPM identification read from its properties. Informational: the wrapped blobs\nthemselves only load under the storage root of the TPM that created them.",
+        "properties": {
+          "manufacturer": {
+            "maxLength": 4,
+            "type": "string"
+          },
+          "vendor": {
+            "maxLength": 16,
+            "type": "string"
+          }
+        },
+        "required": [
+          "manufacturer",
+          "vendor"
+        ],
+        "type": "object"
+      },
+      "TpmBlob": {
+        "additionalProperties": false,
+        "description": "A TPM2B_PUBLIC and TPM2B_PRIVATE pair as produced by TPM2_Create.",
+        "properties": {
+          "private": {
+            "maxLength": 4096,
+            "minLength": 2,
+            "pattern": "^([0-9a-f]{2})+$",
+            "type": "string"
+          },
+          "public": {
+            "maxLength": 4096,
+            "minLength": 2,
+            "pattern": "^([0-9a-f]{2})+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public",
+          "private"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "A P-384 identity whose private keys are TPM-wrapped: `fixedTPM` objects that only\nthe originating TPM can load, authorized by the PIN, under the TPM's\ndictionary-attack lockout. Deleting every copy of this file destroys the identity.",
+    "properties": {
+      "encryption_key": {
+        "$ref": "#/$defs/TpmBlob"
+      },
+      "format": {
+        "const": "apg-tpm-key-v1",
+        "type": "string"
+      },
+      "parent": {
+        "const": "apg-owner-ecc-p384-srk-v1",
+        "type": "string"
+      },
+      "public": {
+        "$ref": "#/$defs/PublicKey",
+        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+      },
+      "signing_key": {
+        "$ref": "#/$defs/TpmBlob"
+      },
+      "tpm": {
+        "$ref": "#/$defs/TpmBinding"
+      }
+    },
+    "required": [
+      "format",
+      "public",
+      "tpm",
+      "parent",
+      "encryption_key",
+      "signing_key"
+    ],
+    "title": "TpmKey",
+    "type": "object"
+  },
+  "trust_store": {
+    "$defs": {
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "apg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "apg-public-v1",
+              "apg-public-p384-v1",
+              "apg-public-hybrid-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 3968,
+            "minLength": 64,
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      },
+      "Revocation": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{128}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-sha384"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6746}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "algorithm": {
+            "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+            "enum": [
+              "ed25519",
+              "ecdsa-p384-sha384",
+              "ed25519-mldsa65"
+            ],
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "const": "apg-revocation-v1",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/$defs/RevocationReason"
+          },
+          "scope": {
+            "const": "entire-identity",
+            "type": "string"
+          },
+          "signature": {
+            "maxLength": 6746,
+            "minLength": 128,
+            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "fingerprint",
+          "scope",
+          "reason",
+          "algorithm",
+          "signature"
+        ],
+        "type": "object"
+      },
+      "RevocationReason": {
+        "enum": [
+          "compromised",
+          "superseded",
+          "retired"
+        ],
+        "type": "string"
+      },
+      "TrustEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "public": {
+            "$ref": "#/$defs/PublicKey"
+          },
+          "revocation": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Revocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validity": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Validity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "public"
+        ],
+        "type": "object"
+      },
+      "Validity": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{128}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-sha384"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6746}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "algorithm": {
+            "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+            "enum": [
+              "ed25519",
+              "ecdsa-p384-sha384",
+              "ed25519-mldsa65"
+            ],
+            "type": "string"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "format": {
+            "const": "apg-validity-v1",
+            "type": "string"
+          },
+          "not_after": {
+            "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+            "maximum": 253402300799,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "not_before": {
+            "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+            "maximum": 253402300798,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "scope": {
+            "const": "entire-identity",
+            "type": "string"
+          },
+          "signature": {
+            "maxLength": 6746,
+            "minLength": 128,
+            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "fingerprint",
+          "scope",
+          "not_before",
+          "not_after",
+          "algorithm",
+          "signature"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "format": {
+              "const": "apg-trust-v1"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "entries": {
+              "items": {
+                "properties": {
+                  "validity": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "entries": {
+        "description": "Fingerprints must be unique; every embedded certificate is authenticated at runtime.",
+        "items": {
+          "$ref": "#/$defs/TrustEntry"
+        },
+        "maxItems": 256,
+        "type": "array"
+      },
+      "format": {
+        "enum": [
+          "apg-trust-v1",
+          "apg-trust-v2"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "entries"
+    ],
+    "title": "TrustStore",
+    "type": "object"
+  },
+  "validity": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{128}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-sha384"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6746}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65"
+        ],
+        "type": "string"
+      },
+      "fingerprint": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-validity-v1",
+        "type": "string"
+      },
+      "not_after": {
+        "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+        "maximum": 253402300799,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "not_before": {
+        "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+        "maximum": 253402300798,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "scope": {
+        "const": "entire-identity",
+        "type": "string"
+      },
+      "signature": {
+        "maxLength": 6746,
+        "minLength": 128,
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746})$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "fingerprint",
+      "scope",
+      "not_before",
+      "not_after",
+      "algorithm",
+      "signature"
+    ],
+    "title": "Validity",
+    "type": "object"
+  }
+}

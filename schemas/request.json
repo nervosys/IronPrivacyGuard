@@ -1,0 +1,1012 @@
+{
+  "$defs": {
+    "RevocationReason": {
+      "enum": [
+        "compromised",
+        "superseded",
+        "retired"
+      ],
+      "type": "string"
+    },
+    "SoftwareIdentity": {
+      "description": "Identity suites that have software secret keys.",
+      "oneOf": [
+        {
+          "const": "apg-public-v1",
+          "description": "X25519 and Ed25519.",
+          "type": "string"
+        },
+        {
+          "const": "apg-public-hybrid-v1",
+          "description": "ML-KEM-768 with X25519 for post-quantum confidentiality, and Ed25519 signatures.",
+          "type": "string"
+        }
+      ]
+    },
+    "TrustPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "store",
+        "expected_digest"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "The complete executable request vocabulary. Unknown fields fail closed.",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "discover",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "schema",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "ontology",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "algorithms",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "knowledge",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "knowledge.search",
+          "type": "string"
+        },
+        "query": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "query"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "request.validate",
+          "type": "string"
+        },
+        "request": true
+      },
+      "required": [
+        "operation",
+        "request"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "plan",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#"
+        }
+      },
+      "required": [
+        "operation",
+        "request"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SoftwareIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Identity suite; omitted means apg-public-v1."
+        },
+        "operation": {
+          "const": "key.generate",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "output",
+        "passphrase_file"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "key.public",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "new_passphrase_file": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "key.rewrap",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "output",
+        "expected_fingerprint",
+        "passphrase_file",
+        "new_passphrase_file"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "key.revoke",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/RevocationReason"
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "output",
+        "expected_fingerprint",
+        "reason"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "revocation.verify",
+          "type": "string"
+        },
+        "signer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "signer",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "encrypt",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recipient": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "recipient",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "decrypt",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "key"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "sign",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "key"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "verify",
+          "type": "string"
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature": {
+          "type": "string"
+        },
+        "signer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "signature",
+        "signer",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "not_after": {
+          "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+          "maximum": 253402300799,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "not_before": {
+          "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+          "maximum": 253402300798,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation": {
+          "const": "key.validity",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "output",
+        "expected_fingerprint",
+        "not_before",
+        "not_after"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "validity.verify",
+          "type": "string"
+        },
+        "signer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "signer",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "trust.validity",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "store",
+        "expected_digest",
+        "input",
+        "expected_fingerprint",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "at_time": {
+          "maximum": 253402300799,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "operation": {
+          "const": "trust.evaluate",
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "store",
+        "expected_digest",
+        "expected_fingerprint",
+        "at_time"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/$defs/TrustPolicy"
+        },
+        "candidate": {
+          "$ref": "#/$defs/TrustPolicy"
+        },
+        "operation": {
+          "const": "trust.compare",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "base",
+        "candidate"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/$defs/TrustPolicy"
+        },
+        "incoming": {
+          "$ref": "#/$defs/TrustPolicy"
+        },
+        "operation": {
+          "const": "trust.merge",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "base",
+        "incoming",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "trust.init",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "operation": {
+          "const": "trust.add",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "public": {
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "store",
+        "expected_digest",
+        "public",
+        "expected_fingerprint",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "trust.revoke",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "store",
+        "expected_digest",
+        "input",
+        "expected_fingerprint",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_digest": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_fingerprint": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "operation": {
+          "const": "trust.status",
+          "type": "string"
+        },
+        "store": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "store",
+        "expected_digest",
+        "expected_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "inspect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "hardware.tokens",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "description": "CKA_LABEL for both generated key pairs; informational, never used for lookup",
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        "operation": {
+          "const": "hardware.key.generate",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "pin_file": {
+          "description": "Token user PIN; exact file bytes, 1..255.",
+          "type": "string"
+        },
+        "token_serial": {
+          "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+          "maxLength": 16,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "token_serial",
+        "label",
+        "output",
+        "pin_file"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "encryption_key_id": {
+          "maxLength": 128,
+          "minLength": 2,
+          "pattern": "^([0-9a-f]{2}){1,64}$",
+          "type": "string"
+        },
+        "operation": {
+          "const": "hardware.key.bind",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "pin_file": {
+          "description": "Token user PIN; exact file bytes, 1..255.",
+          "type": "string"
+        },
+        "signing_key_id": {
+          "maxLength": 128,
+          "minLength": 2,
+          "pattern": "^([0-9a-f]{2}){1,64}$",
+          "type": "string"
+        },
+        "token_serial": {
+          "description": "PKCS#11 token serial number exactly as reported by hardware.tokens",
+          "maxLength": 16,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "token_serial",
+        "encryption_key_id",
+        "signing_key_id",
+        "output",
+        "pin_file"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "tpm.info",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "encryption_key_arn": {
+          "description": "ECC_NIST_P384 KEY_AGREEMENT key ARN.",
+          "maxLength": 160,
+          "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+          "type": "string"
+        },
+        "operation": {
+          "const": "kms.key.bind",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "region": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z0-9-]+$",
+          "type": "string"
+        },
+        "signing_key_arn": {
+          "description": "ECC_NIST_P384 SIGN_VERIFY key ARN.",
+          "maxLength": 160,
+          "pattern": "^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "region",
+        "encryption_key_arn",
+        "signing_key_arn",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "const": "tpm.key.generate",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "pin_file": {
+          "description": "PIN authorizing the new keys; exact file bytes, 1..255.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "output",
+        "pin_file"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "Request"
+}
