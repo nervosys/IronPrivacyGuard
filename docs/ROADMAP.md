@@ -22,15 +22,14 @@ implemented surface, not feature parity with decades of GPG development.
    remain unsupported. Filesystem authorization remains the host's responsibility.
 5. Introduce OpenPGP import/export through a separately specified compatibility
    boundary. Never silently reinterpret native APG data as OpenPGP.
-6. Extend post-quantum coverage. Hybrid ML-KEM-768 + X25519 confidentiality and
-   composite Ed25519 + ML-DSA-65 signatures are implemented for software identities;
-   post-quantum hardware, TPM and KMS keys and SHA-384 trust-snapshot digests remain.
-   Identity fingerprints use SHA-384 for P-384 and hybrid identities. PKCS#11 hardware-backed identities are
-   implemented for P-384 ([HARDWARE.md](HARDWARE.md)); remaining work includes
-   vendor attestation, other
-   cloud KMS providers, live testing of in-token decryption on FIPS-mode HSMs, and
-   CNSA-aligned SHA-384
-   fingerprints. Never silently substitute a weaker suite.
+6. Extend post-quantum and hardware coverage. Hybrid ML-KEM-768 + X25519
+   confidentiality and composite Ed25519 + ML-DSA-65 signatures are implemented for
+   software identities; post-quantum hardware, TPM and KMS keys remain. P-384
+   identities are implemented on PKCS#11 tokens, Linux and Windows TPMs and AWS KMS
+   ([HARDWARE.md](HARDWARE.md)), with SHA-384 fingerprints and SHA-384
+   (`apg-trust-v3`) trust-snapshot digests. Remaining work includes vendor
+   attestation, other cloud KMS providers and live testing of in-token decryption
+   on FIPS-mode HSMs. Never silently substitute a weaker suite.
 
 Future additions must extend schemas, ontology, constraints, adversarial tests and
 versioned formats together. Unsupported capabilities remain explicitly advertised
