@@ -17,10 +17,16 @@ detached signatures with PyCA. Its
 [AEAD helper](../tests/interop/openpgp_aead_reference.py) independently implements
 v6 X25519 and P-384 PKESK wrapping and SEIPDv2/AES-256/OCB in both directions.
 It handles definite and partial packet lengths, checks exact chunk boundaries and
-requires malformed or tampered ciphertext to publish no plaintext. The 92 CLI
-calls include 62 independent AEAD checks. All keys are generated in a temporary
-directory, and the helper independently unseals only those disposable test keys;
-no secret material is checked in. See [OPENPGP.md](OPENPGP.md#testing) for scope.
+requires malformed or tampered ciphertext to publish no plaintext. The
+[signed-message helper](../tests/interop/openpgp_signed_reference.py) crosses
+both v6 signing suites with both encryption suites, independently composing
+binary/ZIP/ZLIB packets and PyCA encryption around APG-made, PyCA-checked document
+signatures. It checks complete AEAD authentication, signature and one-pass
+metadata failures, wrong pins, trailing messages and the decompression limit.
+The 198 CLI calls include 62 independent AEAD checks and 106 signed-message checks.
+All keys are generated in a temporary directory, and the helper independently
+unseals only those disposable test keys; no secret material is checked in.
+See [OPENPGP.md](OPENPGP.md#testing) for scope.
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated
 by [crypto_reference.py](../tests/interop/crypto_reference.py), a separate Python

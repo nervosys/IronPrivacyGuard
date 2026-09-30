@@ -1128,6 +1128,15 @@ pub(crate) fn verify_message(
     let Message::Signed { reader, .. } = &parsed else {
         unreachable!()
     };
+    // rPGP withholds the finalized hash when one-pass metadata (including the
+    // v6 salt) does not match the final signature. Detached verification below
+    // would otherwise discard that mismatch and accept the document signature.
+    if reader.hash(0).is_none() {
+        return Err(Error::new(
+            "authentication_failed",
+            "OpenPGP signature metadata does not match the signed message",
+        ));
+    }
     let signature = reader
         .signature(0)
         .ok_or_else(|| Error::new("invalid_format", "Missing final OpenPGP signature"))?;
