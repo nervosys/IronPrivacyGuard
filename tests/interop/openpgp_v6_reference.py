@@ -9,6 +9,7 @@ import tempfile
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 from openpgp_aead_reference import exercise_aead, packets
+from openpgp_signed_reference import exercise_signed
 
 
 def unarmor(data):
@@ -52,6 +53,7 @@ def check_signature(primary, signature, message):
 def exercise(executable, directory):
     calls = 0
     aead_checks = 0
+    cases = {}
     def path(name):
         return str(directory / name)
     def call(operation, error=None, **arguments):
@@ -81,6 +83,7 @@ def exercise(executable, directory):
         signatures = list(packets(unarmor(Path(path(algorithm + ".sig")).read_bytes())))
         assert len(signatures) == 1 and signatures[0][0] == 2
         check_signature(primary, signatures[0][1], message)
+        cases[algorithm] = {"key": key, "signature": signatures[0][1]}
         recipient = {"certificate": path(algorithm + ".asc"), "expected_openpgp_fingerprint": fingerprint.upper()}
         call("openpgp.verify", input=path("message"), signature=path(algorithm + ".sig"), **recipient)
         Path(path("altered")).write_bytes(message + b"tampered")
@@ -104,7 +107,9 @@ def exercise(executable, directory):
             call("openpgp.decrypt", error=("invalid_format", "authentication_failed", "invalid_request"), input=path(algorithm + ".bad"), output=path(algorithm + ".denied"), key=path(algorithm), passphrase_file=path("pass"))
             assert not Path(path(algorithm + ".denied")).exists()
         aead_checks += exercise_aead(call, path, key, recipient, unarmor)
-    return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks}
+    signed_checks = exercise_signed(call, path, cases, message)
+    return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
+            "signed_message_checks": signed_checks}
 
 
 if __name__ == "__main__":

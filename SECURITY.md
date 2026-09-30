@@ -66,7 +66,10 @@ not govern OpenPGP. V6 keys use direct-key certificate policy and SEIPDv2/OCB
 encryption; mixed v4/v6 recipient sets are refused. PyCA independently checks v6
 fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB
 encryption in both directions, including chunk authentication and final byte
-counts. See [OpenPGP interoperability](docs/OPENPGP.md) for the tested scope.
+counts. Signed-message tests cross both v6 signer and recipient suites and require
+complete AEAD authentication, matching one-pass metadata and valid document
+signatures before publication. See [OpenPGP interoperability](docs/OPENPGP.md)
+for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
 the rest. `apg-stream-signature-v1` provides separate any-size native signatures

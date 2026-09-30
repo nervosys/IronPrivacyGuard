@@ -2,6 +2,51 @@
 mod harness;
 use std::{fs, path::Path};
 
+#[cfg(feature = "openpgp")]
+#[test]
+fn one_pass_metadata_mismatches_never_publish_plaintext() {
+    use iron_privacy_guardian::{Request, execute};
+    use serde_json::{Value, json};
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let path = |name| directory.path().join(name).display().to_string();
+    for case in fixture["cases"].as_array().unwrap() {
+        let message = hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
+        // The independent fixture builder uses a six-byte definite packet header.
+        assert_eq!(&message[..2], &[0xc4, 0xff]);
+        let mut mutations = vec![(7, 1), (9, if message[9] == 19 { 22 } else { 19 })];
+        if message[6] == 6 {
+            mutations.push((11, message[11] ^ 1)); // v6 salt, unchanged final signature
+        } else {
+            mutations.push((8, if message[8] == 10 { 9 } else { 10 })); // v4 hash
+        }
+        fs::write(
+            path("certificate"),
+            hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+        )
+        .unwrap();
+        for (offset, replacement) in mutations {
+            let mut changed = message.clone();
+            changed[offset] = replacement;
+            fs::write(path("message"), changed).unwrap();
+            let request: Request = serde_json::from_value(json!({
+                "operation":"openpgp.message.verify", "input":path("message"),
+                "output":path("denied"), "certificate":path("certificate"),
+                "expected_openpgp_fingerprint":case["fingerprint"],
+            }))
+            .unwrap();
+            assert_eq!(
+                execute(request).err().unwrap().code,
+                "authentication_failed",
+                "{} accepted mismatched metadata at {offset}",
+                case["name"]
+            );
+            assert!(!Path::new(&path("denied")).exists());
+        }
+    }
+}
+
 #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
 #[test]
 fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {

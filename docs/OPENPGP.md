@@ -105,6 +105,8 @@ APG applies this policy to every certificate it reads:
   Signatures dated in the future or past their own expiry are refused. A signature
   made before its certificate expired still verifies, and the result reports
   `certificate_expired_now`.
+- Embedded verification also requires matching one-pass/final signature versions,
+  signature types, algorithms and v6 salts.
 
 Errors: `identity_mismatch` for a wrong pin or a signature from another
 certificate, `key_revoked`, `key_expired` (including a signing key that had expired
@@ -184,9 +186,16 @@ decrypts APG messages for both suites, including empty and 65,537-byte content,
 exact chunk boundaries and partial packet lengths. Negative cases alter key
 wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
 chunks, truncate messages and authenticate a deliberately wrong final byte count.
-Every refused message must leave its output path absent. The suite makes 92 CLI
-calls, with 62 independent AEAD checks. Disposable secret keys are unsealed only
-inside the external harness and never recorded. These checks cover APG's two v6
+Every refused message must leave its output path absent. The suite makes 198 CLI
+calls, with 62 independent AEAD checks and 106 signed-message checks. The signed
+matrix crosses both v6 signer suites with both recipient suites, using binary,
+ZIP and ZLIB messages inside independently constructed PyCA encryption. It
+requires valid signatures and complete AEAD authentication before publication,
+rejects trailing messages and mismatched one-pass metadata, and bounds compressed
+plaintext at 16 MiB. Document signatures are APG-made and separately checked by
+PyCA; packet composition and encryption are independent. Disposable secret keys
+are unsealed only inside the external harness and never recorded. These checks
+cover APG's two v6
 encryption profiles, not every RFC 9580 algorithm or packet composition.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
