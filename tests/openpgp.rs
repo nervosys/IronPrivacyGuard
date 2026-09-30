@@ -11,6 +11,122 @@ use std::fs;
 
 const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
+#[cfg(feature = "openpgp")]
+#[test]
+fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-signature-policy-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let f = Fixture::new();
+    fs::write(f.path("document"), &document).unwrap();
+    for case in fixture["cases"].as_array().unwrap() {
+        let algorithm = case["algorithm"].as_str().unwrap();
+        let fingerprint = case["fingerprint"].as_str().unwrap();
+        fs::write(
+            f.path("certificate"),
+            hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+        )
+        .unwrap();
+        let verify = || {
+            call(
+                json!({"operation":"openpgp.verify", "input":f.path("document"),
+                "signature":f.path("signature"), "certificate":f.path("certificate"),
+                "expected_openpgp_fingerprint":fingerprint}),
+            )
+        };
+        for (field, valid) in [
+            ("valid_signature_hex", true),
+            (
+                "probe_signature_hex",
+                case["probe_valid"].as_bool().unwrap(),
+            ),
+        ] {
+            fs::write(
+                f.path("signature"),
+                hex::decode(case[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+            let result = verify();
+            if valid {
+                assert_eq!(result.unwrap()["valid"], true, "{algorithm}/{field}");
+            } else {
+                assert_eq!(
+                    result.unwrap_err(),
+                    "authentication_failed",
+                    "{algorithm}/{field}"
+                );
+            }
+        }
+        for (field, code) in [
+            ("critical_unknown_signature_hex", "authentication_failed"),
+            ("unhashed_creation_signature_hex", "invalid_format"),
+        ] {
+            if let Some(signature) = case[field].as_str() {
+                fs::write(f.path("signature"), hex::decode(signature).unwrap()).unwrap();
+                assert_eq!(verify().unwrap_err(), code, "{algorithm}/{field}");
+            }
+        }
+        for (field, valid) in [
+            ("valid_embedded_hex", true),
+            ("probe_embedded_hex", case["probe_valid"].as_bool().unwrap()),
+        ] {
+            fs::write(
+                f.path("message"),
+                hex::decode(case[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+            let name = format!("{algorithm}-{field}");
+            let result = call(
+                json!({"operation":"openpgp.message.verify", "input":f.path("message"),
+                "output":f.path(&name), "certificate":f.path("certificate"),
+                "expected_openpgp_fingerprint":fingerprint}),
+            );
+            if valid {
+                assert_eq!(result.unwrap()["valid"], true);
+                assert_eq!(fs::read(f.path(&name)).unwrap(), document);
+            } else {
+                assert_eq!(result.unwrap_err(), "authentication_failed");
+                assert!(!std::path::Path::new(&f.path(&name)).exists());
+            }
+        }
+        if let Some(short_certificate) = case["short_digest_certificate_hex"].as_str() {
+            for (field, usable) in [
+                ("strong_certificate_hex", true),
+                ("short_digest_certificate_hex", false),
+            ] {
+                fs::write(
+                    f.path("certificate"),
+                    hex::decode(case[field].as_str().unwrap()).unwrap(),
+                )
+                .unwrap();
+                let inspected = call(
+                    json!({"operation":"openpgp.cert.inspect", "input":f.path("certificate")}),
+                )
+                .unwrap();
+                assert_eq!(
+                    inspected["certificate"]["usable_for_signing"], usable,
+                    "{algorithm}/{field}"
+                );
+            }
+            fs::write(
+                f.path("certificate"),
+                hex::decode(short_certificate).unwrap(),
+            )
+            .unwrap();
+            fs::write(
+                f.path("signature"),
+                hex::decode(case["valid_signature_hex"].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                verify().unwrap_err(),
+                "policy_mismatch",
+                "{algorithm}/binding"
+            );
+        }
+    }
+}
+
 fn call(value: Value) -> Result<Value, String> {
     let request: Request = serde_json::from_value(value).unwrap();
     execute_with(request, &Host::default())

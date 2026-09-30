@@ -90,6 +90,10 @@ APG applies this policy to every certificate it reads:
   one valid, unrevoked self-certified User ID is required. V6 instead requires a
   valid direct-key self-signature for these properties; User IDs are optional.
   Subkeys must have the same version as their primary key.
+- Signature digests must also meet the signing key's minimum: 48 bytes for
+  ECDSA P-384 and 64 bytes for ECDSA P-521 or Ed448, in addition to APG's
+  32-byte floor. This applies to document signatures, certificate self-signatures,
+  revocations, subkey bindings and signing-subkey back signatures.
 - A signing subkey also needs a valid embedded back signature, so a certificate
   cannot claim someone else's signing key.
 - Any valid revocation made by the primary key revokes the certificate or subkey,
@@ -186,17 +190,25 @@ decrypts APG messages for both suites, including empty and 65,537-byte content,
 exact chunk boundaries and partial packet lengths. Negative cases alter key
 wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
 chunks, truncate messages and authenticate a deliberately wrong final byte count.
-Every refused message must leave its output path absent. The suite makes 198 CLI
-calls, with 62 independent AEAD checks and 106 signed-message checks. The signed
+Every refused message must leave its output path absent. The suite makes 251 CLI
+calls, with 62 independent AEAD checks, 106 signed-message checks and 53 PyCA-made
+signature-policy checks. The signed
 matrix crosses both v6 signer suites with both recipient suites, using binary,
 ZIP and ZLIB messages inside independently constructed PyCA encryption. It
 requires valid signatures and complete AEAD authentication before publication,
 rejects trailing messages and mismatched one-pass metadata, and bounds compressed
-plaintext at 16 MiB. Document signatures are APG-made and separately checked by
-PyCA; packet composition and encryption are independent. Disposable secret keys
+plaintext at 16 MiB. The signed encryption matrix uses APG-made signatures checked
+by PyCA; packet composition and encryption are independent. A separate
+`openpgp_signature_reference.py` helper makes signatures with PyCA for APG to
+verify, including Ed25519, P-384, P-521 and Ed448 public verification. It checks
+unknown critical subpackets, authenticated timestamps, expiration, version
+mismatches and digest-size bounds. The additional curves use PyCA-generated test
+keys; APG key generation remains Ed25519/P-384. Disposable secret keys
 are unsealed only inside the external harness and never recorded. These checks
-cover APG's two v6
-encryption profiles, not every RFC 9580 algorithm or packet composition.
+cover APG's two v6 encryption profiles and the listed signing profiles, not every
+RFC 9580 algorithm or packet composition. The public
+`tests/vectors/openpgp-signature-policy-v1.json` fixture preserves PyCA-made
+signatures and certificates for Rust regression replay without Python or secrets.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 

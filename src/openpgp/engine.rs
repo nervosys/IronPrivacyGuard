@@ -173,6 +173,20 @@ fn hash_allowed(hash: Option<HashAlgorithm>) -> bool {
         )
     )
 }
+/// RFC 9580 section 5.2.3 requires curve-sized signature digests, beyond the
+/// generic SHA-256 floor. P-521 uses the explicit 512-bit exception.
+fn signature_hash_allowed(sig: &Signature, params: &PublicParams) -> bool {
+    let minimum_bytes = match params {
+        PublicParams::ECDSA(EcdsaPublicParams::P384 { .. }) => 48,
+        PublicParams::ECDSA(EcdsaPublicParams::P521 { .. }) | PublicParams::Ed448(_) => 64,
+        _ => 32,
+    };
+    hash_allowed(sig.hash_alg())
+        && sig
+            .hash_alg()
+            .and_then(|hash| hash.digest_size())
+            .is_some_and(|bytes| bytes >= minimum_bytes)
+}
 fn hash_name(hash: Option<HashAlgorithm>) -> String {
     hash.map_or_else(|| "unknown".into(), |h| h.to_string().to_ascii_lowercase())
 }
@@ -276,7 +290,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         .take(MAX_SIGNATURES)
         .any(|s| {
             s.typ() == Some(SignatureType::KeyRevocation)
-                && hash_allowed(s.hash_alg())
+                && signature_hash_allowed(s, primary.public_params())
                 && issued_by(s, primary)
                 && s.verify_key(primary).is_ok()
         });
@@ -286,7 +300,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         let mut certification = Vec::new();
         let mut user_revoked = false;
         for sig in user.signatures.iter().take(MAX_SIGNATURES) {
-            if !hash_allowed(sig.hash_alg()) || !issued_by(sig, primary) {
+            if !signature_hash_allowed(sig, primary.public_params()) || !issued_by(sig, primary) {
                 continue;
             }
             match sig.typ() {
@@ -324,7 +338,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         .take(MAX_SIGNATURES)
         .filter(|s| {
             s.typ() == Some(SignatureType::Key)
-                && hash_allowed(s.hash_alg())
+                && signature_hash_allowed(s, primary.public_params())
                 && issued_by(s, primary)
                 && live(s, at)
                 && s.verify_key(primary).is_ok()
@@ -360,7 +374,9 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
     ));
     for sub in &cert.public_subkeys {
         let key = &sub.key;
-        let issued = |s: &&Signature| hash_allowed(s.hash_alg()) && issued_by(s, primary);
+        let issued = |s: &&Signature| {
+            signature_hash_allowed(s, primary.public_params()) && issued_by(s, primary)
+        };
         let binding = newest(
             sub.signatures
                 .iter()
@@ -389,7 +405,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
                 .and_then(Signature::embedded_signature)
                 .is_some_and(|back| {
                     back.typ() == Some(SignatureType::KeyBinding)
-                        && hash_allowed(back.hash_alg())
+                        && signature_hash_allowed(back, key.public_params())
                         && back.verify_primary_key_binding(key, primary).is_ok()
                 });
         let mut entry = component(
@@ -1183,7 +1199,7 @@ impl<K: pgp::types::VerifyingKey> VerifyKey for K {
             || fingerprints.iter().any(|fp| **fp == self.fingerprint())
     }
     fn check(&self, sig: &Signature, data: &[u8]) -> bool {
-        sig.verify(self, data).is_ok()
+        signature_hash_allowed(sig, self.public_params()) && sig.verify(self, data).is_ok()
     }
 }
 
