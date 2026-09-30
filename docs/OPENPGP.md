@@ -176,8 +176,18 @@ GnuPG. Back up the key file and passphrase.
 V6 tests cover both generated suites, direct-key policy, optional User IDs and
 mixed-version refusal. The published RFC 9580 Appendix A.3 certificate is checked
 against its expected fingerprints. `tests/interop/openpgp_v6_reference.py` uses
-PyCA to verify v6 fingerprint and detached-signature calculations; it checks
-AEAD packet selection and refusal to publish tampered plaintext.
+PyCA to verify v6 fingerprints and detached signatures. Its independent
+`openpgp_aead_reference.py` helper implements v6 PKESK wrapping with X25519
+(HKDF-SHA-256/AES-128 key wrap) and P-384 (SHA-384/AES-192 key wrap), plus
+SEIPDv2/AES-256/OCB encryption and decryption. APG decrypts PyCA messages and PyCA
+decrypts APG messages for both suites, including empty and 65,537-byte content,
+exact chunk boundaries and partial packet lengths. Negative cases alter key
+wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
+chunks, truncate messages and authenticate a deliberately wrong final byte count.
+Every refused message must leave its output path absent. The suite makes 92 CLI
+calls, with 62 independent AEAD checks. Disposable secret keys are unsealed only
+inside the external harness and never recorded. These checks cover APG's two v6
+encryption profiles, not every RFC 9580 algorithm or packet composition.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 

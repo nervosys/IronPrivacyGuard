@@ -13,10 +13,14 @@ with the blank armor-header separator required by rPGP. Rust tests check its
 published fingerprints and usability without User IDs.
 [openpgp_v6_reference.py](../tests/interop/openpgp_v6_reference.py) independently
 computes v6 SHA-256 fingerprints and verifies APG's salted Ed25519 and P-384
-detached signatures with PyCA. It checks v6 PKESK and SEIPDv2/AES-256/OCB output
-and requires tampered ciphertext to publish no plaintext. Its packet parser
-handles small definite-length test packets only. Encryption round trips use
-APG/rPGP on both sides; they are not an independent AEAD oracle.
+detached signatures with PyCA. Its
+[AEAD helper](../tests/interop/openpgp_aead_reference.py) independently implements
+v6 X25519 and P-384 PKESK wrapping and SEIPDv2/AES-256/OCB in both directions.
+It handles definite and partial packet lengths, checks exact chunk boundaries and
+requires malformed or tampered ciphertext to publish no plaintext. The 92 CLI
+calls include 62 independent AEAD checks. All keys are generated in a temporary
+directory, and the helper independently unseals only those disposable test keys;
+no secret material is checked in. See [OPENPGP.md](OPENPGP.md#testing) for scope.
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated
 by [crypto_reference.py](../tests/interop/crypto_reference.py), a separate Python

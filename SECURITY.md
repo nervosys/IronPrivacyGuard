@@ -63,9 +63,10 @@ used only for public operations. `openpgp.message.verify` authenticates one embe
 document signature against a pinned certificate before publishing plaintext;
 `openpgp.decrypt` still does not authenticate the sender. APG trust snapshots do
 not govern OpenPGP. V6 keys use direct-key certificate policy and SEIPDv2/OCB
-encryption; mixed v4/v6 recipient sets are refused. PyCA verifies v6 fingerprint
-and signature calculations independently, while AEAD round trips use rPGP on
-both sides. See [OpenPGP interoperability](docs/OPENPGP.md).
+encryption; mixed v4/v6 recipient sets are refused. PyCA independently checks v6
+fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB
+encryption in both directions, including chunk authentication and final byte
+counts. See [OpenPGP interoperability](docs/OPENPGP.md) for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
 the rest. `apg-stream-signature-v1` provides separate any-size native signatures

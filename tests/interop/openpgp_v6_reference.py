@@ -1,7 +1,4 @@
-"""Independent RFC 9580 v6 fingerprints and detached signatures using PyCA.
-
-Only small definite-length test packets are parsed. This is external test tooling.
-"""
+"""Independent RFC 9580 v6 signatures and bidirectional AEAD using PyCA."""
 import argparse
 import base64
 import hashlib
@@ -11,41 +8,11 @@ import subprocess
 import tempfile
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
+from openpgp_aead_reference import exercise_aead, packets
 
 
 def unarmor(data):
     return base64.b64decode(b"".join(line for line in data.splitlines() if line and not line.startswith((b"-", b"="))))
-
-
-def packets(data):
-    offset = 0
-    while offset < len(data):
-        header = data[offset]
-        offset += 1
-        assert header & 128
-        if header & 64:
-            tag = header & 63
-            first = data[offset]
-            offset += 1
-            if first < 192:
-                size = first
-            elif first < 224:
-                size = ((first - 192) << 8) + data[offset] + 192
-                offset += 1
-            else:
-                assert first == 255
-                size = int.from_bytes(data[offset:offset + 4], "big")
-                offset += 4
-        else:
-            tag = (header >> 2) & 15
-            assert header & 3 != 3
-            width = 1 << (header & 3)
-            size = int.from_bytes(data[offset:offset + width], "big")
-            offset += width
-        body = data[offset:offset + size]
-        assert len(body) == size
-        yield tag, body
-        offset += size
 
 
 def mpi(data, offset):
@@ -84,6 +51,7 @@ def check_signature(primary, signature, message):
 
 def exercise(executable, directory):
     calls = 0
+    aead_checks = 0
     def path(name):
         return str(directory / name)
     def call(operation, error=None, **arguments):
@@ -135,7 +103,8 @@ def exercise(executable, directory):
             Path(path(algorithm + ".bad")).write_bytes(encrypted[:length])
             call("openpgp.decrypt", error=("invalid_format", "authentication_failed", "invalid_request"), input=path(algorithm + ".bad"), output=path(algorithm + ".denied"), key=path(algorithm), passphrase_file=path("pass"))
             assert not Path(path(algorithm + ".denied")).exists()
-    return {"ok": True, "cli_calls": calls}
+        aead_checks += exercise_aead(call, path, key, recipient, unarmor)
+    return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks}
 
 
 if __name__ == "__main__":
