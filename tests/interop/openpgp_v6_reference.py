@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
 from openpgp_aead_reference import exercise_aead, packets
 from openpgp_signed_reference import exercise_signed
+from openpgp_signature_reference import exercise_signatures
 
 
 def unarmor(data):
@@ -50,7 +51,7 @@ def check_signature(primary, signature, message):
         ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP384R1(), point).verify(utils.encode_dss_signature(r, s), digest, ec.ECDSA(utils.Prehashed(hash_type())))
 
 
-def exercise(executable, directory):
+def exercise(executable, directory, fixture_output=None):
     calls = 0
     aead_checks = 0
     cases = {}
@@ -108,13 +109,15 @@ def exercise(executable, directory):
             assert not Path(path(algorithm + ".denied")).exists()
         aead_checks += exercise_aead(call, path, key, recipient, unarmor)
     signed_checks = exercise_signed(call, path, cases, message)
+    signature_checks = exercise_signatures(call, path, cases, fixture_output)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
-            "signed_message_checks": signed_checks}
+            "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apg", required=True, type=Path)
+    parser.add_argument("--write-policy-fixture", type=Path, help="Explicitly freeze public PyCA signature-policy fixtures")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="apg-v6-interop-") as directory:
-        print(json.dumps(exercise(args.apg.resolve(strict=True), Path(directory)), indent=2))
+        print(json.dumps(exercise(args.apg.resolve(strict=True), Path(directory), args.write_policy_fixture), indent=2))

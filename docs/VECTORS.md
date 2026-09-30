@@ -23,10 +23,27 @@ both v6 signing suites with both encryption suites, independently composing
 binary/ZIP/ZLIB packets and PyCA encryption around APG-made, PyCA-checked document
 signatures. It checks complete AEAD authentication, signature and one-pass
 metadata failures, wrong pins, trailing messages and the decompression limit.
-The 198 CLI calls include 62 independent AEAD checks and 106 signed-message checks.
+The [independent signer](../tests/interop/openpgp_signature_reference.py) makes
+Ed25519, P-384, P-521 and Ed448 signatures with PyCA for APG to verify, covering
+unknown critical subpackets, authenticated timestamps, expiration, versions and
+curve digest bounds. The
+[public signature-policy fixture](../tests/vectors/openpgp-signature-policy-v1.json)
+contains accepted and refused signatures, embedded messages and direct-key
+self-signatures, consumed by `tests/openpgp.rs`. SHA-256 remains accepted for
+Ed25519, while P-384 requires at least a 48-byte digest; P-521 and Ed448 require
+64 bytes. These bounds follow [RFC 9580 section 5.2.3](https://www.rfc-editor.org/rfc/rfc9580.html#section-5.2.3).
+The 251 CLI calls include 62 independent AEAD checks, 106 signed-message checks
+and 53 PyCA signature-policy checks.
 All keys are generated in a temporary directory, and the helper independently
 unseals only those disposable test keys; no secret material is checked in.
 See [OPENPGP.md](OPENPGP.md#testing) for scope.
+
+Regenerate only the public signature-policy fixture explicitly after an
+`openpgp` build (this replaces its disposable public certificates and signatures):
+
+```sh
+python tests/interop/openpgp_v6_reference.py --apg target/release/apg --write-policy-fixture tests/vectors/openpgp-signature-policy-v1.json
+```
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated
 by [crypto_reference.py](../tests/interop/crypto_reference.py), a separate Python

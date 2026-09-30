@@ -68,7 +68,10 @@ fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB
 encryption in both directions, including chunk authentication and final byte
 counts. Signed-message tests cross both v6 signer and recipient suites and require
 complete AEAD authentication, matching one-pass metadata and valid document
-signatures before publication. See [OpenPGP interoperability](docs/OPENPGP.md)
+signatures before publication. Independent PyCA-made signatures also exercise
+authenticated metadata and curve-specific digest bounds, including P-521 and
+Ed448 public verification. These bounds apply to certificate signatures as well
+as document signatures. See [OpenPGP interoperability](docs/OPENPGP.md)
 for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to

@@ -77,7 +77,7 @@ def encode_mpi(value):
     return int.from_bytes(value, "big").bit_length().to_bytes(2, "big") + value
 
 
-def encryption_key(key, password):
+def unseal_test_key(key, password):
     """Unseal our temporary APG key with independently implemented framing."""
     assert key["format"] == "apg-openpgp-key-v1"
     assert key["kdf"] == "argon2id-m65536-t3-p4"
@@ -86,8 +86,13 @@ def encryption_key(key, password):
     aad = frame("APG openpgp secret v1 " + key["kdf"],
                 *(key[name].encode() for name in ("format", "fingerprint", "algorithm", "user_id")),
                 certificate, salt, nonce)
-    secret = ChaCha20Poly1305(password_key(password, salt)).decrypt(
+    return ChaCha20Poly1305(password_key(password, salt)).decrypt(
         nonce, bytes.fromhex(key["ciphertext"] + key["tag"]), aad)
+
+
+def encryption_key(key, password):
+    secret = unseal_test_key(key, password)
+    certificate = bytes.fromhex(key["certificate"])
     public_subkeys = [body for tag, body in packets(certificate) if tag == 14]
     secret_subkeys = [body for tag, body in packets(secret) if tag == 7]
     assert len(public_subkeys) == len(secret_subkeys) == 1
