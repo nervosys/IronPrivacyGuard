@@ -2,6 +2,29 @@
 mod harness;
 use std::{fs, path::Path};
 
+#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[test]
+fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
+    for (certificate, document) in [
+        (0u32, 0u32),
+        (u32::MAX, 0),
+        (0, u32::MAX),
+        (u32::MAX, u32::MAX),
+        (65_536, 65_536),
+    ] {
+        let mut frame = vec![3];
+        frame.extend_from_slice(&certificate.to_be_bytes());
+        frame.extend_from_slice(&document.to_be_bytes());
+        for length in 0..=frame.len() {
+            harness::openpgp_packets(&frame[..length]);
+        }
+        frame.resize(65_537, 0xff);
+        harness::openpgp_packets(&frame);
+        frame.push(0);
+        harness::openpgp_packets(&frame);
+    }
+}
+
 #[cfg(feature = "openpgp")]
 #[test]
 fn one_pass_metadata_mismatches_never_publish_plaintext() {

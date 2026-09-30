@@ -16,6 +16,8 @@ jobs:
       - run: cargo install cargo-fuzz --version 0.13.2 --locked
       - run: cargo fetch --locked --manifest-path fuzz/Cargo.toml
       - run: mkdir -p fuzz/corpus/${{ matrix.target }}
+      - if: matrix.target == 'openpgp_packets'
+        run: python3 scripts/fuzz-openpgp-policy-seeds.py --check
       - if: matrix.target == 'stream_headers'
         run: python3 scripts/fuzz-large-headers.py
       - run: cargo +nightly fuzz run --target-dir target/fuzz ${{ matrix.target }} fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }} -- -runs=10000 -max_total_time=45 -max_len=${{ matrix.target == 'stream_headers' && '1048588' || '65537' }} -timeout=10 -rss_limit_mb=2048
