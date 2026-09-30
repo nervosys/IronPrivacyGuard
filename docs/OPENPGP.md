@@ -95,7 +95,10 @@ APG applies this policy to every certificate it reads:
   32-byte floor. This applies to document signatures, certificate self-signatures,
   revocations, subkey bindings and signing-subkey back signatures.
 - A signing subkey also needs a valid embedded back signature, so a certificate
-  cannot claim someone else's signing key.
+  cannot claim someone else's signing key. The back signature must have an
+  authenticated creation time and be live at evaluation time, including when
+  evaluating the certificate at a document signature's creation time.
+  Consent that expires later does not invalidate an earlier document signature.
 - Any valid revocation made by the primary key revokes the certificate or subkey,
   whatever its stated reason. Third-party certifications and revocations by
   designated revokers are ignored.
@@ -193,9 +196,10 @@ decrypts APG messages for both suites, including empty and 65,537-byte content,
 exact chunk boundaries and partial packet lengths. Negative cases alter key
 wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
 chunks, truncate messages and authenticate a deliberately wrong final byte count.
-Every refused message must leave its output path absent. The suite makes 271 CLI
+Every refused message must leave its output path absent. The suite makes 343 CLI
 calls, with 62 independent AEAD checks, 106 signed-message checks, 20 primary
-certificate-policy checks and 53 PyCA-made signature-policy checks. The signed
+certificate-policy checks, 72 back-signature checks and 53 PyCA-made
+signature-policy checks. The signed
 matrix crosses both v6 signer suites with both recipient suites, using binary,
 ZIP and ZLIB messages inside independently constructed PyCA encryption. It
 requires valid signatures and complete AEAD authentication before publication,
@@ -219,6 +223,13 @@ The public `tests/vectors/openpgp-primary-policy-v1.json` fixture checks inspect
 detached verification, embedded verification and encryption, with no output on
 refusal. All test certificate signatures, including back signatures, are made
 and verified with PyCA; private keys stay in the external test process.
+The `openpgp_backsignature_reference.py` helper constructs v4/v6 P-384 signing
+subkey certificates with valid, missing, damaged, wrong-type, short-digest,
+unknown-critical, undated, unauthenticated-time, future and expired back signatures.
+Zero expiration means indefinite consent. Historical documents signed while
+consent was live still verify after that consent expires. The public
+`tests/vectors/openpgp-backsignature-policy-v1.json` fixture replays inspection,
+detached verification and embedded verification in Rust, with no output on refusal.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 

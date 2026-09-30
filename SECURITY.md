@@ -74,7 +74,10 @@ Ed448 public verification. These bounds apply to certificate signatures as well
 as document signatures. Disallowed primary algorithms make all certificate
 subkeys unusable. Independent v4/v6 RSA and v4 DSA certificate fixtures test this
 policy with otherwise valid P-384 signing and encryption subkeys, including
-signing-subkey back signatures. See [OpenPGP interoperability](docs/OPENPGP.md)
+signing-subkey back signatures. Back signatures require authenticated creation
+times and must be live at evaluation time. Independent v4/v6 fixtures cover
+missing, future and expired consent and preserve historical document verification
+when consent was live at signing time. See [OpenPGP interoperability](docs/OPENPGP.md)
 for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to

@@ -12,6 +12,7 @@ from openpgp_aead_reference import exercise_aead, packets
 from openpgp_signed_reference import exercise_signed
 from openpgp_signature_reference import exercise_signatures
 from openpgp_certificate_reference import exercise_certificates
+from openpgp_backsignature_reference import exercise_backsignatures
 
 
 def unarmor(data):
@@ -112,9 +113,10 @@ def exercise(executable, directory, fixture_output=None):
     signed_checks = exercise_signed(call, path, cases, message)
     signature_checks = exercise_signatures(call, path, cases, fixture_output)
     certificate_checks = exercise_certificates(call, path)
+    back_signature_checks = exercise_backsignatures(call, path)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
             "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks,
-            "certificate_policy_checks": certificate_checks}
+            "certificate_policy_checks": certificate_checks, "back_signature_checks": back_signature_checks}
 
 
 if __name__ == "__main__":

@@ -38,19 +38,24 @@ def public_key(version, algorithm, material, created):
         len(material).to_bytes(4, "big") if version == 6 else b"") + material
 
 
-def sign(public, private, document, kind, created, flags=None, back=None):
+def sign(public, private, document, kind, created, flags=None, back=None, *,
+         hash_algorithm=9, creation_area="hashed", extra_hashed=b""):
     version = public[0]
     width = 2 if version == 4 else 4
-    hashed = subpacket(2, created.to_bytes(4, "big"), critical=True)
+    creation = subpacket(2, created.to_bytes(4, "big"), critical=True)
+    hashed = (creation if creation_area == "hashed" else b"") + extra_hashed
+    unhashed = creation if creation_area == "unhashed" else b""
     hashed += subpacket(33, bytes([version]) + fingerprint(public))
     if flags is not None:
         hashed += subpacket(27, bytes([flags]), critical=True)
     if back is not None:
         hashed += subpacket(32, back)
-    prefix = bytes([version, kind, public[5], 9]) + len(hashed).to_bytes(width, "big") + hashed
-    salt = os.urandom(24) if version == 6 else b""
-    digest = hashlib.sha384(salt + document + prefix + bytes([version, 255]) + len(prefix).to_bytes(4, "big")).digest()
-    prehashed = utils.Prehashed(hashes.SHA384())
+    name, hash_type, salt_size = {8: ("sha256", hashes.SHA256, 16),
+                                 9: ("sha384", hashes.SHA384, 24)}[hash_algorithm]
+    prefix = bytes([version, kind, public[5], hash_algorithm]) + len(hashed).to_bytes(width, "big") + hashed
+    salt = os.urandom(salt_size) if version == 6 else b""
+    digest = hashlib.new(name, salt + document + prefix + bytes([version, 255]) + len(prefix).to_bytes(4, "big")).digest()
+    prehashed = utils.Prehashed(hash_type())
     if public[5] == 1:
         raw = private.sign(digest, padding.PKCS1v15(), prehashed)
         private.public_key().verify(raw, digest, padding.PKCS1v15(), prehashed)
@@ -61,7 +66,7 @@ def sign(public, private, document, kind, created, flags=None, back=None):
         private.public_key().verify(raw, digest, algorithm)
         r, s = utils.decode_dss_signature(raw)
         signature = integer(r) + integer(s)
-    return prefix + bytes(width) + digest[:2] + (
+    return prefix + len(unhashed).to_bytes(width, "big") + unhashed + digest[:2] + (
         bytes([len(salt)]) + salt if version == 6 else b"") + signature
 
 
