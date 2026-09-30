@@ -409,6 +409,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
                 .is_some_and(|back| {
                     back.typ() == Some(SignatureType::KeyBinding)
                         && signature_hash_allowed(back, key.public_params())
+                        && live(back, at)
                         && back.verify_primary_key_binding(key, primary).is_ok()
                 });
         let mut entry = component(

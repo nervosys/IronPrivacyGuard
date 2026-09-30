@@ -41,8 +41,19 @@ is replayed by Rust tests: refused primary algorithms disable both strong
 subkeys; accepted RSA-2048 controls verify documents and encrypt successfully.
 Refused verification and encryption leave no output. Binding validity remains
 visible in inspection, together with the primary algorithm policy issue.
-The 271 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
-53 PyCA signature-policy checks and 20 primary certificate-policy checks.
+The [back-signature helper](../tests/interop/openpgp_backsignature_reference.py)
+constructs v4/v6 P-384 signing subkeys with accepted and refused consent.
+The [public back-signature fixture](../tests/vectors/openpgp-backsignature-policy-v1.json)
+tests missing or unauthenticated creation times, future and expired consent,
+missing/damaged signatures, wrong signature type, digest bounds and unknown
+critical subpackets. Zero-expiration controls remain live indefinitely, and
+historical document signatures remain valid if consent was live when they were
+made. Inspection reports current validity; detached and embedded verification
+evaluate consent at document signature time. Every refused embedded message
+leaves output absent. All certificate and document signatures are made with PyCA.
+The 343 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
+53 PyCA signature-policy checks, 20 primary certificate-policy checks and
+72 back-signature checks.
 APG test keys live in a temporary directory; additional PyCA keys stay in memory.
 The helper independently unseals only disposable APG test keys; no secret material
 is checked in.
@@ -59,6 +70,12 @@ Regenerate the separate public primary-policy fixture explicitly:
 
 ```sh
 python tests/interop/openpgp_certificate_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-primary-policy-v1.json
+```
+
+Regenerate the public back-signature fixture explicitly:
+
+```sh
+python tests/interop/openpgp_backsignature_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-backsignature-policy-v1.json
 ```
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated

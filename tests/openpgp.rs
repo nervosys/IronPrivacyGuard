@@ -13,6 +13,87 @@ const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
 #[cfg(feature = "openpgp")]
 #[test]
+fn independent_back_signature_policy_respects_lifetimes_and_history() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-backsignature-policy-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let f = Fixture::new();
+    fs::write(f.path("consent-document"), &document).unwrap();
+    for case in fixture["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let bound_now = case["bound_now"].as_bool().unwrap();
+        let verifies = case["verifies"].as_bool().unwrap();
+        for (field, file) in [
+            ("certificate_hex", "consent-certificate"),
+            ("signature_hex", "consent-signature"),
+            ("embedded_hex", "consent-embedded"),
+        ] {
+            fs::write(
+                f.path(file),
+                hex::decode(case[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+        }
+        let inspected = call(json!({"operation":"openpgp.cert.inspect",
+            "input":f.path("consent-certificate")}))
+        .unwrap();
+        let report = &inspected["certificate"];
+        assert_eq!(report["fingerprint"], case["fingerprint"], "{name}");
+        let keys = report["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 2, "{name}");
+        assert_eq!(keys[0]["bound"], true, "{name}");
+        assert_eq!(
+            keys[1]["fingerprint"], case["signing_fingerprint"],
+            "{name}"
+        );
+        assert_eq!(keys[1]["bound"], bound_now, "{name}");
+        assert_eq!(report["usable_for_signing"], bound_now, "{name}");
+        if !bound_now {
+            assert!(
+                keys[1]["issues"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|issue| issue == "signing subkey lacks a valid back signature"),
+                "{name}"
+            );
+        }
+        let verified = call(json!({"operation":"openpgp.verify",
+            "input":f.path("consent-document"), "signature":f.path("consent-signature"),
+            "certificate":f.path("consent-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if verifies {
+            let result = verified.unwrap();
+            assert_eq!(result["valid"], true, "{name}");
+            assert_eq!(
+                result["verification"]["signing_key"], case["signing_fingerprint"],
+                "{name}"
+            );
+        } else {
+            assert_eq!(verified.unwrap_err(), "policy_mismatch", "{name}");
+        }
+        let output = f.path(&format!("consent-{name}.plain"));
+        let verified = call(json!({"operation":"openpgp.message.verify",
+            "input":f.path("consent-embedded"), "output":output,
+            "certificate":f.path("consent-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if verifies {
+            let result = verified.unwrap();
+            assert_eq!(result["valid"], true, "{name}");
+            assert_eq!(
+                result["verification"]["signing_key"], case["signing_fingerprint"],
+                "{name}"
+            );
+            assert_eq!(fs::read(&output).unwrap(), document, "{name}");
+        } else {
+            assert_eq!(verified.unwrap_err(), "policy_mismatch", "{name}");
+            assert!(!std::path::Path::new(&output).exists(), "{name}");
+        }
+    }
+}
+
+#[cfg(feature = "openpgp")]
+#[test]
 fn independent_primary_policy_fixtures_gate_strong_subkeys() {
     let fixture: Value =
         serde_json::from_str(include_str!("vectors/openpgp-primary-policy-v1.json")).unwrap();
