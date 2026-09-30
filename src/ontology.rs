@@ -279,6 +279,20 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file", "create_file"],
     ),
     (
+        "stream.sign",
+        "Sign any-size exact file bytes using a domain-separated SHA-384 commitment and byte count",
+        &["Plaintext", "SecretKey", "Passphrase"],
+        &["StreamSignature"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "stream.verify",
+        "Verify an any-size file against an apg-stream-signature-v1 artifact and pinned signer",
+        &["Plaintext", "StreamSignature", "PublicKey", "Fingerprint"],
+        &["Verification"],
+        &["read_file"],
+    ),
+    (
         "stream.decrypt",
         "Decrypt an apg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
         &["StreamCiphertext", "SecretKey", "Passphrase"],
@@ -373,6 +387,13 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["OpenpgpVerification"],
         &["read_file"],
     ),
+    (
+        "openpgp.message.verify",
+        "Verify one embedded OpenPGP document signature against a pinned certificate, optionally decrypting, and publish authenticated literal bytes",
+        &["OpenpgpMessage", "OpenpgpCertificate", "OpenpgpFingerprint"],
+        &["Plaintext", "OpenpgpVerification"],
+        &["read_file", "create_file"],
+    ),
 ];
 
 /// Operations whose `key` input may be a software secret or a hardware reference.
@@ -383,6 +404,7 @@ pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "decrypt",
     "stream.decrypt",
     "sign",
+    "stream.sign",
 ];
 
 pub fn operation(id: &str) -> Value {
@@ -415,7 +437,9 @@ pub fn operation(id: &str) -> Value {
         "revocation.verify" | "validity.verify" => {
             vec!["identity-pin", "certificate-not-enforcement"]
         }
-        "key.generate" | "key.public" | "sign" => vec!["secret-channel", "no-clobber"],
+        "key.generate" | "key.public" | "sign" | "stream.sign" => {
+            vec!["secret-channel", "no-clobber"]
+        }
         "encrypt" => vec![
             "identity-pin",
             "no-clobber",
@@ -427,7 +451,7 @@ pub fn operation(id: &str) -> Value {
             "secret-channel",
             "no-clobber",
         ],
-        "verify" => vec!["identity-pin", "exact-bytes"],
+        "verify" | "stream.verify" => vec!["identity-pin", "exact-bytes"],
         "inspect" => vec!["untrusted-metadata"],
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
@@ -493,6 +517,16 @@ pub fn operation(id: &str) -> Value {
             "openpgp-certificate-policy",
             "exact-bytes",
         ],
+        "openpgp.message.verify" => vec![
+            "openpgp-boundary",
+            "openpgp-pin",
+            "openpgp-certificate-policy",
+            "openpgp-embedded-signatures",
+            "openpgp-size-bound",
+            "authenticate-before-release",
+            "no-clobber",
+            "secret-channel",
+        ],
         "kms.key.bind" => vec![
             "kms-provider",
             "non-exportable-key",
@@ -528,6 +562,9 @@ pub fn operation(id: &str) -> Value {
         _ => vec![],
     };
     let key_provider = KEY_PROVIDER_OPERATIONS.contains(id);
+    if matches!(*id, "stream.sign" | "stream.verify") {
+        constraints.push("stream-signature");
+    }
     if key_provider {
         constraints.push("key-provider");
     }
@@ -543,6 +580,8 @@ pub fn operation(id: &str) -> Value {
             | "stream.decrypt"
             | "sign"
             | "verify"
+            | "stream.sign"
+            | "stream.verify"
             | "key.revoke"
             | "key.validity"
     ) {
@@ -574,8 +613,10 @@ pub fn operation(id: &str) -> Value {
             "sha2-384",
             "argon2id",
         ],
-        "sign" | "key.revoke" | "key.validity" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
-        "verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
+        "sign" | "stream.sign" | "key.revoke" | "key.validity" => {
+            vec!["ed25519", "argon2id", "chacha20-poly1305"]
+        }
+        "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "hash" => vec!["sha2-256"],
         "openpgp.key.generate" | "openpgp.decrypt" | "openpgp.sign" => {
             vec!["argon2id", "chacha20-poly1305"]
@@ -607,11 +648,10 @@ pub fn operation(id: &str) -> Value {
             "ml-dsa-65",
         ],
         "key.generate" | "key.rewrap" => &["ml-kem-768", "ml-dsa-65"],
-        "sign" | "verify" | "key.revoke" | "key.validity" | "revocation.verify"
-        | "validity.verify" | "trust.add" | "trust.revoke" | "trust.validity" | "trust.status"
-        | "trust.evaluate" | "trust.compare" | "trust.merge" => {
-            &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"]
-        }
+        "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
+        | "revocation.verify" | "validity.verify" | "trust.add" | "trust.revoke"
+        | "trust.validity" | "trust.status" | "trust.evaluate" | "trust.compare"
+        | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
         _ => &[],
     };
     for algorithm in p384 {
@@ -619,7 +659,13 @@ pub fn operation(id: &str) -> Value {
             algorithms.push(algorithm);
         }
     }
-    let governed = matches!(*id, "encrypt" | "stream.encrypt" | "sign" | "verify");
+    let governed = matches!(
+        *id,
+        "encrypt" | "stream.encrypt" | "sign" | "verify" | "stream.sign" | "stream.verify"
+    );
+    if matches!(*id, "stream.sign" | "stream.verify") && !algorithms.contains(&"sha2-384") {
+        algorithms.push("sha2-384");
+    }
     if governed {
         constraints.push("snapshot-policy");
         constraints.push("validity-window");
@@ -655,8 +701,12 @@ pub fn operation(id: &str) -> Value {
                     | "openpgp.encrypt"
                     | "openpgp.sign"
                     | "openpgp.verify"
+                    | "openpgp.message.verify"
             ));
     let mut conditional_effects = Vec::new();
+    if *id == "openpgp.message.verify" {
+        conditional_effects.push("read an APG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host");
+    }
     if governed {
         conditional_effects.push("read pinned trust snapshot when policy is supplied");
     }
@@ -696,7 +746,7 @@ pub fn discover() -> Value {
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4],"generated_keys":["ed25519","p384"],"encryption":"SEIPDv1 with AES-256","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","verification of signatures embedded in OpenPGP messages","OpenPGP web of trust and designated revokers","streaming signatures","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "unsupported":["OpenPGP v3, v5 or v6 keys","OpenPGP secret-key import or export","OpenPGP web of trust and designated revokers","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -758,7 +808,7 @@ pub fn export() -> Value {
         ),
         (
             "McpHostPolicy",
-            "Startup-selected trust snapshot injected into encrypt, sign and verify, and optional hardware key custody requirement; tool callers cannot replace either",
+            "Startup-selected trust snapshot injected into encrypt, stream.encrypt, sign, stream.sign, verify and stream.verify, and optional hardware key custody requirement; tool callers cannot replace either",
             "control",
         ),
         (
@@ -795,6 +845,11 @@ pub fn export() -> Value {
             "StreamCiphertext",
             "apg-stream-v1: a binary stream with a header wrapping one content key for each of 1..64 recipients and authenticated 64 KiB chunks; does not identify a sender",
             "ciphertext",
+        ),
+        (
+            "StreamSignature",
+            "apg-stream-signature-v1: detached signature binding the signer, algorithm, SHA-384 digest and u64 byte count of an any-size file; distinct from ordinary detached signatures and external prehash modes",
+            "public",
         ),
         (
             "TpmEvidence",
@@ -1070,6 +1125,10 @@ pub fn export() -> Value {
             "Outputs use create-new publication; existing destinations are never replaced.",
         ),
         (
+            "stream-signature",
+            "apg-stream-signature-v1 signs a domain-separated SHA-384 digest and u64 byte count with 64 KiB input memory. It is not ordinary apg-signature-v1, Ed25519ph, HashML-DSA or OpenPGP. Exact content, signer, signature algorithm and digest algorithm are bound together; independent review is still required.",
+        ),
+        (
             "authenticate-before-release",
             "Decryption authenticates the entire envelope before writing any output.",
         ),
@@ -1127,7 +1186,7 @@ pub fn export() -> Value {
         ),
         (
             "openpgp-embedded-signatures",
-            "Signatures inside a decrypted message are reported by signed=true but never verified (signatures_verified=false); exchange detached signatures and use openpgp.verify. Sender identity is otherwise unauthenticated.",
+            "openpgp.decrypt reports signatures without authenticating the sender. Use openpgp.message.verify to publish literal bytes only after one embedded signature verifies against a pinned certificate, optionally decrypting first. It accepts one compression layer and refuses multiple or nested signatures. Literal filenames are untrusted; only the explicit output path is used.",
         ),
         (
             "openpgp-size-bound",

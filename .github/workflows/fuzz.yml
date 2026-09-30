@@ -16,7 +16,9 @@ jobs:
       - run: cargo install cargo-fuzz --version 0.13.2 --locked
       - run: cargo fetch --locked --manifest-path fuzz/Cargo.toml
       - run: mkdir -p fuzz/corpus/${{ matrix.target }}
-      - run: cargo +nightly fuzz run --target-dir target/fuzz ${{ matrix.target }} fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }} -- -runs=10000 -max_total_time=45 -max_len=65537 -timeout=10 -rss_limit_mb=2048
+      - if: matrix.target == 'stream_headers'
+        run: python3 scripts/fuzz-large-headers.py
+      - run: cargo +nightly fuzz run --target-dir target/fuzz ${{ matrix.target }} fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }} -- -runs=10000 -max_total_time=45 -max_len=${{ matrix.target == 'stream_headers' && '1048588' || '65537' }} -timeout=10 -rss_limit_mb=2048
         env:
           CARGO_NET_OFFLINE: true
       - run: git diff --exit-code -- fuzz/Cargo.lock

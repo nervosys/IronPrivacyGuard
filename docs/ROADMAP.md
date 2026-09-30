@@ -16,7 +16,9 @@ implemented surface, not feature parity with decades of GPG development.
    remain external orchestrator duties.
 3. Have the multi-recipient streaming format (`apg-stream-v1`: 64 KiB chunks,
    STREAM nonces with a final-chunk flag, header-committed associated data) reviewed
-   independently, and add streaming signatures for files beyond the in-memory limit.
+   independently. Streaming detached signatures are implemented as the separately
+   versioned `apg-stream-signature-v1` hash-then-sign protocol with SHA-384 and
+   bounded memory; include it in that review.
 4. Expand MCP testing beyond the official Python SDK 2.2.0, now covered by a real
    stdio interoperability suite in CI. Generated tools, host allowlists and
    mandatory host trust policy are implemented; HTTP, tasks and active cancellation
@@ -24,8 +26,10 @@ implemented surface, not feature parity with decades of GPG development.
 5. Extend the OpenPGP compatibility boundary ([OPENPGP.md](OPENPGP.md)). v4 key
    generation, certificate export and inspection, multi-recipient encryption,
    decryption and detached signatures interoperate with GnuPG through rPGP. v6 keys
-   and SEIPDv2, verification of embedded signatures, secret-key import and export,
-   and OpenPGP keys on hardware remain. Never silently reinterpret native APG data
+   and SEIPDv2, secret-key import and export,
+   and OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
+   document signatures, optionally decrypting, before publishing literal bytes.
+   Never silently reinterpret native APG data
    as OpenPGP.
 6. Extend post-quantum and hardware coverage. Hybrid ML-KEM-768 + X25519
    confidentiality and composite Ed25519 + ML-DSA-65 signatures are implemented for

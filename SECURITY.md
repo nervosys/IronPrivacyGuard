@@ -59,11 +59,15 @@ callers; a successful write is not a backup policy.
 OpenPGP support is an optional boundary (`openpgp` feature) built on rPGP rather
 than IronCrypto. It holds only Ed25519 and P-384 secret keys, because rPGP's RSA
 dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); RSA is
-used only for public operations. It does not verify signatures embedded in messages,
-and APG trust snapshots do not govern it. See [OpenPGP interoperability](docs/OPENPGP.md).
+used only for public operations. `openpgp.message.verify` authenticates one embedded
+document signature against a pinned certificate before publishing plaintext;
+`openpgp.decrypt` still does not authenticate the sender. APG trust snapshots do
+not govern OpenPGP. See [OpenPGP interoperability](docs/OPENPGP.md).
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
-the rest. No private-key keyring,
+the rest. `apg-stream-signature-v1` provides separate any-size native signatures
+over domain-separated SHA-384 commitments and byte counts, bounded by SHA-384
+collision resistance; it needs independent review. No private-key keyring,
 identity certification, PKCS#11 or KMS attestation, post-quantum PKCS#11 or TPM keys,
 or FIPS validation. TPM identities can be attested (`docs/ATTESTATION.md`); EK
 certificates are not checked for revocation, and on Windows the final step needs an

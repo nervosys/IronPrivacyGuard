@@ -1531,7 +1531,7 @@
           "type": "string"
         },
         "signatures_verified": {
-          "description": "Always false: embedded signatures are not verified; use openpgp.verify\nwith a detached signature.",
+          "description": "Always false for openpgp.decrypt; use openpgp.message.verify to\nauthenticate and publish embedded signed content.",
           "type": "boolean"
         },
         "signed": {
@@ -1604,6 +1604,36 @@
       "required": [
         "kind",
         "valid",
+        "verification"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "openpgp_message_verified",
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "verification": {
+          "$ref": "#/$defs/Verification"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "valid",
+        "bytes",
         "verification"
       ],
       "type": "object"

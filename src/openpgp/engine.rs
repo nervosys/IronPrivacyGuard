@@ -10,7 +10,7 @@
 use super::{
     Algorithm, Certificate, ComponentKey, Decrypted, KDF, KEY_FORMAT, KeyFile,
     MAX_CERTIFICATE_BYTES, MAX_OWN_CERTIFICATE_BYTES, MAX_PLAINTEXT_BYTES, MAX_SECRET_BYTES,
-    RecipientKeys, Signed, Verification, check_user_id, normalize_fingerprint,
+    RecipientKeys, Signed, Verification, VerifiedMessage, check_user_id, normalize_fingerprint,
 };
 use crate::crypto;
 use crate::error::{Error, Result};
@@ -879,6 +879,107 @@ pub(crate) fn verify(
     }))
 }
 
+/// Extract literal bytes only after one embedded document signature verifies.
+pub(crate) fn verify_message(
+    certificate: &[u8],
+    expected: &str,
+    message: &[u8],
+    recipient: Option<(&KeyFile, &[u8])>,
+) -> Result<VerifiedMessage> {
+    // Pin before password work or reading plaintext.
+    pin(&parse_certificate(certificate)?, expected)?;
+    single_armor_block(message, "message")?;
+    let (mut parsed, _) = Message::from_reader(Cursor::new(message))
+        .map_err(|e| format_error("Unreadable OpenPGP signed message", e))?;
+    if parsed.is_encrypted() {
+        let (key, password) = recipient.ok_or_else(|| {
+            Error::new(
+                "invalid_request",
+                "Encrypted signed messages require a key and passphrase file",
+            )
+        })?;
+        let secret = unseal(key, password)?;
+        parsed = parsed.decrypt(&Password::empty(), &secret).map_err(|e| {
+            Error::new(
+                "authentication_failed",
+                format!("OpenPGP message decryption failed: {e}"),
+            )
+        })?;
+    } else if recipient.is_some() {
+        return Err(Error::new(
+            "invalid_request",
+            "A decryption key was supplied for an unencrypted message",
+        ));
+    }
+    if parsed.is_compressed() {
+        parsed = parsed
+            .decompress()
+            .map_err(|e| format_error("OpenPGP decompression failed", e))?;
+    }
+    let Message::Signed { reader, .. } = &parsed else {
+        return Err(Error::new(
+            "invalid_format",
+            "Expected an embedded signed OpenPGP message",
+        ));
+    };
+    if reader.num_signatures() != 1 || !reader.get_ref().is_literal() {
+        return Err(Error::new(
+            "invalid_format",
+            "Exactly one document signature over literal data is required; nested signatures, compression or encryption are refused",
+        ));
+    }
+    let mut plaintext = Zeroizing::new(Vec::new());
+    (&mut parsed)
+        .take(MAX_PLAINTEXT_BYTES + 1)
+        .read_to_end(&mut plaintext)
+        .map_err(|e| {
+            Error::new(
+                "authentication_failed",
+                format!("OpenPGP signed message reading failed: {e}"),
+            )
+        })?;
+    if plaintext.len() as u64 > MAX_PLAINTEXT_BYTES {
+        return Err(Error::new(
+            "limit_exceeded",
+            "Signed OpenPGP plaintext exceeds 16 MiB",
+        ));
+    }
+    let Message::Signed { reader, .. } = &parsed else {
+        unreachable!()
+    };
+    let signature = reader
+        .signature(0)
+        .ok_or_else(|| Error::new("invalid_format", "Missing final OpenPGP signature"))?;
+    // Reuse the exact detached document-signature policy on extracted literal bytes.
+    // Signature packet metadata and the literal filename are never trusted paths.
+    let detached = DetachedSignature {
+        signature: signature.clone(),
+    }
+    .to_armored_string(ArmorOptions::default())
+    .map_err(|e| format_error("Signature serialization failed", e))?;
+    let verification = verify(certificate, expected, detached.as_bytes(), &plaintext)?;
+    // Finish the containing plaintext reader as well: a second packet message
+    // or unexpected trailing bytes must not be silently accepted.
+    let mut remaining = parsed.into_inner().into_inner();
+    let mut trailing = [0; 1];
+    if remaining.read(&mut trailing).map_err(|e| {
+        Error::new(
+            "authentication_failed",
+            format!("OpenPGP message finalization failed: {e}"),
+        )
+    })? != 0
+    {
+        return Err(Error::new(
+            "invalid_format",
+            "Trailing OpenPGP message data",
+        ));
+    }
+    Ok(VerifiedMessage {
+        plaintext,
+        verification,
+    })
+}
+
 /// Object-safe view of a primary key or subkey for signature checks.
 trait VerifyKey {
     fn issued(&self, sig: &Signature) -> bool;
@@ -893,5 +994,123 @@ impl<K: pgp::types::VerifyingKey> VerifyKey for K {
     }
     fn check(&self, sig: &Signature, data: &[u8]) -> bool {
         sig.verify(self, data).is_ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pgp::types::CompressionAlgorithm;
+
+    #[test]
+    fn embedded_signatures_publish_only_verified_bytes() {
+        let password = b"PUBLIC embedded-signature test password";
+        let data = b"embedded binary\0\xff\r\npayload\n";
+        for algorithm in [Algorithm::Ed25519, Algorithm::P384] {
+            let key = generate("Signer <signer@example.test>", algorithm, password).unwrap();
+            let secret = unseal(&key, password).unwrap();
+            let certificate = hex::decode(&key.certificate).unwrap();
+            let hash = if algorithm == Algorithm::P384 {
+                HashAlgorithm::Sha384
+            } else {
+                HashAlgorithm::Sha512
+            };
+            let make = |encrypted: bool, signatures: usize, hash| {
+                let mut builder =
+                    MessageBuilder::from_bytes("../../untrusted-filename", data.to_vec());
+                builder.compression(CompressionAlgorithm::ZLIB);
+                for _ in 0..signatures {
+                    builder.sign(&secret.primary_key, Password::empty(), hash);
+                }
+                if encrypted {
+                    let mut builder = builder.seipd_v1(OsRng, SymmetricKeyAlgorithm::AES256);
+                    builder
+                        .encrypt_to_key(OsRng, &secret.to_public_key().public_subkeys[0].key)
+                        .unwrap();
+                    builder
+                        .to_armored_string(OsRng, ArmorOptions::default())
+                        .unwrap()
+                } else {
+                    builder
+                        .to_armored_string(OsRng, ArmorOptions::default())
+                        .unwrap()
+                }
+            };
+            for encrypted in [false, true] {
+                let message = make(encrypted, 1, hash);
+                let credentials = encrypted.then_some((&key, &password[..]));
+                let result = verify_message(
+                    &certificate,
+                    &key.fingerprint,
+                    message.as_bytes(),
+                    credentials,
+                )
+                .unwrap();
+                assert_eq!(&*result.plaintext, data);
+                assert_eq!(result.verification.fingerprint, key.fingerprint);
+                let dir = tempfile::tempdir().unwrap();
+                let path = |name: &str| dir.path().join(name).display().to_string();
+                std::fs::write(path("message"), &message).unwrap();
+                std::fs::write(path("certificate"), &certificate).unwrap();
+                std::fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+                std::fs::write(path("password"), password).unwrap();
+                let request = |pin: String| crate::Request::OpenpgpMessageVerify {
+                    input: path("message"),
+                    output: path("output"),
+                    certificate: path("certificate"),
+                    expected_openpgp_fingerprint: pin,
+                    key: encrypted.then(|| path("key")),
+                    passphrase_file: encrypted.then(|| path("password")),
+                };
+                assert!(crate::execute(request("00".repeat(20))).is_err());
+                assert!(!dir.path().join("output").exists());
+                crate::execute(request(key.fingerprint.clone())).unwrap();
+                assert_eq!(std::fs::read(path("output")).unwrap(), data);
+                assert_eq!(
+                    crate::execute(request(key.fingerprint.clone()))
+                        .err()
+                        .unwrap()
+                        .code,
+                    "already_exists"
+                );
+                let mut truncated = message.as_bytes().to_vec();
+                truncated.truncate(truncated.len() / 2);
+                assert!(
+                    verify_message(&certificate, &key.fingerprint, &truncated, credentials)
+                        .is_err()
+                );
+                if encrypted {
+                    assert!(
+                        verify_message(&certificate, &key.fingerprint, message.as_bytes(), None)
+                            .is_err()
+                    );
+                }
+            }
+            for (count, hash) in [(0, hash), (2, hash)] {
+                let bad = make(false, count, hash);
+                assert!(
+                    verify_message(&certificate, &key.fingerprint, bad.as_bytes(), None).is_err()
+                );
+            }
+            let mut builder = MessageBuilder::from_bytes("", data.to_vec());
+            builder.sign(&secret.primary_key, Password::empty(), hash);
+            let binary = builder.to_vec(OsRng).unwrap();
+            let mut trailing = binary.clone();
+            trailing.extend_from_slice(&binary);
+            assert!(verify_message(&certificate, &key.fingerprint, &trailing, None).is_err());
+            let mut tampered = binary;
+            let offset = tampered
+                .windows(data.len())
+                .position(|window| window == data)
+                .unwrap();
+            tampered[offset] ^= 1;
+            assert_eq!(
+                verify_message(&certificate, &key.fingerprint, &tampered, None)
+                    .err()
+                    .unwrap()
+                    .code,
+                "authentication_failed"
+            );
+        }
     }
 }

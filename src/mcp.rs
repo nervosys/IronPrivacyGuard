@@ -375,6 +375,9 @@ impl Server {
             if let Some(required) = &self.config.policy {
                 let target = match &mut request {
                     Request::Encrypt { policy, .. }
+                    | Request::StreamEncrypt { policy, .. }
+                    | Request::StreamSign { policy, .. }
+                    | Request::StreamVerify { policy, .. }
                     | Request::Sign { policy, .. }
                     | Request::Verify { policy, .. } => Some(policy),
                     _ => None,

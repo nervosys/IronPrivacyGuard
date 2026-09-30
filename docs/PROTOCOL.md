@@ -85,11 +85,14 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | trust.status | store, expected_digest, expected_fingerprint |
 | stream.encrypt | input, output, recipients (1..64 of public, expected_fingerprint), optional policy |
 | stream.decrypt | input, output, key (passphrase_file for software keys and PINs) |
+| stream.sign | input, output, key, optional passphrase_file and policy |
+| stream.verify | input, signature, signer, expected_fingerprint, optional policy |
 | openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384) |
 | openpgp.cert.export | key, output |
 | openpgp.cert.inspect | input |
 | openpgp.encrypt | input, output, recipients (1..32 of certificate, expected_openpgp_fingerprint) |
 | openpgp.decrypt, openpgp.sign | input, output, key, passphrase_file |
+| openpgp.message.verify | input, output, certificate, expected_openpgp_fingerprint; optional key and passphrase_file together for encrypted input |
 | openpgp.verify | input, signature, certificate, expected_openpgp_fingerprint |
 
 `reason` is one of `compromised`, `superseded`, `retired`. A successful
@@ -98,7 +101,8 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 certificate without changing trust state. Unsupported reasons fail during request
 or artifact parsing. `inspect` never applies trust policy.
 
-`encrypt`, `sign`, and `verify` also accept optional `policy`:
+`encrypt`, `stream.encrypt`, `sign`, `stream.sign`, `verify`, and `stream.verify`
+also accept optional `policy`:
 `{"store":"snapshot.json","expected_digest":"<96 lowercase hex characters>"}`
 (64 for legacy v1 and v2 snapshots).
 The CLI accepts `--policy` followed by that JSON string. Both fields are required
@@ -120,8 +124,11 @@ reserved for structured control. Binary input/output stays in files.
 
 File inputs are capped at 33,554,432 bytes. Encryptable plaintext is capped at
 16,775,168 bytes, leaving space for hex encoding and envelope fields. Passphrase
-files are capped at 4096 bytes. Hashing and signatures currently use bounded
-whole-file buffers rather than streaming.
+files are capped at 4096 bytes. `hash`, `sign` and `verify` use bounded whole-file
+buffers. `stream.encrypt`, `stream.decrypt`, `stream.sign` and `stream.verify`
+handle any-size data using bounded buffers; their key, signature and policy
+artifacts remain bounded. Streaming signatures use a separate versioned
+SHA-384 commitment format, not ordinary `apg-signature-v1`.
 Trust-policy files have a separate 1,048,576-byte read limit and allow at most
 256 identities. Every embedded revocation is verified before the store is used.
 

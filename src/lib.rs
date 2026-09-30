@@ -24,6 +24,7 @@ mod pkcs11;
 pub mod provider;
 pub mod reconciliation;
 pub mod stream;
+pub mod stream_signature;
 #[cfg(all(feature = "tpm", target_os = "linux"))]
 mod tpm;
 #[cfg(feature = "attestation")]
@@ -349,6 +350,24 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
     },
+    #[serde(rename = "stream.sign")]
+    StreamSign {
+        input: String,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "stream.verify")]
+    StreamVerify {
+        input: String,
+        signature: String,
+        signer: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        policy: Option<TrustPolicy>,
+    },
     #[serde(rename = "tpm.attest")]
     TpmAttest {
         /// An apg-tpm-key-v1 file (Linux or Windows).
@@ -444,6 +463,20 @@ pub enum Request {
         certificate: String,
         #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
         expected_openpgp_fingerprint: String,
+    },
+    #[serde(rename = "openpgp.message.verify")]
+    OpenpgpMessageVerify {
+        input: String,
+        /// Publish only authenticated literal bytes to this new path.
+        output: String,
+        certificate: String,
+        #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
+        expected_openpgp_fingerprint: String,
+        /// APG OpenPGP decryption key, required only for encrypted messages.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        key: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
     },
 }
 
@@ -616,8 +649,8 @@ pub enum Outcome {
         fingerprint: String,
         /// The message carried OpenPGP signatures.
         signed: bool,
-        /// Always false: embedded signatures are not verified; use openpgp.verify
-        /// with a detached signature.
+        /// Always false for openpgp.decrypt; use openpgp.message.verify to
+        /// authenticate and publish embedded signed content.
         signatures_verified: bool,
     },
     OpenpgpSigned {
@@ -630,6 +663,12 @@ pub enum Outcome {
     },
     OpenpgpVerified {
         valid: bool,
+        verification: openpgp::Verification,
+    },
+    OpenpgpMessageVerified {
+        path: String,
+        valid: bool,
+        bytes: u64,
         verification: openpgp::Verification,
     },
 }
@@ -675,6 +714,8 @@ impl Request {
             Self::TpmKeyDelete { .. } => "tpm.key.delete",
             Self::StreamEncrypt { .. } => "stream.encrypt",
             Self::StreamDecrypt { .. } => "stream.decrypt",
+            Self::StreamSign { .. } => "stream.sign",
+            Self::StreamVerify { .. } => "stream.verify",
             Self::TpmAttest { .. } => "tpm.attest",
             Self::TpmAttestationChallenge { .. } => "tpm.attestation.challenge",
             Self::TpmAttestationRespond { .. } => "tpm.attestation.respond",
@@ -686,6 +727,7 @@ impl Request {
             Self::OpenpgpDecrypt { .. } => "openpgp.decrypt",
             Self::OpenpgpSign { .. } => "openpgp.sign",
             Self::OpenpgpVerify { .. } => "openpgp.verify",
+            Self::OpenpgpMessageVerify { .. } => "openpgp.message.verify",
         }
     }
 }
@@ -849,7 +891,7 @@ pub fn schemas() -> Value {
         "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
         "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
         "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),"stream_header":schemars::schema_for!(stream::Header),
+        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),"stream_header":schemars::schema_for!(stream::Header),"stream_signature":schemars::schema_for!(stream_signature::Signature),
         "knowledge_application":schemars::schema_for!(knowledge::Application)}})
 }
 
@@ -1178,6 +1220,55 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 ),
                 identity.custody(),
             ))
+        }
+        Request::StreamSign {
+            input,
+            output,
+            key,
+            passphrase_file,
+            policy,
+        } => {
+            require_absent(&output)?;
+            let key = load_key(&key)?;
+            let digest = trust::enforce(policy.as_ref(), key.public())?;
+            let credential = credential(passphrase_file)?;
+            let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
+            let signature = stream_signature::sign(&*identity, &mut File::open(&input)?)?;
+            Ok(with_custody(
+                with_policy(
+                    save(
+                        output,
+                        &signature,
+                        "stream_signature",
+                        Some(key.public().fingerprint.clone()),
+                    )?,
+                    digest,
+                ),
+                identity.custody(),
+            ))
+        }
+        Request::StreamVerify {
+            input,
+            signature,
+            signer,
+            expected_fingerprint,
+            policy,
+        } => {
+            let public: PublicKey = load(&signer)?;
+            public.pin(&expected_fingerprint)?;
+            let digest = trust::enforce(policy.as_ref(), &public)?;
+            stream_signature::verify(
+                &public,
+                &expected_fingerprint,
+                &load(&signature)?,
+                &mut File::open(&input)?,
+            )?;
+            Ok(Outcome::Verified {
+                valid: true,
+                fingerprint: public.fingerprint,
+                policy_checked_at: digest.as_ref().map(|e| e.checked_at),
+                policy_digest: digest.map(|e| e.digest),
+            })
         }
         Request::Verify {
             input,
@@ -1540,6 +1631,44 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             Ok(Outcome::OpenpgpVerified {
                 valid: true,
                 verification,
+            })
+        }
+        Request::OpenpgpMessageVerify {
+            input,
+            output,
+            certificate,
+            expected_openpgp_fingerprint,
+            key,
+            passphrase_file,
+        } => {
+            require_absent(&output)?;
+            if key.is_some() != passphrase_file.is_some() {
+                return Err(Error::new(
+                    "invalid_request",
+                    "Supply both key and passphrase_file, or neither",
+                ));
+            }
+            let recipient: Option<openpgp::KeyFile> = key
+                .map(|path| {
+                    host.permit(Custody::Software)?;
+                    load(&path)
+                })
+                .transpose()?;
+            let credential = credential(passphrase_file)?;
+            let verified = openpgp::verify_message(
+                &read_limited(File::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &expected_openpgp_fingerprint,
+                &read(&input)?,
+                recipient
+                    .as_ref()
+                    .zip(credential.as_deref().map(Vec::as_slice)),
+            )?;
+            write_new(&output, &verified.plaintext)?;
+            Ok(Outcome::OpenpgpMessageVerified {
+                path: output,
+                valid: true,
+                bytes: verified.plaintext.len() as u64,
+                verification: verified.verification,
             })
         }
         Request::TpmKeyDelete {

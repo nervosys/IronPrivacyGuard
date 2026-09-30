@@ -187,6 +187,19 @@ pub fn artifacts(data: &[u8]) {
         }
     }
     let _ = iron_privacy_guardian::artifact::inspect(data);
+    if let Ok(signature) =
+        serde_json::from_slice::<iron_privacy_guardian::stream_signature::Signature>(data)
+    {
+        let _ = signature.validate();
+        for signer in [public(), p384_public()] {
+            let _ = iron_privacy_guardian::stream_signature::verify(
+                signer,
+                &signer.fingerprint,
+                &signature,
+                &mut &b"fuzz"[..],
+            );
+        }
+    }
     if let Ok(public) = serde_json::from_slice::<crypto::PublicKey>(data) {
         if public.validate().is_ok() {
             // A valid identity always names a known suite with exact key widths.

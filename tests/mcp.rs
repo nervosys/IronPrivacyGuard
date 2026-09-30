@@ -276,7 +276,7 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
         expected_digest: store.digest().unwrap(),
     };
     let mut server = ready(Config {
-        policy: Some(pinned),
+        policy: Some(pinned.clone()),
         allowed: None,
         ..Default::default()
     });
@@ -307,6 +307,42 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
         tool(&mut server, "apg_verify", verify)["result"]["structuredContent"]["error"]["code"],
         "key_revoked"
     );
+    let cases = [
+        (
+            "apg_stream_encrypt",
+            json!({"input":path("missing"),"output":path("stream-out"),"recipients":[{"public":path("public"),"expected_fingerprint":key.public.fingerprint}]}),
+        ),
+        (
+            "apg_stream_sign",
+            json!({"input":path("missing"),"output":path("stream-sig"),"key":path("key"),"passphrase_file":path("missing")}),
+        ),
+        (
+            "apg_stream_verify",
+            json!({"input":path("missing"),"signature":path("missing"),"signer":path("public"),"expected_fingerprint":key.public.fingerprint}),
+        ),
+    ];
+    for (name, args) in cases {
+        for policy in [
+            None,
+            Some(Value::Null),
+            Some(serde_json::to_value(&pinned).unwrap()),
+        ] {
+            let mut args = args.clone();
+            if let Some(policy) = policy {
+                args["policy"] = policy;
+            }
+            assert_eq!(
+                tool(&mut server, name, args)["result"]["structuredContent"]["error"]["code"],
+                "key_revoked"
+            );
+        }
+        let mut replacement = args;
+        replacement["policy"] = json!({"store":path("store"),"expected_digest":old_digest});
+        assert_eq!(
+            tool(&mut server, name, replacement)["result"]["structuredContent"]["error"]["code"],
+            "policy_mismatch"
+        );
+    }
     fs::write(path("store"), b"corrupt").unwrap();
     assert_eq!(
         tool(&mut server, "apg_encrypt", args)["result"]["isError"],

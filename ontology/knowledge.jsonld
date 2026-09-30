@@ -255,7 +255,7 @@
         "apg:goal/content-authenticity",
         "apg:goal/content-integrity"
       ],
-      "guidance": "Verify against the expected signer and exact original bytes before consuming content.",
+      "guidance": "Verify against the expected signer and exact original bytes before consuming content. Use stream.sign and stream.verify beyond the in-memory limit; their separate native format signs a SHA-384 commitment and byte count with bounded memory.",
       "id": "authenticate-file",
       "keywords": [
         "signature",
@@ -283,7 +283,9 @@
       "support": "implemented",
       "tools": [
         "apg:operation/sign",
-        "apg:operation/verify"
+        "apg:operation/verify",
+        "apg:operation/stream.sign",
+        "apg:operation/stream.verify"
       ]
     },
     {
@@ -487,7 +489,7 @@
       "goals": [
         "apg:goal/protocol-interoperability"
       ],
-      "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), share the certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify.",
+      "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), share the certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
       "id": "openpgp-interoperability",
       "keywords": [
         "pgp",
@@ -501,7 +503,7 @@
       "limitations": [
         "Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review",
         "v4 keys only; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys",
-        "Signatures embedded in messages are not verified; exchange detached signatures",
+        "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
         "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply",
         "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected",
         "APG native envelopes, signatures and keys are never OpenPGP packets"
@@ -523,7 +525,8 @@
         "apg:operation/openpgp.encrypt",
         "apg:operation/openpgp.decrypt",
         "apg:operation/openpgp.sign",
-        "apg:operation/openpgp.verify"
+        "apg:operation/openpgp.verify",
+        "apg:operation/openpgp.message.verify"
       ]
     },
     {
@@ -3175,6 +3178,156 @@
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
+      "@id": "apg:operation/stream.sign",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber",
+        "apg:constraint/stream-signature",
+        "apg:constraint/key-provider",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Sign any-size exact file bytes using a domain-separated SHA-384 commitment and byte count",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "stream.sign",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:SecretKey",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [
+        "apg:SecretKey",
+        "apg:HardwareKeyReference",
+        "apg:TpmKeyFile",
+        "apg:KmsKeyFile"
+      ],
+      "mcp_tool": "apg_stream_sign",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:StreamSignature"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "stream.sign"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/stream.verify",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "apg:constraint/identity-pin",
+        "apg:constraint/exact-bytes",
+        "apg:constraint/stream-signature",
+        "apg:constraint/hybrid-post-quantum",
+        "apg:constraint/snapshot-policy",
+        "apg:constraint/validity-window"
+      ],
+      "description": "Verify an any-size file against an apg-stream-signature-v1 artifact and pinned signer",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "stream.verify",
+      "inputs": [
+        "apg:Plaintext",
+        "apg:StreamSignature",
+        "apg:PublicKey",
+        "apg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_stream_verify",
+      "optional_inputs": [
+        "apg:TrustPolicy"
+      ],
+      "outputs": [
+        "apg:Verification"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "stream.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
       "@id": "apg:operation/stream.decrypt",
       "@type": "apg:Operation",
       "algorithms": [
@@ -3894,6 +4047,70 @@
         "operation_const": "openpgp.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "apg:operation/openpgp.message.verify",
+      "@type": "apg:Operation",
+      "algorithms": [],
+      "conditional_effects": [
+        "read an APG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host"
+      ],
+      "constraints": [
+        "apg:constraint/openpgp-boundary",
+        "apg:constraint/openpgp-pin",
+        "apg:constraint/openpgp-certificate-policy",
+        "apg:constraint/openpgp-embedded-signatures",
+        "apg:constraint/openpgp-size-bound",
+        "apg:constraint/authenticate-before-release",
+        "apg:constraint/no-clobber",
+        "apg:constraint/secret-channel"
+      ],
+      "description": "Verify one embedded OpenPGP document signature against a pinned certificate, optionally decrypting, and publish authenticated literal bytes",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "openpgp.message.verify",
+      "inputs": [
+        "apg:OpenpgpMessage",
+        "apg:OpenpgpCertificate",
+        "apg:OpenpgpFingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_openpgp_message_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:Plaintext",
+        "apg:OpenpgpVerification"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "openpgp.message.verify"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     }
   ],
   "@id": "apg:knowledgebase",
@@ -3911,5 +4128,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.15.0"
+  "version": "1.16.0"
 }

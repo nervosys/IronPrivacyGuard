@@ -61,7 +61,7 @@ cargo +nightly fuzz run --target-dir target/fuzz requests fuzz/corpus/requests f
 
 Repeat with `framing`, `artifacts`, `mcp`, `stream_headers` and `tpm_structures`.
 For stream-header campaigns use `-max_len=1048588` to reach the entire header
-boundary; the CI smoke budget remains 65,537 bytes for every target. On Unix use `mkdir -p` instead of
+boundary; other targets retain the 65,537-byte CI budget. On Unix use `mkdir -p` instead of
 `New-Item`. For longer campaigns remove `-runs` and increase `-max_total_time`.
 Windows requires the matching MSVC AddressSanitizer DLL on the process PATH; see
 [Windows setup](https://rust-fuzz.github.io/book/cargo-fuzz/windows/setup.html).
@@ -139,3 +139,21 @@ stream run's final mutation length limit was 15,279 bytes, while the TPM run
 reached its 65,536-byte limit. Large stream-header boundaries are covered by
 deterministic tests, not established by these campaigns. Longer runs, additional
 seeds and independent review remain useful despite these clean results.
+
+### Large-header follow-up
+
+Run `python scripts/fuzz-large-headers.py` to add structural seeds directly to
+the ignored stream corpus: a 169,264-byte header with 64 distinct hybrid
+recipients, a complete 1,048,576-byte header, and length-boundary frames. These
+are parsing fixtures; the modified recipient fingerprints and ciphertexts are
+not authenticated key wraps. CI generates these seeds before its stream run.
+Stable regression tests construct the same large shapes and require successful
+full-body parsing, truncated-body refusal and rejection of 65 recipients.
+
+A Windows AddressSanitizer follow-up with `-max_total_time=120
+-max_len=1048588 -len_control=0 -timeout=10 -rss_limit_mb=2048` completed
+69,327 inputs in 121 seconds (PRNG seed 2201201142, peak RSS 584 MiB) without
+crashes, oracle failures or sanitizer findings. The starting corpus included
+the full 1 MiB body. Disabling gradual input-length growth makes the entire
+declared bound available immediately. The log is retained locally at
+`target/fuzz-reports/stream_headers-large.log`.

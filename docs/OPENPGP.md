@@ -1,7 +1,7 @@
 # OpenPGP interoperability
 
 APG exchanges encrypted files and detached signatures with GnuPG and other OpenPGP
-(RFC 9580) tools through seven `openpgp.*` operations. This is a separate
+(RFC 9580) tools through eight `openpgp.*` operations. This is a separate
 compatibility boundary: native APG keys, envelopes and signatures are never read as
 OpenPGP data, and OpenPGP data is never read as native APG artifacts.
 
@@ -39,6 +39,7 @@ certificates), which that advisory does not affect.
 | `openpgp.decrypt` | Decrypt a message (armored or binary) with an APG-held key. |
 | `openpgp.sign` | Create an ASCII-armored detached signature with an APG-held key: SHA-512 for Ed25519, SHA-384 for P-384. |
 | `openpgp.verify` | Verify a detached signature against a pinned certificate. |
+| `openpgp.message.verify` | Verify exactly one embedded binary/text document signature against a pinned certificate and publish authenticated literal bytes to `output`. Supply both `key` and `passphrase_file` when the message is encrypted, and neither for unencrypted input. |
 
 A typical exchange with a GnuPG user:
 
@@ -121,9 +122,29 @@ When decrypting, APG:
   the decompressed output at 16 MiB;
 - reports `signed: true` when the message carries signatures, but never verifies
   them (`signatures_verified: false`). Sender identity is not authenticated; ask
-  correspondents for detached signatures and use `openpgp.verify`.
+  use `openpgp.message.verify` with a pinned signer certificate to authenticate
+  an embedded signature, or exchange detached signatures and use `openpgp.verify`.
 
 Plaintext is limited to 16 MiB in both directions.
+
+For signed messages, `openpgp.message.verify` accepts exactly one binary or text
+document signature over literal content, optionally after decryption and one
+compression layer. It applies the same signer certificate, revocation, expiry,
+binding, back-signature and hash-strength policy as detached verification. It
+refuses unsigned messages, multiple/nested signatures and nested compression or
+encryption. Text signatures use OpenPGP line-ending normalization. Literal
+filenames and timestamps do not determine the output path or establish identity.
+An existing output is never replaced; any failure publishes no plaintext.
+
+```sh
+apg openpgp message verify --input signed.asc --output verified.bin --certificate them.asc --expected-openpgp-fingerprint <trusted-40-hex>
+apg openpgp message verify --input signed-encrypted.asc --output verified.bin --certificate them.asc --expected-openpgp-fingerprint <trusted-40-hex> --key me.json --passphrase-file pass.bin
+```
+
+Supplying a decryption key requires software custody permission. Native trust
+snapshots remain inapplicable, and MCP's explicit OpenPGP allowlist rule applies
+to this operation too. Cleartext-signed armor (`PGP SIGNED MESSAGE`) is outside
+this packet-message operation; use detached signatures for that workflow.
 
 ## Key file
 
