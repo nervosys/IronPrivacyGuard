@@ -1,6 +1,6 @@
 //! OpenPGP boundary: round trips, pins, tampering and policy that need no GnuPG.
-//! GnuPG interoperability and third-party certificate policy are covered by
-//! tests/interop/gnupg_reference.py.
+//! GnuPG interoperability and live independent certificate construction are
+//! covered by tests/interop; public PyCA policy fixtures are replayed here.
 use iron_privacy_guardian::{
     Request, execute_with,
     mcp::{Config, tool_catalog},
@@ -10,6 +10,98 @@ use serde_json::{Value, json};
 use std::fs;
 
 const PASSWORD: &[u8] = b"openpgp test-only passphrase";
+
+#[cfg(feature = "openpgp")]
+#[test]
+fn independent_primary_policy_fixtures_gate_strong_subkeys() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-primary-policy-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let f = Fixture::new();
+    fs::write(f.path("primary-document"), &document).unwrap();
+    for case in fixture["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let accepted = case["accepted"].as_bool().unwrap();
+        for (field, file) in [
+            ("certificate_hex", "primary-certificate"),
+            ("signature_hex", "primary-signature"),
+            ("embedded_hex", "primary-embedded"),
+        ] {
+            fs::write(
+                f.path(file),
+                hex::decode(case[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+        }
+        let inspected = call(json!({"operation":"openpgp.cert.inspect",
+            "input":f.path("primary-certificate")}))
+        .unwrap();
+        let report = &inspected["certificate"];
+        assert_eq!(report["fingerprint"], case["fingerprint"], "{name}");
+        assert_eq!(report["usable_for_signing"], accepted, "{name}");
+        assert_eq!(report["usable_for_encryption"], accepted, "{name}");
+        let keys = report["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 3, "{name}");
+        assert!(keys.iter().all(|key| key["bound"] == true), "{name}");
+        assert_eq!(
+            keys[1]["fingerprint"], case["signing_fingerprint"],
+            "{name}"
+        );
+        assert_eq!(
+            keys[2]["fingerprint"], case["encryption_fingerprint"],
+            "{name}"
+        );
+        if !accepted {
+            assert!(
+                keys.iter().all(|key| key["usable_for_signing"] == false
+                    && key["usable_for_encryption"] == false),
+                "{name}"
+            );
+            for key in &keys[1..] {
+                assert!(key["issues"].as_array().unwrap().iter().any(|issue|
+                    issue == "primary key algorithm is not accepted by APG policy"), "{name}");
+            }
+        }
+        let verified = call(json!({"operation":"openpgp.verify",
+            "input":f.path("primary-document"), "signature":f.path("primary-signature"),
+            "certificate":f.path("primary-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if accepted {
+            let result = verified.unwrap();
+            assert_eq!(result["valid"], true, "{name}");
+            assert_eq!(
+                result["verification"]["signing_key"], case["signing_fingerprint"],
+                "{name}"
+            );
+        } else {
+            assert_eq!(verified.unwrap_err(), "policy_mismatch", "{name}");
+        }
+        let output = f.path(&format!("{name}.plain"));
+        let verified = call(json!({"operation":"openpgp.message.verify",
+            "input":f.path("primary-embedded"), "output":output,
+            "certificate":f.path("primary-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if accepted {
+            assert_eq!(verified.unwrap()["valid"], true, "{name}");
+            assert_eq!(fs::read(&output).unwrap(), document, "{name}");
+        } else {
+            assert_eq!(verified.unwrap_err(), "policy_mismatch", "{name}");
+            assert!(!std::path::Path::new(&output).exists(), "{name}");
+        }
+        let output = f.path(&format!("{name}.encrypted"));
+        let encrypted = call(json!({"operation":"openpgp.encrypt",
+            "input":f.path("primary-document"), "output":output,
+            "recipients":[{"certificate":f.path("primary-certificate"),
+                "expected_openpgp_fingerprint":case["fingerprint"]}]}));
+        if accepted {
+            encrypted.unwrap();
+            assert!(std::path::Path::new(&output).exists(), "{name}");
+        } else {
+            assert_eq!(encrypted.unwrap_err(), "invalid_request", "{name}");
+            assert!(!std::path::Path::new(&output).exists(), "{name}");
+        }
+    }
+}
 
 #[cfg(feature = "openpgp")]
 #[test]

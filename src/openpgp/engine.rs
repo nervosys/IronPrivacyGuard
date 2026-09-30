@@ -356,10 +356,13 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
     let cert_created = u64::from(primary.created_at().as_secs());
     let expires = binding.and_then(|b| key_expiry(primary, b));
     let expired = expires.is_some_and(|e| at >= e);
-    let cert_ok = binding.is_some() && !revoked && !expired && cert_created <= at;
+    // The primary authenticates every component. A strong subkey cannot make a
+    // certificate usable when its primary signature algorithm is disallowed.
+    let capability = classify(primary.public_params());
+    let cert_ok =
+        capability.sign && binding.is_some() && !revoked && !expired && cert_created <= at;
 
     let mut keys = Vec::new();
-    let capability = classify(primary.public_params());
     let flags = binding.map(Signature::key_flags);
     keys.push(component(
         primary,
@@ -423,6 +426,11 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
             entry
                 .issues
                 .push("signing subkey lacks a valid back signature".into());
+        }
+        if !capability.sign {
+            entry
+                .issues
+                .push("primary key algorithm is not accepted by APG policy".into());
         }
         keys.push(entry);
     }
