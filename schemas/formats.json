@@ -1653,6 +1653,137 @@
     "title": "Header",
     "type": "object"
   },
+  "stream_signature": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{128}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-sha384"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6746}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6810}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
+        ],
+        "type": "string"
+      },
+      "bytes": {
+        "maximum": 18446744073709551615,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "digest": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "digest_algorithm": {
+        "const": "sha2-384",
+        "type": "string"
+      },
+      "format": {
+        "const": "apg-stream-signature-v1",
+        "type": "string"
+      },
+      "signature": {
+        "maxLength": 6810,
+        "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
+        "type": "string"
+      },
+      "signer": {
+        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "signer",
+      "algorithm",
+      "digest_algorithm",
+      "digest",
+      "bytes",
+      "signature"
+    ],
+    "title": "Signature",
+    "type": "object"
+  },
   "tpm_challenge": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,

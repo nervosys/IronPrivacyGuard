@@ -17,10 +17,10 @@
     "keywords": ["signature", "signing", "authenticity", "artifact", "release", "Ed25519", "ECDSA"],
     "goals": ["content-authenticity", "content-integrity"],
     "support": "implemented",
-    "operations": ["sign", "verify"],
+    "operations": ["sign", "verify", "stream.sign", "stream.verify"],
     "prerequisites": ["Signer secret key and passphrase, or hardware key reference and PIN file, for signing", "Public signer identity and independently trusted fingerprint for verification", "Supply a pinned policy for revocation and expiry enforcement"],
     "limitations": ["Native detached APG signatures; no OpenPGP or platform code-signing compatibility", "No confidentiality, trusted timestamp, replay prevention or automatic authorization"],
-    "guidance": "Verify against the expected signer and exact original bytes before consuming content.",
+    "guidance": "Verify against the expected signer and exact original bytes before consuming content. Use stream.sign and stream.verify beyond the in-memory limit; their separate native format signs a SHA-384 commitment and byte count with bounded memory.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc8032", "https://doi.org/10.6028/NIST.FIPS.186-5"]
   },
   {
@@ -101,10 +101,10 @@
     "keywords": ["pgp", "gpg", "openpgp", "import", "email", "compatibility"],
     "goals": ["protocol-interoperability"],
     "support": "implemented",
-    "operations": ["openpgp.key.generate", "openpgp.cert.export", "openpgp.cert.inspect", "openpgp.encrypt", "openpgp.decrypt", "openpgp.sign", "openpgp.verify"],
+    "operations": ["openpgp.key.generate", "openpgp.cert.export", "openpgp.cert.inspect", "openpgp.encrypt", "openpgp.decrypt", "openpgp.sign", "openpgp.verify", "openpgp.message.verify"],
     "prerequisites": ["An apg build with the openpgp feature", "Each correspondent's OpenPGP certificate and its independently trusted 40-hex fingerprint", "An MCP host that pins a trust policy must name the openpgp operations in --allow"],
-    "limitations": ["Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review", "v4 keys only; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys", "Signatures embedded in messages are not verified; exchange detached signatures", "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply", "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected", "APG native envelopes, signatures and keys are never OpenPGP packets"],
-    "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), share the certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify.",
+    "limitations": ["Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review", "v4 keys only; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys", "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures", "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply", "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected", "APG native envelopes, signatures and keys are never OpenPGP packets"],
+    "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), share the certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc9580", "https://github.com/rpgp/rpgp"]
   },
   {

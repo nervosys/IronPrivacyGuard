@@ -1200,6 +1200,93 @@
         {
           "additionalProperties": false,
           "properties": {
+            "input": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "stream.sign",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "key"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_fingerprint": {
+              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "maxLength": 96,
+              "minLength": 64,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "stream.verify",
+              "type": "string"
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "signature": {
+              "type": "string"
+            },
+            "signer": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "signature",
+            "signer",
+            "expected_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
             "key": {
               "description": "An apg-tpm-key-v1 file (Linux or Windows).",
               "type": "string"
@@ -1543,6 +1630,56 @@
             "operation",
             "input",
             "signature",
+            "certificate",
+            "expected_openpgp_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "certificate": {
+              "type": "string"
+            },
+            "expected_openpgp_fingerprint": {
+              "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
+              "maxLength": 40,
+              "minLength": 40,
+              "not": {
+                "pattern": "[^0-9A-Fa-f]"
+              },
+              "pattern": "^[0-9A-Fa-f]{40}$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "key": {
+              "description": "APG OpenPGP decryption key, required only for encrypted messages.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "openpgp.message.verify",
+              "type": "string"
+            },
+            "output": {
+              "description": "Publish only authenticated literal bytes to this new path.",
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
             "certificate",
             "expected_openpgp_fingerprint"
           ],

@@ -30,6 +30,7 @@ jobs:
       - run: python tests/interop/schema_contracts.py
       - run: python tests/interop/mcp_client.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/crypto_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/stream_signature_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/p384_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/hybrid_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/p384_mldsa_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}

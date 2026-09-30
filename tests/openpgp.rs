@@ -63,6 +63,9 @@ fn openpgp_operations_fail_closed_without_the_feature() {
     );
     assert!(!std::path::Path::new(&f.path("k")).exists());
     fs::write(f.path("cert"), b"not a certificate").unwrap();
+    fs::write(f.path("message"), b"not a message").unwrap();
+    assert_eq!(call(json!({"operation":"openpgp.message.verify","input":f.path("message"),"output":f.path("verified"),"certificate":f.path("cert"),"expected_openpgp_fingerprint":"00".repeat(20)})).unwrap_err(), "provider_unavailable");
+    assert!(!std::path::Path::new(&f.path("verified")).exists());
     assert_eq!(
         call(json!({"operation":"openpgp.cert.inspect","input":f.path("cert")})).unwrap_err(),
         "provider_unavailable"

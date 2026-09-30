@@ -115,6 +115,11 @@ def exercise(executable, gpg, directory):
         result = call("openpgp.decrypt", input=signed_message, output=out + "-signed", key=key, passphrase_file=password)
         assert result["signed"] is True and result["signatures_verified"] is False
         assert Path(out + "-signed").read_bytes() == data
+        checked = out + "-authenticated"
+        result = call("openpgp.message.verify", input=signed_message, output=checked,
+                      certificate=peer, expected_openpgp_fingerprint=peer_fp,
+                      key=key, passphrase_file=password)
+        assert result["valid"] is True and Path(checked).read_bytes() == data
 
         # APG -> GnuPG and APG, one message for both.
         both = str(directory / f"both-{algorithm}.asc")
@@ -147,6 +152,25 @@ def exercise(executable, gpg, directory):
         result = call("openpgp.verify", input=source, signature=signature, certificate=cert,
                       expected_openpgp_fingerprint=fp)
         assert result["valid"] is True and result["verification"]["fingerprint"] == fp.lower(), result
+        embedded = str(directory / f"{uid}.embedded")
+        run_gpg("--local-user", fp, "--output", embedded, "--sign", source)
+        authenticated = embedded + ".verified"
+        result = call("openpgp.message.verify", input=embedded, output=authenticated,
+                      certificate=cert, expected_openpgp_fingerprint=fp)
+        assert result["valid"] is True and Path(authenticated).read_bytes() == data
+        if uid == "rsa@example.test":
+            weak = embedded + ".sha1"
+            run_gpg("--local-user", fp, "--digest-algo", "SHA1", "--output", weak, "--sign", source)
+            call("openpgp.message.verify", expect="authentication_failed", input=weak,
+                 output=authenticated + ".sha1", certificate=cert, expected_openpgp_fingerprint=fp)
+            assert not Path(authenticated + ".sha1").exists()
+        bad = directory / f"{uid}.truncated"
+        binary = Path(embedded).read_bytes()
+        bad.write_bytes(binary[:len(binary) // 2])
+        refused = authenticated + ".refused"
+        call("openpgp.message.verify", expect=("invalid_format", "authentication_failed"),
+             input=str(bad), output=refused, certificate=cert, expected_openpgp_fingerprint=fp)
+        assert not Path(refused).exists()
         message = str(directory / f"to-{uid}.asc")
         call("openpgp.encrypt", input=source, output=message,
              recipients=[{"certificate": cert, "expected_openpgp_fingerprint": fp}])

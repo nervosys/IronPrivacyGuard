@@ -319,6 +319,29 @@ persisted, non-exportable ECDH P-384 and ECDSA P-384 keys whose usage authorizat
 is SHA-256 of `frame("APG CNG authorization v1", [PIN])`. See
 [HARDWARE.md](HARDWARE.md#windows).
 
+## Streaming detached signature: apg-stream-signature-v1
+
+Fields in declared order: `format`, `signer`, `algorithm`, `digest_algorithm`,
+`digest`, `bytes`, `signature`. `digest_algorithm` is exactly `sha2-384`; `digest`
+is SHA-384 of the exact input bytes as 96 lowercase hex characters; `bytes` is
+the u64 byte count. `signer`, `algorithm` and `signature` follow the identity
+suite's native fingerprint and signature encodings, including both required
+halves for composite signatures.
+
+The suite signs
+`frame("APG stream signature v1 {algorithm}", [signer ASCII, digest_algorithm ASCII, bytes u64 BE, digest raw 48 bytes])`.
+`frame` is the existing domain followed by each field's u64 big-endian length
+and bytes. The framed commitment is signed using the existing suite signing
+function, including composite ML-DSA contexts and low-s ECDSA enforcement.
+Verification authenticates this commitment before hashing the input, then
+requires both digest and byte count to match. Hashing uses 64 KiB input buffers.
+The SHA-384 collision resistance bounds this hash-then-sign protocol; it is
+distinct from ordinary APG signatures and standardized external prehash modes.
+
+There is no timestamp, freshness, filename binding or confidentiality. A
+concurrently modified file is not a stable snapshot: callers must sign and
+consume immutable content. Independent protocol review remains necessary.
+
 ## OpenPGP key: apg-openpgp-key-v1
 
 An APG-held v4 OpenPGP key with its transferable secret key sealed under a

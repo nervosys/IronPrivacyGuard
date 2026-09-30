@@ -103,7 +103,8 @@ operation IDs are advertised and accepted. The list is fixed for the session;
 tool arguments cannot expand it. `plan` describes nested requests but never
 executes them, even if the nested operation is excluded by the allowlist.
 
-A startup policy is injected into every encrypt/sign/verify request. Omitted or
+A startup policy is injected into encrypt, stream.encrypt, sign, stream.sign,
+verify and stream.verify requests. Omitted or
 null caller policy is replaced by the host policy; an explicitly different path
 or digest fails with `policy_mismatch`. Matching policy is allowed. Comparison is
 exact, not filesystem alias resolution. The host's digest is fixed for the
@@ -147,7 +148,7 @@ The release binary has been exercised on Windows with the
 [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) 2.2.0 and
 `jsonschema` 4.26.0. The suite uses real stdio subprocesses in both automatic and
 legacy negotiation modes, negotiating APG's `2025-11-25` protocol. It lists all
-49 tools, validates advertised schemas and returned envelopes, checks generated
+52 tools, validates advertised schemas and returned envelopes, checks generated
 artifact schemas, preflights valid and invalid candidates, reconciles trust branches, and exercises active, revoked and
 expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also

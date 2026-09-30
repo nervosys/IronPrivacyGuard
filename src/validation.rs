@@ -100,6 +100,16 @@ fn check(value: &Value, path: &str, report: &mut Validation) {
     if map.get("operation").and_then(Value::as_str) == Some("request.validate") {
         return;
     }
+    if map.get("operation").and_then(Value::as_str) == Some("openpgp.message.verify") {
+        let present = |field: &str| map.get(field).is_some_and(|v| !v.is_null());
+        if present("key") != present("passphrase_file") {
+            report.issue(
+                format!("{path}/key"),
+                "invalid_request",
+                "Supply both key and passphrase_file, or neither",
+            );
+        }
+    }
     if map.get("operation").and_then(Value::as_str) == Some("knowledge.search")
         && let Some(query) = map.get("query").and_then(Value::as_str)
         && crate::knowledge::validate_query(query).is_err()

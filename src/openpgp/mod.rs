@@ -188,6 +188,11 @@ pub struct Signed {
     pub hash_algorithm: String,
 }
 
+pub struct VerifiedMessage {
+    pub plaintext: zeroize::Zeroizing<Vec<u8>>,
+    pub verification: Verification,
+}
+
 fn is_lower_hex(value: &str) -> bool {
     value
         .bytes()
@@ -222,7 +227,9 @@ pub fn check_user_id(user_id: &str) -> Result<()> {
 }
 
 #[cfg(feature = "openpgp")]
-pub(crate) use engine::{decrypt, encrypt, export, generate, inspect, sign, verify};
+pub(crate) use engine::{
+    decrypt, encrypt, export, generate, inspect, sign, verify, verify_message,
+};
 
 #[cfg(not(feature = "openpgp"))]
 mod unavailable {
@@ -257,6 +264,16 @@ mod unavailable {
     pub(crate) fn verify(_: &[u8], _: &str, _: &[u8], _: &[u8]) -> Result<Verification> {
         unavailable()
     }
+    pub(crate) fn verify_message(
+        _: &[u8],
+        _: &str,
+        _: &[u8],
+        _: Option<(&KeyFile, &[u8])>,
+    ) -> Result<VerifiedMessage> {
+        unavailable()
+    }
 }
 #[cfg(not(feature = "openpgp"))]
-pub(crate) use unavailable::{decrypt, encrypt, export, generate, inspect, sign, verify};
+pub(crate) use unavailable::{
+    decrypt, encrypt, export, generate, inspect, sign, verify, verify_message,
+};

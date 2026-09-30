@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 49 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 52 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -103,7 +103,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 49 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 52 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -141,7 +141,7 @@ apg knowledge search --query "openpgp"
 | --- | --- |
 | Confidential file transfer | `encrypt`, `decrypt` |
 | Large files or several recipients | `stream.encrypt`, `stream.decrypt` |
-| Authenticate file contents | `sign`, `verify` |
+| Authenticate file contents | `sign`, `verify`; `stream.sign`, `stream.verify` for any-size files |
 | File digest | `hash` |
 | Protect private identities | `key.generate`, `key.public`, `key.rewrap` |
 | Manage trust and lifecycle | `trust.*`, `key.revoke`, `key.validity`, certificate verification |
@@ -150,7 +150,7 @@ apg knowledge search --query "openpgp"
 | Prove keys are resident in a genuine TPM | `tpm.attest`, `tpm.attestation.challenge`, `tpm.attestation.respond`, `tpm.attestation.verify` |
 | Managed key custody (AWS KMS), optionally with composite ML-DSA-65 signatures | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity apg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
-| Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify` |
+| Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify`, `openpgp.message.verify` |
 | TLS, password-verifier storage, FIPS validation | `external_required`; no executable APG tools |
 
 Search returns matches under `result.document.matches`. Each match contains an
@@ -320,6 +320,20 @@ narrower signed validity windows. Conflicting windows fail without publication.
 The orchestrator still controls the current policy pin and approves new identities.
 See [branch reconciliation](docs/TRUST.md#comparing-and-reconciling-branches).
 
+## Any-size detached signatures
+
+Any-size detached native signatures use a separate `apg-stream-signature-v1`
+format. `stream.sign` hashes input in 64 KiB buffers and signs a domain-separated
+SHA-384 digest and byte count; `stream.verify` verifies the commitment and reads
+the exact original bytes with the same bounded memory. Both accept native trust
+policy, and signing supports every existing identity provider. This protocol is
+not Ed25519ph, HashML-DSA or OpenPGP and requires independent review.
+
+```sh
+apg stream sign --input large.bin --output large.sig.json --key me.json --passphrase-file pass.bin
+apg stream verify --input large.bin --signature large.sig.json --signer me.public.json --expected-fingerprint <trusted-fingerprint>
+```
+
 ## Hardware-backed identities
 
 With a `pkcs11` build and the host's `APG_PKCS11_MODULE` set to the absolute path
@@ -388,6 +402,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tpm_native.rs` | Windows TPM keys through TBS, and the attestation prover on every platform |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
 | `src/stream.rs` | apg-stream-v1: multi-recipient streaming encryption |
+| `src/stream_signature.rs` | apg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/apg-cng` | Minimal safe wrapper over Windows CNG and TBS; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary (`openpgp` feature): key file, rPGP operations and APG certificate policy |
@@ -415,6 +430,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/tpm_attest_live.rs` | TPM identity and attestation round trip (swtpm or a real TPM, opt-in) |
 | `tests/attestation.rs` | Offline attestation verification and tamper rejection with swtpm evidence |
 | `tests/stream.rs`, `tests/vectors_stream.rs` | Stream round trips, chunk boundaries, tampering, and PyCA-made streams |
+| `tests/stream_signatures.rs`, `tests/vectors_stream_signatures.rs` | Any-size signature round trips, tampering, policy and independent all-suite vectors |
 | `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody and MCP exposure |
 | `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |

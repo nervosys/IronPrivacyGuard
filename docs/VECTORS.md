@@ -139,6 +139,25 @@ The existing Windows/Linux/macOS CI matrix runs both the Rust tests and referenc
 CLI suite. Local validation was performed on Windows; configuring other platforms
 in CI does not establish that those remote jobs have passed.
 
+## Streaming-signature corpus
+
+[stream-signatures-v1.json](../tests/vectors/stream-signatures-v1.json) is produced
+by [stream_signature_reference.py](../tests/interop/stream_signature_reference.py)
+with PyCA. It covers empty content and 65,537-byte binary content for Ed25519,
+ECDSA P-384, Ed25519 + ML-DSA-65 and ECDSA P-384 + ML-DSA-65. Rust verifies all
+eight frozen signatures and rejects altered content. The Python suite also
+mutates commitment metadata and each composite half, and independently verifies
+APG signatures on files larger than 32 MiB for both software identity suites.
+It does not exercise live HSM, TPM or KMS custody.
+
+```sh
+python tests/interop/stream_signature_reference.py --apg target/debug/apg
+```
+
+Explicit `--write-vectors` regenerates this public fixture. Composite signatures
+can differ because ML-DSA uses randomized signing; verification and commitment
+values, rather than byte-for-byte signature regeneration, are the oracle.
+
 ## Reference API documentation
 
 The independent implementation follows the specified raw-key encodings and APIs

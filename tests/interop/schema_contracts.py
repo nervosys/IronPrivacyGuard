@@ -130,6 +130,15 @@ def main():
             check(header_schema, {**header, field: bad}, False)
         check(header_schema, {**header, "recipients": header["recipients"] * 65}, False)
         check(header_schema, {**header, "unknown": 1}, False)
+    signature_vectors = json.loads((ROOT / "tests/vectors/stream-signatures-v1.json").read_text())
+    stream_signature_schema = schemas["formats"]["stream_signature"]
+    for case in signature_vectors["cases"]:
+        signature = case["signature"]
+        check(stream_signature_schema, signature)
+        for field, bad in [("format", "apg-signature-v1"), ("digest_algorithm", "sha2-256"),
+                           ("digest", "00" * 32), ("bytes", -1), ("bytes", 2**64),
+                           ("signature", "00" * 63)]:
+            check(stream_signature_schema, {**signature, field:bad}, False)
     # TPM attestation evidence captured from swtpm, and the protocol messages.
     evidence = json.loads((ROOT / "tests/vectors/tpm-attestation-swtpm/evidence.json").read_text())
     evidence_schema = schemas["formats"]["tpm_evidence"]

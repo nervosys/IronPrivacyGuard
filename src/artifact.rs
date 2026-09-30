@@ -99,6 +99,11 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "apg-stream-signature-v1" => {
+            let value: crate::stream_signature::Signature = serde_json::from_slice(data)?;
+            value.validate()?;
+            Some(value.signer)
+        }
         "apg-revocation-v1" => {
             let value: Revocation = serde_json::from_slice(data)?;
             value.validate()?;

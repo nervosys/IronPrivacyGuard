@@ -70,6 +70,54 @@ fn stream_header_limits_and_valid_seed_consumption() {
 }
 
 #[test]
+fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
+    use iron_privacy_guardian::stream;
+    use std::io::Cursor;
+    let framed = fs::read("fuzz/seeds/stream_headers/three-recipients").unwrap();
+    let mut header: stream::Header = serde_json::from_slice(&framed[12..]).unwrap();
+    let envelope = header
+        .recipients
+        .iter()
+        .max_by_key(|e| e.ephemeral_key.len())
+        .unwrap();
+    header.recipients = (0..64)
+        .map(|i| {
+            let mut value = serde_json::to_value(envelope).unwrap();
+            value["recipient"] = serde_json::json!(format!("{i:096x}"));
+            serde_json::from_value(value).unwrap()
+        })
+        .collect();
+    let frame = |header: &stream::Header| {
+        let body = serde_json::to_vec(header).unwrap();
+        let mut data = stream::MAGIC.to_vec();
+        data.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        data.extend_from_slice(&body);
+        data
+    };
+    let many = frame(&header);
+    assert!(many.len() > 65_536);
+    harness::stream_headers(&many);
+    stream::read_header(&mut Cursor::new(&many)).unwrap();
+    let room = stream::MAX_HEADER_BYTES as usize - (many.len() - 12);
+    header.recipients[0]
+        .ciphertext
+        .push_str(&"00".repeat(room / 2));
+    let near = frame(&header);
+    assert!(
+        (stream::MAX_HEADER_BYTES as usize - 1..=stream::MAX_HEADER_BYTES as usize)
+            .contains(&(near.len() - 12))
+    );
+    harness::stream_headers(&near);
+    stream::read_header(&mut Cursor::new(&near)).unwrap();
+    assert!(stream::read_header(&mut Cursor::new(&near[..near.len() - 1])).is_err());
+    header.recipients[0].ciphertext.clear();
+    header.recipients.push(
+        serde_json::from_value(serde_json::to_value(&header.recipients[1]).unwrap()).unwrap(),
+    );
+    assert!(stream::read_header(&mut Cursor::new(frame(&header))).is_err());
+}
+
+#[test]
 fn frame_limits_hold_across_fragment_sizes_and_line_endings() {
     let limit = iron_privacy_guardian::MAX_REQUEST_BYTES as usize;
     for size in [limit - 1, limit, limit + 1] {
