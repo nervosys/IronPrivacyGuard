@@ -2,6 +2,75 @@
 mod harness;
 use std::{fs, path::Path};
 
+#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[test]
+fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {
+    use iron_privacy_guardian::{Request, execute};
+    use serde_json::{Value, json};
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let path = |name| directory.path().join(name).display().to_string();
+    fs::write(path("document"), &document).unwrap();
+    let call = |candidate: Value| execute(serde_json::from_value::<Request>(candidate).unwrap());
+    for case in fixture["cases"].as_array().unwrap() {
+        let fingerprint = case["fingerprint"].as_str().unwrap();
+        let certificate = hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap();
+        let signature = hex::decode(case["signature_hex"].as_str().unwrap()).unwrap();
+        let message = hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
+        fs::write(path("certificate"), &certificate).unwrap();
+        fs::write(path("signature"), &signature).unwrap();
+        let inspected = serde_json::to_value(
+            call(json!({"operation":"openpgp.cert.inspect","input":path("certificate")})).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(inspected["certificate"]["fingerprint"], fingerprint);
+        assert_eq!(inspected["certificate"]["usable_for_signing"], true);
+        assert_eq!(inspected["certificate"]["usable_for_encryption"], true);
+        call(json!({"operation":"openpgp.verify","input":path("document"),"signature":path("signature"),"certificate":path("certificate"),"expected_openpgp_fingerprint":fingerprint})).unwrap();
+        let verify_message = || {
+            call(
+                json!({"operation":"openpgp.message.verify","input":path("message"),"output":path("verified"),"certificate":path("certificate"),"expected_openpgp_fingerprint":fingerprint}),
+            )
+        };
+        fs::write(path("message"), &message).unwrap();
+        verify_message().unwrap();
+        assert_eq!(fs::read(path("verified")).unwrap(), document);
+        fs::remove_file(path("verified")).unwrap();
+        for length in 0..message.len() {
+            fs::write(path("message"), &message[..length]).unwrap();
+            assert!(
+                verify_message().is_err(),
+                "{} accepted truncation {length}",
+                case["name"]
+            );
+            assert!(!Path::new(&path("verified")).exists());
+        }
+        let mut duplicate = message.clone();
+        duplicate.extend_from_slice(&message);
+        fs::write(path("message"), duplicate).unwrap();
+        assert!(verify_message().is_err());
+        assert!(!Path::new(&path("verified")).exists());
+        for field in ["embedded_zlib_hex", "embedded_zip_hex"] {
+            let compressed = hex::decode(case[field].as_str().unwrap()).unwrap();
+            fs::write(path("message"), &compressed).unwrap();
+            verify_message().unwrap();
+            assert_eq!(fs::read(path("verified")).unwrap(), document);
+            fs::remove_file(path("verified")).unwrap();
+            for length in 0..compressed.len() {
+                fs::write(path("message"), &compressed[..length]).unwrap();
+                assert!(
+                    verify_message().is_err(),
+                    "{} accepted {field} truncation {length}",
+                    case["name"]
+                );
+                assert!(!Path::new(&path("verified")).exists());
+            }
+        }
+    }
+}
+
 #[test]
 fn checked_in_fuzz_seeds_and_deterministic_mutations() {
     type Oracle = fn(&[u8]);
@@ -13,6 +82,8 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
         ("stream_headers", harness::stream_headers as Oracle),
         #[cfg(feature = "fuzzing")]
         ("tpm_structures", harness::tpm_structures as Oracle),
+        #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+        ("openpgp_packets", harness::openpgp_packets as Oracle),
     ] {
         oracle(b"");
         oracle(b"\xff\x00\xfe\n");

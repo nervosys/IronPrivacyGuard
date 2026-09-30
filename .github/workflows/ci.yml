@@ -16,7 +16,7 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo clippy --locked --all-targets --features pkcs11,kms,openpgp,attestation -- -D warnings
       - run: cargo test --locked
-      - run: cargo test --locked --features fuzzing --test fuzz_regressions
+      - run: cargo test --locked --features fuzzing,openpgp --test fuzz_regressions
       - run: cargo test --locked --features pkcs11,kms,openpgp,attestation
       - if: runner.os == 'Windows'
         run: cargo clippy --locked --all-targets --features tpm,pkcs11,kms,openpgp -- -D warnings

@@ -66,6 +66,11 @@ pub fn tpm_structures(data: &[u8]) {
     iron_privacy_guardian::fuzz_support::tpm_structures(data);
 }
 
+#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+pub fn openpgp_packets(data: &[u8]) {
+    iron_privacy_guardian::openpgp::fuzz_packets(data);
+}
+
 pub fn requests(data: &[u8]) {
     if data.len() <= MAX_REQUEST_BYTES as usize
         && let Ok(candidate) = serde_json::from_slice::<Value>(data)

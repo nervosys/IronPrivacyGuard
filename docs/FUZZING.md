@@ -1,6 +1,6 @@
 # APG boundary fuzzing
 
-Six cargo-fuzz targets share their oracles with the normal stable Rust regression
+Seven cargo-fuzz targets share their oracles with the normal stable Rust regression
 suite. The product remains pure Rust; libFuzzer and its C++ runtime are isolated
 in the unpublished `fuzz/` package, with a separate lockfile.
 
@@ -12,6 +12,7 @@ in the unpublished `fuzz/` package, with a separate lockfile.
 | `mcp` | New and ready JSON-RPC sessions, whole messages and up to 16 NDJSON steps | Responses are valid JSON-RPC; only planning is callable; filesystem tools remain disabled |
 | `stream_headers` | Binary magic and length framing, strict canonical JSON, recipient validation, fragmented reads | Accepted headers preserve exact canonical bytes, consume only the declared header and behave identically with 1-byte and 7-byte reads |
 | `tpm_structures` | TPM public areas, key certifications and RSASSA-SHA256 signatures | Accepted public areas marshal to identical bytes; names have the declared digest width; sized buffers round-trip; trailing bytes are rejected |
+| `openpgp_packets` | v4/v6 public certificates, detached signatures and unencrypted embedded signatures, in binary or armor | Certificate policy survives serialization; wrong pins and changed content fail; accepted signatures survive serialization; verified message signers are eligible |
 
 Fuzz bytes never reach arbitrary filesystem execution. Native requests are decoded
 through `parse_call` and wrapped in `plan`; MCP has a host allowlist containing
@@ -23,7 +24,8 @@ KDFs, OS randomness, every cryptographic primitive, or external policy managemen
 Inputs are bounded at 65,537 bytes for requests/MCP, 65,536 for artifacts and
 131,074 for framing (individual frames still have the 65,536-byte limit),
 1,048,588 for stream headers (the 1 MiB header limit plus its 12-byte framing),
-and 65,536 for TPM structures.
+65,536 for TPM structures, and 65,537 for OpenPGP packets (one mode byte plus
+65,536 packet bytes).
 The checked-in seeds include all artifact types and all three snapshot versions,
 protocol errors, duplicate native fields, plans and MCP lifecycle sequences.
 Artifact seeds use only the public test keys from the independent vector corpus.
@@ -32,20 +34,51 @@ vectors. TPM seeds are public areas, certifications and signatures extracted fro
 the checked-in swtpm attestation evidence. Neither target accesses hardware,
 unlocks identities, authenticates to a TPM or decrypts content. The `fuzzing`
 feature exposes the hidden TPM oracle and enables verifier dependencies only;
-it does not enable the `tpm` feature or change agent contracts.
+it does not enable the `tpm` feature or change agent contracts. Combining it with
+`openpgp` exposes the hidden public-packet oracle. The fuzz package enables both
+by default; production builds do not enable `fuzzing`.
+
+The OpenPGP mode byte modulo three selects certificates, detached signatures or
+unencrypted embedded messages. Signatures are verified against four frozen public
+test certificates (v4/v6 Ed25519 and P-384). The target never generates keys, opens
+secret keys, derives passwords or decrypts encrypted messages. Embedded-message
+decompression remains bounded at the product's 16 MiB plaintext limit.
+These signatures and certificates are generated test data, not an independent
+cryptographic implementation. The separate PyCA and RFC fixtures provide that
+additional evidence.
+
+The 29 OpenPGP seeds contain binary and armored certificates/signatures,
+uncompressed, ZIP and ZLIB signed messages, and the RFC 9580 Appendix A.3
+certificate. `tests/vectors/openpgp-parser-v1.json` holds only public artifacts
+and the test document. Rebuild the seed bytes from that frozen corpus with
+`python scripts/fuzz-openpgp-seeds.py --from-fixture`. Explicitly replacing the
+corpus with fresh disposable keys requires `--apg <OpenPGP-enabled executable>`;
+the script validates each uncompressed message through APG before saving it and
+deletes the temporary secret keys and test passphrase. The independent stdlib
+packet wrapper constructs one-pass/literal/signature packets and ZIP/ZLIB layers.
+Normal regression tests validate all variants and never regenerate keys.
 
 ## Stable regression checks
 
 ```powershell
 cargo test --locked --target-dir target --test fuzz_regressions
 cargo test --locked --target-dir target --features fuzzing --test fuzz_regressions --lib
+cargo test --locked --target-dir target --features fuzzing,openpgp --test fuzz_regressions
 ```
 
 These tests replay the curated seeds plus deterministic truncations and byte
 mutations. Separate regressions cover deep arrays and nested plans, exact frame
 boundaries with EOF/LF/CRLF, multiple maximum-sized frames and direct library
-request limits. They run as part of ordinary `cargo test` on every CI platform,
+request limits. OpenPGP checks verify every frozen fixture through the real file
+operations and require every byte truncation and concatenated embedded message
+to fail without publishing plaintext. The base tests run as part of ordinary
+`cargo test` on every CI platform, while feature-dependent replay runs in CI with
+`fuzzing,openpgp`,
 without nightly or libFuzzer. This finite replay is not coverage-guided fuzzing.
+
+The OpenPGP regression corpus has twelve embedded-message variants and 2,818
+individual byte truncations. Each refusal is checked through the real file
+operation and must leave its output path absent.
 
 ## Coverage-guided runs
 
@@ -59,7 +92,8 @@ New-Item -ItemType Directory -Force fuzz/corpus/requests
 cargo +nightly fuzz run --target-dir target/fuzz requests fuzz/corpus/requests fuzz/seeds/requests -- -runs=10000 -max_total_time=45 -max_len=65537 -timeout=10 -rss_limit_mb=2048
 ```
 
-Repeat with `framing`, `artifacts`, `mcp`, `stream_headers` and `tpm_structures`.
+Repeat with `framing`, `artifacts`, `mcp`, `stream_headers`, `tpm_structures` and
+`openpgp_packets`.
 For stream-header campaigns use `-max_len=1048588` to reach the entire header
 boundary; other targets retain the 65,537-byte CI budget. On Unix use `mkdir -p` instead of
 `New-Item`. For longer campaigns remove `-runs` and increase `-max_total_time`.
@@ -82,7 +116,7 @@ Never replace curated seeds automatically with generated corpus contents.
 
 ## CI and validation limits
 
-The separate Linux fuzz workflow runs all six targets with AddressSanitizer,
+The separate Linux fuzz workflow runs all seven targets with AddressSanitizer,
 10,000 iterations or 45 seconds each, and uploads crash artifacts on failure.
 It fetches the checked-in fuzz lockfile, then runs offline and checks for lockfile
 drift. The normal CI matrix also checks formatting of the fuzz package.
@@ -173,3 +207,23 @@ plans are replayed by stable regression tests. The MCP fuzz host allows only
 planning, so these seeds never open files or generate keys. This campaign covers
 JSON-RPC lifecycle and planning boundaries, not OpenPGP packet parsing or AEAD
 cryptography, and does not establish exhaustive protocol coverage.
+
+## OpenPGP public-packet campaigns, 2026-09-30
+
+The new target completed two Windows MSVC AddressSanitizer runs without crashes,
+oracle failures or sanitizer findings. Both used `-max_len=65537 -timeout=10
+-rss_limit_mb=2048 -print_final_stats=1`.
+
+| Run | PRNG seed | Executed inputs | Elapsed seconds | Peak RSS MiB |
+| --- | --- | --- | --- | --- |
+| Initial, 21 binary/armored seeds | 3315132518 | 50,484 | 121 | 449 |
+| Extended, 29 seeds including ZIP/ZLIB | 3293875621 | 163,293 | 601 | 511 |
+
+The first run used `-max_total_time=120`. The second continued from its discovered
+corpus with `-max_total_time=600 -len_control=0`, making the full packet input cap
+available immediately. Logs are retained locally at
+`target/fuzz-reports/openpgp-packets-asan.log` and
+`target/fuzz-reports/openpgp-packets-extended.log`. Input caps and a clean bounded
+campaign do not establish exhaustive size coverage or security. This target
+covers at most 64 KiB of packet data, a subset of the 1 MiB certificate limit;
+encrypted-message decryption, KDFs and private-key operations remain outside it.
