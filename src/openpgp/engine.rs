@@ -43,7 +43,8 @@ use zeroize::Zeroizing;
 const MAX_SIGNATURES: usize = 1024;
 
 /// Public-only packet fuzzing: mode 0 certificates, 1 detached signatures,
-/// 2 unencrypted embedded signatures. No filesystem, entropy or password work.
+/// 2 unencrypted embedded signatures, 3 framed certificate/document/signature
+/// pairs. No filesystem, entropy or password work.
 #[cfg(feature = "fuzzing")]
 pub fn fuzz_packets(input: &[u8]) {
     if input.len() > 65_537 {
@@ -54,7 +55,81 @@ pub fn fuzz_packets(input: &[u8]) {
     };
     // A fixed time makes certificate round-trip comparisons deterministic.
     const AT: u64 = 2_000_000_000;
-    if mode % 3 == 0 {
+    if mode % 4 == 3 {
+        let Some(header) = data.get(..8) else {
+            return;
+        };
+        let cert_len = u32::from_be_bytes(header[..4].try_into().unwrap()) as usize;
+        let document_len = u32::from_be_bytes(header[4..].try_into().unwrap()) as usize;
+        let Some(cert_end) = 8usize.checked_add(cert_len) else {
+            return;
+        };
+        let Some(document_end) = cert_end.checked_add(document_len) else {
+            return;
+        };
+        let (Some(certificate), Some(document), Some(signature)) = (
+            data.get(8..cert_end),
+            data.get(cert_end..document_end),
+            data.get(document_end..),
+        ) else {
+            return;
+        };
+        let Ok(cert) = parse_certificate(certificate) else {
+            return;
+        };
+        let fingerprint = hex_fingerprint(&cert.primary_key);
+        if let Ok(report) =
+            verify_with_clock(certificate, &fingerprint, signature, document, || Ok(AT))
+        {
+            let summary = evaluate(&cert, report.created).summary;
+            assert!(
+                summary
+                    .keys
+                    .iter()
+                    .any(|key| { key.fingerprint == report.signing_key && key.usable_for_signing })
+            );
+            let detached = DetachedSignature::from_reader_many(Cursor::new(signature))
+                .unwrap()
+                .0
+                .next()
+                .unwrap()
+                .unwrap();
+            let other = verify_with_clock(
+                &cert.to_bytes().unwrap(),
+                &fingerprint,
+                &detached.to_bytes().unwrap(),
+                document,
+                || Ok(AT),
+            )
+            .unwrap();
+            assert_eq!(
+                serde_json::to_value(&report).unwrap(),
+                serde_json::to_value(other).unwrap()
+            );
+            let mut changed = document.to_vec();
+            changed.push(0);
+            assert!(
+                verify_with_clock(certificate, &fingerprint, signature, &changed, || Ok(AT))
+                    .is_err()
+            );
+            let mut wrong = fingerprint.into_bytes();
+            wrong[0] = if wrong[0] == b'0' { b'1' } else { b'0' };
+            assert_eq!(
+                verify_with_clock(
+                    certificate,
+                    std::str::from_utf8(&wrong).unwrap(),
+                    signature,
+                    document,
+                    || Ok(AT),
+                )
+                .unwrap_err()
+                .code,
+                "identity_mismatch"
+            );
+        }
+        return;
+    }
+    if mode % 4 == 0 {
         if let Ok(cert) = parse_certificate(data) {
             let summary = evaluate(&cert, AT).summary;
             let encoded = cert.to_bytes().unwrap();
@@ -113,7 +188,7 @@ pub fn fuzz_packets(input: &[u8]) {
         )
     });
     for (certificate, fingerprint) in anchors {
-        if mode % 3 == 1 {
+        if mode % 4 == 1 {
             if let Ok(report) = verify(certificate, fingerprint, data, document) {
                 assert_eq!(&report.fingerprint, fingerprint);
                 let detached = DetachedSignature::from_reader_many(Cursor::new(data))
@@ -981,6 +1056,18 @@ pub(crate) fn verify(
     signature: &[u8],
     data: &[u8],
 ) -> Result<Verification> {
+    verify_with_clock(certificate, expected, signature, data, now)
+}
+
+// Keep the host clock at the same point in ordinary verification; fuzzing can
+// supply a fixed time so expiry boundaries do not make replay nondeterministic.
+fn verify_with_clock(
+    certificate: &[u8],
+    expected: &str,
+    signature: &[u8],
+    data: &[u8],
+    clock: impl FnOnce() -> Result<u64>,
+) -> Result<Verification> {
     let cert = parse_certificate(certificate)?;
     pin(&cert, expected)?;
     single_armor_block(signature, "signature")?;
@@ -1012,7 +1099,7 @@ pub(crate) fn verify(
             ),
         ));
     }
-    let now = now()?;
+    let now = clock()?;
     let created = created(sig)
         .ok_or_else(|| Error::new("invalid_format", "Signature has no creation time"))?;
     if created > now {

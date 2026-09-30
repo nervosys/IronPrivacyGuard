@@ -12,7 +12,7 @@ in the unpublished `fuzz/` package, with a separate lockfile.
 | `mcp` | New and ready JSON-RPC sessions, whole messages and up to 16 NDJSON steps | Responses are valid JSON-RPC; only planning is callable; filesystem tools remain disabled |
 | `stream_headers` | Binary magic and length framing, strict canonical JSON, recipient validation, fragmented reads | Accepted headers preserve exact canonical bytes, consume only the declared header and behave identically with 1-byte and 7-byte reads |
 | `tpm_structures` | TPM public areas, key certifications and RSASSA-SHA256 signatures | Accepted public areas marshal to identical bytes; names have the declared digest width; sized buffers round-trip; trailing bytes are rejected |
-| `openpgp_packets` | v4/v6 public certificates, detached signatures and unencrypted embedded signatures, in binary or armor | Certificate policy survives serialization; wrong pins and changed content fail; accepted signatures survive serialization; verified message signers are eligible |
+| `openpgp_packets` | v4/v6 public certificates, detached signatures, unencrypted embedded signatures and framed certificate/document/signature pairs | Certificate policy survives serialization; wrong pins and changed content fail; accepted signatures survive serialization; verified signers are eligible |
 
 Fuzz bytes never reach arbitrary filesystem execution. Native requests are decoded
 through `parse_call` and wrapped in `plan`; MCP has a host allowlist containing
@@ -38,16 +38,27 @@ it does not enable the `tpm` feature or change agent contracts. Combining it wit
 `openpgp` exposes the hidden public-packet oracle. The fuzz package enables both
 by default; production builds do not enable `fuzzing`.
 
-The OpenPGP mode byte modulo three selects certificates, detached signatures or
-unencrypted embedded messages. Signatures are verified against four frozen public
-test certificates (v4/v6 Ed25519 and P-384). The target never generates keys, opens
+The OpenPGP mode byte modulo four selects certificates, detached signatures,
+unencrypted embedded messages or framed certificate/document/signature pairs.
+The original detached and embedded modes verify against four frozen public
+test certificates (v4/v6 Ed25519 and P-384). Paired inputs carry their own public
+certificate and document; this reaches independent Ed25519, P-384, P-521, Ed448,
+RSA and DSA certificate-policy fixtures. Their framing is one mode byte, a
+big-endian u32 certificate length, a u32 document length, certificate bytes,
+document bytes and the remaining detached signature bytes. Invalid lengths
+fail before slicing or packet parsing. Successful paired verification must retain
+the same report after certificate and signature serialization, select an eligible
+signing component, reject a wrong pin and reject changed content. Paired verification
+uses the fixed test time 2,000,000,000 Unix seconds to make expiry-boundary replay
+deterministic; ordinary verification still reads the host clock at its existing
+validation point. The target never generates keys, opens
 secret keys, derives passwords or decrypts encrypted messages. Embedded-message
 decompression remains bounded at the product's 16 MiB plaintext limit.
-These signatures and certificates are generated test data, not an independent
-cryptographic implementation. The separate PyCA and RFC fixtures provide that
-additional evidence.
+The original parser fixtures are APG/rPGP-generated test data. Additional policy
+seeds come from the independent PyCA fixtures, and the RFC certificate supplies
+a separate published reference.
 
-The 29 OpenPGP seeds contain binary and armored certificates/signatures,
+The original 29 OpenPGP seeds contain binary and armored certificates/signatures,
 uncompressed, ZIP and ZLIB signed messages, and the RFC 9580 Appendix A.3
 certificate. `tests/vectors/openpgp-parser-v1.json` holds only public artifacts
 and the test document. Rebuild the seed bytes from that frozen corpus with
@@ -57,6 +68,20 @@ the script validates each uncompressed message through APG before saving it and
 deletes the temporary secret keys and test passphrase. The independent stdlib
 packet wrapper constructs one-pass/literal/signature packets and ZIP/ZLIB layers.
 Normal regression tests validate all variants and never regenerate keys.
+
+The additional 146 policy seeds contain 69 independent public certificates and
+77 matching certificate/document/signature pairs, bringing the curated corpus to
+175 seeds. They replay `openpgp-signature-policy-v1.json`,
+`openpgp-primary-policy-v1.json`, `openpgp-backsignature-policy-v1.json` and
+`openpgp-metadata-policy-v1.json`. These include accepted and refused digest sizes,
+weak primary algorithms, back-signature lifetimes and injected unauthenticated
+metadata. Rebuild only these seed bytes with
+`python scripts/fuzz-openpgp-policy-seeds.py`; use `--check` to verify byte-exact
+reproduction without writing. Both CI workflows check reproduction, and stable
+Rust regression tests replay every seed plus truncations and byte mutations.
+No private keys, key generation or cryptographic Python packages are needed to
+reproduce these public seeds. The 65,537-byte total cap also applies to paired
+inputs, including their nine-byte framing and document bytes.
 
 ## Stable regression checks
 
@@ -227,3 +252,26 @@ available immediately. Logs are retained locally at
 campaign do not establish exhaustive size coverage or security. This target
 covers at most 64 KiB of packet data, a subset of the 1 MiB certificate limit;
 encrypted-message decryption, KDFs and private-key operations remain outside it.
+
+### Independent policy corpus follow-up
+
+After adding paired inputs and the 146 independent policy seeds, a fresh ignored
+`fuzz/corpus/openpgp_policy` directory and all 175 curated seeds completed a
+Windows MSVC AddressSanitizer run with `-max_total_time=600 -max_len=65537
+-len_control=0 -timeout=10 -rss_limit_mb=2048 -print_final_stats=1 -seed=20260930`.
+The process exited successfully with no crash artifacts, oracle failures or
+sanitizer findings.
+
+| PRNG seed | Executed inputs | Elapsed seconds | Peak RSS MiB | Final edge counters / features |
+| --- | --- | --- | --- | --- |
+| 20260930 | 229,608 | 601 | 619 | 16,897 / 52,200 |
+
+The local log is retained at
+`target/fuzz-reports/openpgp-policy-extended.log`. Discoveries remain in the ignored
+corpus for later campaigns; curated seeds reproduced byte-for-byte afterward.
+The counters describe this instrumented harness and dependencies, not a product
+coverage percentage, and are not directly comparable with earlier binaries.
+The full input cap was available immediately; this does not establish that every
+input size was exercised. Stable replay, hostile-length framing checks, strict
+Clippy, 471 independent OpenPGP CLI calls and 51 GnuPG compatibility calls also
+passed. The same public-packet, plaintext-size and secret-operation limits apply.

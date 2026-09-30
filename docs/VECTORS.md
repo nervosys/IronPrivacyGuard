@@ -71,6 +71,12 @@ The helper independently unseals only disposable APG test keys; no secret materi
 is checked in.
 See [OPENPGP.md](OPENPGP.md#testing) for scope.
 
+The four independent policy fixtures also supply 146 public fuzz seeds through
+`scripts/fuzz-openpgp-policy-seeds.py`. Paired certificate/document/signature
+inputs let the verifier fuzz matching independent keys instead of relying only
+on the original four parser anchors. Seed reproduction is checked byte-for-byte
+in CI; see [FUZZING.md](FUZZING.md) for framing, invariants and limits.
+
 Regenerate only the public signature-policy fixture explicitly after an
 `openpgp` build (this replaces its disposable public certificates and signatures):
 

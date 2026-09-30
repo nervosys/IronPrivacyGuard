@@ -247,7 +247,9 @@ establish GnuPG v6 interoperability.
 
 The `openpgp_packets` fuzz target covers public certificates, detached signatures
 and unencrypted embedded messages for v4/v6 Ed25519 and P-384. Its frozen public
-corpus includes binary, armor, ZIP and ZLIB forms. Stable replay also checks every
+corpus includes binary, armor, ZIP and ZLIB forms. Paired inputs also fuzz matching
+certificates, documents and signatures from the independent policy fixtures,
+including P-521, Ed448 and weak-primary controls. Stable replay also checks every
 truncation of each signed-message fixture and concatenated messages, requiring no
 plaintext publication on failure. It does not exercise secret-key operations or
 encrypted-message decryption. See [FUZZING.md](FUZZING.md) for bounds and commands.
