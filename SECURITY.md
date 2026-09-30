@@ -77,7 +77,10 @@ policy with otherwise valid P-384 signing and encryption subkeys, including
 signing-subkey back signatures. Back signatures require authenticated creation
 times and must be live at evaluation time. Independent v4/v6 fixtures cover
 missing, future and expired consent and preserve historical document verification
-when consent was live at signing time. See [OpenPGP interoperability](docs/OPENPGP.md)
+when consent was live at signing time. Independent metadata injection checks
+also require authenticated key flags and expiry values: attacker-editable
+unhashed copies cannot grant permissions or extend signed validity periods.
+See [OpenPGP interoperability](docs/OPENPGP.md)
 for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
