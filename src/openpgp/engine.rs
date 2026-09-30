@@ -42,6 +42,112 @@ use zeroize::Zeroizing;
 /// Signatures examined per component; bounds work on hostile certificates.
 const MAX_SIGNATURES: usize = 1024;
 
+/// Public-only packet fuzzing: mode 0 certificates, 1 detached signatures,
+/// 2 unencrypted embedded signatures. No filesystem, entropy or password work.
+#[cfg(feature = "fuzzing")]
+pub fn fuzz_packets(input: &[u8]) {
+    if input.len() > 65_537 {
+        return;
+    }
+    let Some((&mode, data)) = input.split_first() else {
+        return;
+    };
+    // A fixed time makes certificate round-trip comparisons deterministic.
+    const AT: u64 = 2_000_000_000;
+    if mode % 3 == 0 {
+        if let Ok(cert) = parse_certificate(data) {
+            let summary = evaluate(&cert, AT).summary;
+            let encoded = cert.to_bytes().unwrap();
+            let reparsed = parse_certificate(&encoded).unwrap();
+            let other = evaluate(&reparsed, AT).summary;
+            assert_eq!(
+                serde_json::to_value(&summary).unwrap(),
+                serde_json::to_value(other).unwrap()
+            );
+            assert_eq!(
+                summary.usable_for_signing,
+                summary.keys.iter().any(|key| key.usable_for_signing)
+            );
+            assert_eq!(
+                summary.usable_for_encryption,
+                summary.keys.iter().any(|key| key.usable_for_encryption)
+            );
+            for key in &summary.keys {
+                assert!(matches!(key.fingerprint.len(), 40 | 64));
+                if key.usable_for_signing || key.usable_for_encryption {
+                    assert!(key.bound && !key.revoked && !summary.revoked && !summary.expired);
+                    assert!(key.expires.is_none_or(|expiry| AT < expiry));
+                }
+            }
+            let mut wrong = summary.fingerprint.into_bytes();
+            wrong[0] = if wrong[0] == b'0' { b'1' } else { b'0' };
+            assert_eq!(
+                pin(&cert, std::str::from_utf8(&wrong).unwrap())
+                    .unwrap_err()
+                    .code,
+                "identity_mismatch"
+            );
+        }
+        return;
+    }
+    type Anchors = (Vec<(Vec<u8>, String)>, Vec<u8>);
+    static ANCHORS: std::sync::OnceLock<Anchors> = std::sync::OnceLock::new();
+    let (anchors, document) = ANCHORS.get_or_init(|| {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../tests/vectors/openpgp-parser-v1.json"))
+                .unwrap();
+        let anchors = fixture["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|case| {
+                (
+                    hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+                    case["fingerprint"].as_str().unwrap().to_owned(),
+                )
+            })
+            .collect();
+        (
+            anchors,
+            hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap(),
+        )
+    });
+    for (certificate, fingerprint) in anchors {
+        if mode % 3 == 1 {
+            if let Ok(report) = verify(certificate, fingerprint, data, document) {
+                assert_eq!(&report.fingerprint, fingerprint);
+                let detached = DetachedSignature::from_reader_many(Cursor::new(data))
+                    .unwrap()
+                    .0
+                    .next()
+                    .unwrap()
+                    .unwrap();
+                let encoded = detached.to_bytes().unwrap();
+                let other = verify(certificate, fingerprint, &encoded, document).unwrap();
+                assert_eq!(
+                    serde_json::to_value(report).unwrap(),
+                    serde_json::to_value(other).unwrap()
+                );
+                let mut changed = document.clone();
+                changed.push(0);
+                assert!(verify(certificate, fingerprint, data, &changed).is_err());
+            }
+        } else if let Ok(message) = verify_message(certificate, fingerprint, data, None) {
+            assert_eq!(&message.verification.fingerprint, fingerprint);
+            assert!(message.plaintext.len() as u64 <= MAX_PLAINTEXT_BYTES);
+            let cert = parse_certificate(certificate).unwrap();
+            let summary = evaluate(&cert, message.verification.created).summary;
+            assert!(
+                summary
+                    .keys
+                    .iter()
+                    .any(|key| key.fingerprint == message.verification.signing_key
+                        && key.usable_for_signing)
+            );
+        }
+    }
+}
+
 fn format_error(context: &str, error: pgp::errors::Error) -> Error {
     Error::new("invalid_format", format!("{context}: {error}"))
 }

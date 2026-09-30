@@ -239,6 +239,11 @@ pub(crate) use engine::{
     decrypt, encrypt, export, generate_version, inspect, sign, verify, verify_message,
 };
 
+/// In-memory public-packet oracle, exposed only to the fuzz tooling.
+#[cfg(all(feature = "openpgp", feature = "fuzzing"))]
+#[doc(hidden)]
+pub use engine::fuzz_packets;
+
 #[cfg(not(feature = "openpgp"))]
 mod unavailable {
     use super::*;

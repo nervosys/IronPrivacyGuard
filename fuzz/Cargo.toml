@@ -9,8 +9,9 @@ edition = "2024"
 cargo-fuzz = true
 
 [features]
-default = ["fuzzing"]
+default = ["fuzzing", "openpgp"]
 fuzzing = []
+openpgp = ["iron-privacy-guardian/openpgp"]
 
 [dependencies]
 iron-privacy-guardian = { path = "..", features = ["fuzzing"] }
@@ -19,6 +20,14 @@ libfuzzer-sys = "=0.4.13"
 
 [workspace]
 members = ["."]
+
+[[bin]]
+name = "openpgp_packets"
+path = "fuzz_targets/openpgp_packets.rs"
+required-features = ["openpgp", "fuzzing"]
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "stream_headers"

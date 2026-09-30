@@ -1,5 +1,12 @@
 # Independent APG format vectors
 
+`openpgp-parser-v1.json` is a separate public parser-regression corpus generated
+from disposable APG/rPGP v4 and v6 Ed25519 and P-384 keys. It contains no secrets.
+`scripts/fuzz-openpgp-seeds.py` builds embedded message wrappers and compression
+layers with the Python standard library; Rust tests validate each fixture and
+its byte truncations. These are fuzz seeds and regressions, not an independent
+cryptographic oracle. The RFC and PyCA checks below supply independent evidence.
+
 The [RFC 9580 v6 certificate](../tests/vectors/openpgp-v6-rfc9580.asc) is copied
 from [Appendix A.3](https://www.rfc-editor.org/rfc/rfc9580.html#appendix-A.3),
 with the blank armor-header separator required by rPGP. Rust tests check its
