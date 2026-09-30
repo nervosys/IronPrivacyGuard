@@ -24,13 +24,13 @@
           "type": "string"
         },
         "expected_openpgp_fingerprint": {
-          "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
-          "maxLength": 40,
+          "description": "OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces.",
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9A-Fa-f]"
           },
-          "pattern": "^[0-9A-Fa-f]{40}$",
+          "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
           "type": "string"
         }
       },
@@ -109,6 +109,14 @@
         "expected_digest"
       ],
       "type": "object"
+    },
+    "Version": {
+      "description": "OpenPGP packet version; v4 preserves compatibility with existing correspondents.",
+      "enum": [
+        "v4",
+        "v6"
+      ],
+      "type": "string"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1513,6 +1521,10 @@
           "$ref": "#/$defs/Algorithm",
           "default": "ed25519"
         },
+        "key_version": {
+          "$ref": "#/$defs/Version",
+          "default": "v4"
+        },
         "operation": {
           "const": "openpgp.key.generate",
           "type": "string"
@@ -1676,13 +1688,13 @@
           "type": "string"
         },
         "expected_openpgp_fingerprint": {
-          "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
-          "maxLength": 40,
+          "description": "OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces.",
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9A-Fa-f]"
           },
-          "pattern": "^[0-9A-Fa-f]{40}$",
+          "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
           "type": "string"
         },
         "input": {
@@ -1713,13 +1725,13 @@
           "type": "string"
         },
         "expected_openpgp_fingerprint": {
-          "description": "v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces.",
-          "maxLength": 40,
+          "description": "OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces.",
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9A-Fa-f]"
           },
-          "pattern": "^[0-9A-Fa-f]{40}$",
+          "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
           "type": "string"
         },
         "input": {

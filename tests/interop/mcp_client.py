@@ -96,6 +96,10 @@ async def exercise(executable, directory):
         await checked.call("sign", {"input": path("message"), "output": path("signature"), "key": path("key"), "passphrase_file": path("pass")})
         verification = {"input": path("message"), "signature": path("signature"), "signer": path("public"), "expected_fingerprint": fingerprint}
         await checked.call("verify", verification)
+        await checked.call("stream.sign", {"input": path("message"), "output": path("stream-signature"), "key": path("key"), "passphrase_file": path("pass")})
+        stream_verification = {**verification, "signature": path("stream-signature")}
+        await checked.call("stream.verify", stream_verification)
+        await checked.call("stream.sign", {"input": path("message"), "output": path("stream-signature"), "key": path("key"), "passphrase_file": path("pass")}, error="already_exists")
         digest = await checked.call("hash", {"input": path("message")})
         assert digest["digest"] == hashlib.sha256(message).hexdigest()
         inspected = await checked.call("inspect", {"input": path("public")})
@@ -142,23 +146,28 @@ async def exercise(executable, directory):
         await checked.call("trust.init", {"output": path("empty")}, error="already_exists")
         Path(path("altered")).write_bytes(message + b"tampered")
         await checked.call("verify", {**verification, "input": path("altered")}, error="authentication_failed")
+        await checked.call("stream.verify", {**stream_verification, "input": path("altered")}, error="authentication_failed")
+        Draft202012Validator(schemas["formats"]["stream_signature"]).validate(json.loads(Path(path("stream-signature")).read_text()))
         for filename, schema_name in [("merged", "trust_store"), ("validity", "validity"), ("expired", "trust_store"), ("key", "secret_key"), ("rewrapped", "secret_key"), ("public", "public_key"), ("encrypted", "envelope"), ("signature", "signature"), ("certificate", "revocation"), ("empty", "trust_store"), ("active", "trust_store"), ("revoked", "trust_store")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))
         summary["calls"] += checked.calls
 
-    allowed = "encrypt,sign,verify,plan"
+    allowed = "encrypt,sign,verify,stream.encrypt,stream.sign,stream.verify,plan"
     async with connect("--allow", allowed, "--trust-store", path("active"), "--expected-store-digest", active["digest"], mode="legacy") as client:
         assert client.protocol_version == "2025-11-25"
         catalog = await client.list_tools()
         checked = CheckedClient(client, catalog.tools)
-        assert set(checked.tools) == {"apg_" + op for op in allowed.split(",")}
+        assert set(checked.tools) == {"apg_" + op.replace(".", "_") for op in allowed.split(",")}
         summary["sessions"].append({"mode": "legacy", "policy": "active", "protocol": client.protocol_version})
         for operation, arguments in [
             ("encrypt", {"input": path("message"), "output": path("governed-encrypted"), "recipient": path("public"), "expected_fingerprint": fingerprint}),
             ("sign", {"input": path("message"), "output": path("governed-signature"), "key": path("key"), "passphrase_file": path("pass"), "policy": None}),
             ("verify", {**verification, "signature": path("governed-signature")}),
+            ("stream.encrypt", {"input": path("message"), "output": path("governed-stream"), "recipients": [{"public": path("public"), "expected_fingerprint": fingerprint}]}),
+            ("stream.sign", {"input": path("message"), "output": path("governed-stream-signature"), "key": path("key"), "passphrase_file": path("pass"), "policy": None}),
+            ("stream.verify", {**stream_verification, "signature": path("governed-stream-signature")}),
         ]:
             result = await checked.call(operation, arguments)
             assert result["policy_digest"] == active["digest"]
@@ -182,6 +191,14 @@ async def exercise(executable, directory):
         await checked.call("encrypt", {**encryption, "policy": {"store": path("active"), "expected_digest": active["digest"]}}, error="policy_mismatch")
         await checked.call("sign", {"input": path("missing"), "output": path("denied"), "key": path("key"), "passphrase_file": path("missing")}, error="key_revoked")
         await checked.call("verify", {**verification, "input": path("missing")}, error="key_revoked")
+        for operation, arguments in [
+            ("stream.encrypt", {"input": path("missing"), "output": path("denied"), "recipients": [{"public": path("public"), "expected_fingerprint": fingerprint}]}),
+            ("stream.sign", {"input": path("missing"), "output": path("denied"), "key": path("key"), "passphrase_file": path("missing")}),
+            ("stream.verify", {**stream_verification, "input": path("missing")}),
+        ]:
+            for policy in [{}, {"policy": None}, {"policy": incoming_policy}]:
+                await checked.call(operation, {**arguments, **policy}, error="key_revoked")
+            await checked.call(operation, {**arguments, "policy": {"store": path("active"), "expected_digest": active["digest"]}}, error="policy_mismatch")
         assert not Path(path("denied")).exists()
         summary["calls"] += checked.calls
     async with connect("--allow", allowed, "--trust-store", path("expired"), "--expected-store-digest", expired["digest"]) as client:
@@ -190,6 +207,12 @@ async def exercise(executable, directory):
         await checked.call("encrypt", {**encryption, "policy": None}, error="key_expired")
         await checked.call("sign", {"input": path("missing"), "output": path("denied"), "key": path("key"), "passphrase_file": path("missing")}, error="key_expired")
         await checked.call("verify", {**verification, "input": path("missing")}, error="key_expired")
+        for operation, arguments in [
+            ("stream.encrypt", {"input": path("missing"), "output": path("denied"), "recipients": [{"public": path("public"), "expected_fingerprint": fingerprint}]}),
+            ("stream.sign", {"input": path("missing"), "output": path("denied"), "key": path("key"), "passphrase_file": path("missing")}),
+            ("stream.verify", {**stream_verification, "input": path("missing")}),
+        ]:
+            await checked.call(operation, arguments, error="key_expired")
         await checked.call("encrypt", {**encryption, "at_time": 0}, error="invalid_request", invalid_input=True)
         assert not Path(path("denied")).exists()
         summary["calls"] += checked.calls

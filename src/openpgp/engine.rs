@@ -1,7 +1,7 @@
 //! rPGP-backed implementation with APG's certificate-validity policy.
 //!
 //! Policy (applied to every certificate APG reads):
-//! - exactly one v4 certificate per file;
+//! - exactly one v4 or v6 certificate per file;
 //! - a component is usable only with a valid, unexpired binding self-signature
 //!   made with SHA-256 or stronger; signing subkeys also need a valid back signature;
 //! - any valid revocation by the primary key revokes the certificate or subkey
@@ -10,7 +10,8 @@
 use super::{
     Algorithm, Certificate, ComponentKey, Decrypted, KDF, KEY_FORMAT, KeyFile,
     MAX_CERTIFICATE_BYTES, MAX_OWN_CERTIFICATE_BYTES, MAX_PLAINTEXT_BYTES, MAX_SECRET_BYTES,
-    RecipientKeys, Signed, Verification, VerifiedMessage, check_user_id, normalize_fingerprint,
+    RecipientKeys, Signed, Verification, VerifiedMessage, Version, check_user_id,
+    normalize_fingerprint,
 };
 use crate::crypto;
 use crate::error::{Error, Result};
@@ -22,7 +23,12 @@ use pgp::{
         MessageBuilder, SecretKeyParamsBuilder, SignedPublicKey, SignedSecretKey,
         SubkeyParamsBuilder,
     },
-    crypto::{ecc_curve::ECCCurve, hash::HashAlgorithm, sym::SymmetricKeyAlgorithm},
+    crypto::{
+        aead::{AeadAlgorithm, ChunkSize},
+        ecc_curve::ECCCurve,
+        hash::HashAlgorithm,
+        sym::SymmetricKeyAlgorithm,
+    },
     packet::{KeyFlags, Signature, SignatureType},
     ser::Serialize as _,
     types::{
@@ -217,11 +223,16 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
                 && live(s, at)
                 && s.verify_key(primary).is_ok()
         });
-    self_signatures.extend(direct);
-    // v4 certificates need a valid User ID; the newest self-signature sets flags and expiry.
-    let binding = (!user_ids.is_empty())
-        .then(|| newest(self_signatures.into_iter()))
-        .flatten();
+    // V6 preferences and key flags belong to direct-key self-signatures; User IDs
+    // are optional and their certifications must not override these properties.
+    let binding = if primary.version() == KeyVersion::V6 {
+        newest(direct)
+    } else {
+        self_signatures.extend(direct);
+        (!user_ids.is_empty())
+            .then(|| newest(self_signatures.into_iter()))
+            .flatten()
+    };
     let cert_created = u64::from(primary.created_at().as_secs());
     let expires = binding.and_then(|b| key_expiry(primary, b));
     let expired = expires.is_some_and(|e| at >= e);
@@ -283,7 +294,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
             sub_revoked,
             binding.and_then(|b| key_expiry(key, b)),
             flags.as_ref(),
-            cert_ok && key.version() == KeyVersion::V4,
+            cert_ok && key.version() == primary.version(),
             at,
         );
         if binding.is_some() && !backed {
@@ -294,7 +305,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         keys.push(entry);
     }
     let mut issues = Vec::new();
-    if user_ids.is_empty() {
+    if user_ids.is_empty() && primary.version() == KeyVersion::V4 {
         issues.push("no valid self-certified User ID".to_string());
     }
     if let Some(first) = keys.first_mut() {
@@ -386,7 +397,7 @@ fn single_armor_block(data: &[u8], what: &str) -> Result<()> {
     Ok(())
 }
 
-/// Parse exactly one v4 certificate, armored or binary.
+/// Parse exactly one v4 or v6 certificate, armored or binary.
 fn parse_certificate(data: &[u8]) -> Result<SignedPublicKey> {
     if data.len() as u64 > MAX_CERTIFICATE_BYTES {
         return Err(Error::new(
@@ -407,10 +418,10 @@ fn parse_certificate(data: &[u8]) -> Result<SignedPublicKey> {
             "File holds more than one OpenPGP certificate; supply exactly one",
         ));
     }
-    if cert.primary_key.version() != KeyVersion::V4 {
+    if !matches!(cert.primary_key.version(), KeyVersion::V4 | KeyVersion::V6) {
         return Err(Error::new(
             "invalid_format",
-            "Only v4 OpenPGP certificates are supported",
+            "Only v4 and v6 OpenPGP certificates are supported",
         ));
     }
     Ok(cert)
@@ -440,12 +451,30 @@ fn secret_aad(key: &KeyFile, certificate: &[u8], salt: &[u8], nonce: &[u8]) -> V
     )
 }
 
-pub(crate) fn generate(user_id: &str, algorithm: Algorithm, password: &[u8]) -> Result<KeyFile> {
+#[cfg(test)]
+fn generate(user_id: &str, algorithm: Algorithm, password: &[u8]) -> Result<KeyFile> {
+    generate_version(user_id, algorithm, Version::V4, password)
+}
+
+pub(crate) fn generate_version(
+    user_id: &str,
+    algorithm: Algorithm,
+    version: Version,
+    password: &[u8],
+) -> Result<KeyFile> {
     check_user_id(user_id)?;
     let (primary, subkey, hashes) = match algorithm {
         Algorithm::Ed25519 => (
-            KeyType::Ed25519Legacy,
-            KeyType::ECDH(ECCCurve::Curve25519Legacy),
+            if version == Version::V6 {
+                KeyType::Ed25519
+            } else {
+                KeyType::Ed25519Legacy
+            },
+            if version == Version::V6 {
+                KeyType::X25519
+            } else {
+                KeyType::ECDH(ECCCurve::Curve25519Legacy)
+            },
             vec![
                 HashAlgorithm::Sha512,
                 HashAlgorithm::Sha384,
@@ -469,9 +498,18 @@ pub(crate) fn generate(user_id: &str, algorithm: Algorithm, password: &[u8]) -> 
         )
     };
     let mut encryption = SubkeyParamsBuilder::default();
-    encryption.key_type(subkey).can_encrypt(EncryptionCaps::All);
+    let packet_version = if version == Version::V6 {
+        KeyVersion::V6
+    } else {
+        KeyVersion::V4
+    };
+    encryption
+        .version(packet_version)
+        .key_type(subkey)
+        .can_encrypt(EncryptionCaps::All);
     let mut params = SecretKeyParamsBuilder::default();
     params
+        .version(packet_version)
         .key_type(primary)
         .can_certify(true)
         .can_sign(true)
@@ -483,6 +521,13 @@ pub(crate) fn generate(user_id: &str, algorithm: Algorithm, password: &[u8]) -> 
         )
         .preferred_hash_algorithms(hashes.into_iter().collect())
         .subkeys(vec![encryption.build().map_err(|e| generation(&e))?]);
+    if version == Version::V6 {
+        params.feature_seipd_v2(true).preferred_aead_algorithms(
+            [(SymmetricKeyAlgorithm::AES256, AeadAlgorithm::Ocb)]
+                .into_iter()
+                .collect(),
+        );
+    }
     let secret = params
         .build()
         .map_err(|e| generation(&e))?
@@ -588,8 +633,7 @@ pub(crate) fn inspect(data: &[u8]) -> Result<Certificate> {
     Ok(evaluate(&parse_certificate(data)?, now()?).summary)
 }
 
-/// Encrypt to every usable encryption key of each pinned certificate (SEIPDv1
-/// with AES-256), producing an ASCII-armored message.
+/// Encrypt to every usable encryption key of each pinned certificate (AES-256: SEIPDv1 for v4, SEIPDv2/OCB for v6), producing an ASCII-armored message.
 pub(crate) fn encrypt(
     data: &[u8],
     recipients: &[(Zeroizing<Vec<u8>>, String)],
@@ -644,41 +688,72 @@ pub(crate) fn encrypt(
         }
         certs.push((cert, summary));
     }
-    let mut builder = MessageBuilder::from_bytes("", data.to_vec())
-        .seipd_v1(OsRng, SymmetricKeyAlgorithm::AES256);
-    let mut used = Vec::new();
-    for (cert, summary) in &certs {
-        let usable = |fp: &str| {
-            summary
-                .keys
-                .iter()
-                .any(|k| k.fingerprint == fp && k.usable_for_encryption)
-        };
-        let mut keys = Vec::new();
-        if usable(&hex_fingerprint(&cert.primary_key)) {
-            builder
-                .encrypt_to_key(OsRng, &cert.primary_key)
-                .map_err(|e| format_error("Encryption failed", e))?;
-            keys.push(hex_fingerprint(&cert.primary_key));
-        }
-        for sub in &cert.public_subkeys {
-            let fp = hex_fingerprint(&sub.key);
-            if usable(&fp) {
-                builder
-                    .encrypt_to_key(OsRng, &sub.key)
-                    .map_err(|e| format_error("Encryption failed", e))?;
-                keys.push(fp);
-            }
-        }
-        used.push(RecipientKeys {
-            fingerprint: summary.fingerprint.clone(),
-            encryption_keys: keys,
-        });
+    let v6 = certs
+        .iter()
+        .all(|(cert, _)| cert.primary_key.version() == KeyVersion::V6);
+    if !v6
+        && certs
+            .iter()
+            .any(|(cert, _)| cert.primary_key.version() == KeyVersion::V6)
+    {
+        return Err(Error::new(
+            "invalid_request",
+            "Mixed v4/v6 recipient sets are unsupported; encrypt separately to avoid a downgrade",
+        ));
     }
-    let armored = builder
-        .to_armored_string(OsRng, ArmorOptions::default())
-        .map_err(|e| format_error("Encryption failed", e))?;
-    Ok((armored, used))
+    // rPGP represents v1 and v2 builders with distinct generic types. Keep the
+    // recipient-selection and publication logic identical for both protocols.
+    macro_rules! finish {
+        ($builder:expr) => {{
+            let mut builder = $builder;
+            let mut used = Vec::new();
+            for (cert, summary) in &certs {
+                let usable = |fp: &str| {
+                    summary
+                        .keys
+                        .iter()
+                        .any(|k| k.fingerprint == fp && k.usable_for_encryption)
+                };
+                let mut keys = Vec::new();
+                if usable(&hex_fingerprint(&cert.primary_key)) {
+                    builder
+                        .encrypt_to_key(OsRng, &cert.primary_key)
+                        .map_err(|e| format_error("Encryption failed", e))?;
+                    keys.push(hex_fingerprint(&cert.primary_key));
+                }
+                for sub in &cert.public_subkeys {
+                    let fp = hex_fingerprint(&sub.key);
+                    if usable(&fp) {
+                        builder
+                            .encrypt_to_key(OsRng, &sub.key)
+                            .map_err(|e| format_error("Encryption failed", e))?;
+                        keys.push(fp);
+                    }
+                }
+                used.push(RecipientKeys {
+                    fingerprint: summary.fingerprint.clone(),
+                    encryption_keys: keys,
+                });
+            }
+            let armored = builder
+                .to_armored_string(OsRng, ArmorOptions::default())
+                .map_err(|e| format_error("Encryption failed", e))?;
+            Ok((armored, used))
+        }};
+    }
+    if v6 {
+        finish!(MessageBuilder::from_bytes("", data.to_vec()).seipd_v2(
+            OsRng,
+            SymmetricKeyAlgorithm::AES256,
+            AeadAlgorithm::Ocb,
+            ChunkSize::default()
+        ))
+    } else {
+        finish!(
+            MessageBuilder::from_bytes("", data.to_vec())
+                .seipd_v1(OsRng, SymmetricKeyAlgorithm::AES256)
+        )
+    }
 }
 
 /// Decrypt an integrity-protected message (SEIPD v1 or v2). Legacy unprotected
@@ -1001,6 +1076,154 @@ impl<K: pgp::types::VerifyingKey> VerifyKey for K {
 mod tests {
     use super::*;
     use pgp::types::CompressionAlgorithm;
+
+    #[test]
+    fn published_rfc9580_v6_certificate_is_usable_without_user_ids() {
+        let certificate = include_bytes!("../../tests/vectors/openpgp-v6-rfc9580.asc");
+        let summary = inspect(certificate).unwrap();
+        assert_eq!(
+            summary.fingerprint,
+            "cb186c4f0609a697e4d52dfa6c722b0c1f1e27c18a56708f6525ec27bad9acc9"
+        );
+        assert!(summary.user_ids.is_empty());
+        assert!(summary.usable_for_encryption && summary.usable_for_signing);
+        assert_eq!(
+            summary.keys[1].fingerprint,
+            "12c83f1e706f6308fe151a417743a1f033790e93e9978488d1db378da9930885"
+        );
+        encrypt(
+            b"RFC vector recipient",
+            &[(Zeroizing::new(certificate.to_vec()), summary.fingerprint)],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn v6_keys_sign_encrypt_and_enforce_direct_key_policy() {
+        let password = b"v6 test passphrase";
+        let data = b"v6 OpenPGP\0\xff\r\n";
+        for algorithm in [Algorithm::Ed25519, Algorithm::P384] {
+            let key =
+                generate_version("V6 <v6@example.test>", algorithm, Version::V6, password).unwrap();
+            assert_eq!(key.fingerprint.len(), 64);
+            let (certificate, summary) = export(&key).unwrap();
+            assert!(summary.usable_for_encryption && summary.usable_for_signing);
+            assert!(summary.keys.iter().all(|k| k.fingerprint.len() == 64));
+            let cert = parse_certificate(certificate.as_bytes()).unwrap();
+            assert_eq!(cert.primary_key.version(), KeyVersion::V6);
+            let secret = unseal(&key, password).unwrap();
+            let hash = if algorithm == Algorithm::P384 {
+                HashAlgorithm::Sha384
+            } else {
+                HashAlgorithm::Sha512
+            };
+            let mut embedded = MessageBuilder::from_bytes("../../untrusted", data.as_slice());
+            embedded.sign(&secret.primary_key, Password::empty(), hash);
+            let embedded = embedded.to_vec(OsRng).unwrap();
+            assert_eq!(
+                &verify_message(certificate.as_bytes(), &key.fingerprint, &embedded, None)
+                    .unwrap()
+                    .plaintext[..],
+                data
+            );
+            let signed = sign(&key, password, data).unwrap();
+            verify(
+                certificate.as_bytes(),
+                &key.fingerprint.to_uppercase(),
+                signed.armored.as_bytes(),
+                data,
+            )
+            .unwrap();
+            assert!(
+                verify(
+                    certificate.as_bytes(),
+                    &key.fingerprint,
+                    signed.armored.as_bytes(),
+                    b"altered"
+                )
+                .is_err()
+            );
+            let recipients = [(
+                Zeroizing::new(certificate.as_bytes().to_vec()),
+                key.fingerprint.clone(),
+            )];
+            let (encrypted, _) = encrypt(data, &recipients).unwrap();
+            assert_eq!(
+                &decrypt(&key, password, encrypted.as_bytes())
+                    .unwrap()
+                    .plaintext[..],
+                data
+            );
+            let mut no_user = cert.clone();
+            no_user.details.users.clear();
+            assert!(
+                evaluate(&no_user, now().unwrap())
+                    .summary
+                    .usable_for_signing
+            );
+            let mut unbound_subkey = cert.clone();
+            unbound_subkey.public_subkeys[0].signatures.clear();
+            assert!(
+                !evaluate(&unbound_subkey, now().unwrap())
+                    .summary
+                    .usable_for_encryption
+            );
+            let mut revoked_cert = cert.clone();
+            let revocation = pgp::packet::SignatureConfig::v6(
+                OsRng,
+                SignatureType::KeyRevocation,
+                secret.primary_key.algorithm(),
+                hash,
+            )
+            .unwrap()
+            .sign_key(&secret.primary_key, &Password::empty(), &cert.primary_key)
+            .unwrap();
+            revoked_cert.details.revocation_signatures.push(revocation);
+            let revoked_summary = evaluate(&revoked_cert, now().unwrap()).summary;
+            assert!(revoked_summary.revoked);
+            assert!(!revoked_summary.usable_for_encryption && !revoked_summary.usable_for_signing);
+            let revoked_bytes = revoked_cert.to_bytes().unwrap();
+            assert_eq!(
+                verify(
+                    &revoked_bytes,
+                    &key.fingerprint,
+                    signed.armored.as_bytes(),
+                    data
+                )
+                .unwrap_err()
+                .code,
+                "key_revoked"
+            );
+            assert_eq!(
+                encrypt(
+                    data,
+                    &[(Zeroizing::new(revoked_bytes), key.fingerprint.clone())]
+                )
+                .unwrap_err()
+                .code,
+                "key_revoked"
+            );
+            let mut no_direct = cert;
+            no_direct.details.direct_signatures.clear();
+            assert!(
+                !evaluate(&no_direct, now().unwrap())
+                    .summary
+                    .usable_for_signing
+            );
+            assert!(
+                !evaluate(&no_direct, now().unwrap())
+                    .summary
+                    .usable_for_encryption
+            );
+            let v4 = generate("V4 <v4@example.test>", algorithm, password).unwrap();
+            let (v4cert, _) = export(&v4).unwrap();
+            let mixed = [
+                recipients[0].clone(),
+                (Zeroizing::new(v4cert.into_bytes()), v4.fingerprint),
+            ];
+            assert_eq!(encrypt(data, &mixed).unwrap_err().code, "invalid_request");
+        }
+    }
 
     #[test]
     fn embedded_signatures_publish_only_verified_bytes() {

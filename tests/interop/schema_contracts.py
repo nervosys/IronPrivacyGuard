@@ -224,7 +224,8 @@ def main():
                    "tag": "00" * 16}
     openpgp_schema = schemas["formats"]["openpgp_key"]
     check(openpgp_schema, openpgp_key)
-    for field, bad in [("format", "apg-secret-v1"), ("fingerprint", "AB" * 20), ("fingerprint", "ab" * 32),
+    check(openpgp_schema, {**openpgp_key, "fingerprint": "ab" * 32})
+    for field, bad in [("format", "apg-secret-v1"), ("fingerprint", "AB" * 20), ("fingerprint", "ab" * 31),
                        ("algorithm", "rsa"), ("certificate", "999"), ("certificate", "99" * 16385),
                        ("ciphertext", "01" * 4097), ("kdf", "pbkdf2"), ("salt", "00" * 15), ("user_id", "a\nb")]:
         check(openpgp_schema, {**openpgp_key, field: bad}, False)
@@ -276,9 +277,10 @@ def main():
                 check(tool_schema, {**arguments, "mldsa_signing_key_arn": bad}, False)
             check(tool_schema, {**arguments, "mldsa_signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/3"})
         if "expected_openpgp_fingerprint" in values:
-            # Either case is valid; APG fingerprints, spaces and trailing newlines are not.
+            # Either case and both defined widths are valid; spaces and trailing newlines are not.
             check(tool_schema, {**arguments, "expected_openpgp_fingerprint": "ab" * 20})
-            for bad in ["ab" * 32, "g" * 40, ("ab" * 20) + "\n", " ".join(["ABCD"] * 10), "ab" * 19]:
+            check(tool_schema, {**arguments, "expected_openpgp_fingerprint": "AB" * 32})
+            for bad in ["ab" * 31, "g" * 40, ("ab" * 20) + "\n", " ".join(["ABCD"] * 10), "ab" * 19]:
                 check(tool_schema, {**arguments, "expected_openpgp_fingerprint": bad}, False)
         if operation == "stream.encrypt":
             recipient = values["recipients"][0]
@@ -289,7 +291,7 @@ def main():
         if operation == "openpgp.encrypt":
             recipient = values["recipients"][0]
             for bad in [[], [recipient] * 33, [{"certificate": "path"}], [{**recipient, "extra": 1}],
-                        [{**recipient, "expected_openpgp_fingerprint": "ab" * 32}]]:
+                        [{**recipient, "expected_openpgp_fingerprint": "ab" * 31}]]:
                 check(tool_schema, {**arguments, "recipients": bad}, False)
             check(tool_schema, {**arguments, "recipients": [recipient] * 32})
         if "user_id" in values:
@@ -298,6 +300,9 @@ def main():
             check(tool_schema, {**arguments, "user_id": "Ünïcode Name <u@example.test>"})
             check(tool_schema, {**arguments, "algorithm": "p384"})
             check(tool_schema, {**arguments, "algorithm": "rsa4096"}, False)
+            check(tool_schema, {**arguments, "key_version": "v4"})
+            check(tool_schema, {**arguments, "key_version": "v6"})
+            check(tool_schema, {**arguments, "key_version": "v5"}, False)
         if "token_serial" in values:
             for bad in ["", "x" * 17]:
                 check(tool_schema, {**arguments, "token_serial": bad}, False)

@@ -39,6 +39,7 @@ jobs:
       # GnuPG ships on the Linux and Windows runners (Git for Windows); macOS runners lack it.
       - if: runner.os != 'macOS'
         run: python tests/interop/gnupg_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/openpgp_v6_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
   tpm:
     # Full TPM lifecycle against a throwaway swtpm software TPM.
     runs-on: ubuntu-latest

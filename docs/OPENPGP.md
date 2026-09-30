@@ -32,7 +32,7 @@ certificates), which that advisory does not affect.
 
 | Operation | Purpose |
 | --- | --- |
-| `openpgp.key.generate` | Create a v4 OpenPGP key: `ed25519` (default; Ed25519 primary key and Curve25519 encryption subkey, as GnuPG creates) or `p384` (ECDSA P-384 and ECDH P-384 with SHA-384 and AES-256, CNSA-aligned). Takes `output`, `passphrase_file` and `user_id`. |
+| `openpgp.key.generate` | Create a v4 (default) or v6 key using `key_version`: `v4` or `v6`. `ed25519` uses legacy Ed25519/Curve25519 for v4 and RFC 9580 Ed25519/X25519 for v6; `p384` uses ECDSA/ECDH P-384. Takes `output`, `passphrase_file` and `user_id`. |
 | `openpgp.cert.export` | Write the key's ASCII-armored certificate (public key) for correspondents. No passphrase is needed. |
 | `openpgp.cert.inspect` | Evaluate any certificate under APG policy at host time and report its fingerprint, valid User IDs and, per key, algorithm, flags, expiry, revocation, usability and issues. |
 | `openpgp.encrypt` | Encrypt `input` to 1..32 recipients, each `{certificate, expected_openpgp_fingerprint}`, as one ASCII-armored message. |
@@ -61,8 +61,8 @@ apg openpgp verify --input report.pdf --signature report.pdf.asc --certificate t
 
 ## Pins, not trust
 
-Every certificate is pinned by its v4 primary-key fingerprint in
-`expected_openpgp_fingerprint`: 40 hexadecimal characters in either case, no spaces
+Every certificate is pinned by its primary-key fingerprint in
+`expected_openpgp_fingerprint`: v4 40 or v6 64 hexadecimal characters in either case, no spaces
 (GnuPG prints them uppercase in groups; remove the spaces). The field name differs
 from native `expected_fingerprint` on purpose: the two kinds of fingerprint are
 never interchangeable. A certificate file must hold exactly one certificate.
@@ -83,11 +83,13 @@ host `--key-custody` of `non-exportable` or `hardware` refuses `openpgp.key.gene
 rPGP parses and verifies signatures but leaves OpenPGP semantics to applications.
 APG applies this policy to every certificate it reads:
 
-- Only v4 certificates are accepted (GnuPG 2.2 and 2.4 create v4 keys).
+- V4 and v6 certificates are accepted. V4 generation remains the default for compatibility.
 - A key is usable only with a valid binding self-signature that is in effect at the
   evaluation time and made with SHA-256, SHA-384, SHA-512, SHA3-256 or SHA3-512.
-  The newest valid self-signature sets the key flags and expiry. The certificate
-  needs at least one valid, unrevoked self-certified User ID.
+  For v4 the newest valid self-signature sets key flags and expiry, and at least
+  one valid, unrevoked self-certified User ID is required. V6 instead requires a
+  valid direct-key self-signature for these properties; User IDs are optional.
+  Subkeys must have the same version as their primary key.
 - A signing subkey also needs a valid embedded back signature, so a certificate
   cannot claim someone else's signing key.
 - Any valid revocation made by the primary key revokes the certificate or subkey,
@@ -112,8 +114,14 @@ hash, and `invalid_request` for a recipient without a usable encryption key.
 
 ## Messages
 
-APG writes SEIPDv1 messages (integrity-protected, with a modification detection
-code) using AES-256, the format GnuPG 2.4 reads and writes; it does not compress.
+For v4 recipients APG writes SEIPDv1 messages using AES-256. For v6 recipients
+it writes SEIPDv2 with AES-256/OCB and v6 session-key packets. Mixed v4/v6 recipient
+sets are refused; send separate messages. Output is uncompressed. V6 generation
+advertises AES-256/OCB. Correspondents must support RFC 9580 v6 and SEIPDv2.
+
+```sh
+apg openpgp key generate --output me-v6.json --passphrase-file pass.bin --user-id "Me <me@example.org>" --key-version v6
+```
 When decrypting, APG:
 
 - refuses legacy messages without integrity protection (SED packets);
@@ -149,7 +157,7 @@ this packet-message operation; use detached signatures for that workflow.
 ## Key file
 
 `apg-openpgp-key-v1` is JSON with fields in declared order: `format`,
-`fingerprint` (40 lowercase hex), `algorithm` (`ed25519` or `p384`), `user_id`,
+`fingerprint` (v4 40 or v6 64 lowercase hex), `algorithm` (`ed25519` or `p384`), `user_id`,
 `certificate` (the binary certificate as lowercase hex, at most 16 KiB), `kdf`
 (`argon2id-m65536-t3-p4`), `salt` (16 bytes), `nonce` (12 bytes), `ciphertext` and
 `tag` (16 bytes). The ciphertext is the binary transferable secret key, with
@@ -164,6 +172,14 @@ Secret keys cannot be exported, so an APG-held OpenPGP key cannot be moved into
 GnuPG. Back up the key file and passphrase.
 
 ## Testing
+
+V6 tests cover both generated suites, direct-key policy, optional User IDs and
+mixed-version refusal. The published RFC 9580 Appendix A.3 certificate is checked
+against its expected fingerprints. `tests/interop/openpgp_v6_reference.py` uses
+PyCA to verify v6 fingerprint and detached-signature calculations; it checks
+AEAD packet selection and refusal to publish tampered plaintext.
+The GnuPG suite below covers the default v4 compatibility path; it does not
+establish GnuPG v6 interoperability.
 
 `tests/openpgp.rs` covers round trips for both algorithms, multi-recipient
 encryption, pins, tampering, wrong keys and passphrases, custody policy, limits and
@@ -182,7 +198,7 @@ create are reported as skipped.
 
 ## Not supported
 
-v3, v5 and v6 keys; SEIPDv2 (AEAD) output; secret-key import or export; cleartext
-and inline-signed messages; verification of signatures inside messages; passphrase
+v3 and v5 keys; mixed v4/v6 recipient sets; secret-key import or export; cleartext
+signatures and inline-signature generation; passphrase
 (symmetric) encryption; keyservers, WKD and the web of trust; smartcards and
 OpenPGP keys in HSMs or TPMs.

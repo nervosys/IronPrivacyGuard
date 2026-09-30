@@ -344,7 +344,7 @@ consume immutable content. Independent protocol review remains necessary.
 
 ## OpenPGP key: apg-openpgp-key-v1
 
-An APG-held v4 OpenPGP key with its transferable secret key sealed under a
+An APG-held v4 or v6 OpenPGP key with its transferable secret key sealed under a
 passphrase. It is an OpenPGP-boundary artifact, never a native identity; see
 [OPENPGP.md](OPENPGP.md#key-file) for its fields and sealing.
 

@@ -357,10 +357,11 @@ attributes are self-reported, not attested. See [hardware identities](docs/HARDW
 
 ## OpenPGP interoperability
 
-With the `openpgp` feature, APG generates v4 OpenPGP keys (Ed25519, or P-384 for
+With the `openpgp` feature, APG generates v4 (default) or v6 OpenPGP keys (Ed25519, or P-384 for
 CNSA-aligned use), exports their certificates, encrypts to up to 32 pinned
 certificates, decrypts, and creates and verifies detached signatures. Output
-interoperates with GnuPG 2.2 and later.
+from the default v4 path interoperates with GnuPG 2.2 and later. Select v6 with
+`--key-version v6` for correspondents supporting RFC 9580 and SEIPDv2/OCB.
 
 ```sh
 apg openpgp key generate --output me.json --passphrase-file pass.bin --user-id "Me <me@example.org>" --algorithm p384

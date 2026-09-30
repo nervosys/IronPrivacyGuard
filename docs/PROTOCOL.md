@@ -87,7 +87,7 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | stream.decrypt | input, output, key (passphrase_file for software keys and PINs) |
 | stream.sign | input, output, key, optional passphrase_file and policy |
 | stream.verify | input, signature, signer, expected_fingerprint, optional policy |
-| openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384) |
+| openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384; key_version: v4 default or v6) |
 | openpgp.cert.export | key, output |
 | openpgp.cert.inspect | input |
 | openpgp.encrypt | input, output, recipients (1..32 of certificate, expected_openpgp_fingerprint) |

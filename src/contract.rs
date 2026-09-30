@@ -72,16 +72,16 @@ pub fn ek_certificates(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"array", "minItems":1, "maxItems":4, "items":{"type":"string", "minLength":2,
         "maxLength":8192, "pattern":"^([0-9a-f]{2})+$", "not":{"pattern":"[^0-9a-f]"}}})
 }
-/// A pinned v4 OpenPGP fingerprint; either case, since GnuPG prints uppercase.
+/// A pinned v4 or v6 OpenPGP fingerprint; either case, since GnuPG prints uppercase.
 pub fn openpgp_fingerprint(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":40, "maxLength":40,
-        "pattern":"^[0-9A-Fa-f]{40}$", "not":{"pattern":"[^0-9A-Fa-f]"},
-        "description":"v4 OpenPGP primary-key fingerprint: 40 hex characters, no spaces."})
+    json_schema!({"type":"string", "minLength":40, "maxLength":64,
+        "pattern":"^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$", "not":{"pattern":"[^0-9A-Fa-f]"},
+        "description":"OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces."})
 }
-/// A v4 OpenPGP fingerprint as APG reports it.
+/// An OpenPGP fingerprint as APG reports it.
 pub fn openpgp_key_fingerprint(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":"string", "minLength":40, "maxLength":40,
-        "pattern":"^[0-9a-f]{40}$", "not":{"pattern":"[^0-9a-f]"}})
+    json_schema!({"type":"string", "minLength":40, "maxLength":64,
+        "pattern":"^([0-9a-f]{40}|[0-9a-f]{64})$", "not":{"pattern":"[^0-9a-f]"}})
 }
 pub fn openpgp_user_id(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":1, "maxLength":crate::openpgp::MAX_USER_ID_BYTES,

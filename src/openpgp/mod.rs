@@ -1,4 +1,4 @@
-//! OpenPGP compatibility boundary: v4 keys, certificates, messages and detached
+//! OpenPGP compatibility boundary: v4 and v6 keys, certificates, messages and detached
 //! signatures (RFC 9580) for exchanging data with GnuPG and other OpenPGP tools.
 //!
 //! Packet processing and the OpenPGP primitives come from rPGP (`openpgp` feature),
@@ -38,6 +38,14 @@ pub enum Algorithm {
     /// (CNSA-aligned).
     P384,
 }
+/// OpenPGP packet version; v4 preserves compatibility with existing correspondents.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Version {
+    #[default]
+    V4,
+    V6,
+}
 impl Algorithm {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -55,7 +63,7 @@ impl Algorithm {
 pub struct KeyFile {
     #[schemars(schema_with = "crate::contract::openpgp_key_format")]
     pub format: String,
-    /// v4 primary-key fingerprint.
+    /// Primary-key fingerprint: v4 40 hex, v6 64 hex.
     #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
     pub fingerprint: String,
     pub algorithm: Algorithm,
@@ -82,8 +90,8 @@ impl KeyFile {
         if self.format != KEY_FORMAT || self.kdf != KDF {
             return format("Unsupported OpenPGP key format or KDF");
         }
-        if self.fingerprint.len() != 40 || !is_lower_hex(&self.fingerprint) {
-            return format("OpenPGP key fingerprint must be 40 lowercase hex characters");
+        if !matches!(self.fingerprint.len(), 40 | 64) || !is_lower_hex(&self.fingerprint) {
+            return format("OpenPGP key fingerprint must be 40 or 64 lowercase hex characters");
         }
         check_user_id(&self.user_id)?;
         let hex_field = |value: &str, max: usize| {
@@ -199,13 +207,13 @@ fn is_lower_hex(value: &str) -> bool {
         .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-/// Normalize a pinned v4 fingerprint to lowercase; either case is accepted, as
+/// Normalize a pinned v4 or v6 fingerprint to lowercase; either case is accepted, as
 /// GnuPG prints uppercase.
 pub fn normalize_fingerprint(pin: &str) -> Result<String> {
-    if pin.len() != 40 || !pin.bytes().all(|b| b.is_ascii_hexdigit()) {
+    if !matches!(pin.len(), 40 | 64) || !pin.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(Error::new(
             "invalid_format",
-            "OpenPGP fingerprint must be 40 hexadecimal characters without spaces",
+            "OpenPGP fingerprint must be 40 or 64 hexadecimal characters without spaces",
         ));
     }
     Ok(pin.to_ascii_lowercase())
@@ -228,7 +236,7 @@ pub fn check_user_id(user_id: &str) -> Result<()> {
 
 #[cfg(feature = "openpgp")]
 pub(crate) use engine::{
-    decrypt, encrypt, export, generate, inspect, sign, verify, verify_message,
+    decrypt, encrypt, export, generate_version, inspect, sign, verify, verify_message,
 };
 
 #[cfg(not(feature = "openpgp"))]
@@ -240,7 +248,7 @@ mod unavailable {
             "This apg build has no OpenPGP support; rebuild with --features openpgp",
         ))
     }
-    pub(crate) fn generate(_: &str, _: Algorithm, _: &[u8]) -> Result<KeyFile> {
+    pub(crate) fn generate_version(_: &str, _: Algorithm, _: Version, _: &[u8]) -> Result<KeyFile> {
         unavailable()
     }
     pub(crate) fn export(_: &KeyFile) -> Result<(String, Certificate)> {
@@ -275,5 +283,5 @@ mod unavailable {
 }
 #[cfg(not(feature = "openpgp"))]
 pub(crate) use unavailable::{
-    decrypt, encrypt, export, generate, inspect, sign, verify, verify_message,
+    decrypt, encrypt, export, generate_version, inspect, sign, verify, verify_message,
 };
