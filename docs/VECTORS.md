@@ -51,9 +51,21 @@ historical document signatures remain valid if consent was live when they were
 made. Inspection reports current validity; detached and embedded verification
 evaluate consent at document signature time. Every refused embedded message
 leaves output absent. All certificate and document signatures are made with PyCA.
-The 343 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
+The [metadata helper](../tests/interop/openpgp_metadata_reference.py) constructs
+v4/v6 P-384 certificates and documents, then injects unhashed policy subpackets
+without private-key access or re-signing. The
+[public metadata fixture](../tests/vectors/openpgp-metadata-policy-v1.json) covers
+permission grants against absent or signed-denied flags; attempted expiry
+extension for primary keys, subkeys, certificate signatures and document
+signatures; authenticated timestamp preservation; and tampering with signed
+primary/subkey flags. Accepted controls ignore advisory metadata; refusals leave
+no plaintext or ciphertext output. Rust replay and the live independent helper
+also assert inspection flags, bindings and expiry, plus exact encryption-key
+selection. These checks follow the trust boundary described in
+[RFC 9580 section 13.13](https://www.rfc-editor.org/rfc/rfc9580.html#section-13.13).
+The 471 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
 53 PyCA signature-policy checks, 20 primary certificate-policy checks and
-72 back-signature checks.
+72 back-signature checks and 128 metadata-policy checks.
 APG test keys live in a temporary directory; additional PyCA keys stay in memory.
 The helper independently unseals only disposable APG test keys; no secret material
 is checked in.
@@ -76,6 +88,12 @@ Regenerate the public back-signature fixture explicitly:
 
 ```sh
 python tests/interop/openpgp_backsignature_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-backsignature-policy-v1.json
+```
+
+Regenerate the public metadata fixture explicitly:
+
+```sh
+python tests/interop/openpgp_metadata_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-metadata-policy-v1.json
 ```
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated

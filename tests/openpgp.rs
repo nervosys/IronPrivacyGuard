@@ -13,6 +13,102 @@ const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
 #[cfg(feature = "openpgp")]
 #[test]
+fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-metadata-policy-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let f = Fixture::new();
+    fs::write(f.path("metadata-document"), &document).unwrap();
+    for case in fixture["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        for (field, file) in [
+            ("certificate_hex", "metadata-certificate"),
+            ("signature_hex", "metadata-signature"),
+            ("embedded_hex", "metadata-embedded"),
+        ] {
+            fs::write(
+                f.path(file),
+                hex::decode(case[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+        }
+        let inspected = call(json!({"operation":"openpgp.cert.inspect",
+            "input":f.path("metadata-certificate")}))
+        .unwrap();
+        let report = &inspected["certificate"];
+        for field in [
+            "fingerprint",
+            "usable_for_signing",
+            "usable_for_encryption",
+            "expired",
+        ] {
+            assert_eq!(report[field], case[field], "{name}/{field}");
+        }
+        assert_eq!(report["expires"], case["expires"][0], "{name}");
+        let keys = report["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 3, "{name}");
+        for (index, key) in keys.iter().enumerate() {
+            for field in ["bound", "flags", "expires"] {
+                assert_eq!(key[field], case[field][index], "{name}/{index}/{field}");
+            }
+        }
+        let verified = call(json!({"operation":"openpgp.verify",
+            "input":f.path("metadata-document"), "signature":f.path("metadata-signature"),
+            "certificate":f.path("metadata-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if let Some(error) = case["verify_error"].as_str() {
+            assert_eq!(verified.unwrap_err(), error, "{name}");
+        } else {
+            let result = verified.unwrap();
+            assert_eq!(result["valid"], true, "{name}");
+            assert_eq!(
+                result["verification"]["signing_key"], case["signing_fingerprint"],
+                "{name}"
+            );
+            assert_eq!(
+                result["verification"]["created"], case["document_created"],
+                "{name}"
+            );
+        }
+        let output = f.path(&format!("metadata-{name}.plain"));
+        let verified = call(json!({"operation":"openpgp.message.verify",
+            "input":f.path("metadata-embedded"), "output":output,
+            "certificate":f.path("metadata-certificate"),
+            "expected_openpgp_fingerprint":case["fingerprint"]}));
+        if let Some(error) = case["verify_error"].as_str() {
+            assert_eq!(verified.unwrap_err(), error, "{name}");
+            assert!(!std::path::Path::new(&output).exists(), "{name}");
+        } else {
+            let result = verified.unwrap();
+            assert_eq!(result["valid"], true, "{name}");
+            assert_eq!(
+                result["verification"]["created"], case["document_created"],
+                "{name}"
+            );
+            assert_eq!(fs::read(&output).unwrap(), document, "{name}");
+        }
+        let output = f.path(&format!("metadata-{name}.encrypted"));
+        let encrypted = call(json!({"operation":"openpgp.encrypt",
+            "input":f.path("metadata-document"), "output":output,
+            "recipients":[{"certificate":f.path("metadata-certificate"),
+                "expected_openpgp_fingerprint":case["fingerprint"]}]}));
+        if let Some(error) = case["encrypt_error"].as_str() {
+            assert_eq!(encrypted.unwrap_err(), error, "{name}");
+            assert!(!std::path::Path::new(&output).exists(), "{name}");
+        } else {
+            let result = encrypted.unwrap();
+            assert!(std::path::Path::new(&output).exists(), "{name}");
+            assert_eq!(
+                result["recipients"][0]["encryption_keys"],
+                json!([case["encryption_fingerprint"]]),
+                "{name}"
+            );
+        }
+    }
+}
+
+#[cfg(feature = "openpgp")]
+#[test]
 fn independent_back_signature_policy_respects_lifetimes_and_history() {
     let fixture: Value =
         serde_json::from_str(include_str!("vectors/openpgp-backsignature-policy-v1.json")).unwrap();
