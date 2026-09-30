@@ -32,10 +32,20 @@ contains accepted and refused signatures, embedded messages and direct-key
 self-signatures, consumed by `tests/openpgp.rs`. SHA-256 remains accepted for
 Ed25519, while P-384 requires at least a 48-byte digest; P-521 and Ed448 require
 64 bytes. These bounds follow [RFC 9580 section 5.2.3](https://www.rfc-editor.org/rfc/rfc9580.html#section-5.2.3).
-The 251 CLI calls include 62 independent AEAD checks, 106 signed-message checks
-and 53 PyCA signature-policy checks.
-All keys are generated in a temporary directory, and the helper independently
-unseals only those disposable test keys; no secret material is checked in.
+The [independent certificate helper](../tests/interop/openpgp_certificate_reference.py)
+constructs v4/v6 RSA-1024 and RSA-2048 primaries and a v4 DSA-2048 primary,
+each binding P-384 signing and encryption subkeys. Every signature is made and
+verified with PyCA, including the signing subkey's back signature. The
+[public primary-policy fixture](../tests/vectors/openpgp-primary-policy-v1.json)
+is replayed by Rust tests: refused primary algorithms disable both strong
+subkeys; accepted RSA-2048 controls verify documents and encrypt successfully.
+Refused verification and encryption leave no output. Binding validity remains
+visible in inspection, together with the primary algorithm policy issue.
+The 271 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
+53 PyCA signature-policy checks and 20 primary certificate-policy checks.
+APG test keys live in a temporary directory; additional PyCA keys stay in memory.
+The helper independently unseals only disposable APG test keys; no secret material
+is checked in.
 See [OPENPGP.md](OPENPGP.md#testing) for scope.
 
 Regenerate only the public signature-policy fixture explicitly after an
@@ -43,6 +53,12 @@ Regenerate only the public signature-policy fixture explicitly after an
 
 ```sh
 python tests/interop/openpgp_v6_reference.py --apg target/release/apg --write-policy-fixture tests/vectors/openpgp-signature-policy-v1.json
+```
+
+Regenerate the separate public primary-policy fixture explicitly:
+
+```sh
+python tests/interop/openpgp_certificate_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-primary-policy-v1.json
 ```
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated

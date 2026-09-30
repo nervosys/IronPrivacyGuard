@@ -100,7 +100,10 @@ APG applies this policy to every certificate it reads:
   whatever its stated reason. Third-party certifications and revocations by
   designated revokers are ignored.
 - RSA keys shorter than 2048 bits, DSA, ElGamal and unrecognized algorithms are
-  never used. Signatures using SHA-1 or MD5 are refused, including old SHA-1
+  never used. A disallowed primary algorithm makes every subkey unusable, even
+  when the subkeys use accepted algorithms and have valid binding signatures.
+  Inspection preserves their cryptographic binding status and reports the primary
+  policy failure. Signatures using SHA-1 or MD5 are refused, including old SHA-1
   self-signatures; such certificates must be refreshed by their owner.
 - Encryption goes to every usable encryption key of each recipient certificate,
   including an encryption-capable primary key. A recipient with none is refused.
@@ -190,9 +193,9 @@ decrypts APG messages for both suites, including empty and 65,537-byte content,
 exact chunk boundaries and partial packet lengths. Negative cases alter key
 wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
 chunks, truncate messages and authenticate a deliberately wrong final byte count.
-Every refused message must leave its output path absent. The suite makes 251 CLI
-calls, with 62 independent AEAD checks, 106 signed-message checks and 53 PyCA-made
-signature-policy checks. The signed
+Every refused message must leave its output path absent. The suite makes 271 CLI
+calls, with 62 independent AEAD checks, 106 signed-message checks, 20 primary
+certificate-policy checks and 53 PyCA-made signature-policy checks. The signed
 matrix crosses both v6 signer suites with both recipient suites, using binary,
 ZIP and ZLIB messages inside independently constructed PyCA encryption. It
 requires valid signatures and complete AEAD authentication before publication,
@@ -209,6 +212,13 @@ cover APG's two v6 encryption profiles and the listed signing profiles, not ever
 RFC 9580 algorithm or packet composition. The public
 `tests/vectors/openpgp-signature-policy-v1.json` fixture preserves PyCA-made
 signatures and certificates for Rust regression replay without Python or secrets.
+The `openpgp_certificate_reference.py` helper independently constructs v4/v6
+RSA-1024 and RSA-2048 certificates and a v4 DSA-2048 certificate, each with P-384
+signing and encryption subkeys. Only the RSA-2048 controls may use those subkeys.
+The public `tests/vectors/openpgp-primary-policy-v1.json` fixture checks inspection,
+detached verification, embedded verification and encryption, with no output on
+refusal. All test certificate signatures, including back signatures, are made
+and verified with PyCA; private keys stay in the external test process.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 
