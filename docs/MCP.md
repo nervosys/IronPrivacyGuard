@@ -154,6 +154,13 @@ expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also
 checked. This validates one external SDK, not every MCP host or client UI.
 
+The suite also checks streaming signing and verification, content tampering and
+no-clobber outputs. Host-policy sessions exercise `stream.encrypt`, `stream.sign`
+and `stream.verify` with active, revoked and expired snapshots; omitted, null and
+explicit matching policies cannot bypass the host pin, and conflicting pins fail
+before missing input files are opened. These sessions made 74 checked tool calls
+with SDK 2.2.0 in the local validation run.
+
 The test discovered and fixed a recursive-schema relocation bug: extracting the
 `plan` variant as a standalone tool changed the meaning of the Request schema's
 root reference. MCP tool schemas now keep the full tagged Request in

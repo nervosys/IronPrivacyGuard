@@ -87,12 +87,12 @@
           ]
         },
         "fingerprint": {
-          "maxLength": 40,
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9a-f]"
           },
-          "pattern": "^[0-9a-f]{40}$",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
           "type": "string"
         },
         "keys": {
@@ -366,12 +366,12 @@
           ]
         },
         "fingerprint": {
-          "maxLength": 40,
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9a-f]"
           },
-          "pattern": "^[0-9a-f]{40}$",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
           "type": "string"
         },
         "flags": {
@@ -557,12 +557,12 @@
           "type": "array"
         },
         "fingerprint": {
-          "maxLength": 40,
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9a-f]"
           },
-          "pattern": "^[0-9a-f]{40}$",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
           "type": "string"
         }
       },
@@ -768,12 +768,12 @@
           "type": "integer"
         },
         "fingerprint": {
-          "maxLength": 40,
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9a-f]"
           },
-          "pattern": "^[0-9a-f]{40}$",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
           "type": "string"
         },
         "hash_algorithm": {
@@ -781,12 +781,12 @@
         },
         "signing_key": {
           "description": "The primary key or subkey that made the signature.",
-          "maxLength": 40,
+          "maxLength": 64,
           "minLength": 40,
           "not": {
             "pattern": "[^0-9a-f]"
           },
-          "pattern": "^[0-9a-f]{40}$",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
           "type": "string"
         }
       },
@@ -1456,12 +1456,12 @@
                   "$ref": "#/$defs/Algorithm"
                 },
                 "fingerprint": {
-                  "maxLength": 40,
+                  "maxLength": 64,
                   "minLength": 40,
                   "not": {
                     "pattern": "[^0-9a-f]"
                   },
-                  "pattern": "^[0-9a-f]{40}$",
+                  "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
                   "type": "string"
                 },
                 "kind": {
@@ -1533,12 +1533,12 @@
             {
               "properties": {
                 "fingerprint": {
-                  "maxLength": 40,
+                  "maxLength": 64,
                   "minLength": 40,
                   "not": {
                     "pattern": "[^0-9a-f]"
                   },
-                  "pattern": "^[0-9a-f]{40}$",
+                  "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
                   "type": "string"
                 },
                 "kind": {
@@ -1569,12 +1569,12 @@
             {
               "properties": {
                 "fingerprint": {
-                  "maxLength": 40,
+                  "maxLength": 64,
                   "minLength": 40,
                   "not": {
                     "pattern": "[^0-9a-f]"
                   },
-                  "pattern": "^[0-9a-f]{40}$",
+                  "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
                   "type": "string"
                 },
                 "hash_algorithm": {
@@ -1588,12 +1588,12 @@
                   "type": "string"
                 },
                 "signing_key": {
-                  "maxLength": 40,
+                  "maxLength": 64,
                   "minLength": 40,
                   "not": {
                     "pattern": "[^0-9a-f]"
                   },
-                  "pattern": "^[0-9a-f]{40}$",
+                  "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
                   "type": "string"
                 }
               },

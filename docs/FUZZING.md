@@ -157,3 +157,19 @@ crashes, oracle failures or sanitizer findings. The starting corpus included
 the full 1 MiB body. Disabling gradual input-length growth makes the entire
 declared bound available immediately. The log is retained locally at
 `target/fuzz-reports/stream_headers-large.log`.
+
+## MCP security campaign, 2026-09-29
+
+After adding v6 request contracts and streaming-policy interoperability checks,
+the MCP boundary completed a Windows MSVC AddressSanitizer run with
+`-max_total_time=600 -max_len=65537 -timeout=10 -rss_limit_mb=2048
+-print_final_stats=1`. PRNG seed 2683892529 executed 40,802 inputs in 601 seconds,
+with 504 MiB peak RSS, without crashes, oracle failures or sanitizer findings.
+The run continued from the ignored discovered corpus and curated MCP seeds;
+its log is retained at `target/fuzz-reports/mcp-security-extended.log`.
+
+Curated v6 generation plans, unsupported-version requests and streaming-signature
+plans are replayed by stable regression tests. The MCP fuzz host allows only
+planning, so these seeds never open files or generate keys. This campaign covers
+JSON-RPC lifecycle and planning boundaries, not OpenPGP packet parsing or AEAD
+cryptography, and does not establish exhaustive protocol coverage.

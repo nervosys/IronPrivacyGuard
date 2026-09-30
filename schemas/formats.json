@@ -851,13 +851,13 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "v4 primary-key fingerprint.",
-        "maxLength": 40,
+        "description": "Primary-key fingerprint: v4 40 hex, v6 64 hex.",
+        "maxLength": 64,
         "minLength": 40,
         "not": {
           "pattern": "[^0-9a-f]"
         },
-        "pattern": "^[0-9a-f]{40}$",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
         "type": "string"
       },
       "format": {

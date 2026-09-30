@@ -502,7 +502,7 @@
       "label": "Exchange OpenPGP messages or GPG keys",
       "limitations": [
         "Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review",
-        "v4 keys only; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys",
+        "v4 and v6 keys; APG generates Ed25519 or P-384 keys and cannot import or export OpenPGP secret keys",
         "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
         "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply",
         "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected",
@@ -510,7 +510,7 @@
       ],
       "prerequisites": [
         "An apg build with the openpgp feature",
-        "Each correspondent's OpenPGP certificate and its independently trusted 40-hex fingerprint",
+        "Each correspondent's OpenPGP certificate and its independently trusted fingerprint (v4 40 hex or v6 64 hex)",
         "An MCP host that pins a trust policy must name the openpgp operations in --allow"
       ],
       "sources": [
@@ -3656,7 +3656,7 @@
         "apg:constraint/no-clobber",
         "apg:constraint/openpgp-user-id"
       ],
-      "description": "Create a v4 OpenPGP key (Ed25519 or P-384) for GnuPG interoperability, sealed under a passphrase",
+      "description": "Create a v4 (default) or v6 OpenPGP key (Ed25519 or P-384), sealed under a passphrase; v4 supports existing GnuPG correspondents",
       "deterministic": false,
       "effects": [
         "read_passphrase",
@@ -3822,7 +3822,7 @@
         "apg:constraint/no-clobber",
         "apg:constraint/openpgp-size-bound"
       ],
-      "description": "Encrypt to 1..32 pinned OpenPGP certificates as an armored SEIPDv1 AES-256 message",
+      "description": "Encrypt to 1..32 pinned OpenPGP certificates as an armored AES-256 message (SEIPDv1 for v4, SEIPDv2/OCB for v6; mixed sets refused)",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -4128,5 +4128,5 @@
     "meaning": "Primitive availability does not imply APG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.16.0"
+  "version": "1.17.0"
 }

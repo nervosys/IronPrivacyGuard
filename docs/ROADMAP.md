@@ -25,8 +25,8 @@ implemented surface, not feature parity with decades of GPG development.
    remain unsupported. Filesystem authorization remains the host's responsibility.
 5. Extend the OpenPGP compatibility boundary ([OPENPGP.md](OPENPGP.md)). v4 key
    generation, certificate export and inspection, multi-recipient encryption,
-   decryption and detached signatures interoperate with GnuPG through rPGP. v6 keys
-   and SEIPDv2, secret-key import and export,
+   decryption and detached signatures interoperate with GnuPG through rPGP. V6 key
+   generation and SEIPDv2/OCB encryption are implemented. Secret-key import and export,
    and OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
    document signatures, optionally decrypting, before publishing literal bytes.
    Never silently reinterpret native APG data

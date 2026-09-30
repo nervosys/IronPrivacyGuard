@@ -1,5 +1,16 @@
 # Independent APG format vectors
 
+The [RFC 9580 v6 certificate](../tests/vectors/openpgp-v6-rfc9580.asc) is copied
+from [Appendix A.3](https://www.rfc-editor.org/rfc/rfc9580.html#appendix-A.3),
+with the blank armor-header separator required by rPGP. Rust tests check its
+published fingerprints and usability without User IDs.
+[openpgp_v6_reference.py](../tests/interop/openpgp_v6_reference.py) independently
+computes v6 SHA-256 fingerprints and verifies APG's salted Ed25519 and P-384
+detached signatures with PyCA. It checks v6 PKESK and SEIPDv2/AES-256/OCB output
+and requires tampered ciphertext to publish no plaintext. Its packet parser
+handles small definite-length test packets only. Encryption round trips use
+APG/rPGP on both sides; they are not an independent AEAD oracle.
+
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated
 by [crypto_reference.py](../tests/interop/crypto_reference.py), a separate Python
 implementation of the documented APG framing and formats. It uses PyCA

@@ -1,0 +1,1 @@
+{"protocol":"apg/1","id":"v6-plan","request":{"operation":"plan","request":{"operation":"openpgp.key.generate","output":"unused-v6-key","passphrase_file":"unused-password","user_id":"Public fuzz fixture <fuzz@example.test>","key_version":"v6","algorithm":"ed25519"}}}

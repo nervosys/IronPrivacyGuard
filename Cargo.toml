@@ -73,7 +73,7 @@ tpm = ["dep:tss-esapi", "dep:apg-cng", "attestation"]
 attestation = ["dep:ic-rsa", "dep:ic-pkix", "dep:webpki", "dep:pki-types", "dep:ic-rustls"]
 # AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
 kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
-# OpenPGP (RFC 9580 v4) keys, messages and signatures for GnuPG interoperability,
+# OpenPGP (RFC 9580 v4/v6) keys, messages and signatures for GnuPG interoperability,
 # through rPGP. Pure Rust; bzip2 decompression is not included.
 openpgp = ["dep:pgp", "dep:rand_core"]
 

@@ -62,7 +62,10 @@ dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); R
 used only for public operations. `openpgp.message.verify` authenticates one embedded
 document signature against a pinned certificate before publishing plaintext;
 `openpgp.decrypt` still does not authenticate the sender. APG trust snapshots do
-not govern OpenPGP. See [OpenPGP interoperability](docs/OPENPGP.md).
+not govern OpenPGP. V6 keys use direct-key certificate policy and SEIPDv2/OCB
+encryption; mixed v4/v6 recipient sets are refused. PyCA verifies v6 fingerprint
+and signature calculations independently, while AEAD round trips use rPGP on
+both sides. See [OpenPGP interoperability](docs/OPENPGP.md).
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
 the rest. `apg-stream-signature-v1` provides separate any-size native signatures

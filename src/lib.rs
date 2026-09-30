@@ -420,6 +420,8 @@ pub enum Request {
         user_id: String,
         #[serde(default)]
         algorithm: openpgp::Algorithm,
+        #[serde(default)]
+        key_version: openpgp::Version,
     },
     #[serde(rename = "openpgp.cert.export")]
     OpenpgpCertExport {
@@ -1530,10 +1532,16 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             passphrase_file,
             user_id,
             algorithm,
+            key_version,
         } => {
             host.permit(Custody::Software)?;
             require_absent(&output)?;
-            let key = openpgp::generate(&user_id, algorithm, &password(&passphrase_file)?)?;
+            let key = openpgp::generate_version(
+                &user_id,
+                algorithm,
+                key_version,
+                &password(&passphrase_file)?,
+            )?;
             write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
             Ok(Outcome::OpenpgpKey {
                 path: output,
