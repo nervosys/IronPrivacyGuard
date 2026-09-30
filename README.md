@@ -436,8 +436,8 @@ Hardware support runs end to end against SoftHSMv2 with `scripts/softhsm-test.sh
 see [testing hardware identities](docs/HARDWARE.md#testing).
 
 ### Boundary fuzz testing
-Four isolated cargo-fuzz targets cover native requests, NDJSON framing, artifact
-validation and MCP session handling. Curated seeds and deterministic mutations
+Six isolated cargo-fuzz targets cover native requests, NDJSON framing, artifact
+validation, MCP session handling, stream headers and TPM structures. Curated seeds and deterministic mutations
 also run under ordinary `cargo test`; no nightly toolchain is needed for replay.
 See [FUZZING.md](docs/FUZZING.md) for sanitizer setup, scope and bounded runs.
 

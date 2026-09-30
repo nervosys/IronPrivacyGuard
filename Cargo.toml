@@ -60,6 +60,8 @@ members = ["crates/apg-cng"]
 
 [features]
 default = []
+# In-memory parser oracles for fuzz tooling; never enables TPM access.
+fuzzing = ["attestation"]
 # Hardware-backed identities through a host-configured PKCS#11 module. Loads
 # vendor code at runtime only; no C compilation and no effect on contracts.
 pkcs11 = ["dep:cryptoki", "dep:secrecy"]
