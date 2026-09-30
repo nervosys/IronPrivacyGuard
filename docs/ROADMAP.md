@@ -6,7 +6,7 @@ implemented surface, not feature parity with decades of GPG development.
 1. Commission independent protocol and implementation review, expand platform
    security testing and run sustained fuzz campaigns. Independent PyCA vectors
    and bidirectional CLI checks are implemented ([VECTORS.md](VECTORS.md)), as
-   are four boundary fuzz targets and regression replay ([FUZZING.md](FUZZING.md)).
+   are six boundary fuzz targets and regression replay ([FUZZING.md](FUZZING.md)).
    Stabilize APG v1 only after review.
 2. Extend immutable trust snapshots with managed publication, concurrency control,
    and explicit identity assertions. Passphrase rewrapping, certificates,

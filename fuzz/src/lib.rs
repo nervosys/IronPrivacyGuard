@@ -9,6 +9,63 @@ use std::{
     sync::OnceLock,
 };
 
+pub fn stream_headers(data: &[u8]) {
+    use iron_privacy_guardian::stream;
+    if data.len() > stream::MAX_HEADER_BYTES as usize + 12 {
+        return;
+    }
+    // Limit individual reads to exercise fragmented framing as well as Cursor.
+    struct Fragmented<'a> {
+        rest: &'a [u8],
+        width: usize,
+    }
+    impl std::io::Read for Fragmented<'_> {
+        fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+            let length = output.len().min(self.width).min(self.rest.len());
+            output[..length].copy_from_slice(&self.rest[..length]);
+            self.rest = &self.rest[length..];
+            Ok(length)
+        }
+    }
+    let mut cursor = Cursor::new(data);
+    let result = stream::read_header(&mut cursor);
+    for width in [1, 7] {
+        let mut fragmented = Fragmented { rest: data, width };
+        let other = stream::read_header(&mut fragmented);
+        match (&result, other) {
+            (Ok((header, raw)), Ok((other, other_raw))) => {
+                assert_eq!(
+                    serde_json::to_value(header).unwrap(),
+                    serde_json::to_value(other).unwrap()
+                );
+                assert_eq!(*raw, other_raw);
+                assert_eq!(fragmented.rest, &data[cursor.position() as usize..]);
+            }
+            (Err(error), Err(other)) => assert_eq!(error.code, other.code),
+            _ => panic!("stream parsing depends on read fragmentation"),
+        }
+    }
+    if let Ok((header, raw)) = result {
+        let length = u32::from_be_bytes(data[8..12].try_into().unwrap()) as usize;
+        assert_eq!(cursor.position() as usize, 12 + length);
+        assert_eq!(raw, data[12..12 + length]);
+        assert_eq!(serde_json::to_vec(&header).unwrap(), raw);
+        assert_eq!(header.format, stream::FORMAT);
+        assert_eq!(header.chunk_size as usize, stream::CHUNK_SIZE);
+        assert!((1..=stream::MAX_RECIPIENTS).contains(&header.recipients.len()));
+        let mut recipients = BTreeSet::new();
+        for envelope in header.recipients {
+            envelope.validate().unwrap();
+            assert!(recipients.insert(envelope.recipient));
+        }
+    }
+}
+
+#[cfg(feature = "fuzzing")]
+pub fn tpm_structures(data: &[u8]) {
+    iron_privacy_guardian::fuzz_support::tpm_structures(data);
+}
+
 pub fn requests(data: &[u8]) {
     if data.len() <= MAX_REQUEST_BYTES as usize
         && let Ok(candidate) = serde_json::from_slice::<Value>(data)

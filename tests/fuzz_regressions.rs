@@ -10,6 +10,9 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
         ("framing", harness::framing as Oracle),
         ("artifacts", harness::artifacts as Oracle),
         ("mcp", harness::mcp as Oracle),
+        ("stream_headers", harness::stream_headers as Oracle),
+        #[cfg(feature = "fuzzing")]
+        ("tpm_structures", harness::tpm_structures as Oracle),
     ] {
         oracle(b"");
         oracle(b"\xff\x00\xfe\n");
@@ -30,6 +33,40 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
             }
         }
     }
+}
+
+#[test]
+fn stream_header_limits_and_valid_seed_consumption() {
+    use iron_privacy_guardian::stream;
+    use std::io::Cursor;
+    for entry in fs::read_dir("fuzz/seeds/stream_headers").unwrap() {
+        let mut data = fs::read(entry.unwrap().path()).unwrap();
+        let mut input = Cursor::new(&data);
+        stream::read_header(&mut input).unwrap();
+        assert_eq!(input.position() as usize, data.len());
+        data.extend_from_slice(b"chunk bytes must remain unread");
+        harness::stream_headers(&data);
+    }
+    for length in [0, stream::MAX_HEADER_BYTES + 1, u32::MAX] {
+        let mut framed = stream::MAGIC.to_vec();
+        framed.extend_from_slice(&length.to_be_bytes());
+        let error = stream::read_header(&mut Cursor::new(&framed))
+            .err()
+            .unwrap();
+        assert_eq!(error.code, "limit_exceeded");
+        harness::stream_headers(&framed);
+    }
+    // The maximum advertised size is allowed, but a short body is rejected.
+    let mut framed = stream::MAGIC.to_vec();
+    framed.extend_from_slice(&stream::MAX_HEADER_BYTES.to_be_bytes());
+    assert_eq!(
+        stream::read_header(&mut Cursor::new(&framed))
+            .err()
+            .unwrap()
+            .code,
+        "invalid_format"
+    );
+    harness::stream_headers(&framed);
 }
 
 #[test]

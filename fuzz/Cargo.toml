@@ -8,13 +8,31 @@ edition = "2024"
 [package.metadata]
 cargo-fuzz = true
 
+[features]
+default = ["fuzzing"]
+fuzzing = []
+
 [dependencies]
-iron-privacy-guardian = { path = ".." }
+iron-privacy-guardian = { path = "..", features = ["fuzzing"] }
 serde_json = "1"
 libfuzzer-sys = "=0.4.13"
 
 [workspace]
 members = ["."]
+
+[[bin]]
+name = "stream_headers"
+path = "fuzz_targets/stream_headers.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tpm_structures"
+path = "fuzz_targets/tpm_structures.rs"
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "requests"

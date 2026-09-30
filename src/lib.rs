@@ -9,6 +9,9 @@ mod contract;
 pub mod control_json;
 pub mod crypto;
 pub mod error;
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub mod fuzz_support;
 #[cfg(feature = "kms")]
 mod kms;
 pub mod knowledge;
