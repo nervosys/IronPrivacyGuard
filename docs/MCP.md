@@ -119,7 +119,7 @@ private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 
 ## Limits and unsupported capabilities
 
-Maximum input frame size is 65,536 bytes including the newline. Oversized frames
+Maximum input frame size is 65,546 bytes including the newline. Oversized frames
 produce a JSON-RPC error and close the session. Input is processed sequentially;
 EOF ends the process, with a final non-newline-terminated frame accepted.
 The native `apg serve` protocol remains separate from MCP.
@@ -148,7 +148,7 @@ The release binary has been exercised on Windows with the
 [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) 2.2.0 and
 `jsonschema` 4.26.0. The suite uses real stdio subprocesses in both automatic and
 legacy negotiation modes, negotiating APG's `2025-11-25` protocol. It lists all
-53 tools, validates advertised schemas and returned envelopes, checks generated
+54 tools, validates advertised schemas and returned envelopes, checks generated
 artifact schemas, preflights valid and invalid candidates, reconciles trust branches, and exercises active, revoked and
 expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also

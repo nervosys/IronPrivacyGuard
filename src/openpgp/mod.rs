@@ -19,7 +19,7 @@ pub const KDF: &str = "argon2id-m65536-t3-p4";
 pub const MAX_CERTIFICATE_BYTES: u64 = 1024 * 1024;
 /// Total retained certificate signatures; excess is refused before evaluation.
 pub const MAX_CERTIFICATE_SIGNATURES: usize = 1024;
-/// APG-generated certificates and secret keys are small and fixed-shape.
+/// APG-held certificates and secret keys use a small, fixed two-key profile.
 pub const MAX_OWN_CERTIFICATE_BYTES: usize = 16 * 1024;
 pub const MAX_SECRET_BYTES: usize = 4096;
 pub const MAX_RECIPIENTS: usize = 32;
@@ -238,8 +238,8 @@ pub fn check_user_id(user_id: &str) -> Result<()> {
 
 #[cfg(feature = "openpgp")]
 pub(crate) use engine::{
-    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
-    verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
+    verify, verify_message,
 };
 
 /// In-memory public-packet oracle, exposed only to the fuzz tooling.
@@ -260,6 +260,9 @@ mod unavailable {
         unavailable()
     }
     pub(crate) fn export(_: &KeyFile) -> Result<(String, Certificate)> {
+        unavailable()
+    }
+    pub(crate) fn import_secret(_: &[u8], _: &str, _: &[u8], _: &[u8]) -> Result<KeyFile> {
         unavailable()
     }
     pub(crate) fn export_secret(
@@ -299,6 +302,6 @@ mod unavailable {
 }
 #[cfg(not(feature = "openpgp"))]
 pub(crate) use unavailable::{
-    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
-    verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
+    verify, verify_message,
 };

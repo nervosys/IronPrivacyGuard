@@ -68,7 +68,10 @@ V4 exports use AES-256 CFB with iterated-and-salted SHA-256 S2K and a SHA-1
 integrity checksum; this compatibility format lacks the memory-hard KDF of the
 APG key file. V6 exports use AES-256 OCB and Argon2id (64 MiB, three passes, four
 lanes). Hosts requiring non-exportable or hardware custody refuse export.
-Exported keys can be used outside APG policy; secret-key import remains unsupported.
+Exported keys can be used outside APG policy. Secret-key import requires a pinned
+fingerprint, current certificate usability, bounded protection settings and derived
+private/public consistency for both supported key packets before APG sealing.
+See [the import profile](docs/OPENPGP.md#secret-key-import) for exact limits.
 V6 keys use direct-key certificate policy and SEIPDv2/OCB
 encryption; mixed v4/v6 recipient sets are refused. PyCA independently checks v6
 fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB

@@ -154,6 +154,23 @@ def exercise(executable, gpg, directory):
         call("openpgp.verify", input=source, signature=exported_signature, certificate=cert,
              expected_openpgp_fingerprint=generated["fingerprint"])
 
+        # GnuPG reserializes its protected private key; APG imports both packets.
+        exported_again = put(f"gpg-protected-{algorithm}.asc", run_gpg(
+            "--armor", "--export-secret-keys", generated["fingerprint"],
+            password_file=export_password).stdout)
+        imported = str(directory / f"imported-{algorithm}")
+        call("openpgp.key.import", input=exported_again, output=imported,
+             expected_openpgp_fingerprint=generated["fingerprint"].upper(),
+             passphrase_file=export_password, new_passphrase_file=password)
+        imported_signature = str(directory / f"imported-{algorithm}.sig")
+        call("openpgp.sign", input=source, output=imported_signature,
+             key=imported, passphrase_file=password)
+        run_gpg("--verify", imported_signature, source)
+        imported_plain = str(directory / f"imported-{algorithm}.plain")
+        call("openpgp.decrypt", input=message, output=imported_plain,
+             key=imported, passphrase_file=password)
+        assert Path(imported_plain).read_bytes() == data
+
     # GnuPG peers sign; APG verifies. P-384 and RSA peers are also encryption targets.
     run_gpg("--quick-gen-key", "P384 <p384@example.test>", "nistp384", "default", "never")
     run_gpg("--quick-gen-key", "RSA <rsa@example.test>", "rsa3072", "default", "never")
@@ -163,6 +180,19 @@ def exercise(executable, gpg, directory):
     for uid in ["peer@example.test", "p384@example.test", "rsa@example.test"]:
         fp = fingerprint(uid)
         cert = export(uid, f"{uid}.asc")
+        external_secret = put(f"{uid}.secret", run_gpg("--export-secret-keys", fp).stdout)
+        empty_password = put("empty-password", b"")
+        imported = str(directory / f"{uid}.imported")
+        if uid not in ("peer@example.test", "p384@example.test"):
+            call("openpgp.key.import", "invalid_format", input=external_secret, output=imported,
+                 expected_openpgp_fingerprint=fp, passphrase_file=empty_password, new_passphrase_file=password)
+            assert not Path(imported).exists()
+        else:
+            call("openpgp.key.import", input=external_secret, output=imported,
+                 expected_openpgp_fingerprint=fp, passphrase_file=empty_password, new_passphrase_file=password)
+            imported_signature = imported + ".sig"
+            call("openpgp.sign", input=source, output=imported_signature, key=imported, passphrase_file=password)
+            run_gpg("--verify", imported_signature, source)
         signature = str(directory / f"{uid}.sig")
         run_gpg("--local-user", fp, "--output", signature, "--detach-sign", source)
         result = call("openpgp.verify", input=source, signature=signature, certificate=cert,
@@ -276,6 +306,12 @@ def exercise(executable, gpg, directory):
             continue
         fp = fingerprint(uid)
         cert = export(uid, f"{uid}.asc")
+        external_secret = put(f"{uid}.secret", run_gpg("--export-secret-keys", fp).stdout)
+        empty_password = put("empty-password", b"")
+        imported = str(directory / f"{uid}.imported")
+        call("openpgp.key.import", "invalid_format", input=external_secret, output=imported,
+             expected_openpgp_fingerprint=fp, passphrase_file=empty_password, new_passphrase_file=password)
+        assert not Path(imported).exists()
         report = call("openpgp.cert.inspect", input=cert)["certificate"]
         assert not report["keys"][0]["usable_for_signing"], report
         weak_signature = str(directory / f"{algo}.sig")

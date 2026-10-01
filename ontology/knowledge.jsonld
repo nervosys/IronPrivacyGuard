@@ -489,7 +489,7 @@
       "goals": [
         "apg:goal/protocol-interoperability"
       ],
-      "guidance": "Generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
+      "guidance": "Import a pinned supported transferable secret key with openpgp.key.import and a new APG wrapping passphrase, or generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
       "id": "openpgp-interoperability",
       "keywords": [
         "pgp",
@@ -502,7 +502,7 @@
       "label": "Exchange OpenPGP messages or GPG keys",
       "limitations": [
         "Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review",
-        "v4 and v6 keys; APG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; secret-key import is unsupported",
+        "v4 and v6 keys; APG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters",
         "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
         "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply",
         "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected",
@@ -520,6 +520,7 @@
       "support": "implemented",
       "tools": [
         "apg:operation/openpgp.key.generate",
+        "apg:operation/openpgp.key.import",
         "apg:operation/openpgp.key.export",
         "apg:operation/openpgp.cert.export",
         "apg:operation/openpgp.cert.inspect",
@@ -3700,6 +3701,72 @@
       "request_schema": {
         "command": "apg schema",
         "operation_const": "openpgp.key.generate"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "apg:operation/openpgp.key.import",
+      "@type": "apg:Operation",
+      "algorithms": [
+        "ic:argon2id",
+        "ic:chacha20-poly1305"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "apg:constraint/openpgp-boundary",
+        "apg:constraint/openpgp-pin",
+        "apg:constraint/openpgp-secret-import",
+        "apg:constraint/openpgp-certificate-policy",
+        "apg:constraint/openpgp-user-id",
+        "apg:constraint/secret-channel",
+        "apg:constraint/no-clobber"
+      ],
+      "description": "Import one pinned v4 or v6 Ed25519/Curve25519 or P-384 signing primary and encryption subkey, validating bounded protection and private/public consistency before sealing under an APG passphrase",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "openpgp.key.import",
+      "inputs": [
+        "apg:OpenpgpSecretKey",
+        "apg:OpenpgpFingerprint",
+        "apg:OpenpgpSourcePassword",
+        "apg:Passphrase"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "apg_openpgp_key_import",
+      "optional_inputs": [],
+      "outputs": [
+        "apg:OpenpgpKeyFile",
+        "apg:OpenpgpFingerprint"
+      ],
+      "request_schema": {
+        "command": "apg schema",
+        "operation_const": "openpgp.key.import"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },

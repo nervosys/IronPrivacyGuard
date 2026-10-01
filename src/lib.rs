@@ -423,6 +423,18 @@ pub enum Request {
         #[serde(default)]
         key_version: openpgp::Version,
     },
+    #[serde(rename = "openpgp.key.import")]
+    OpenpgpKeyImport {
+        /// One armored or binary transferable secret key in APG's supported profile.
+        input: String,
+        output: String,
+        #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
+        expected_openpgp_fingerprint: String,
+        /// Exact source password bytes; an empty file supports unprotected packets.
+        passphrase_file: String,
+        /// Seal the imported key under these 16..4096 exact passphrase bytes.
+        new_passphrase_file: String,
+    },
     #[serde(rename = "openpgp.key.export")]
     OpenpgpKeyExport {
         /// An APG-held software OpenPGP key, authenticated before export.
@@ -741,6 +753,7 @@ impl Request {
             Self::TpmAttestationRespond { .. } => "tpm.attestation.respond",
             Self::TpmAttestationVerify { .. } => "tpm.attestation.verify",
             Self::OpenpgpKeyGenerate { .. } => "openpgp.key.generate",
+            Self::OpenpgpKeyImport { .. } => "openpgp.key.import",
             Self::OpenpgpKeyExport { .. } => "openpgp.key.export",
             Self::OpenpgpCertExport { .. } => "openpgp.cert.export",
             Self::OpenpgpCertInspect { .. } => "openpgp.cert.inspect",
@@ -1567,6 +1580,30 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 fingerprint: key.fingerprint,
                 algorithm,
                 user_id,
+            })
+        }
+        Request::OpenpgpKeyImport {
+            input,
+            output,
+            expected_openpgp_fingerprint,
+            passphrase_file,
+            new_passphrase_file,
+        } => {
+            host.permit(Custody::Software)?;
+            require_absent(&output)?;
+            let data = read_limited(File::open(&input)?, openpgp::MAX_CERTIFICATE_BYTES)?;
+            let key = openpgp::import_secret(
+                &data,
+                &expected_openpgp_fingerprint,
+                &password(&passphrase_file)?,
+                &password(&new_passphrase_file)?,
+            )?;
+            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            Ok(Outcome::OpenpgpKey {
+                path: output,
+                fingerprint: key.fingerprint,
+                algorithm: key.algorithm,
+                user_id: key.user_id,
             })
         }
         Request::OpenpgpKeyExport {

@@ -1,7 +1,7 @@
 # OpenPGP interoperability
 
 APG exchanges encrypted files and detached signatures with GnuPG and other OpenPGP
-(RFC 9580) tools through nine `openpgp.*` operations. This is a separate
+(RFC 9580) tools through ten `openpgp.*` operations. This is a separate
 compatibility boundary: native APG keys, envelopes and signatures are never read as
 OpenPGP data, and OpenPGP data is never read as native APG artifacts.
 
@@ -24,7 +24,7 @@ independent review.
 
 rPGP depends on the `rsa` crate, which has an unfixed timing side channel in RSA
 private-key operations (RUSTSEC-2023-0071). APG never holds RSA secret keys: it
-generates only Ed25519 and P-384 keys and cannot import OpenPGP secret keys. RSA is
+generates and imports only Ed25519/Curve25519 and P-384 secret-key pairs. RSA is
 used only for public operations (encrypting to and verifying GnuPG users' RSA
 certificates), which that advisory does not affect.
 
@@ -33,6 +33,7 @@ certificates), which that advisory does not affect.
 | Operation | Purpose |
 | --- | --- |
 | `openpgp.key.generate` | Create a v4 (default) or v6 key using `key_version`: `v4` or `v6`. `ed25519` uses legacy Ed25519/Curve25519 for v4 and RFC 9580 Ed25519/X25519 for v6; `p384` uses ECDSA/ECDH P-384. Takes `output`, `passphrase_file` and `user_id`. |
+| `openpgp.key.import` | Import one pinned armored or binary transferable secret key into an APG-sealed key file. Requires `input`, `output`, `expected_openpgp_fingerprint`, `passphrase_file`, and `new_passphrase_file`. |
 | `openpgp.key.export` | Write a pinned APG-held key as an ASCII-armored, passphrase-protected OpenPGP private key. Requires `key`, `output`, `expected_openpgp_fingerprint`, `passphrase_file`, and `new_passphrase_file`. |
 | `openpgp.cert.export` | Write the key's ASCII-armored certificate (public key) for correspondents. No passphrase is needed. |
 | `openpgp.cert.inspect` | Evaluate any certificate under APG policy at host time and report its fingerprint, valid User IDs and, per key, algorithm, flags, expiry, revocation, usability and issues. |
@@ -77,7 +78,7 @@ APG trust snapshots do not apply to OpenPGP operations. An MCP host started with
 pinned trust policy (`--trust-store`) therefore does not expose `openpgp.*` tools
 unless `--allow` names them explicitly. OpenPGP secret keys are software keys, so a
 host `--key-custody` of `non-exportable` or `hardware` refuses `openpgp.key.generate`,
-`openpgp.key.export`, `openpgp.decrypt` and `openpgp.sign`.
+`openpgp.key.import`, `openpgp.key.export`, `openpgp.decrypt` and `openpgp.sign`.
 
 ## Certificate policy
 
@@ -213,12 +214,45 @@ Argon2id with 64 MiB, three passes and four lanes. Each secret packet receives
 fresh random protection parameters on every export. Keep the exported private
 key and its passphrase private; anyone holding both can sign and decrypt outside
 APG's host policy. Export permits historical revoked or expired keys for backup;
-it does not change certificate validity or revocation. Secret-key import into APG
-remains unsupported. GnuPG interoperability tests cover v4 exports; stable Rust
+it does not change certificate validity or revocation. GnuPG interoperability tests cover v4 exports; stable Rust
 tests check protection and byte-exact secret preservation for both v4 and v6.
 The v6 reference client also decrypts both secret packets with independent PyCA
 Argon2id, HKDF-SHA-256 and AES-256 OCB, checks exact private-key preservation,
 and refuses wrong passphrases, altered ciphertext and altered public-key metadata.
+
+## Secret-key import
+
+`openpgp.key.import` accepts exactly one v4 or v6 transferable secret key,
+armored or binary, with one signing primary and one encryption secret subkey.
+Supported pairs are v4 EdDSA Ed25519/legacy Curve25519 ECDH, v6 Ed25519/X25519,
+and v4 or v6 ECDSA P-384/ECDH P-384. Extra subkeys, public-only subkeys,
+unknown packets, User Attributes and RSA private keys are refused. The complete
+certificate must be currently usable for signing and encryption, with a valid
+self-certified User ID of 1..256 UTF-8 bytes without controls. The first valid
+User ID becomes the APG metadata label; all accepted certificate bindings remain.
+
+```sh
+apg openpgp key import --input me-private.asc --output imported.json --expected-openpgp-fingerprint <trusted-fingerprint> --passphrase-file source-pass.bin --new-passphrase-file apg-pass.bin
+```
+
+The source password contains exact 0..4096 bytes; use an empty file for an
+unprotected source. The new APG password contains exact 16..4096 bytes. Input is
+limited to 1 MiB, with at most 1024 signatures; the supported composition must
+fit the existing 16 KiB certificate and 4096-byte unlocked-secret key-file limits.
+No output is created on failure and existing destinations are never replaced.
+
+APG checks the fingerprint and both packets' protection settings before unlocking
+either packet. Accepted protection is AES-128/192/256 CFB with iterated salted
+SHA-1 or SHA-256/384/512 S2K and SHA-1 integrity checksum, or AES-256 OCB with
+Argon2id at most 64 MiB, 3 passes and 4 lanes. Encoded iterated S2K counts are
+bounded by their one-byte representation (at most 65,011,712 hashed bytes per
+hash invocation). Legacy or malleable CFB, simple/salted-only S2K, other AEAD
+profiles and excessive Argon2 parameters are refused. SHA-1 here is a legacy
+password-protection compatibility allowance; SHA-1 certificate signatures remain
+refused. APG derives both public keys from the unlocked private keys and compares
+them before sealing the key with its fixed Argon2id/ChaCha20-Poly1305 profile.
+Signing rechecks current primary-key usability, including revocation and expiry.
+Source files are unchanged, and JSON results contain only public metadata.
 
 ## Testing
 
@@ -316,7 +350,7 @@ create are reported as skipped.
 
 ## Not supported
 
-v3 and v5 keys; mixed v4/v6 recipient sets; secret-key import; cleartext
+v3 and v5 keys; mixed v4/v6 recipient sets; secret-key import outside the supported profile; cleartext
 signatures and inline-signature generation; passphrase
 (symmetric) encryption; keyservers, WKD and the web of trust; smartcards and
 OpenPGP keys in HSMs or TPMs.

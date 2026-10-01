@@ -14,12 +14,15 @@ published fingerprints and usability without User IDs.
 [openpgp_v6_reference.py](../tests/interop/openpgp_v6_reference.py) independently
 computes v6 SHA-256 fingerprints and verifies APG's salted Ed25519 and P-384
 detached signatures with PyCA. Its
-[secret-export helper](../tests/interop/openpgp_secret_export_reference.py)
+[secret-key helper](../tests/interop/openpgp_secret_export_reference.py)
 independently decrypts v6 primary and subkey secret packets using PyCA Argon2id,
 HKDF-SHA-256 and AES-256 OCB. It requires exact secret-key preservation and
 rejects wrong credentials, altered ciphertext and altered public-key metadata.
-GnuPG independently imports v4 protected exports and uses their signing and
-decryption keys. Its
+It also wraps independent v6 import packets with PyCA, checks both private keys
+after APG sealing, and verifies import rejection for wrong pins, passwords and
+altered ciphertext. GnuPG independently imports v4 protected exports and uses
+their signing and decryption keys; APG imports both GnuPG-protected and unprotected
+Ed25519/Curve25519 and P-384 keys and refuses RSA/DSA private keys. Its
 [AEAD helper](../tests/interop/openpgp_aead_reference.py) independently implements
 v6 X25519 and P-384 PKESK wrapping and SEIPDv2/AES-256/OCB in both directions.
 It handles definite and partial packet lengths, checks exact chunk boundaries and

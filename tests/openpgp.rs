@@ -583,6 +583,16 @@ fn openpgp_operations_fail_closed_without_the_feature() {
     );
     assert!(!std::path::Path::new(&f.path("private.asc")).exists());
     fs::write(f.path("cert"), b"not a certificate").unwrap();
+    assert_eq!(
+        call(
+            json!({"operation":"openpgp.key.import", "input":f.path("cert"),
+        "output":f.path("imported"), "expected_openpgp_fingerprint":"00".repeat(20),
+        "passphrase_file":f.path("pass"), "new_passphrase_file":f.path("pass")})
+        )
+        .unwrap_err(),
+        "provider_unavailable"
+    );
+    assert!(!std::path::Path::new(&f.path("imported")).exists());
     fs::write(f.path("message"), b"not a message").unwrap();
     assert_eq!(call(json!({"operation":"openpgp.message.verify","input":f.path("message"),"output":f.path("verified"),"certificate":f.path("cert"),"expected_openpgp_fingerprint":"00".repeat(20)})).unwrap_err(), "provider_unavailable");
     assert!(!std::path::Path::new(&f.path("verified")).exists());
@@ -629,6 +639,48 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
 #[cfg(feature = "openpgp")]
 mod enabled {
     use super::*;
+
+    #[test]
+    fn secret_import_preserves_identity_and_never_clobbers_or_publishes_failures() {
+        let f = Fixture::new();
+        let fingerprint = f.key("source", "ed25519");
+        fs::write(
+            f.path("source-pass"),
+            b"external protected secret passphrase",
+        )
+        .unwrap();
+        call(json!({"operation":"openpgp.key.export", "key":f.path("source"), "output":f.path("private.asc"),
+            "expected_openpgp_fingerprint":fingerprint, "passphrase_file":f.path("pass"), "new_passphrase_file":f.path("source-pass")})).unwrap();
+        let original = fs::read(f.path("private.asc")).unwrap();
+        let request = json!({"operation":"openpgp.key.import", "input":f.path("private.asc"), "output":f.path("imported"),
+            "expected_openpgp_fingerprint":fingerprint, "passphrase_file":f.path("source-pass"), "new_passphrase_file":f.path("pass")});
+        let mut changed = request.clone();
+        changed["expected_openpgp_fingerprint"] = json!("00".repeat(20));
+        assert_eq!(call(changed).unwrap_err(), "identity_mismatch");
+        fs::write(f.path("wrong"), b"wrong source password").unwrap();
+        let mut changed = request.clone();
+        changed["passphrase_file"] = json!(f.path("wrong"));
+        assert_eq!(call(changed).unwrap_err(), "authentication_failed");
+        let mut changed = request.clone();
+        changed["new_passphrase_file"] = json!(f.path("short"));
+        fs::write(f.path("short"), b"short").unwrap();
+        assert_eq!(call(changed).unwrap_err(), "invalid_request");
+        assert!(!std::path::Path::new(&f.path("imported")).exists());
+        let result = call(request.clone()).unwrap();
+        assert_eq!(result["fingerprint"], fingerprint);
+        assert_eq!(result["kind"], "openpgp_key");
+        assert_eq!(fs::read(f.path("private.asc")).unwrap(), original);
+        let imported = fs::read(f.path("imported")).unwrap();
+        let mut changed = request;
+        changed["input"] = json!(f.path("missing"));
+        changed["passphrase_file"] = json!(f.path("missing"));
+        assert_eq!(call(changed).unwrap_err(), "already_exists");
+        assert_eq!(fs::read(f.path("imported")).unwrap(), imported);
+        fs::write(f.path("message"), b"imported signing key").unwrap();
+        call(json!({"operation":"openpgp.sign", "input":f.path("message"), "output":f.path("signature"), "key":f.path("imported"), "passphrase_file":f.path("pass")})).unwrap();
+        call(json!({"operation":"openpgp.cert.export", "key":f.path("imported"), "output":f.path("imported.asc")})).unwrap();
+        call(json!({"operation":"openpgp.verify", "input":f.path("message"), "signature":f.path("signature"), "certificate":f.path("imported.asc"), "expected_openpgp_fingerprint":fingerprint})).unwrap();
+    }
 
     #[test]
     fn secret_export_requires_pin_credentials_and_new_output() {
@@ -891,6 +943,7 @@ mod enabled {
             custody: iron_privacy_guardian::provider::CustodyPolicy::NonExportable,
         };
         for request in [
+            json!({"operation":"openpgp.key.import","input":f.path("missing"),"output":f.path("imported"),"expected_openpgp_fingerprint":"00".repeat(20),"passphrase_file":f.path("missing"),"new_passphrase_file":f.path("missing")}),
             json!({"operation":"openpgp.key.export","key":f.path("a"),"output":f.path("secret.asc"),"expected_openpgp_fingerprint":"00".repeat(20),"passphrase_file":f.path("pass"),"new_passphrase_file":f.path("missing")}),
             json!({"operation":"openpgp.key.generate","output":f.path("k2"),"passphrase_file":f.path("pass"),"user_id":"B <b@example.test>"}),
             json!({"operation":"openpgp.sign","input":f.path("data"),"output":f.path("s"),"key":f.path("a"),"passphrase_file":f.path("pass")}),

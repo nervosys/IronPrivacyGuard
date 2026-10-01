@@ -122,7 +122,7 @@ def exercise(executable, directory, fixture_output=None):
     metadata_checks = exercise_metadata(call, path)
     revocation_limit_checks = exercise_revocation_limits(call, path)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
-            "secret_export_checks": export_checks,
+            "secret_export_and_import_checks": export_checks,
             "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks,
             "certificate_policy_checks": certificate_checks, "back_signature_checks": back_signature_checks,
             "metadata_policy_checks": metadata_checks, "revocation_limit_checks": revocation_limit_checks}
