@@ -15,6 +15,7 @@ from openpgp_certificate_reference import exercise_certificates
 from openpgp_backsignature_reference import exercise_backsignatures
 from openpgp_metadata_reference import exercise_metadata
 from openpgp_revocation_limit_reference import exercise_revocation_limits
+from openpgp_secret_export_reference import exercise_export
 
 
 def unarmor(data):
@@ -58,6 +59,7 @@ def check_signature(primary, signature, message):
 def exercise(executable, directory, fixture_output=None):
     calls = 0
     aead_checks = 0
+    export_checks = 0
     cases = {}
     def path(name):
         return str(directory / name)
@@ -80,6 +82,7 @@ def exercise(executable, directory, fixture_output=None):
     for algorithm in ["ed25519", "p384"]:
         generated = call("openpgp.key.generate", output=path(algorithm), passphrase_file=path("pass"), user_id="Oracle <oracle@example.test>", algorithm=algorithm, key_version="v6")
         key = json.loads(Path(path(algorithm)).read_text())
+        export_checks += exercise_export(call, path, algorithm, key, unarmor)
         primary = list(packets(bytes.fromhex(key["certificate"])))[0][1]
         fingerprint = hashlib.sha256(b"\x9b" + len(primary).to_bytes(4, "big") + primary).hexdigest()
         assert fingerprint == generated["fingerprint"] == key["fingerprint"]
@@ -119,6 +122,7 @@ def exercise(executable, directory, fixture_output=None):
     metadata_checks = exercise_metadata(call, path)
     revocation_limit_checks = exercise_revocation_limits(call, path)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
+            "secret_export_checks": export_checks,
             "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks,
             "certificate_policy_checks": certificate_checks, "back_signature_checks": back_signature_checks,
             "metadata_policy_checks": metadata_checks, "revocation_limit_checks": revocation_limit_checks}

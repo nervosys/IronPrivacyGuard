@@ -238,7 +238,8 @@ pub fn check_user_id(user_id: &str) -> Result<()> {
 
 #[cfg(feature = "openpgp")]
 pub(crate) use engine::{
-    decrypt, encrypt, export, generate_version, inspect, sign, verify, verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
+    verify_message,
 };
 
 /// In-memory public-packet oracle, exposed only to the fuzz tooling.
@@ -259,6 +260,14 @@ mod unavailable {
         unavailable()
     }
     pub(crate) fn export(_: &KeyFile) -> Result<(String, Certificate)> {
+        unavailable()
+    }
+    pub(crate) fn export_secret(
+        _: &KeyFile,
+        _: &str,
+        _: &[u8],
+        _: &[u8],
+    ) -> Result<zeroize::Zeroizing<String>> {
         unavailable()
     }
     pub(crate) fn inspect(_: &[u8]) -> Result<Certificate> {
@@ -290,5 +299,6 @@ mod unavailable {
 }
 #[cfg(not(feature = "openpgp"))]
 pub(crate) use unavailable::{
-    decrypt, encrypt, export, generate_version, inspect, sign, verify, verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
+    verify_message,
 };

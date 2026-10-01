@@ -62,7 +62,14 @@ dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); R
 used only for public operations. `openpgp.message.verify` authenticates one embedded
 document signature against a pinned certificate before publishing plaintext;
 `openpgp.decrypt` still does not authenticate the sender. APG trust snapshots do
-not govern OpenPGP. V6 keys use direct-key certificate policy and SEIPDv2/OCB
+not govern OpenPGP. Protected secret-key export authenticates the source key and its
+fingerprint pin, then protects both secret packets with a separate passphrase.
+V4 exports use AES-256 CFB with iterated-and-salted SHA-256 S2K and a SHA-1
+integrity checksum; this compatibility format lacks the memory-hard KDF of the
+APG key file. V6 exports use AES-256 OCB and Argon2id (64 MiB, three passes, four
+lanes). Hosts requiring non-exportable or hardware custody refuse export.
+Exported keys can be used outside APG policy; secret-key import remains unsupported.
+V6 keys use direct-key certificate policy and SEIPDv2/OCB
 encryption; mixed v4/v6 recipient sets are refused. PyCA independently checks v6
 fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB
 encryption in both directions, including chunk authentication and final byte

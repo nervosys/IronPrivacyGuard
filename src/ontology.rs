@@ -348,6 +348,13 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file", "create_file"],
     ),
     (
+        "openpgp.key.export",
+        "Export a pinned APG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase",
+        &["OpenpgpKeyFile", "OpenpgpFingerprint", "Passphrase"],
+        &["OpenpgpSecretKey", "OpenpgpFingerprint"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
         "openpgp.cert.inspect",
         "Evaluate an OpenPGP certificate under APG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
         &["OpenpgpCertificate"],
@@ -489,6 +496,13 @@ pub fn operation(id: &str) -> Value {
             "openpgp-user-id",
         ],
         "openpgp.cert.export" => vec!["openpgp-boundary", "no-clobber"],
+        "openpgp.key.export" => vec![
+            "openpgp-boundary",
+            "openpgp-pin",
+            "openpgp-secret-export",
+            "secret-channel",
+            "no-clobber",
+        ],
         "openpgp.cert.inspect" => vec![
             "openpgp-boundary",
             "openpgp-certificate-policy",
@@ -618,7 +632,7 @@ pub fn operation(id: &str) -> Value {
         }
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "hash" => vec!["sha2-256"],
-        "openpgp.key.generate" | "openpgp.decrypt" | "openpgp.sign" => {
+        "openpgp.key.generate" | "openpgp.key.export" | "openpgp.decrypt" | "openpgp.sign" => {
             vec!["argon2id", "chacha20-poly1305"]
         }
         "tpm.attest" | "tpm.attestation.challenge" | "tpm.attestation.verify" => {
@@ -697,6 +711,7 @@ pub fn operation(id: &str) -> Value {
                     | "tpm.attestation.respond"
                     | "tpm.attestation.verify"
                     | "openpgp.key.generate"
+                    | "openpgp.key.export"
                     | "openpgp.cert.inspect"
                     | "openpgp.encrypt"
                     | "openpgp.sign"
@@ -746,7 +761,7 @@ pub fn discover() -> Value {
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4,6],"generated_keys":["ed25519","p384"],"encryption":"AES-256: SEIPDv1 for v4 recipients, SEIPDv2/OCB for v6 recipients; mixed versions refused","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"max_certificate_bytes":crate::openpgp::MAX_CERTIFICATE_BYTES,"max_certificate_signatures":crate::openpgp::MAX_CERTIFICATE_SIGNATURES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3 or v5 keys","OpenPGP secret-key import or export","OpenPGP web of trust and designated revokers","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "unsupported":["OpenPGP v3 or v5 keys","OpenPGP secret-key import","OpenPGP web of trust and designated revokers","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
         "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
@@ -890,6 +905,11 @@ pub fn export() -> Value {
             "OpenpgpCertificate",
             "An OpenPGP certificate (transferable public key) file, ASCII-armored or binary; untrusted until pinned by fingerprint",
             "public",
+        ),
+        (
+            "OpenpgpSecretKey",
+            "ASCII-armored transferable OpenPGP private key; every secret packet is protected by a passphrase and must be kept private",
+            "encrypted-secret",
         ),
         (
             "OpenpgpFingerprint",
@@ -1170,11 +1190,15 @@ pub fn export() -> Value {
         ),
         (
             "openpgp-boundary",
-            "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native APG artifacts, and native operations never read OpenPGP data. APG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, decryption and signing.",
+            "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native APG artifacts, and native operations never read OpenPGP data. APG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, secret-key export, decryption and signing.",
         ),
         (
             "openpgp-pin",
             "Each certificate must match an independently trusted fingerprint in expected_openpgp_fingerprint (v4 40 hex or v6 64 hex, either case). A certificate file must hold exactly one v4 or v6 certificate.",
+        ),
+        (
+            "openpgp-secret-export",
+            "Export only an authenticated APG-held software key matching expected_openpgp_fingerprint. The source is unchanged. Both passphrase files contain 16..4096 exact bytes. Every primary and subkey secret packet is protected with fresh salts and IVs: v4 AES-256 CFB with SHA-256 iterated-and-salted S2K (encoded count 224) and SHA-1 integrity checksum; v6 AES-256 OCB with Argon2id (64 MiB, 3 passes, 4 lanes). No unprotected export or secret bytes in JSON. Revocation or expiry does not prevent backup/export; those remain certificate policy decisions for use.",
         ),
         (
             "openpgp-certificate-policy",

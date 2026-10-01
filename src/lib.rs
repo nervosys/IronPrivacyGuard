@@ -423,6 +423,17 @@ pub enum Request {
         #[serde(default)]
         key_version: openpgp::Version,
     },
+    #[serde(rename = "openpgp.key.export")]
+    OpenpgpKeyExport {
+        /// An APG-held software OpenPGP key, authenticated before export.
+        key: String,
+        output: String,
+        #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
+        expected_openpgp_fingerprint: String,
+        passphrase_file: String,
+        /// Protect every exported secret packet with these exact passphrase bytes.
+        new_passphrase_file: String,
+    },
     #[serde(rename = "openpgp.cert.export")]
     OpenpgpCertExport {
         /// An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.
@@ -635,6 +646,13 @@ pub enum Outcome {
         algorithm: openpgp::Algorithm,
         user_id: String,
     },
+    OpenpgpSecretExported {
+        path: String,
+        #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
+        fingerprint: String,
+        /// Every secret packet is passphrase protected; no secret bytes enter JSON.
+        protected: bool,
+    },
     /// A certificate evaluated under APG policy; `path` is set when one was written.
     OpenpgpCertificate {
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -723,6 +741,7 @@ impl Request {
             Self::TpmAttestationRespond { .. } => "tpm.attestation.respond",
             Self::TpmAttestationVerify { .. } => "tpm.attestation.verify",
             Self::OpenpgpKeyGenerate { .. } => "openpgp.key.generate",
+            Self::OpenpgpKeyExport { .. } => "openpgp.key.export",
             Self::OpenpgpCertExport { .. } => "openpgp.cert.export",
             Self::OpenpgpCertInspect { .. } => "openpgp.cert.inspect",
             Self::OpenpgpEncrypt { .. } => "openpgp.encrypt",
@@ -1548,6 +1567,29 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 fingerprint: key.fingerprint,
                 algorithm,
                 user_id,
+            })
+        }
+        Request::OpenpgpKeyExport {
+            key,
+            output,
+            expected_openpgp_fingerprint,
+            passphrase_file,
+            new_passphrase_file,
+        } => {
+            host.permit(Custody::Software)?;
+            require_absent(&output)?;
+            let key: openpgp::KeyFile = load(&key)?;
+            let armored = openpgp::export_secret(
+                &key,
+                &expected_openpgp_fingerprint,
+                &password(&passphrase_file)?,
+                &password(&new_passphrase_file)?,
+            )?;
+            write_new(&output, armored.as_bytes())?;
+            Ok(Outcome::OpenpgpSecretExported {
+                path: output,
+                fingerprint: key.fingerprint,
+                protected: true,
             })
         }
         Request::OpenpgpCertExport { key, output } => {

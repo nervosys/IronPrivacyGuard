@@ -33,7 +33,7 @@ implemented surface, not feature parity with decades of GPG development.
    decryption and detached signatures interoperate with GnuPG through rPGP. V6 key
    generation and SEIPDv2/OCB encryption are implemented, with independent PyCA
    checks of v6 key wrapping and chunk authentication in both directions.
-   Secret-key import and export,
+   Protected secret-key export is implemented. Secret-key import
    and OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
    document signatures, optionally decrypting, before publishing literal bytes.
    Never silently reinterpret native APG data

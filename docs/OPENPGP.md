@@ -1,7 +1,7 @@
 # OpenPGP interoperability
 
 APG exchanges encrypted files and detached signatures with GnuPG and other OpenPGP
-(RFC 9580) tools through eight `openpgp.*` operations. This is a separate
+(RFC 9580) tools through nine `openpgp.*` operations. This is a separate
 compatibility boundary: native APG keys, envelopes and signatures are never read as
 OpenPGP data, and OpenPGP data is never read as native APG artifacts.
 
@@ -33,6 +33,7 @@ certificates), which that advisory does not affect.
 | Operation | Purpose |
 | --- | --- |
 | `openpgp.key.generate` | Create a v4 (default) or v6 key using `key_version`: `v4` or `v6`. `ed25519` uses legacy Ed25519/Curve25519 for v4 and RFC 9580 Ed25519/X25519 for v6; `p384` uses ECDSA/ECDH P-384. Takes `output`, `passphrase_file` and `user_id`. |
+| `openpgp.key.export` | Write a pinned APG-held key as an ASCII-armored, passphrase-protected OpenPGP private key. Requires `key`, `output`, `expected_openpgp_fingerprint`, `passphrase_file`, and `new_passphrase_file`. |
 | `openpgp.cert.export` | Write the key's ASCII-armored certificate (public key) for correspondents. No passphrase is needed. |
 | `openpgp.cert.inspect` | Evaluate any certificate under APG policy at host time and report its fingerprint, valid User IDs and, per key, algorithm, flags, expiry, revocation, usability and issues. |
 | `openpgp.encrypt` | Encrypt `input` to 1..32 recipients, each `{certificate, expected_openpgp_fingerprint}`, as one ASCII-armored message. |
@@ -76,7 +77,7 @@ APG trust snapshots do not apply to OpenPGP operations. An MCP host started with
 pinned trust policy (`--trust-store`) therefore does not expose `openpgp.*` tools
 unless `--allow` names them explicitly. OpenPGP secret keys are software keys, so a
 host `--key-custody` of `non-exportable` or `hardware` refuses `openpgp.key.generate`,
-`openpgp.decrypt` and `openpgp.sign`.
+`openpgp.key.export`, `openpgp.decrypt` and `openpgp.sign`.
 
 ## Certificate policy
 
@@ -188,8 +189,36 @@ algorithm, user_id, certificate, salt, nonce])`, so no public field can be chang
 without failing authentication. On opening, APG also requires the secret key to
 reproduce the stored certificate exactly.
 
-Secret keys cannot be exported, so an APG-held OpenPGP key cannot be moved into
-GnuPG. Back up the key file and passphrase.
+## Protected secret-key export
+
+`openpgp.key.export` moves an APG-generated key into OpenPGP tools or writes a
+portable backup. It requires an independently retained fingerprint pin, the
+source passphrase file and a new export passphrase file. Both passphrases contain
+16..4096 exact bytes; no trimming or text conversion occurs. The operation writes
+an ASCII-armored `PGP PRIVATE KEY BLOCK` with the primary and encryption-subkey
+secret packets protected separately. It never exports unprotected secret packets
+or returns secret bytes in JSON. The source key file remains unchanged, and an
+existing output is refused before opening the key or passphrase files.
+
+```sh
+apg openpgp key export --key me.json --output me-private.asc --expected-openpgp-fingerprint <trusted-fingerprint> --passphrase-file pass.bin --new-passphrase-file export-pass.bin
+gpg --batch --pinentry-mode loopback --passphrase-file export-pass.bin --import me-private.asc
+```
+
+The key version remains unchanged. V4 exports use AES-256 CFB, SHA-256
+iterated-and-salted S2K (encoded count 224, a 16 MiB hashing count), and a SHA-1
+integrity checksum for GnuPG compatibility. This legacy protection is not memory
+hard like the APG key file's Argon2id wrapping. V6 exports use AES-256 OCB and
+Argon2id with 64 MiB, three passes and four lanes. Each secret packet receives
+fresh random protection parameters on every export. Keep the exported private
+key and its passphrase private; anyone holding both can sign and decrypt outside
+APG's host policy. Export permits historical revoked or expired keys for backup;
+it does not change certificate validity or revocation. Secret-key import into APG
+remains unsupported. GnuPG interoperability tests cover v4 exports; stable Rust
+tests check protection and byte-exact secret preservation for both v4 and v6.
+The v6 reference client also decrypts both secret packets with independent PyCA
+Argon2id, HKDF-SHA-256 and AES-256 OCB, checks exact private-key preservation,
+and refuses wrong passphrases, altered ciphertext and altered public-key metadata.
 
 ## Testing
 
@@ -287,7 +316,7 @@ create are reported as skipped.
 
 ## Not supported
 
-v3 and v5 keys; mixed v4/v6 recipient sets; secret-key import or export; cleartext
+v3 and v5 keys; mixed v4/v6 recipient sets; secret-key import; cleartext
 signatures and inline-signature generation; passphrase
 (symmetric) encryption; keyservers, WKD and the web of trust; smartcards and
 OpenPGP keys in HSMs or TPMs.

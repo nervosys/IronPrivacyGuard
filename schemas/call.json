@@ -1475,6 +1475,48 @@
         {
           "additionalProperties": false,
           "properties": {
+            "expected_openpgp_fingerprint": {
+              "description": "OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces.",
+              "maxLength": 64,
+              "minLength": 40,
+              "not": {
+                "pattern": "[^0-9A-Fa-f]"
+              },
+              "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
+              "type": "string"
+            },
+            "key": {
+              "description": "An APG-held software OpenPGP key, authenticated before export.",
+              "type": "string"
+            },
+            "new_passphrase_file": {
+              "description": "Protect every exported secret packet with these exact passphrase bytes.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.key.export",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "key",
+            "output",
+            "expected_openpgp_fingerprint",
+            "passphrase_file",
+            "new_passphrase_file"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
             "key": {
               "description": "An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.",
               "type": "string"

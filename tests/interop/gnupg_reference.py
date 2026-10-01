@@ -42,9 +42,10 @@ def exercise(executable, gpg, directory):
     environment = {**os.environ, "GNUPGHOME": gnupg_path(home, gpg)}
     calls = 0
 
-    def run_gpg(*args, check=True, faked=None):
-        command = [gpg, "--batch", "--yes", "--no-tty", "--pinentry-mode", "loopback", "--passphrase", "",
+    def run_gpg(*args, check=True, faked=None, password_file=None):
+        command = [gpg, "--batch", "--yes", "--no-tty", "--pinentry-mode", "loopback",
                    "--trust-model", "always"]
+        command += ["--passphrase-file", password_file] if password_file else ["--passphrase", ""]
         if faked:
             command += ["--faked-system-time", faked + "!"]
         result = subprocess.run(command + list(args), capture_output=True, env=environment, timeout=120)
@@ -137,6 +138,21 @@ def exercise(executable, gpg, directory):
         call("openpgp.sign", input=source, output=signature, key=key, passphrase_file=password)
         verified = run_gpg("--status-fd", "1", "--verify", signature, source).stdout.decode()
         assert f"VALIDSIG {generated['fingerprint'].upper()}" in verified, verified
+
+        # Export both protected secret packets and exercise them in GnuPG.
+        export_password = put(f"export-pass-{algorithm}", b"independent export passphrase")
+        secret = str(directory / f"apg-{algorithm}-secret.asc")
+        result = call("openpgp.key.export", key=key, output=secret,
+                      expected_openpgp_fingerprint=generated["fingerprint"].upper(),
+                      passphrase_file=password, new_passphrase_file=export_password)
+        assert result["protected"] is True and result["fingerprint"] == generated["fingerprint"]
+        run_gpg("--import", secret, password_file=export_password)
+        assert run_gpg("--decrypt", message, password_file=export_password).stdout == data
+        exported_signature = str(directory / f"exported-{algorithm}.sig")
+        run_gpg("--local-user", generated["fingerprint"], "--output", exported_signature,
+                "--detach-sign", source, password_file=export_password)
+        call("openpgp.verify", input=source, signature=exported_signature, certificate=cert,
+             expected_openpgp_fingerprint=generated["fingerprint"])
 
     # GnuPG peers sign; APG verifies. P-384 and RSA peers are also encryption targets.
     run_gpg("--quick-gen-key", "P384 <p384@example.test>", "nistp384", "default", "never")
