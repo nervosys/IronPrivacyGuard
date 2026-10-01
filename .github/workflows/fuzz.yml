@@ -18,9 +18,13 @@ jobs:
       - run: mkdir -p fuzz/corpus/${{ matrix.target }}
       - if: matrix.target == 'openpgp_packets'
         run: python3 scripts/fuzz-openpgp-policy-seeds.py --check
+      - if: matrix.target == 'openpgp_packets'
+        run: python3 scripts/fuzz-openpgp-large-certificates.py
+      - if: matrix.target == 'openpgp_packets'
+        run: python3 scripts/fuzz-openpgp-large-certificates.py --check
       - if: matrix.target == 'stream_headers'
         run: python3 scripts/fuzz-large-headers.py
-      - run: cargo +nightly fuzz run --target-dir target/fuzz ${{ matrix.target }} fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }} -- -runs=10000 -max_total_time=45 -max_len=${{ matrix.target == 'stream_headers' && '1048588' || '65537' }} -timeout=10 -rss_limit_mb=2048
+      - run: cargo +nightly fuzz run --target-dir target/fuzz ${{ matrix.target }} fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }} -- -runs=10000 -max_total_time=45 -max_len=${{ matrix.target == 'stream_headers' && '1048588' || matrix.target == 'openpgp_packets' && '1048577' || '65537' }} -timeout=10 -rss_limit_mb=2048
         env:
           CARGO_NET_OFFLINE: true
       - run: git diff --exit-code -- fuzz/Cargo.lock

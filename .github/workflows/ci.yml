@@ -28,6 +28,8 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r tests/interop/requirements.txt
       - run: python scripts/fuzz-openpgp-policy-seeds.py --check
+      - run: python scripts/fuzz-openpgp-large-certificates.py
+      - run: python scripts/fuzz-openpgp-large-certificates.py --check
       - run: python tests/interop/schema_contracts.py
       - run: python tests/interop/mcp_client.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/crypto_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
