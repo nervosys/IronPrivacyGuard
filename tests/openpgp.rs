@@ -561,6 +561,27 @@ fn openpgp_operations_fail_closed_without_the_feature() {
         "provider_unavailable"
     );
     assert!(!std::path::Path::new(&f.path("k")).exists());
+    fs::write(
+        f.path("sealed-key"),
+        serde_json::to_vec(&json!({
+            "format":"apg-openpgp-key-v1", "fingerprint":"00".repeat(20), "algorithm":"ed25519",
+            "user_id":"Test <test@example.test>", "certificate":"00", "ciphertext":"00",
+            "kdf":"argon2id-m65536-t3-p4", "salt":"00".repeat(16), "nonce":"00".repeat(12),
+            "tag":"00".repeat(16)
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        call(
+            json!({"operation":"openpgp.key.export", "key":f.path("sealed-key"),
+        "output":f.path("private.asc"), "expected_openpgp_fingerprint":"00".repeat(20),
+        "passphrase_file":f.path("pass"), "new_passphrase_file":f.path("pass")})
+        )
+        .unwrap_err(),
+        "provider_unavailable"
+    );
+    assert!(!std::path::Path::new(&f.path("private.asc")).exists());
     fs::write(f.path("cert"), b"not a certificate").unwrap();
     fs::write(f.path("message"), b"not a message").unwrap();
     assert_eq!(call(json!({"operation":"openpgp.message.verify","input":f.path("message"),"output":f.path("verified"),"certificate":f.path("cert"),"expected_openpgp_fingerprint":"00".repeat(20)})).unwrap_err(), "provider_unavailable");
@@ -608,6 +629,55 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
 #[cfg(feature = "openpgp")]
 mod enabled {
     use super::*;
+
+    #[test]
+    fn secret_export_requires_pin_credentials_and_new_output() {
+        let f = Fixture::new();
+        let fingerprint = f.key("export-key", "ed25519");
+        let original = fs::read(f.path("export-key")).unwrap();
+        fs::write(f.path("export-pass"), b"different export passphrase").unwrap();
+        let request = json!({"operation":"openpgp.key.export", "key":f.path("export-key"),
+            "output":f.path("private.asc"), "expected_openpgp_fingerprint":fingerprint,
+            "passphrase_file":f.path("pass"), "new_passphrase_file":f.path("export-pass")});
+        let mut changed = request.clone();
+        changed["expected_openpgp_fingerprint"] = json!("00".repeat(20));
+        assert_eq!(call(changed).unwrap_err(), "identity_mismatch");
+        fs::write(f.path("wrong-pass"), b"incorrect source passphrase").unwrap();
+        let mut changed = request.clone();
+        changed["passphrase_file"] = json!(f.path("wrong-pass"));
+        assert_eq!(call(changed).unwrap_err(), "authentication_failed");
+        for length in [0, 15, 4097] {
+            fs::write(f.path("export-pass"), vec![b'x'; length]).unwrap();
+            assert_eq!(
+                call(request.clone()).unwrap_err(),
+                if length > 4096 {
+                    "limit_exceeded"
+                } else {
+                    "invalid_request"
+                }
+            );
+            assert!(!std::path::Path::new(&f.path("private.asc")).exists());
+        }
+        fs::write(f.path("export-pass"), b"different export passphrase").unwrap();
+        let result = call(request.clone()).unwrap();
+        assert_eq!(result["fingerprint"], fingerprint);
+        assert_eq!(result["protected"], true);
+        assert_eq!(result.as_object().unwrap().len(), 4); // kind, path, fingerprint, protected
+        assert_eq!(fs::read(f.path("export-key")).unwrap(), original);
+        let exported = fs::read(f.path("private.asc")).unwrap();
+        let mut changed = request.clone();
+        changed["key"] = json!(f.path("missing"));
+        assert_eq!(call(changed).unwrap_err(), "already_exists");
+        assert_eq!(fs::read(f.path("private.asc")).unwrap(), exported);
+        // Authentication failure never leaves a secret-key output.
+        let mut key: Value = serde_json::from_slice(&original).unwrap();
+        key["user_id"] = json!("Changed <changed@example.test>");
+        fs::write(f.path("export-key"), serde_json::to_vec(&key).unwrap()).unwrap();
+        let mut changed = request;
+        changed["output"] = json!(f.path("tampered.asc"));
+        assert_eq!(call(changed).unwrap_err(), "authentication_failed");
+        assert!(!std::path::Path::new(&f.path("tampered.asc")).exists());
+    }
 
     #[test]
     fn keys_encrypt_decrypt_sign_and_verify_for_both_algorithms() {
@@ -821,6 +891,7 @@ mod enabled {
             custody: iron_privacy_guardian::provider::CustodyPolicy::NonExportable,
         };
         for request in [
+            json!({"operation":"openpgp.key.export","key":f.path("a"),"output":f.path("secret.asc"),"expected_openpgp_fingerprint":"00".repeat(20),"passphrase_file":f.path("pass"),"new_passphrase_file":f.path("missing")}),
             json!({"operation":"openpgp.key.generate","output":f.path("k2"),"passphrase_file":f.path("pass"),"user_id":"B <b@example.test>"}),
             json!({"operation":"openpgp.sign","input":f.path("data"),"output":f.path("s"),"key":f.path("a"),"passphrase_file":f.path("pass")}),
             json!({"operation":"openpgp.decrypt","input":f.path("data"),"output":f.path("d"),"key":f.path("a"),"passphrase_file":f.path("pass")}),

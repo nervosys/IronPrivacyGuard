@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 52 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 53 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -103,7 +103,7 @@ For a persistent process, use `apg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `apg mcp`. It exposes all 52 operations as tools named
+For MCP clients, use `apg mcp`. It exposes all 53 operations as tools named
 `apg_discover`, `apg_knowledge`, `apg_knowledge_search`, `apg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -373,7 +373,8 @@ apg openpgp verify --input report.pdf --signature report.pdf.asc --certificate t
 Certificates are pinned by fingerprint in `expected_openpgp_fingerprint`; APG trust
 snapshots do not apply to them. APG enforces its own certificate policy: valid
 binding and back signatures, expiry, revocation, and no SHA-1, weak RSA, DSA or
-ElGamal. OpenPGP secret keys stay in APG; they cannot be imported or exported. See
+ElGamal. `openpgp.key.export` writes a pinned key as a passphrase-protected OpenPGP
+private-key file for migration or backup; secret-key import remains unsupported. See
 [OpenPGP interoperability](docs/OPENPGP.md).
 
 ## Ontology and implementation

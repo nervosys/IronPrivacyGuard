@@ -1485,6 +1485,37 @@
               "type": "object"
             },
             {
+              "properties": {
+                "fingerprint": {
+                  "maxLength": 64,
+                  "minLength": 40,
+                  "not": {
+                    "pattern": "[^0-9a-f]"
+                  },
+                  "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "openpgp_secret_exported",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "protected": {
+                  "description": "Every secret packet is passphrase protected; no secret bytes enter JSON.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "fingerprint",
+                "protected"
+              ],
+              "type": "object"
+            },
+            {
               "description": "A certificate evaluated under APG policy; `path` is set when one was written.",
               "properties": {
                 "certificate": {

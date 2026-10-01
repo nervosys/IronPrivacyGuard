@@ -147,6 +147,7 @@ mod tests {
             json!({"operation":"stream.sign", "input":"large", "output":"signature", "key":"key", "passphrase_file":"pass", "policy":policy}),
             json!({"operation":"stream.verify", "input":"large", "signature":"signature", "signer":"public", "expected_fingerprint":"00".repeat(32), "policy":policy}),
             json!({"operation":"openpgp.message.verify", "input":"signed", "output":"plain", "certificate":"cert", "expected_openpgp_fingerprint":"00".repeat(20)}),
+            json!({"operation":"openpgp.key.export", "key":"key", "output":"secret.asc", "expected_openpgp_fingerprint":"00".repeat(20), "passphrase_file":"pass", "new_passphrase_file":"export-pass"}),
             json!({"operation":"request.validate", "request":{"operation":"hash", "input":"file"}}),
             json!({"operation":"key.generate", "output":"secret", "passphrase_file":"pass"}),
             json!({"operation":"key.public", "key":"secret", "output":"public", "passphrase_file":"pass"}),
