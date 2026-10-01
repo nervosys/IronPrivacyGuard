@@ -9,9 +9,9 @@
 //! - RSA below 2048 bits, DSA, ElGamal and unknown algorithms are never used.
 use super::{
     Algorithm, Certificate, ComponentKey, Decrypted, KDF, KEY_FORMAT, KeyFile,
-    MAX_CERTIFICATE_BYTES, MAX_OWN_CERTIFICATE_BYTES, MAX_PLAINTEXT_BYTES, MAX_SECRET_BYTES,
-    RecipientKeys, Signed, Verification, VerifiedMessage, Version, check_user_id,
-    normalize_fingerprint,
+    MAX_CERTIFICATE_BYTES, MAX_CERTIFICATE_SIGNATURES, MAX_OWN_CERTIFICATE_BYTES,
+    MAX_PLAINTEXT_BYTES, MAX_SECRET_BYTES, RecipientKeys, Signed, Verification, VerifiedMessage,
+    Version, check_user_id, normalize_fingerprint,
 };
 use crate::crypto;
 use crate::error::{Error, Result};
@@ -38,9 +38,6 @@ use pgp::{
 use rand_core::OsRng;
 use std::io::{Cursor, Read};
 use zeroize::Zeroizing;
-
-/// Total certificate signatures; reject excess rather than hide revocations.
-const MAX_CERTIFICATE_SIGNATURES: usize = 1024;
 
 /// Public-only packet fuzzing: mode 0 certificates, 1 detached signatures,
 /// 2 unencrypted embedded signatures, 3 framed certificate/document/signature
