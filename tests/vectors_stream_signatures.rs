@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto::PublicKey,
     stream_signature::{self, Signature},
 };

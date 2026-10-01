@@ -59,7 +59,7 @@ impl Transport for Device {
 }
 
 #[cfg(all(windows, feature = "tpm"))]
-struct Tbs(apg_cng::Tbs);
+struct Tbs(ipg_cng::Tbs);
 #[cfg(all(windows, feature = "tpm"))]
 impl Transport for Tbs {
     fn exchange(&mut self, command: &[u8]) -> Result<Vec<u8>> {
@@ -110,7 +110,7 @@ pub(crate) fn open(configuration: &str) -> Result<Box<dyn Transport>> {
             Ok(Box::new(Device(file)))
         }
         #[cfg(all(windows, feature = "tpm"))]
-        "tbs" => Ok(Box::new(Tbs(apg_cng::Tbs::open().map_err(|e| {
+        "tbs" => Ok(Box::new(Tbs(ipg_cng::Tbs::open().map_err(|e| {
             unavailable(format!("TPM Base Services unavailable: {e}"))
         })?))),
         _ => Err(unavailable(format!(

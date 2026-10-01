@@ -1,8 +1,8 @@
 //! Minimal safe wrapper over Windows CNG (NCrypt) and TPM Base Services (TBS): the
-//! Microsoft Platform Crypto Provider for apg-cng-key-v1 keys and EK certificates,
-//! and raw TPM 2.0 command submission for APG's own TPM layer.
+//! Microsoft Platform Crypto Provider for ipg-cng-key-v1 keys and EK certificates,
+//! and raw TPM 2.0 command submission for IPG's own TPM layer.
 //!
-//! This is the only crate in IronPrivacyGuardian that contains `unsafe` code. It
+//! This is the only crate in IronPrivacyGuard that contains `unsafe` code. It
 //! exposes owned handles that are freed on drop and byte-oriented operations; every
 //! FFI call checks its status and every buffer length is validated before use.
 #![cfg(windows)]
@@ -100,7 +100,7 @@ impl Drop for Tbs {
         unsafe { Tbsip_Context_Close(self.0) };
     }
 }
-/// The largest TPM response APG reads (TPM2B buffers are at most a few KiB).
+/// The largest TPM response IPG reads (TPM2B buffers are at most a few KiB).
 const MAX_TPM_RESPONSE: usize = 8192;
 impl Tbs {
     pub fn open() -> Result<Self> {
@@ -741,7 +741,7 @@ mod tests {
     use ic_ec::{EcdhP384, EcdsaP384Sha384};
 
     /// Live probe of this machine's TPM. Creates two test keys and deletes them.
-    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture`.
+    /// Run explicitly: `cargo test -p ipg-cng -- --ignored --nocapture`.
     #[test]
     #[ignore]
     fn platform_provider_p384_round_trip() {
@@ -753,8 +753,8 @@ mod tests {
         let auth = [0x5a_u8; 32];
         let suffix = std::process::id();
         let (ecdh_name, ecdsa_name) = (
-            format!("apg-probe-{suffix}-enc"),
-            format!("apg-probe-{suffix}-sig"),
+            format!("ipg-probe-{suffix}-enc"),
+            format!("ipg-probe-{suffix}-sig"),
         );
         let result = std::panic::catch_unwind(|| {
             let ecdh = provider
@@ -764,7 +764,7 @@ mod tests {
                 .create(&ecdsa_name, Algorithm::EcdsaP384, &auth)
                 .unwrap();
             let signing_point = ecdsa.public_point().unwrap();
-            let message = b"apg cng probe";
+            let message = b"ipg cng probe";
             let digest = ic_hash::Sha384::digest(message);
             let signature = ecdsa.sign_digest(digest.as_ref()).unwrap();
             assert_eq!(signature.len(), 96);
@@ -797,7 +797,7 @@ mod tests {
     /// Live probe of key attestation support. Creates an identity key and a P-384
     /// key, prints what the provider exposes, saves the blobs to the temp directory
     /// for offline parsing, and deletes both keys.
-    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture attestation`.
+    /// Run explicitly: `cargo test -p ipg-cng -- --ignored --nocapture attestation`.
     #[test]
     #[ignore]
     fn attestation_probe() {
@@ -808,7 +808,7 @@ mod tests {
                 Ok(list) => {
                     eprintln!("{name}: {} certificates", list.len());
                     for (index, der) in list.iter().enumerate() {
-                        std::fs::write(out.join(format!("apg-{name}-{index}.der")), der).unwrap();
+                        std::fs::write(out.join(format!("ipg-{name}-{index}.der")), der).unwrap();
                     }
                 }
                 Err(error) => eprintln!("{name}: {error}"),
@@ -818,22 +818,22 @@ mod tests {
             match provider.property(name) {
                 Ok(value) => {
                     eprintln!("{name}: {} bytes", value.len());
-                    std::fs::write(out.join(format!("apg-{name}.bin")), value).unwrap();
+                    std::fs::write(out.join(format!("ipg-{name}.bin")), value).unwrap();
                 }
                 Err(error) => eprintln!("{name}: {error}"),
             }
         }
         let suffix = std::process::id();
         let (aik_name, subject_name) = (
-            format!("apg-probe-{suffix}-aik"),
-            format!("apg-probe-{suffix}-sig"),
+            format!("ipg-probe-{suffix}-aik"),
+            format!("ipg-probe-{suffix}-sig"),
         );
         let auth = [0x5a_u8; 32];
         let result = std::panic::catch_unwind(|| {
             let aik = provider.create_identity_key(&aik_name).unwrap();
             let opaque = aik.export_opaque().unwrap();
             eprintln!("aik opaque: {} bytes", opaque.len());
-            std::fs::write(out.join("apg-aik-opaque.bin"), &opaque).unwrap();
+            std::fs::write(out.join("ipg-aik-opaque.bin"), &opaque).unwrap();
             match aik.property("PCP_TPM2BNAME") {
                 Ok(v) => eprintln!("aik name: {v:02x?}"),
                 Err(e) => eprintln!("aik name: {e}"),
@@ -847,20 +847,20 @@ mod tests {
                 &subject.public_point().unwrap()[..8]
             );
             std::fs::write(
-                out.join("apg-subject-point.bin"),
+                out.join("ipg-subject-point.bin"),
                 subject.public_point().unwrap(),
             )
             .unwrap();
             match subject.export_opaque() {
                 Ok(blob) => {
                     eprintln!("subject opaque: {} bytes", blob.len());
-                    std::fs::write(out.join("apg-subject-opaque.bin"), blob).unwrap();
+                    std::fs::write(out.join("ipg-subject-opaque.bin"), blob).unwrap();
                 }
                 Err(error) => eprintln!("subject opaque: {error}"),
             }
             let claim = aik.certify(&subject, &[0x11; 32]).unwrap();
             eprintln!("claim: {} bytes", claim.len());
-            std::fs::write(out.join("apg-claim.bin"), &claim).unwrap();
+            std::fs::write(out.join("ipg-claim.bin"), &claim).unwrap();
         });
         let _ = provider.delete(&subject_name, &auth);
         provider.delete_unauthenticated(&aik_name).unwrap();
@@ -888,7 +888,7 @@ mod tests {
 
     /// Live probe of raw TPM access through TBS as the current user. Creates only a
     /// transient primary key, which is flushed.
-    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture tbs`.
+    /// Run explicitly: `cargo test -p ipg-cng -- --ignored --nocapture tbs`.
     #[test]
     #[ignore]
     fn tbs_probe() {
@@ -954,13 +954,13 @@ mod tests {
     /// Live probe: load a Platform Crypto Provider key through TBS and certify it
     /// with a transient endorsement-hierarchy AK, to learn the provider's authValue
     /// encoding. At most two authorization attempts (the DA counter counts them).
-    /// Run explicitly: `cargo test -p apg-cng -- --ignored --nocapture tbs_certify`.
+    /// Run explicitly: `cargo test -p ipg-cng -- --ignored --nocapture tbs_certify`.
     #[test]
     #[ignore]
     fn tbs_certify_probe() {
         let provider = Provider::open().unwrap();
         let tbs = Tbs::open().unwrap();
-        let name = format!("apg-probe-{}-sig", std::process::id());
+        let name = format!("ipg-probe-{}-sig", std::process::id());
         let auth = [0x5a_u8; 32];
         provider.create(&name, Algorithm::EcdsaP384, &auth).unwrap();
         let result = std::panic::catch_unwind(|| {
@@ -1018,7 +1018,7 @@ mod tests {
                     certified.len()
                 );
                 if code(&certified) == 0 {
-                    std::fs::write(std::env::temp_dir().join("apg-tbs-certify.bin"), &certified)
+                    std::fs::write(std::env::temp_dir().join("ipg-tbs-certify.bin"), &certified)
                         .unwrap();
                     break;
                 }
@@ -1043,7 +1043,7 @@ mod tests {
     fn tbs_load_identity_key_probe() {
         let provider = Provider::open().unwrap();
         let tbs = Tbs::open().unwrap();
-        let name = format!("apg-probe-{}-aik", std::process::id());
+        let name = format!("ipg-probe-{}-aik", std::process::id());
         let aik = provider.create_identity_key(&name).unwrap();
         let result = std::panic::catch_unwind(|| {
             let blob = aik.export_opaque().unwrap();
@@ -1079,10 +1079,10 @@ mod tests {
     #[ignore]
     fn remove_leftover_probe_keys() {
         let provider = Provider::open().unwrap();
-        for name in std::env::var("APG_CNG_DELETE")
+        for name in std::env::var("IPG_CNG_DELETE")
             .unwrap_or_default()
             .split(',')
-            .filter(|n| n.starts_with("apg-probe-"))
+            .filter(|n| n.starts_with("ipg-probe-"))
         {
             provider.delete(name, &[0x5a_u8; 32]).unwrap();
             eprintln!("deleted {name}");

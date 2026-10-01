@@ -1,8 +1,8 @@
-//! `apg-stream-v1`: multi-recipient, streaming authenticated encryption.
+//! `ipg-stream-v1`: multi-recipient, streaming authenticated encryption.
 //!
-//! Layout: the 8-byte magic `APGSTRM1`, a big-endian u32 header length, the header
+//! Layout: the 8-byte magic `IPGSTRM1`, a big-endian u32 header length, the header
 //! as compact JSON, then the chunks. A random 32-byte content key is wrapped for
-//! every recipient as an ordinary `apg-envelope-v1` over `stream_id || key`, so
+//! every recipient as an ordinary `ipg-envelope-v1` over `stream_id || key`, so
 //! every identity suite and key provider decrypts streams unchanged.
 //!
 //! Chunks hold `CHUNK_SIZE` plaintext bytes (the last may be shorter) plus a 16-byte
@@ -24,8 +24,8 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufReader, BufWriter, Read, Write};
 use zeroize::Zeroizing;
 
-pub const FORMAT: &str = "apg-stream-v1";
-pub const MAGIC: &[u8; 8] = b"APGSTRM1";
+pub const FORMAT: &str = "ipg-stream-v1";
+pub const MAGIC: &[u8; 8] = b"IPGSTRM1";
 pub const CHUNK_SIZE: usize = 64 * 1024;
 pub const MAX_RECIPIENTS: usize = 64;
 /// Bounds header parsing: 64 hybrid recipient envelopes fit comfortably.
@@ -54,7 +54,7 @@ pub struct Header {
     pub stream_id: String,
     #[schemars(schema_with = "crate::contract::hex_bytes::<7>")]
     pub nonce_prefix: String,
-    /// One `apg-envelope-v1` per recipient over `stream_id || content key`.
+    /// One `ipg-envelope-v1` per recipient over `stream_id || content key`.
     #[schemars(length(min = 1, max = 64))]
     pub recipients: Vec<Envelope>,
 }
@@ -84,7 +84,7 @@ impl Header {
         Ok(())
     }
     fn associated_data(bytes: &[u8]) -> Vec<u8> {
-        Sha384::digest(&crypto::frame("APG stream v1", &[bytes]))
+        Sha384::digest(&crypto::frame("IPG stream v1", &[bytes]))
             .as_ref()
             .to_vec()
     }
@@ -245,7 +245,7 @@ pub fn encrypt(
 pub fn read_header(input: &mut impl Read) -> Result<(Header, Vec<u8>)> {
     let mut magic = [0u8; 8];
     if fill(input, &mut magic)? != 8 || &magic != MAGIC {
-        return Err(Error::new("invalid_format", "Not an apg-stream-v1 file"));
+        return Err(Error::new("invalid_format", "Not an ipg-stream-v1 file"));
     }
     let mut length = [0u8; 4];
     if fill(input, &mut length)? != 4 {

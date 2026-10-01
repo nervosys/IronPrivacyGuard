@@ -1,28 +1,28 @@
-# APG control protocol v1
+# IPG control protocol v1
 
-This document describes APG's native protocol. The separate `apg mcp` transport is
+This document describes IPG's native protocol. The separate `ipg mcp` transport is
 documented in [MCP.md](MCP.md) and delegates to the same operation implementation.
 
 ## Invocation
 
-* `apg <operation> --field value`: typed CLI facade; hyphens in flag names map to
+* `ipg <operation> --field value`: typed CLI facade; hyphens in flag names map to
   underscores in JSON fields. Flags cannot be repeated. Unknown fields fail.
-  Dotted operations use subcommands: `key.generate` becomes `apg key generate`,
-  `request.validate` becomes `apg request validate`, and `trust.compare` becomes
-  `apg trust compare`. This applies to every dotted operation. Dotted CLI aliases
+  Dotted operations use subcommands: `key.generate` becomes `ipg key generate`,
+  `request.validate` becomes `ipg request validate`, and `trust.compare` becomes
+  `ipg trust compare`. This applies to every dotted operation. Dotted CLI aliases
   remain supported; JSON operation names and MCP allowlists retain dots.
-* `apg call`: one UTF-8 JSON Call on stdin, capped at 65,536 bytes.
-* `apg serve`: newline-delimited Calls, capped at 65,536 bytes per line including
+* `ipg call`: one UTF-8 JSON Call on stdin, capped at 65,536 bytes.
+* `ipg serve`: newline-delimited Calls, capped at 65,536 bytes per line including
   delimiter. EOF terminates the process; a final non-newline-terminated Call is
   accepted. An oversized frame returns an error and terminates the session.
-* `apg`, `apg help`, `apg --help`: machine-readable discovery.
+* `ipg`, `ipg help`, `ipg --help`: machine-readable discovery.
 
 ```json
-{"protocol":"apg/1","id":"unique-in-your-session","request":{"operation":"discover"}}
+{"protocol":"ipg/1","id":"unique-in-your-session","request":{"operation":"discover"}}
 ```
 
 The Call requires exactly `protocol`, `id`, and `request`. Requests require the
-operation tag and its typed fields. See `apg schema` for generated JSON Schema.
+operation tag and its typed fields. See `ipg schema` for generated JSON Schema.
 Transport parsing rejects unsupported protocols, unknown fields, missing fields,
 invalid types and excessive nesting. Duplicate decoded JSON object member names are rejected at every depth before
 dispatch, including inside arbitrary preflight candidates. The same decoder serves
@@ -38,13 +38,13 @@ IDs correlate calls; they are **not** persisted idempotency keys.
 Success:
 
 ```json
-{"protocol":"apg/1","id":"task-42","ok":true,"result":{"kind":"digest","algorithm":"sha2-256","digest":"..."}}
+{"protocol":"ipg/1","id":"task-42","ok":true,"result":{"kind":"digest","algorithm":"sha2-256","digest":"..."}}
 ```
 
 Failure:
 
 ```json
-{"protocol":"apg/1","id":"task-42","ok":false,"error":{"code":"authentication_failed","message":"Cryptographic operation rejected its input","retryable":false}}
+{"protocol":"ipg/1","id":"task-42","ok":false,"error":{"code":"authentication_failed","message":"Cryptographic operation rejected its input","retryable":false}}
 ```
 
 CLI responses and unparseable Calls have `id: null`. Error text is diagnostic;
@@ -128,7 +128,7 @@ files are capped at 4096 bytes. `hash`, `sign` and `verify` use bounded whole-fi
 buffers. `stream.encrypt`, `stream.decrypt`, `stream.sign` and `stream.verify`
 handle any-size data using bounded buffers; their key, signature and policy
 artifacts remain bounded. Streaming signatures use a separate versioned
-SHA-384 commitment format, not ordinary `apg-signature-v1`.
+SHA-384 commitment format, not ordinary `ipg-signature-v1`.
 Trust-policy files have a separate 1,048,576-byte read limit and allow at most
 256 identities. Every embedded revocation is verified before the store is used.
 
@@ -136,7 +136,7 @@ Trust-policy files have a separate 1,048,576-byte read limit and allow at most
 
 Creation uses an exclusive destination and never overwrites. If a response is
 lost, the output may already exist. Inspect it or choose another path; do not
-automatically delete outputs. APG has no durable request log or transaction across
+automatically delete outputs. IPG has no durable request log or transaction across
 multiple operations. Each artifact is independently published.
 
 The orchestrator must authorize all requested paths and operations. Running
@@ -188,4 +188,4 @@ use the same 65,536-byte per-value bound and strict decoding. Candidate validati
 can diagnose malformed shapes only after this raw-JSON boundary succeeds: it never
 receives duplicate keys that an earlier parser silently collapsed. Programmatic
 callers supplying already-built JSON values are responsible for their own original
-input decoding; APG cannot recover discarded members from an existing map.
+input decoding; IPG cannot recover discarded members from an existing map.

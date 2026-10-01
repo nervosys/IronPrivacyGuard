@@ -31,18 +31,18 @@ jobs:
       - run: python scripts/fuzz-openpgp-large-certificates.py
       - run: python scripts/fuzz-openpgp-large-certificates.py --check
       - run: python tests/interop/schema_contracts.py
-      - run: python tests/interop/mcp_client.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/crypto_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/stream_signature_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/p384_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/hybrid_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/p384_mldsa_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/stream_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/kms_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/mcp_client.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/crypto_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/stream_signature_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/p384_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/hybrid_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/p384_mldsa_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/stream_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/kms_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       # GnuPG ships on the Linux and Windows runners (Git for Windows); macOS runners lack it.
       - if: runner.os != 'macOS'
-        run: python tests/interop/gnupg_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
-      - run: python tests/interop/openpgp_v6_reference.py --apg target/release/apg${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: python tests/interop/gnupg_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/openpgp_v6_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
   tpm:
     # Full TPM lifecycle against a throwaway swtpm software TPM.
     runs-on: ubuntu-latest

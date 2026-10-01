@@ -1,9 +1,9 @@
-//! TPM operations over APG's in-house TPM 2.0 layer: the Windows key backend (TPM
+//! TPM operations over IPG's in-house TPM 2.0 layer: the Windows key backend (TPM
 //! Base Services) and key attestation on every platform.
 //!
 //! Windows keys are created under the Windows storage root key (persistent handle
-//! 0x81000001) and kept as TPM-wrapped blobs in an apg-tpm-key-v1 file, exactly as
-//! Linux keys are kept under APG's owner-hierarchy storage root. Nothing persists in
+//! 0x81000001) and kept as TPM-wrapped blobs in an ipg-tpm-key-v1 file, exactly as
+//! Linux keys are kept under IPG's owner-hierarchy storage root. Nothing persists in
 //! the TPM. Key operations run in HMAC sessions salted with the storage root key;
 //! attestation sessions are salted with the endorsement key.
 use crate::attest::{self, AttestationResponse, Challenge, Evidence, KeyCertification, Role};
@@ -50,7 +50,7 @@ fn connection() -> Result<Tpm> {
 /// Key authorization bound to the PIN; the same derivation as the Linux backend.
 pub(crate) fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
     Zeroizing::new(
-        Sha384::digest(&crypto::frame("APG TPM authorization v1", &[pin]))
+        Sha384::digest(&crypto::frame("IPG TPM authorization v1", &[pin]))
             .as_ref()
             .to_vec(),
     )
@@ -315,7 +315,7 @@ fn ek_certificates(tpm: &mut Tpm) -> Result<Vec<Vec<u8>>> {
     #[cfg(windows)]
     {
         let _ = &tpm;
-        let provider = apg_cng::Provider::open().map_err(|e| {
+        let provider = ipg_cng::Provider::open().map_err(|e| {
             Error::new(
                 "provider_unavailable",
                 format!("Platform Crypto Provider: {e}"),
@@ -472,17 +472,17 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
     result
 }
 
-/// Against a TPM from APG_TEST_TPM_TCTI (swtpm in CI): the Windows key backend under a
+/// Against a TPM from IPG_TEST_TPM_TCTI (swtpm in CI): the Windows key backend under a
 /// Windows-style persistent storage root, and the full attestation protocol.
-/// APG_TEST_EK_ANCHORS and APG_TEST_EK_INTERMEDIATES name the EK CA certificates.
+/// IPG_TEST_EK_ANCHORS and IPG_TEST_EK_INTERMEDIATES name the EK CA certificates.
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn native_keys_and_attestation_on_a_test_tpm() {
-        let Ok(tcti) = std::env::var("APG_TEST_TPM_TCTI") else {
-            eprintln!("skipping: APG_TEST_TPM_TCTI is not set");
+        let Ok(tcti) = std::env::var("IPG_TEST_TPM_TCTI") else {
+            eprintln!("skipping: IPG_TEST_TPM_TCTI is not set");
             return;
         };
         TEST_TCTI.with(|t| *t.borrow_mut() = Some(tcti));
@@ -521,8 +521,8 @@ mod tests {
                 .unwrap_or_default()
         };
         let (anchors, intermediates) = (
-            read("APG_TEST_EK_ANCHORS"),
-            read("APG_TEST_EK_INTERMEDIATES"),
+            read("IPG_TEST_EK_ANCHORS"),
+            read("IPG_TEST_EK_INTERMEDIATES"),
         );
         let fingerprint = key.public.fingerprint.clone();
         let (challenge, secret, _) =

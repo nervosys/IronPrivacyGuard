@@ -157,13 +157,13 @@ def exercise_revocation_limits(call, path, fixture_output=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--apg", required=True, type=Path)
+    parser.add_argument("--ipg", required=True, type=Path)
     parser.add_argument("--write-fixture", type=Path)
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="apg-revocation-limit-") as directory:
+    with tempfile.TemporaryDirectory(prefix="ipg-revocation-limit-") as directory:
         def call(operation, error=None, **arguments):
-            request = {"protocol": "apg/1", "id": "revocation-limit", "request": {"operation": operation, **arguments}}
-            result = subprocess.run([str(args.apg.resolve(strict=True)), "call"],
+            request = {"protocol": "ipg/1", "id": "revocation-limit", "request": {"operation": operation, **arguments}}
+            result = subprocess.run([str(args.ipg.resolve(strict=True)), "call"],
                                     input=json.dumps(request).encode(), capture_output=True, timeout=120)
             response = json.loads(result.stdout)
             assert response["ok"] is (error is None), response

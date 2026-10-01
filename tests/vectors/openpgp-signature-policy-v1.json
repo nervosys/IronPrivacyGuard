@@ -1,5 +1,5 @@
 {
-  "provenance": "Public disposable APG v6 Ed25519/P-384 and PyCA v6 P-521/Ed448 certificates; document and direct-key signatures independently made with PyCA cryptography 50.0.1",
+  "provenance": "Public disposable IPG v6 Ed25519/P-384 and PyCA v6 P-521/Ed448 certificates; document and direct-key signatures independently made with PyCA cryptography 50.0.1",
   "document_hex": "5055424c494320696e646570656e64656e7420763620646f63756d656e7400ff0d0a",
   "cases": [
     {

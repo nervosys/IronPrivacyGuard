@@ -34,7 +34,7 @@ pub fn applications() -> Vec<Application> {
 }
 
 pub fn context() -> Value {
-    json!({"@vocab":"urn:apg:v1:","apg":"urn:apg:v1:","ic":"urn:ironcrypto:algorithm:",
+    json!({"@vocab":"urn:ipg:v1:","ipg":"urn:ipg:v1:","ic":"urn:ironcrypto:algorithm:",
         "inputs":{"@type":"@id"},"optional_inputs":{"@type":"@id"},
         "outputs":{"@type":"@id"},"constraints":{"@type":"@id"},
         "algorithms":{"@type":"@id"},"tools":{"@type":"@id"},
@@ -47,17 +47,17 @@ pub fn nodes() -> Vec<Value> {
     let mut goals = BTreeSet::new();
     for app in applications() {
         goals.extend(app.goals.clone());
-        nodes.push(json!({"@id":format!("apg:application/{}",app.id),
-            "@type":"apg:CryptographicApplication", "id":app.id,"label":app.label,
+        nodes.push(json!({"@id":format!("ipg:application/{}",app.id),
+            "@type":"ipg:CryptographicApplication", "id":app.id,"label":app.label,
             "keywords":app.keywords,"support":app.support,
-            "goals":app.goals.iter().map(|s|format!("apg:goal/{s}")).collect::<Vec<_>>(),
-            "tools":app.operations.iter().map(|s|format!("apg:operation/{s}")).collect::<Vec<_>>(),
+            "goals":app.goals.iter().map(|s|format!("ipg:goal/{s}")).collect::<Vec<_>>(),
+            "tools":app.operations.iter().map(|s|format!("ipg:operation/{s}")).collect::<Vec<_>>(),
             "prerequisites":app.prerequisites,"limitations":app.limitations,
             "guidance":app.guidance,"sources":app.sources}));
     }
     for goal in goals {
         nodes.push(
-            json!({"@id":format!("apg:goal/{goal}"),"@type":"apg:SecurityGoal","label":goal}),
+            json!({"@id":format!("ipg:goal/{goal}"),"@type":"ipg:SecurityGoal","label":goal}),
         );
     }
     nodes
@@ -71,10 +71,10 @@ pub fn export() -> Value {
             .iter()
             .map(|op| crate::ontology::operation(op.0)),
     );
-    json!({"@context":context(),"@id":"apg:knowledgebase","version":VERSION,
-        "reviewed":"2026-09-28","scope":"Curated APG application guidance, not exhaustive cryptography coverage",
+    json!({"@context":context(),"@id":"ipg:knowledgebase","version":VERSION,
+        "reviewed":"2026-09-28","scope":"Curated IPG application guidance, not exhaustive cryptography coverage",
         "advisory":true,"execution":false,
-        "upstream_algorithms":{"operation":"algorithms","meaning":"Primitive availability does not imply APG protocol support"},
+        "upstream_algorithms":{"operation":"algorithms","meaning":"Primitive availability does not imply IPG protocol support"},
         "search":{"operation":"knowledge.search","query":"1..256 Unicode characters, at least one alphanumeric token; case-insensitive AND substring matching over IDs, labels, keywords, goals and operation names","ordering":"catalog order; no suitability ranking","no_match":"No recommendation; consult catalog or refine keywords"},
         "@graph":graph})
 }

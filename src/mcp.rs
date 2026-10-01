@@ -89,7 +89,7 @@ impl Config {
         {
             return Err(Error::new(
                 "invalid_request",
-                "MCP allowlist must contain known APG operation IDs",
+                "MCP allowlist must contain known IPG operation IDs",
             ));
         }
         if let Some(policy) = &self.policy {
@@ -97,7 +97,7 @@ impl Config {
         }
         Ok(())
     }
-    /// OpenPGP operations are outside APG trust snapshots, so a host that pins a
+    /// OpenPGP operations are outside IPG trust snapshots, so a host that pins a
     /// trust policy exposes them only when its allowlist names them.
     fn allows(&self, id: &str) -> bool {
         match &self.allowed {
@@ -122,7 +122,7 @@ pub struct Server {
 }
 
 pub fn tool_name(operation: &str) -> String {
-    format!("apg_{}", operation.replace('.', "_"))
+    format!("ipg_{}", operation.replace('.', "_"))
 }
 
 // Request is recursive (Plan contains Request), so schemars references its root
@@ -132,7 +132,7 @@ fn relocate_request_root(schema: &mut Value) {
     match schema {
         Value::Object(map) => {
             if map.get("$ref").and_then(Value::as_str) == Some("#") {
-                map.insert("$ref".into(), json!("#/$defs/ApgFullRequest"));
+                map.insert("$ref".into(), json!("#/$defs/IpgFullRequest"));
             }
             for value in map.values_mut() {
                 relocate_request_root(value);
@@ -159,10 +159,10 @@ pub fn tool_catalog(config: &Config) -> Value {
     full_object.remove("$schema");
     relocate_request_root(&mut full_request);
     assert!(
-        !definitions.contains_key("ApgFullRequest"),
+        !definitions.contains_key("IpgFullRequest"),
         "reserved schema definition"
     );
-    definitions.insert("ApgFullRequest".into(), full_request);
+    definitions.insert("IpgFullRequest".into(), full_request);
     let tools: Vec<Value> = ontology::OPERATIONS.iter().filter(|o|config.allows(o.0)).map(|(id, description, _, _, effects)| {
         let mut input = variants.iter().find(|v|v["properties"]["operation"]["const"] == *id).expect("registered operation schema").clone();
         input["properties"].as_object_mut().expect("properties").remove("operation");
@@ -174,10 +174,10 @@ pub fn tool_catalog(config: &Config) -> Value {
             .iter()
             .any(|e| matches!(*e, "create_file" | "create_token_object" | "delete_token_object"));
         let hardware = effects.contains(&"load_provider") || ontology::KEY_PROVIDER_OPERATIONS.contains(id);
-        json!({"name":tool_name(id), "title":description, "description":format!("{description}. Consult apg_ontology for constraints and apg_plan before mutation. Files resolve relative to the server working directory."),
+        json!({"name":tool_name(id), "title":description, "description":format!("{description}. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory."),
             "inputSchema":input, "outputSchema":output,
             "annotations":{"readOnlyHint":read_only,"destructiveHint":!read_only,"idempotentHint":read_only,"openWorldHint":hardware},
-            "_meta":{"apg/operation":id,"apg/requiredPolicy":config.policy,"apg/keyCustody":config.host.custody.as_str()}})
+            "_meta":{"ipg/operation":id,"ipg/requiredPolicy":config.policy,"ipg/keyCustody":config.host.custody.as_str()}})
     }).collect();
     json!({"tools":tools})
 }
@@ -305,7 +305,7 @@ impl Server {
             return Some(success(
                 id,
                 json!({"protocolVersion":negotiated,"capabilities":{"tools":{"listChanged":false}},
-                "serverInfo":{"name":"iron-privacy-guardian","version":env!("CARGO_PKG_VERSION")},
+                "serverInfo":{"name":"iron-privacy-guard","version":env!("CARGO_PKG_VERSION")},
                 "instructions":instructions(&self.config)}),
             ));
         }

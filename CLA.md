@@ -1,8 +1,8 @@
 # Contributor License Agreement (CLA)
 
-## IronPrivacyGuardian — Individual Contributor License Agreement v1.0
+## IronPrivacyGuard — Individual Contributor License Agreement v1.0
 
-Thank you for your interest in contributing to **IronPrivacyGuardian** (the
+Thank you for your interest in contributing to **IronPrivacyGuard** (the
 "Project"), owned and maintained by **NERVOSYS** (the "Organization").
 
 By submitting a contribution (including but not limited to code, documentation,

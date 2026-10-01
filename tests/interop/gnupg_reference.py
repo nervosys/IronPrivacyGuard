@@ -1,14 +1,14 @@
-"""Check APG's OpenPGP boundary against GnuPG, the reference OpenPGP implementation.
+"""Check IPG's OpenPGP boundary against GnuPG, the reference OpenPGP implementation.
 
-Both directions are exercised for APG's Ed25519 and P-384 keys and for GnuPG
+Both directions are exercised for IPG's Ed25519 and P-384 keys and for GnuPG
 Ed25519, P-384 and RSA peers: encryption (including multi-recipient), decryption,
 detached signatures and certificate fingerprints. GnuPG also produces the
-certificates APG's policy must refuse: expired, revoked, SHA-1-bound, weak RSA and
+certificates IPG's policy must refuse: expired, revoked, SHA-1-bound, weak RSA and
 DSA keys, SHA-1 data signatures and tampered messages.
 
 Everything runs in a throwaway GNUPGHOME; the user's keyring is never touched.
 All keys and passphrases here are PUBLIC TEST DATA. Needs `gpg` 2.2 or later and an
-apg build with --features openpgp.
+ipg build with --features openpgp.
 """
 import argparse
 import json
@@ -54,7 +54,7 @@ def exercise(executable, gpg, directory):
         return result
 
     def fingerprint(uid):
-        # <email> matches exactly; a bare substring would also match apg-<email>.
+        # <email> matches exactly; a bare substring would also match ipg-<email>.
         listing = run_gpg("--with-colons", "--fingerprint", f"<{uid}>").stdout.decode()
         return re.search(r"^fpr:+([0-9A-F]{40}):", listing, re.M).group(1)
 
@@ -70,7 +70,7 @@ def exercise(executable, gpg, directory):
 
     def call(operation, expect=None, **arguments):
         nonlocal calls
-        request = {"protocol": "apg/1", "id": operation, "request": {"operation": operation, **arguments}}
+        request = {"protocol": "ipg/1", "id": operation, "request": {"operation": operation, **arguments}}
         result = subprocess.run([str(executable), "call"], input=json.dumps(request).encode(), capture_output=True,
                                 timeout=120)
         calls += 1
@@ -92,19 +92,19 @@ def exercise(executable, gpg, directory):
     peer = export("peer@example.test", "peer.asc")
 
     for algorithm in ["ed25519", "p384"]:
-        key = str(directory / f"apg-{algorithm}")
+        key = str(directory / f"ipg-{algorithm}")
         generated = call("openpgp.key.generate", output=key, passphrase_file=password,
-                         user_id=f"APG {algorithm} <apg-{algorithm}@example.test>", algorithm=algorithm)
-        cert = str(directory / f"apg-{algorithm}.asc")
+                         user_id=f"IPG {algorithm} <ipg-{algorithm}@example.test>", algorithm=algorithm)
+        cert = str(directory / f"ipg-{algorithm}.asc")
         call("openpgp.cert.export", key=key, output=cert)
         run_gpg("--import", cert)
         # Fingerprints agree, and GnuPG sees the expected algorithms.
-        assert fingerprint(f"apg-{algorithm}@example.test").lower() == generated["fingerprint"]
+        assert fingerprint(f"ipg-{algorithm}@example.test").lower() == generated["fingerprint"]
         listing = run_gpg("--with-colons", "--list-keys", generated["fingerprint"]).stdout.decode()
         curve = "ed25519" if algorithm == "ed25519" else "nistp384"
         assert f":{curve}:" in listing or curve in listing, listing
 
-        # GnuPG -> APG, plain and signed-and-encrypted.
+        # GnuPG -> IPG, plain and signed-and-encrypted.
         message = str(directory / f"to-{algorithm}.asc")
         run_gpg("--armor", "--recipient", generated["fingerprint"], "--output", message, "--encrypt", source)
         out = str(directory / f"from-gpg-{algorithm}")
@@ -122,7 +122,7 @@ def exercise(executable, gpg, directory):
                       key=key, passphrase_file=password)
         assert result["valid"] is True and Path(checked).read_bytes() == data
 
-        # APG -> GnuPG and APG, one message for both.
+        # IPG -> GnuPG and IPG, one message for both.
         both = str(directory / f"both-{algorithm}.asc")
         sent = call("openpgp.encrypt", input=source, output=both, recipients=[
             {"certificate": peer, "expected_openpgp_fingerprint": peer_fp},
@@ -133,15 +133,15 @@ def exercise(executable, gpg, directory):
         call("openpgp.decrypt", input=both, output=out + "-self", key=key, passphrase_file=password)
         assert Path(out + "-self").read_bytes() == data
 
-        # APG signs, GnuPG verifies.
-        signature = str(directory / f"apg-{algorithm}.sig")
+        # IPG signs, GnuPG verifies.
+        signature = str(directory / f"ipg-{algorithm}.sig")
         call("openpgp.sign", input=source, output=signature, key=key, passphrase_file=password)
         verified = run_gpg("--status-fd", "1", "--verify", signature, source).stdout.decode()
         assert f"VALIDSIG {generated['fingerprint'].upper()}" in verified, verified
 
         # Export both protected secret packets and exercise them in GnuPG.
         export_password = put(f"export-pass-{algorithm}", b"independent export passphrase")
-        secret = str(directory / f"apg-{algorithm}-secret.asc")
+        secret = str(directory / f"ipg-{algorithm}-secret.asc")
         result = call("openpgp.key.export", key=key, output=secret,
                       expected_openpgp_fingerprint=generated["fingerprint"].upper(),
                       passphrase_file=password, new_passphrase_file=export_password)
@@ -154,7 +154,7 @@ def exercise(executable, gpg, directory):
         call("openpgp.verify", input=source, signature=exported_signature, certificate=cert,
              expected_openpgp_fingerprint=generated["fingerprint"])
 
-        # GnuPG reserializes its protected private key; APG imports both packets.
+        # GnuPG reserializes its protected private key; IPG imports both packets.
         exported_again = put(f"gpg-protected-{algorithm}.asc", run_gpg(
             "--armor", "--export-secret-keys", generated["fingerprint"],
             password_file=export_password).stdout)
@@ -171,7 +171,7 @@ def exercise(executable, gpg, directory):
              key=imported, passphrase_file=password)
         assert Path(imported_plain).read_bytes() == data
 
-    # GnuPG peers sign; APG verifies. P-384 and RSA peers are also encryption targets.
+    # GnuPG peers sign; IPG verifies. P-384 and RSA peers are also encryption targets.
     run_gpg("--quick-gen-key", "P384 <p384@example.test>", "nistp384", "default", "never")
     run_gpg("--quick-gen-key", "RSA <rsa@example.test>", "rsa3072", "default", "never")
     # With an explicit algorithm, GnuPG creates only a primary key; add encryption subkeys.
@@ -326,7 +326,7 @@ def exercise(executable, gpg, directory):
     tampered[len(tampered) // 2] ^= 0x01
     put("tampered.gpg", bytes(tampered))
     call("openpgp.decrypt", ("authentication_failed", "invalid_format"), input=str(directory / "tampered.gpg"),
-         output=str(directory / "tampered.out"), key=str(directory / "apg-ed25519"), passphrase_file=password)
+         output=str(directory / "tampered.out"), key=str(directory / "ipg-ed25519"), passphrase_file=password)
     assert not (directory / "tampered.out").exists()
     subprocess.run(["gpgconf", "--kill", "all"], env=environment, capture_output=True)
     return calls, skipped
@@ -334,13 +334,13 @@ def exercise(executable, gpg, directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apg", type=Path, required=True, help="apg built with --features openpgp")
+    parser.add_argument("--ipg", type=Path, required=True, help="ipg built with --features openpgp")
     parser.add_argument("--gpg", default=shutil.which("gpg") or "gpg")
     args = parser.parse_args()
     version = subprocess.run([args.gpg, "--version"], capture_output=True, check=True).stdout.decode().splitlines()[0]
     # A short directory keeps gpg-agent's socket path within platform limits.
-    with tempfile.TemporaryDirectory(prefix="apg") as directory:
-        calls, skipped = exercise(args.apg.resolve(), args.gpg, Path(directory))
+    with tempfile.TemporaryDirectory(prefix="ipg") as directory:
+        calls, skipped = exercise(args.ipg.resolve(), args.gpg, Path(directory))
     print(json.dumps({"ok": True, "gnupg": version, "cli_calls": calls, "skipped": skipped}))
 
 

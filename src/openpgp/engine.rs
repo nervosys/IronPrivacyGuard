@@ -1,6 +1,6 @@
-//! rPGP-backed implementation with APG's certificate-validity policy.
+//! rPGP-backed implementation with IPG's certificate-validity policy.
 //!
-//! Policy (applied to every certificate APG reads):
+//! Policy (applied to every certificate IPG reads):
 //! - exactly one v4 or v6 certificate per file;
 //! - a component is usable only with a valid, unexpired binding self-signature
 //!   made with SHA-256 or stronger; signing subkeys also need a valid back signature;
@@ -490,7 +490,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         if !capability.sign {
             entry
                 .issues
-                .push("primary key algorithm is not accepted by APG policy".into());
+                .push("primary key algorithm is not accepted by IPG policy".into());
         }
         keys.push(entry);
     }
@@ -545,7 +545,7 @@ fn component(
     }
     if !capability.sign && !capability.encrypt {
         issues.push(format!(
-            "algorithm {} is not accepted by APG policy",
+            "algorithm {} is not accepted by IPG policy",
             capability.name
         ));
     }
@@ -655,7 +655,7 @@ fn pin(cert: &SignedPublicKey, expected: &str) -> Result<()> {
 
 fn secret_aad(key: &KeyFile, certificate: &[u8], salt: &[u8], nonce: &[u8]) -> Vec<u8> {
     crypto::frame(
-        "APG openpgp secret v1 argon2id-m65536-t3-p4",
+        "IPG openpgp secret v1 argon2id-m65536-t3-p4",
         &[
             key.format.as_bytes(),
             key.fingerprint.as_bytes(),
@@ -772,7 +772,7 @@ fn seal_secret(
     if certificate.len() > MAX_OWN_CERTIFICATE_BYTES || sealed.len() > MAX_SECRET_BYTES {
         return Err(Error::new(
             "limit_exceeded",
-            "OpenPGP key exceeds the APG key-file limits",
+            "OpenPGP key exceeds the IPG key-file limits",
         ));
     }
     let salt = crypto::random::<16>()?;
@@ -961,7 +961,7 @@ pub(crate) fn import_secret(
     if password.len() > 4096 || !(16..=4096).contains(&new_password.len()) {
         return Err(Error::new(
             "invalid_request",
-            "Source password must be at most 4096 bytes; APG passphrase must contain 16..4096 bytes",
+            "Source password must be at most 4096 bytes; IPG passphrase must contain 16..4096 bytes",
         ));
     }
     single_armor_block(data, "secret key")?;
@@ -1047,7 +1047,7 @@ pub(crate) fn import_secret(
     if cert.to_bytes().map_err(|_| invalid())?.len() > MAX_OWN_CERTIFICATE_BYTES {
         return Err(Error::new(
             "limit_exceeded",
-            "Imported key exceeds the APG key-file limits",
+            "Imported key exceeds the IPG key-file limits",
         ));
     }
     import_protection(secret.primary_key.secret_params())?;
@@ -1115,7 +1115,7 @@ fn secret_shape(secret: &SignedSecretKey) -> Result<Algorithm> {
     if !supported_subkey || secret.secret_subkeys.len() != 1 || !secret.public_subkeys.is_empty() {
         return Err(Error::new(
             "invalid_format",
-            "Unsupported APG OpenPGP secret-key shape",
+            "Unsupported IPG OpenPGP secret-key shape",
         ));
     }
     Ok(algorithm)
@@ -1220,7 +1220,7 @@ pub(crate) fn encrypt(
             return Err(Error::new(
                 "invalid_request",
                 format!(
-                    "Certificate {} has no valid encryption key under APG policy",
+                    "Certificate {} has no valid encryption key under IPG policy",
                     summary.fingerprint
                 ),
             ));
@@ -1434,7 +1434,7 @@ fn verify_with_clock(
         return Err(Error::new(
             "authentication_failed",
             format!(
-                "Signature hash {} is below APG policy (SHA-256 or stronger)",
+                "Signature hash {} is below IPG policy (SHA-256 or stronger)",
                 hash_name(sig.hash_alg())
             ),
         ));
@@ -1479,7 +1479,7 @@ fn verify_with_clock(
                 Error::new(
                     "policy_mismatch",
                     format!(
-                        "The signing key was not usable for signing under APG policy when the signature was made: {}",
+                        "The signing key was not usable for signing under IPG policy when the signature was made: {}",
                         if at_signing.issues.is_empty() {
                             "no sign key flag".to_string()
                         } else {
@@ -1647,7 +1647,7 @@ mod tests {
     #[test]
     fn imported_certificate_expiry_and_revocation_prevent_signing() {
         use pgp::packet::{SignatureConfig, Subpacket, SubpacketData};
-        let password = b"APG validity test passphrase";
+        let password = b"IPG validity test passphrase";
         let mut subkey = SubkeyParamsBuilder::default();
         subkey
             .key_type(KeyType::ECDH(ECCCurve::Curve25519Legacy))
@@ -1731,7 +1731,7 @@ mod tests {
 
     #[test]
     fn import_rejects_mismatched_private_keys_and_preflights_both_packets() {
-        let password = b"APG import test passphrase";
+        let password = b"IPG import test passphrase";
         for version in [Version::V4, Version::V6] {
             for algorithm in [Algorithm::Ed25519, Algorithm::P384] {
                 let key =
@@ -1839,7 +1839,7 @@ mod tests {
     #[test]
     fn protected_exports_preserve_both_secrets_for_v4_and_v6() {
         use pgp::types::{S2kParams, SecretParams, StringToKey};
-        let password = b"APG source passphrase test-only";
+        let password = b"IPG source passphrase test-only";
         let export_password = b"export passphrase test-only\0\xff";
         let check = |params: &SecretParams, version: Version| {
             let SecretParams::Encrypted(encrypted) = params else {

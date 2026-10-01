@@ -1,6 +1,6 @@
 """Independent RFC 9580 v6 PKESK and SEIPDv2 oracle using PyCA.
 
-Only APG's X25519/P-384 and AES-256/OCB profiles are implemented. Secret
+Only IPG's X25519/P-384 and AES-256/OCB profiles are implemented. Secret
 material belongs to disposable integration-test keys and is never recorded.
 This is test tooling, not a general OpenPGP reader or a key-export facility.
 """
@@ -78,12 +78,12 @@ def encode_mpi(value):
 
 
 def unseal_test_key(key, password):
-    """Unseal our temporary APG key with independently implemented framing."""
-    assert key["format"] == "apg-openpgp-key-v1"
+    """Unseal our temporary IPG key with independently implemented framing."""
+    assert key["format"] == "ipg-openpgp-key-v1"
     assert key["kdf"] == "argon2id-m65536-t3-p4"
     salt, nonce = bytes.fromhex(key["salt"]), bytes.fromhex(key["nonce"])
     certificate = bytes.fromhex(key["certificate"])
-    aad = frame("APG openpgp secret v1 " + key["kdf"],
+    aad = frame("IPG openpgp secret v1 " + key["kdf"],
                 *(key[name].encode() for name in ("format", "fingerprint", "algorithm", "user_id")),
                 certificate, salt, nonce)
     return ChaCha20Poly1305(password_key(password, salt)).decrypt(
@@ -223,12 +223,12 @@ def exercise_aead(call, path, key, recipient, unarmor):
     algorithm = key["algorithm"]
     decrypt_args = {"key": path(algorithm), "passphrase_file": path("pass")}
     checks = 0
-    # APG's default chunk size is 4096; also exercise partial packet framing.
+    # IPG's default chunk size is 4096; also exercise partial packet framing.
     encoded_sizes = set()
     for size in [0, 1, 4083, 4084, 4085, 4086, 4087, 4088, 8192, 65537]:
         message = bytes((index % 251 for index in range(size)))
         Path(path("aead-input")).write_bytes(message)
-        output = path(f"aead-apg-{algorithm}-{size}")
+        output = path(f"aead-ipg-{algorithm}-{size}")
         call("openpgp.encrypt", input=path("aead-input"), output=output, recipients=[recipient])
         encrypted = list(packets(unarmor(Path(output).read_bytes())))
         assert [tag for tag, _ in encrypted] == [1, 18]

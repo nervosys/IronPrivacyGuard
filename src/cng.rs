@@ -1,23 +1,23 @@
 //! Windows TPM backend through CNG's Microsoft Platform Crypto Provider.
 //!
 //! Each identity is two persisted, non-exportable TPM-backed keys (ECDH P-384 and
-//! ECDSA P-384) named in an `apg-cng-key-v1` file. Key authorization is derived from
+//! ECDSA P-384) named in an `ipg-cng-key-v1` file. Key authorization is derived from
 //! the PIN and presented as the provider's usage authorization; the TPM's
-//! dictionary-attack lockout limits guessing. All FFI lives in the `apg-cng` crate.
+//! dictionary-attack lockout limits guessing. All FFI lives in the `ipg-cng` crate.
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
     provider::{CngKey, TpmBinding, TpmInfo},
 };
-use apg_cng::{Algorithm, Key, Provider, status};
 use ic_core::traits::Digest as _;
 use ic_hash::Sha256;
+use ipg_cng::{Algorithm, Key, Provider, status};
 use zeroize::Zeroizing;
 
 /// `NTE_PERM`: the provider refused the usage authorization.
 const NTE_PERM: i32 = 0x8009_0010_u32 as i32;
 
-fn map(error: apg_cng::Error) -> Error {
+fn map(error: ipg_cng::Error) -> Error {
     let detail = error.to_string();
     let code = match error.status {
         NTE_PERM | status::TPM_AUTHFAIL | status::TPM_20_AUTH_FAIL | status::TPM_20_BAD_AUTH => {
@@ -43,7 +43,7 @@ fn open_provider() -> Result<Provider> {
 /// Usage authorization bound to the PIN; fixed at the SHA-256 digest size.
 fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
     Zeroizing::new(
-        Sha256::digest(&crypto::frame("APG CNG authorization v1", &[pin]))
+        Sha256::digest(&crypto::frame("IPG CNG authorization v1", &[pin]))
             .as_ref()
             .to_vec(),
     )
@@ -140,7 +140,7 @@ pub fn open(key: &CngKey, pin: &[u8]) -> Result<Box<dyn IdentityKey>> {
 pub fn delete(key: &CngKey, pin: &[u8]) -> Result<()> {
     let identity = load(key, pin)?;
     // Signing proves the authorization before anything is destroyed.
-    crypto::sign_message(&identity, b"APG key deletion check v1")?;
+    crypto::sign_message(&identity, b"IPG key deletion check v1")?;
     let provider = open_provider()?;
     drop(identity);
     let auth = authorization(pin);

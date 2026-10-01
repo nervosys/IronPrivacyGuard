@@ -13,15 +13,15 @@ use std::{collections::HashSet, fs::File};
 pub const MAX_IDENTITIES: usize = 256;
 /// Sized for 256 hybrid identities, whose composite certificates are ~7 KB each.
 pub const MAX_STORE_BYTES: u64 = 8 * 1024 * 1024;
-/// Format of every snapshot APG writes. v1 and v2 remain readable, with SHA-256 digests.
-pub const FORMAT: &str = "apg-trust-v3";
+/// Format of every snapshot IPG writes. v1 and v2 remain readable, with SHA-256 digests.
+pub const FORMAT: &str = "ipg-trust-v3";
 
 /// Snapshot version; v1 forbids validity windows, v3 commits with SHA-384.
 fn version(format: &str) -> Result<u8> {
     match format {
-        "apg-trust-v1" => Ok(1),
-        "apg-trust-v2" => Ok(2),
-        "apg-trust-v3" => Ok(3),
+        "ipg-trust-v1" => Ok(1),
+        "ipg-trust-v2" => Ok(2),
+        "ipg-trust-v3" => Ok(3),
         _ => Err(Error::new(
             "invalid_format",
             "Unsupported trust snapshot format",
@@ -107,15 +107,15 @@ impl TrustStore {
         let body = serde_json::to_vec(self)?;
         Ok(match version(&self.format)? {
             1 => hex::encode(Sha256::digest(&crypto::frame(
-                "APG trust snapshot v1",
+                "IPG trust snapshot v1",
                 &[&body],
             ))),
             2 => hex::encode(Sha256::digest(&crypto::frame(
-                "APG trust snapshot v2",
+                "IPG trust snapshot v2",
                 &[&body],
             ))),
             _ => hex::encode(Sha384::digest(&crypto::frame(
-                "APG trust snapshot v3",
+                "IPG trust snapshot v3",
                 &[&body],
             ))),
         })

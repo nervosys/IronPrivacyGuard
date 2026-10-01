@@ -1,5 +1,5 @@
 //! Versioned detached signatures over a bounded-memory SHA-384 file commitment.
-//! This is APG's hash-then-sign protocol, not Ed25519ph, HashML-DSA or OpenPGP.
+//! This is IPG's hash-then-sign protocol, not Ed25519ph, HashML-DSA or OpenPGP.
 use crate::{
     crypto::{self, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Read;
 use zeroize::Zeroizing;
 
-pub const FORMAT: &str = "apg-stream-signature-v1";
+pub const FORMAT: &str = "ipg-stream-signature-v1";
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -52,7 +52,7 @@ impl Signature {
 
     fn message(&self) -> Result<Vec<u8>> {
         Ok(crypto::frame(
-            &format!("APG stream signature v1 {}", self.algorithm),
+            &format!("IPG stream signature v1 {}", self.algorithm),
             &[
                 self.signer.as_bytes(),
                 self.digest_algorithm.as_bytes(),

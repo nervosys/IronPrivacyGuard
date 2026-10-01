@@ -9,7 +9,7 @@ LIMIT = 1024 * 1024
 
 def encode(header):
     body = json.dumps(header, separators=(",", ":")).encode()
-    return b"APGSTRM1" + len(body).to_bytes(4, "big") + body
+    return b"IPGSTRM1" + len(body).to_bytes(4, "big") + body
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
     (corpus / "large-near-limit").write_bytes(near)
     for length in [0, LIMIT, LIMIT + 1, 2**32 - 1]:
         (corpus / f"large-length-{length}").write_bytes(
-            b"APGSTRM1" + length.to_bytes(4, "big"))
+            b"IPGSTRM1" + length.to_bytes(4, "big"))
     print(f"64-recipient header: {len(many) - 12}; near-limit header: {len(near) - 12} bytes")
 
 

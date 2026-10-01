@@ -1,5 +1,5 @@
 [package]
-name = "apg-fuzz-support"
+name = "ipg-fuzz-support"
 version = "0.0.0"
 publish = false
 license = "AGPL-3.0-or-later"
@@ -11,10 +11,10 @@ cargo-fuzz = true
 [features]
 default = ["fuzzing", "openpgp"]
 fuzzing = []
-openpgp = ["iron-privacy-guardian/openpgp"]
+openpgp = ["iron-privacy-guard/openpgp"]
 
 [dependencies]
-iron-privacy-guardian = { path = "..", features = ["fuzzing"] }
+iron-privacy-guard = { path = "..", features = ["fuzzing"] }
 serde_json = "1"
 libfuzzer-sys = "=0.4.13"
 

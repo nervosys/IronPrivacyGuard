@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-use iron_privacy_guardian::{Request, error::Error};
+use iron_privacy_guard::{Request, error::Error};
 use serde_json::{Map, Value};
 use std::io::{self, Write};
 
@@ -12,8 +12,8 @@ fn emit(value: &Value) -> io::Result<()> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().is_some_and(|s| s == "mcp") {
-        let mut server = match iron_privacy_guardian::mcp::Config::parse(&args[1..])
-            .and_then(iron_privacy_guardian::mcp::Server::new)
+        let mut server = match iron_privacy_guard::mcp::Config::parse(&args[1..])
+            .and_then(iron_privacy_guard::mcp::Server::new)
         {
             Ok(server) => server,
             Err(error) => {
@@ -27,7 +27,7 @@ fn main() {
         };
         let mut input = io::stdin().lock();
         loop {
-            match iron_privacy_guardian::transport::read_frame(&mut input) {
+            match iron_privacy_guard::transport::read_frame(&mut input) {
                 Ok(Some(frame)) => {
                     if let Some(response) = server.handle(&frame)
                         && emit(&response).is_err()
@@ -37,7 +37,7 @@ fn main() {
                 }
                 Ok(None) => return,
                 Err(error) => {
-                    let _ = emit(&iron_privacy_guardian::mcp::rpc_error(
+                    let _ = emit(&iron_privacy_guard::mcp::rpc_error(
                         Value::Null,
                         -32600,
                         &error.message,
@@ -51,38 +51,38 @@ fn main() {
         let stdin = io::stdin();
         let mut input = stdin.lock();
         loop {
-            let line = match iron_privacy_guardian::transport::read_frame(&mut input) {
+            let line = match iron_privacy_guard::transport::read_frame(&mut input) {
                 Ok(Some(line)) => line,
                 Ok(None) => break,
                 Err(error) => {
-                    let (v, code) = iron_privacy_guardian::respond(None, Err(error));
+                    let (v, code) = iron_privacy_guard::respond(None, Err(error));
                     let _ = emit(&v);
                     std::process::exit(code);
                 }
             };
-            if emit(&iron_privacy_guardian::handle_call(&line).0).is_err() {
+            if emit(&iron_privacy_guard::handle_call(&line).0).is_err() {
                 std::process::exit(4);
             }
         }
         return;
     }
     let (value, code) = if args == ["call"] {
-        match iron_privacy_guardian::read_limited(
+        match iron_privacy_guard::read_limited(
             io::stdin().lock(),
-            iron_privacy_guardian::MAX_REQUEST_BYTES,
+            iron_privacy_guard::MAX_REQUEST_BYTES,
         ) {
-            Ok(data) => iron_privacy_guardian::handle_call(&data),
-            Err(e) => iron_privacy_guardian::respond(None, Err(e)),
+            Ok(data) => iron_privacy_guard::handle_call(&data),
+            Err(e) => iron_privacy_guard::respond(None, Err(e)),
         }
     } else {
-        iron_privacy_guardian::respond(None, parse(args).and_then(iron_privacy_guardian::execute))
+        iron_privacy_guard::respond(None, parse(args).and_then(iron_privacy_guard::execute))
     };
     if emit(&value).is_err() {
         std::process::exit(4);
     }
     std::process::exit(code);
 }
-fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
+fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
     if args.is_empty() || args == ["--help"] || args == ["help"] {
         return Ok(Request::Discover {});
     }
@@ -117,7 +117,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
                 | "not_after"
                 | "at_time"
         ) {
-            iron_privacy_guardian::control_json::parse(pair[1].as_bytes())?
+            iron_privacy_guard::control_json::parse(pair[1].as_bytes())?
         } else {
             Value::String(pair[1].clone())
         };
@@ -129,7 +129,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guardian::error::Result<Request> {
     serde_json::from_value(Value::Object(map)).map_err(|_| {
         Error::new(
             "invalid_request",
-            "Unknown operation, missing field, or unsupported field; use apg schema",
+            "Unknown operation, missing field, or unsupported field; use ipg schema",
         )
     })
 }

@@ -1,7 +1,7 @@
 {
-  "format": "apg-tpm-evidence-v1",
+  "format": "ipg-tpm-evidence-v1",
   "public": {
-    "format": "apg-public-p384-v1",
+    "format": "ipg-public-p384-v1",
     "encryption_key": "04026bb2337c9be570d13a36c08c8450eb7d37fb20c77021df13dd706589c683cc83147e4a6eb4266c5dd1deb3ed357a559a803b2d49445c85df239af00d57332ed584e63b4e634072d20bd2c3d93872cd7486910a774260e48b5a8235a2fb3801",
     "signing_key": "04ea4d730c8ccef9ab0e767f4473ce3a97f51a06ff9a616c44953a74c5588bf981ebadca40a7f260df59971c679951281039ca5e930103136d6452960b36e9565a4a0abf11a856a155d36b9bf9a07ec9fa400a39c25a574074b7befaf0d5214fe3",
     "fingerprint": "5ca454d2f57b89486df3f5a84a08b9e086afd3142e5ed8626a40834c008b4b5eef19babedc8b1705d5815d88bda741c9"

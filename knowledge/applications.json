@@ -7,8 +7,8 @@
     "support": "implemented",
     "operations": ["encrypt", "decrypt"],
     "prerequisites": ["Recipient public identity and independently trusted fingerprint", "Recipient secret key and passphrase file, or hardware key reference and PIN file, for decryption", "Supply a pinned trust policy to encrypt when revocation and expiry must be enforced"],
-    "limitations": ["One recipient and native APG format only; bounded in-memory files", "Encryption does not authenticate the sender", "No forward secrecy against later recipient private-key compromise", "Decryption remains available for recovery without trust policy enforcement"],
-    "guidance": "The envelope suite follows the recipient identity: X25519/ChaCha20-Poly1305 for apg-public-v1, P-384/AES-256-GCM for apg-public-p384-v1. Inspect discover limits before transferring data.",
+    "limitations": ["One recipient and native IPG format only; bounded in-memory files", "Encryption does not authenticate the sender", "No forward secrecy against later recipient private-key compromise", "Decryption remains available for recovery without trust policy enforcement"],
+    "guidance": "The envelope suite follows the recipient identity: X25519/ChaCha20-Poly1305 for ipg-public-v1, P-384/AES-256-GCM for ipg-public-p384-v1. Inspect discover limits before transferring data.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc8439", "https://www.rfc-editor.org/rfc/rfc7748", "https://www.rfc-editor.org/rfc/rfc5869", "https://doi.org/10.6028/NIST.SP.800-38D"]
   },
   {
@@ -19,7 +19,7 @@
     "support": "implemented",
     "operations": ["sign", "verify", "stream.sign", "stream.verify"],
     "prerequisites": ["Signer secret key and passphrase, or hardware key reference and PIN file, for signing", "Public signer identity and independently trusted fingerprint for verification", "Supply a pinned policy for revocation and expiry enforcement"],
-    "limitations": ["Native detached APG signatures; no OpenPGP or platform code-signing compatibility", "No confidentiality, trusted timestamp, replay prevention or automatic authorization"],
+    "limitations": ["Native detached IPG signatures; no OpenPGP or platform code-signing compatibility", "No confidentiality, trusted timestamp, replay prevention or automatic authorization"],
     "guidance": "Verify against the expected signer and exact original bytes before consuming content. Use stream.sign and stream.verify beyond the in-memory limit; their separate native format signs a SHA-384 commitment and byte count with bounded memory.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc8032", "https://doi.org/10.6028/NIST.FIPS.186-5"]
   },
@@ -42,9 +42,9 @@
     "goals": ["secret-protection"],
     "support": "implemented",
     "operations": ["key.generate", "key.public", "key.rewrap"],
-    "prerequisites": ["Access-controlled passphrase file of 16..4096 bytes", "New destinations; APG never overwrites files", "Expected identity fingerprint when rewrapping"],
+    "prerequisites": ["Access-controlled passphrase file of 16..4096 bytes", "New destinations; IPG never overwrites files", "Expected identity fingerprint when rewrapping"],
     "limitations": ["Rewrapping does not rotate the identity or invalidate old copies", "Host filesystem permissions and secret-file cleanup remain caller responsibilities"],
-    "guidance": "APG internally derives a wrapping key with Argon2id and encrypts private seeds; no raw KDF endpoint is exposed.",
+    "guidance": "IPG internally derives a wrapping key with Argon2id and encrypts private seeds; no raw KDF endpoint is exposed.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc9106", "https://www.rfc-editor.org/rfc/rfc8439"]
   },
   {
@@ -90,7 +90,7 @@
     "goals": ["structural-validation"],
     "support": "implemented",
     "operations": ["inspect"],
-    "prerequisites": ["Bounded native APG artifact file"],
+    "prerequisites": ["Bounded native IPG artifact file"],
     "limitations": ["Inspection does not authenticate the artifact or trust embedded metadata"],
     "guidance": "Use inspect to route an artifact, then explicitly invoke the appropriate authentication operation.",
     "sources": []
@@ -102,9 +102,9 @@
     "goals": ["protocol-interoperability"],
     "support": "implemented",
     "operations": ["openpgp.key.generate", "openpgp.key.import", "openpgp.key.export", "openpgp.cert.export", "openpgp.cert.inspect", "openpgp.encrypt", "openpgp.decrypt", "openpgp.sign", "openpgp.verify", "openpgp.message.verify"],
-    "prerequisites": ["An apg build with the openpgp feature", "Each correspondent's OpenPGP certificate and its independently trusted fingerprint (v4 40 hex or v6 64 hex)", "An MCP host that pins a trust policy must name the openpgp operations in --allow"],
-    "limitations": ["Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review", "v4 and v6 keys; APG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters", "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures", "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply", "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected", "APG native envelopes, signatures and keys are never OpenPGP packets"],
-    "guidance": "Import a pinned supported transferable secret key with openpgp.key.import and a new APG wrapping passphrase, or generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
+    "prerequisites": ["An ipg build with the openpgp feature", "Each correspondent's OpenPGP certificate and its independently trusted fingerprint (v4 40 hex or v6 64 hex)", "An MCP host that pins a trust policy must name the openpgp operations in --allow"],
+    "limitations": ["Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review", "v4 and v6 keys; IPG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters", "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures", "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and IPG trust snapshots do not apply", "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected", "IPG native envelopes, signatures and keys are never OpenPGP packets"],
+    "guidance": "Import a pinned supported transferable secret key with openpgp.key.import and a new IPG wrapping passphrase, or generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the IPG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc9580", "https://github.com/rpgp/rpgp"]
   },
   {
@@ -115,8 +115,8 @@
     "support": "external_required",
     "operations": [],
     "prerequisites": ["A separately evaluated TLS stack and peer authentication policy"],
-    "limitations": ["APG file encryption is not a TLS handshake or record protocol"],
-    "guidance": "Use a complete transport protocol implementation; do not assemble a channel from APG file commands.",
+    "limitations": ["IPG file encryption is not a TLS handshake or record protocol"],
+    "guidance": "Use a complete transport protocol implementation; do not assemble a channel from IPG file commands.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc8446"]
   },
   {
@@ -127,8 +127,8 @@
     "support": "external_required",
     "operations": [],
     "prerequisites": ["A password hashing and verification implementation with application-specific resource policy"],
-    "limitations": ["APG uses Argon2id internally but exposes no password verifier interface", "APG hash is a fast file digest, not password hashing"],
-    "guidance": "Use a dedicated salted password verifier API; do not use APG hash or treat key wrapping as login verification.",
+    "limitations": ["IPG uses Argon2id internally but exposes no password verifier interface", "IPG hash is a fast file digest, not password hashing"],
+    "guidance": "Use a dedicated salted password verifier API; do not use IPG hash or treat key wrapping as login verification.",
     "sources": ["https://www.rfc-editor.org/rfc/rfc9106"]
   },
   {
@@ -139,7 +139,7 @@
     "support": "implemented",
     "operations": ["stream.encrypt", "stream.decrypt"],
     "prerequisites": ["Each recipient's public identity and independently trusted fingerprint (1..64 recipients, any suite)"],
-    "limitations": ["No sender authentication: any recipient could re-encrypt other content to the others; sign streams when origin matters", "Streams are binary files; apg-envelope-v1 (encrypt) stays single-recipient JSON", "Post-quantum confidentiality holds only for hybrid recipients; the stream is only as strong as each recipient's wrap for that recipient"],
+    "limitations": ["No sender authentication: any recipient could re-encrypt other content to the others; sign streams when origin matters", "Streams are binary files; ipg-envelope-v1 (encrypt) stays single-recipient JSON", "Post-quantum confidentiality holds only for hybrid recipients; the stream is only as strong as each recipient's wrap for that recipient"],
     "guidance": "Use stream.encrypt with a recipients list of {public, expected_fingerprint} objects; each recipient decrypts with stream.decrypt and its own key file. Streams handle files of any size in 64 KiB authenticated chunks and release plaintext only after the last chunk verifies. openpgp.encrypt covers multi-recipient OpenPGP messages.",
     "sources": []
   },
@@ -150,9 +150,9 @@
     "goals": ["post-quantum-security", "confidentiality"],
     "support": "implemented",
     "operations": ["key.generate", "key.public", "encrypt", "decrypt"],
-    "prerequisites": ["Generate the recipient with key.generate identity apg-public-hybrid-v1", "Recipient hybrid public identity and independently trusted fingerprint"],
-    "limitations": ["Fingerprints and trust-snapshot digests use SHA-384; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)", "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review", "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only", "Software secret keys only; hardware identities have no post-quantum suite"],
-    "guidance": "Create a hybrid identity with apg key generate --identity apg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
+    "prerequisites": ["Generate the recipient with key.generate identity ipg-public-hybrid-v1", "Recipient hybrid public identity and independently trusted fingerprint"],
+    "limitations": ["Fingerprints and trust-snapshot digests use SHA-384; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)", "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review", "IronCrypto's ML-KEM is marked experimental upstream; IPG checks it against PyCA and OpenSSL only", "Software secret keys only; hardware identities have no post-quantum suite"],
+    "guidance": "Create a hybrid identity with ipg key generate --identity ipg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
     "sources": ["https://doi.org/10.6028/NIST.FIPS.203", "https://www.rfc-editor.org/rfc/rfc7748", "https://www.rfc-editor.org/rfc/rfc5869"]
   },
   {
@@ -162,8 +162,8 @@
     "goals": ["quantum-resistant-authenticity"],
     "support": "implemented",
     "operations": ["key.generate", "kms.key.bind", "sign", "verify"],
-    "prerequisites": ["A hybrid identity from key.generate identity apg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)", "The signer's public identity and independently trusted fingerprint"],
-    "limitations": ["Composite ed25519-mldsa65 (software) or ecdsa-p384-mldsa65 (AWS KMS) only; no SLH-DSA or standalone ML-DSA", "PKCS#11 and TPM identities sign with ECDSA P-384 only", "KMS post-quantum identities keep P-384 encryption, since KMS has no ML-KEM", "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL", "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"],
+    "prerequisites": ["A hybrid identity from key.generate identity ipg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)", "The signer's public identity and independently trusted fingerprint"],
+    "limitations": ["Composite ed25519-mldsa65 (software) or ecdsa-p384-mldsa65 (AWS KMS) only; no SLH-DSA or standalone ML-DSA", "PKCS#11 and TPM identities sign with ECDSA P-384 only", "KMS post-quantum identities keep P-384 encryption, since KMS has no ML-KEM", "IronCrypto's ML-DSA is marked experimental upstream; IPG checks it against PyCA and OpenSSL", "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"],
     "guidance": "Sign with a hybrid identity, or bind AWS KMS keys with mldsa_signing_key_arn for KMS custody; every signature, revocation and validity certificate then requires both the classical and the ML-DSA-65 signature to verify, so it stays unforgeable while either holds.",
     "sources": ["https://doi.org/10.6028/NIST.FIPS.204"]
   },
@@ -174,8 +174,8 @@
     "goals": ["hardware-custody"],
     "support": "implemented",
     "operations": ["hardware.tokens", "hardware.key.generate", "hardware.key.bind", "tpm.info", "tpm.key.generate", "tpm.key.delete", "key.public", "decrypt", "sign", "key.revoke", "key.validity"],
-    "prerequisites": ["PKCS#11: an apg build with the pkcs11 feature, host-set APG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE", "TPM: an apg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set APG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider", "PIN in an access-controlled file"],
-    "limitations": ["P-384 identities only; APG never substitutes another curve", "Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others, TPMs and KMS release one per-envelope ECDH shared secret into process memory", "Protection flags are self-reported token attributes, not vendor attestation; counterparties cannot see custody", "The module runs inside the APG process with its privileges", "No token PIN, object or policy administration", "TPM key files are the only copy of the wrapped keys and load only in the originating TPM; tpm2-pkcs11 tokens lack ECDH and cannot decrypt through PKCS#11"],
+    "prerequisites": ["PKCS#11: an ipg build with the pkcs11 feature, host-set IPG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE", "TPM: an ipg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set IPG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider", "PIN in an access-controlled file"],
+    "limitations": ["P-384 identities only; IPG never substitutes another curve", "Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others, TPMs and KMS release one per-envelope ECDH shared secret into process memory", "Protection flags are self-reported token attributes, not vendor attestation; counterparties cannot see custody", "The module runs inside the IPG process with its privileges", "No token PIN, object or policy administration", "TPM key files are the only copy of the wrapped keys and load only in the originating TPM; tpm2-pkcs11 tokens lack ECDH and cannot decrypt through PKCS#11"],
     "guidance": "Create the identity on a token with hardware.key.generate, bind vendor-generated keys with hardware.key.bind, or create TPM keys with tpm.key.generate; then use the resulting file as the key input. MCP hosts can add --key-custody hardware to refuse software keys.",
     "sources": ["https://docs.oasis-open.org/pkcs11/pkcs11-spec/v3.1/pkcs11-spec-v3.1.html", "https://trustedcomputinggroup.org/resource/tpm-library-specification/", "https://doi.org/10.6028/NIST.FIPS.186-5", "https://doi.org/10.6028/NIST.SP.800-56Ar3"]
   },
@@ -186,8 +186,8 @@
     "goals": ["custody-assurance"],
     "support": "implemented",
     "operations": ["tpm.attest", "tpm.attestation.challenge", "tpm.attestation.respond", "tpm.attestation.verify"],
-    "prerequisites": ["An apg-tpm-key-v1 identity from tpm.key.generate (Linux or Windows)", "The TPM's EK certificate (TPM NV on Linux; Windows retrieves it)", "Root certificates of the TPM manufacturers the verifier accepts", "On Windows, an elevated process for tpm.attestation.respond"],
-    "limitations": ["Proves key residency and attributes only, not host software state or PIN secrecy", "RSA-2048 endorsement keys only; EK certificates are not checked for revocation", "apg-cng-key-v1 keys cannot be attested", "A point-in-time statement; use each challenge once"],
+    "prerequisites": ["An ipg-tpm-key-v1 identity from tpm.key.generate (Linux or Windows)", "The TPM's EK certificate (TPM NV on Linux; Windows retrieves it)", "Root certificates of the TPM manufacturers the verifier accepts", "On Windows, an elevated process for tpm.attestation.respond"],
+    "limitations": ["Proves key residency and attributes only, not host software state or PIN secrecy", "RSA-2048 endorsement keys only; EK certificates are not checked for revocation", "ipg-cng-key-v1 keys cannot be attested", "A point-in-time statement; use each challenge once"],
     "guidance": "The prover runs tpm.attest and sends the evidence. The verifier runs tpm.attestation.challenge with its accepted manufacturer roots, keeps the secret file, and sends the challenge. The prover runs tpm.attestation.respond; the verifier checks the response with tpm.attestation.verify.",
     "sources": ["https://trustedcomputinggroup.org/resource/tpm-library-specification/"]
   },
@@ -198,9 +198,9 @@
     "goals": ["service-custody"],
     "support": "implemented",
     "operations": ["kms.key.bind", "key.public", "decrypt", "sign", "key.revoke", "key.validity"],
-    "prerequisites": ["An apg build with the kms feature", "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret", "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling; optionally an ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures"],
-    "limitations": ["AWS KMS only; APG never creates KMS keys", "SSO profiles need a current `aws sso login`; APG never refreshes SSO tokens", "Every private-key operation is a billable network call to AWS", "Decryption releases one per-envelope shared secret into process memory"],
-    "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set APG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
+    "prerequisites": ["An ipg build with the kms feature", "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret", "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling; optionally an ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures"],
+    "limitations": ["AWS KMS only; IPG never creates KMS keys", "SSO profiles need a current `aws sso login`; IPG never refreshes SSO tokens", "Every private-key operation is a billable network call to AWS", "Decryption releases one per-envelope shared secret into process memory"],
+    "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set IPG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
     "sources": ["https://docs.aws.amazon.com/kms/latest/APIReference/API_DeriveSharedSecret.html", "https://docs.aws.amazon.com/kms/latest/APIReference/API_Sign.html", "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv.html"]
   },
   {
@@ -211,8 +211,8 @@
     "support": "external_required",
     "operations": [],
     "prerequisites": ["Independent verification of the required module validation and exact deployment configuration"],
-    "limitations": ["APG makes no FIPS validation claim", "Outside in-token decryption, the envelope KDF and AES-GCM for hardware identities run in IronCrypto, which holds no CMVP certificate"],
-    "guidance": "Do not infer validation from an algorithm name; APG has no validated mode. Hardware identities keep private-key operations in the PKCS#11 module, whose own validation status and approved-mode configuration must be verified separately.",
+    "limitations": ["IPG makes no FIPS validation claim", "Outside in-token decryption, the envelope KDF and AES-GCM for hardware identities run in IronCrypto, which holds no CMVP certificate"],
+    "guidance": "Do not infer validation from an algorithm name; IPG has no validated mode. Hardware identities keep private-key operations in the PKCS#11 module, whose own validation status and approved-mode configuration must be verified separately.",
     "sources": []
   }
 ]

@@ -1,4 +1,4 @@
-//! In-memory preflight of APG requests. Never executes a candidate or reads files.
+//! In-memory preflight of IPG requests. Never executes a candidate or reads files.
 use crate::{Request, crypto, lifecycle::MAX_UNIX_TIME};
 use schemars::JsonSchema;
 use serde::Serialize;

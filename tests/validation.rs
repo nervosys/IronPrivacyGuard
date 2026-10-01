@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{handle_call, validation};
+use iron_privacy_guard::{handle_call, validation};
 use serde_json::{Value, json};
 use std::{fs, process::Command};
 fn report(value: Value) -> Value {
@@ -13,7 +13,7 @@ fn shape_failures_do_not_reflect_untrusted_content() {
         json!({"operation":"hash"}),
         json!({"operation":"hash","input":3}),
         json!({"operation":"hash","input":"x","untrusted-secret-field":"private"}),
-        json!({"protocol":"apg/1","id":"x","request":{"operation":"discover"}}),
+        json!({"protocol":"ipg/1","id":"x","request":{"operation":"discover"}}),
     ] {
         let result = report(value);
         assert_eq!(result["valid"], false);
@@ -70,7 +70,7 @@ fn bounded_validation_and_validation_of_validation() {
     assert_eq!(report(deep)["issues"][0]["code"], "limit_exceeded");
     assert_eq!(
         report(
-            json!({"operation":"hash","input":"x".repeat(iron_privacy_guardian::MAX_REQUEST_BYTES as usize)})
+            json!({"operation":"hash","input":"x".repeat(iron_privacy_guard::MAX_REQUEST_BYTES as usize)})
         )["issues"][0]["code"],
         "limit_exceeded"
     );
@@ -85,7 +85,7 @@ fn cli_and_protocol_preflight_never_execute_candidates() {
     let dir = tempfile::tempdir().unwrap();
     let out = dir.path().join("key");
     let candidate = json!({"operation":"key.generate","passphrase_file":dir.path().join("missing"),"output":out});
-    let cli = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["request.validate", "--request", &candidate.to_string()])
         .output()
         .unwrap();
@@ -94,10 +94,10 @@ fn cli_and_protocol_preflight_never_execute_candidates() {
     assert_eq!(result["result"]["validation"]["valid"], true);
     assert!(!out.exists());
     fs::write(&out, b"sentinel").unwrap();
-    let bytes=serde_json::to_vec(&json!({"protocol":"apg/1","id":"preflight","request":{"operation":"request.validate","request":candidate}})).unwrap();
+    let bytes=serde_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":candidate}})).unwrap();
     assert_eq!(handle_call(&bytes).1, 0);
     assert_eq!(fs::read(&out).unwrap(), b"sentinel");
-    let invalid=serde_json::to_vec(&json!({"protocol":"apg/1","id":"preflight","request":{"operation":"request.validate","request":{"operation":"not-real"}}})).unwrap();
+    let invalid=serde_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":{"operation":"not-real"}}})).unwrap();
     let (response, status) = handle_call(&invalid);
     assert_eq!(status, 0);
     assert_eq!(response["ok"], true);

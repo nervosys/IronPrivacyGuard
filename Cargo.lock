@@ -57,7 +57,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "apg-cng"
+name = "ipg-cng"
 version = "0.1.0"
 dependencies = [
  "ic-core",
@@ -970,10 +970,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "iron-privacy-guardian"
+name = "iron-privacy-guard"
 version = "0.1.0"
 dependencies = [
- "apg-cng",
+ "ipg-cng",
  "cryptoki",
  "getrandom 0.3.4",
  "hex",

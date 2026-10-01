@@ -30,7 +30,7 @@ pub struct Validity {
 }
 impl Validity {
     pub fn validate(&self) -> Result<()> {
-        if self.format != "apg-validity-v1"
+        if self.format != "ipg-validity-v1"
             || self.scope != "entire-identity"
             || Suite::from_algorithm(&self.algorithm).is_err()
             || self.not_before >= self.not_after
@@ -50,7 +50,7 @@ impl Validity {
     }
     fn message(&self) -> Vec<u8> {
         crypto::frame(
-            "APG validity v1",
+            "IPG validity v1",
             &[
                 self.format.as_bytes(),
                 self.fingerprint.as_bytes(),
@@ -72,7 +72,7 @@ pub(crate) fn validity_template(
     public.pin(expected)?;
     let suite = public.suite()?;
     let certificate = Validity {
-        format: "apg-validity-v1".into(),
+        format: "ipg-validity-v1".into(),
         fingerprint: expected.into(),
         scope: "entire-identity".into(),
         not_before,
@@ -161,7 +161,7 @@ pub struct Revocation {
 
 impl Revocation {
     pub fn validate(&self) -> Result<()> {
-        if self.format != "apg-revocation-v1"
+        if self.format != "ipg-revocation-v1"
             || self.scope != "entire-identity"
             || Suite::from_algorithm(&self.algorithm).is_err()
         {
@@ -179,7 +179,7 @@ impl Revocation {
     }
     fn message(&self) -> Vec<u8> {
         crypto::frame(
-            "APG revocation v1",
+            "IPG revocation v1",
             &[
                 self.format.as_bytes(),
                 self.fingerprint.as_bytes(),
@@ -229,7 +229,7 @@ pub fn revoke_with(
     let public = key.public();
     public.pin(expected)?;
     let mut revocation = Revocation {
-        format: "apg-revocation-v1".into(),
+        format: "ipg-revocation-v1".into(),
         fingerprint: public.fingerprint.clone(),
         scope: "entire-identity".into(),
         reason,

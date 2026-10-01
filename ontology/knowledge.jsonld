@@ -1,10 +1,9 @@
 {
   "@context": {
-    "@vocab": "urn:apg:v1:",
+    "@vocab": "urn:ipg:v1:",
     "algorithms": {
       "@type": "@id"
     },
-    "apg": "urn:apg:v1:",
     "constraints": {
       "@type": "@id"
     },
@@ -15,6 +14,7 @@
     "inputs": {
       "@type": "@id"
     },
+    "ipg": "urn:ipg:v1:",
     "optional_inputs": {
       "@type": "@id"
     },
@@ -31,8 +31,8 @@
   "@graph": [
     {
       "@id": "ic:x25519",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Ephemeral sender key agreement with the recipient public key inside the native envelope suite",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Ephemeral sender key agreement with the recipient public key inside the native envelope suite",
       "label": "X25519",
       "limitations": [
         "Not encryption on its own",
@@ -46,12 +46,12 @@
     },
     {
       "@id": "ic:hkdf-sha2-256",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Derive the envelope encryption key from the X25519 shared secret with protocol context",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Derive the envelope encryption key from the X25519 shared secret with protocol context",
       "label": "HKDF-SHA-256",
       "limitations": [
         "Not a password-hardening function",
-        "No standalone APG derivation command"
+        "No standalone IPG derivation command"
       ],
       "role": "Key derivation from keying material",
       "sources": [
@@ -60,8 +60,8 @@
     },
     {
       "@id": "ic:chacha20-poly1305",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Protect envelope plaintext and wrapped private seeds; authenticate before releasing plaintext",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Protect envelope plaintext and wrapped private seeds; authenticate before releasing plaintext",
       "label": "ChaCha20-Poly1305",
       "limitations": [
         "Nonce reuse under the same key is unsafe",
@@ -74,8 +74,8 @@
     },
     {
       "@id": "ic:ed25519",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Domain-separated content signatures and signed identity lifecycle certificates",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Domain-separated content signatures and signed identity lifecycle certificates",
       "label": "Ed25519",
       "limitations": [
         "No confidentiality",
@@ -89,12 +89,12 @@
     },
     {
       "@id": "ic:argon2id",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Derive private-key wrapping keys using the fixed APG v1 profile: 65536 KiB memory, 3 iterations, 4 lanes",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Derive private-key wrapping keys using the fixed IPG v1 profile: 65536 KiB memory, 3 iterations, 4 lanes",
       "label": "Argon2id",
       "limitations": [
-        "No APG password-verifier API",
-        "APG profile is a protocol choice, not a universal password policy"
+        "No IPG password-verifier API",
+        "IPG profile is a protocol choice, not a universal password policy"
       ],
       "role": "Memory-hard password-based derivation",
       "sources": [
@@ -103,8 +103,8 @@
     },
     {
       "@id": "ic:sha2-256",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "File digests, apg-public-v1 fingerprints and legacy v1/v2 trust snapshot digests",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "File digests, ipg-public-v1 fingerprints and legacy v1/v2 trust snapshot digests",
       "label": "SHA-256",
       "limitations": [
         "Unkeyed hashing does not prove origin",
@@ -115,8 +115,8 @@
     },
     {
       "@id": "ic:ecdh-p384",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Ephemeral sender key agreement with a P-384 identity; tokens run CKM_ECDH1_DERIVE, preferably with the X9.63 KDF so the shared secret never leaves them",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Ephemeral sender key agreement with a P-384 identity; tokens run CKM_ECDH1_DERIVE, preferably with the X9.63 KDF so the shared secret never leaves them",
       "label": "ECDH P-384",
       "limitations": [
         "Not encryption on its own",
@@ -131,8 +131,8 @@
     },
     {
       "@id": "ic:aes-256-gcm",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Protect P-384 envelope plaintext; authenticate before releasing plaintext",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Protect P-384 envelope plaintext; authenticate before releasing plaintext",
       "label": "AES-256-GCM",
       "limitations": [
         "Nonce reuse under the same key is catastrophic",
@@ -145,12 +145,12 @@
     },
     {
       "@id": "ic:ecdsa-p384-sha384",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Hardware identity signatures, certificates and possession checks; tokens sign the SHA-384 digest with CKM_ECDSA and APG canonicalizes to low-s",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Hardware identity signatures, certificates and possession checks; tokens sign the SHA-384 digest with CKM_ECDSA and IPG canonicalizes to low-s",
       "label": "ECDSA P-384 with SHA-384",
       "limitations": [
         "Randomized signatures differ per run",
-        "Signatures are malleable unless low-s is enforced, which APG does",
+        "Signatures are malleable unless low-s is enforced, which IPG does",
         "Not post-quantum"
       ],
       "role": "Digital signature",
@@ -160,13 +160,13 @@
     },
     {
       "@id": "ic:sha2-384",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "P-384 and hybrid identity fingerprints, apg-trust-v3 snapshot digests, the message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "P-384 and hybrid identity fingerprints, ipg-trust-v3 snapshot digests, the message digest for ECDSA P-384 signatures, and the hash inside the P-384 envelope's ANSI X9.63 KDF (PKCS#11 CKD_SHA384_KDF) and its SharedInfo commitment",
       "label": "SHA-384",
       "limitations": [
         "No authenticity on its own",
         "Not a password-hardening function",
-        "No standalone APG sha2-384 digest command"
+        "No standalone IPG sha2-384 digest command"
       ],
       "role": "Cryptographic hash",
       "sources": [
@@ -175,8 +175,8 @@
     },
     {
       "@id": "ic:ml-kem-768",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Encapsulates a second shared secret to hybrid identities; combined with X25519 by HKDF so either component alone protects the envelope",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Encapsulates a second shared secret to hybrid identities; combined with X25519 by HKDF so either component alone protects the envelope",
       "label": "ML-KEM-768",
       "limitations": [
         "Encapsulation only, not encryption or authentication",
@@ -190,8 +190,8 @@
     },
     {
       "@id": "ic:ml-dsa-65",
-      "@type": "apg:CryptographicPrimitive",
-      "apg_usage": "Second half of composite ed25519-mldsa65 signatures and certificates for hybrid identities; hedged signing with a fixed APG context string",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Second half of composite ed25519-mldsa65 signatures and certificates for hybrid identities; hedged signing with a fixed IPG context string",
       "label": "ML-DSA-65",
       "limitations": [
         "Used only in composite with Ed25519",
@@ -204,13 +204,13 @@
       ]
     },
     {
-      "@id": "apg:application/confidential-file-transfer",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/confidential-file-transfer",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/confidentiality",
-        "apg:goal/ciphertext-integrity"
+        "ipg:goal/confidentiality",
+        "ipg:goal/ciphertext-integrity"
       ],
-      "guidance": "The envelope suite follows the recipient identity: X25519/ChaCha20-Poly1305 for apg-public-v1, P-384/AES-256-GCM for apg-public-p384-v1. Inspect discover limits before transferring data.",
+      "guidance": "The envelope suite follows the recipient identity: X25519/ChaCha20-Poly1305 for ipg-public-v1, P-384/AES-256-GCM for ipg-public-p384-v1. Inspect discover limits before transferring data.",
       "id": "confidential-file-transfer",
       "keywords": [
         "encryption",
@@ -226,7 +226,7 @@
       ],
       "label": "Encrypt and decrypt a file for one recipient",
       "limitations": [
-        "One recipient and native APG format only; bounded in-memory files",
+        "One recipient and native IPG format only; bounded in-memory files",
         "Encryption does not authenticate the sender",
         "No forward secrecy against later recipient private-key compromise",
         "Decryption remains available for recovery without trust policy enforcement"
@@ -244,16 +244,16 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/encrypt",
-        "apg:operation/decrypt"
+        "ipg:operation/encrypt",
+        "ipg:operation/decrypt"
       ]
     },
     {
-      "@id": "apg:application/authenticate-file",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/authenticate-file",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/content-authenticity",
-        "apg:goal/content-integrity"
+        "ipg:goal/content-authenticity",
+        "ipg:goal/content-integrity"
       ],
       "guidance": "Verify against the expected signer and exact original bytes before consuming content. Use stream.sign and stream.verify beyond the in-memory limit; their separate native format signs a SHA-384 commitment and byte count with bounded memory.",
       "id": "authenticate-file",
@@ -268,7 +268,7 @@
       ],
       "label": "Sign and verify exact file bytes",
       "limitations": [
-        "Native detached APG signatures; no OpenPGP or platform code-signing compatibility",
+        "Native detached IPG signatures; no OpenPGP or platform code-signing compatibility",
         "No confidentiality, trusted timestamp, replay prevention or automatic authorization"
       ],
       "prerequisites": [
@@ -282,17 +282,17 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/sign",
-        "apg:operation/verify",
-        "apg:operation/stream.sign",
-        "apg:operation/stream.verify"
+        "ipg:operation/sign",
+        "ipg:operation/verify",
+        "ipg:operation/stream.sign",
+        "ipg:operation/stream.verify"
       ]
     },
     {
-      "@id": "apg:application/file-digest",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/file-digest",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/content-identification"
+        "ipg:goal/content-identification"
       ],
       "guidance": "Compare digests for byte identity; use sign and verify when signer authentication is needed.",
       "id": "file-digest",
@@ -314,16 +314,16 @@
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/hash"
+        "ipg:operation/hash"
       ]
     },
     {
-      "@id": "apg:application/protect-private-identity",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/protect-private-identity",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/secret-protection"
+        "ipg:goal/secret-protection"
       ],
-      "guidance": "APG internally derives a wrapping key with Argon2id and encrypts private seeds; no raw KDF endpoint is exposed.",
+      "guidance": "IPG internally derives a wrapping key with Argon2id and encrypts private seeds; no raw KDF endpoint is exposed.",
       "id": "protect-private-identity",
       "keywords": [
         "key generation",
@@ -340,7 +340,7 @@
       ],
       "prerequisites": [
         "Access-controlled passphrase file of 16..4096 bytes",
-        "New destinations; APG never overwrites files",
+        "New destinations; IPG never overwrites files",
         "Expected identity fingerprint when rewrapping"
       ],
       "sources": [
@@ -349,16 +349,16 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/key.generate",
-        "apg:operation/key.public",
-        "apg:operation/key.rewrap"
+        "ipg:operation/key.generate",
+        "ipg:operation/key.public",
+        "ipg:operation/key.rewrap"
       ]
     },
     {
-      "@id": "apg:application/manage-trust",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/manage-trust",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/identity-policy"
+        "ipg:goal/identity-policy"
       ],
       "guidance": "Publish immutable snapshots and explicitly supply the approved pin to governed operations or MCP host configuration.",
       "id": "manage-trust",
@@ -382,18 +382,18 @@
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/trust.init",
-        "apg:operation/trust.add",
-        "apg:operation/trust.status",
-        "apg:operation/trust.compare",
-        "apg:operation/trust.merge"
+        "ipg:operation/trust.init",
+        "ipg:operation/trust.add",
+        "ipg:operation/trust.status",
+        "ipg:operation/trust.compare",
+        "ipg:operation/trust.merge"
       ]
     },
     {
-      "@id": "apg:application/revoke-identity",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/revoke-identity",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/identity-policy"
+        "ipg:goal/identity-policy"
       ],
       "guidance": "Import the authenticated certificate into a new snapshot, then distribute and explicitly adopt its digest.",
       "id": "revoke-identity",
@@ -415,17 +415,17 @@
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/key.revoke",
-        "apg:operation/revocation.verify",
-        "apg:operation/trust.revoke",
-        "apg:operation/trust.status"
+        "ipg:operation/key.revoke",
+        "ipg:operation/revocation.verify",
+        "ipg:operation/trust.revoke",
+        "ipg:operation/trust.status"
       ]
     },
     {
-      "@id": "apg:application/identity-validity",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/identity-validity",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/identity-policy"
+        "ipg:goal/identity-policy"
       ],
       "guidance": "Issue a signed window, import it into a snapshot, and apply that policy to encrypt, sign and verify.",
       "id": "identity-validity",
@@ -450,17 +450,17 @@
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/key.validity",
-        "apg:operation/validity.verify",
-        "apg:operation/trust.validity",
-        "apg:operation/trust.evaluate"
+        "ipg:operation/key.validity",
+        "ipg:operation/validity.verify",
+        "ipg:operation/trust.validity",
+        "ipg:operation/trust.evaluate"
       ]
     },
     {
-      "@id": "apg:application/inspect-artifact",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/inspect-artifact",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/structural-validation"
+        "ipg:goal/structural-validation"
       ],
       "guidance": "Use inspect to route an artifact, then explicitly invoke the appropriate authentication operation.",
       "id": "inspect-artifact",
@@ -475,21 +475,21 @@
         "Inspection does not authenticate the artifact or trust embedded metadata"
       ],
       "prerequisites": [
-        "Bounded native APG artifact file"
+        "Bounded native IPG artifact file"
       ],
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/inspect"
+        "ipg:operation/inspect"
       ]
     },
     {
-      "@id": "apg:application/openpgp-interoperability",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/openpgp-interoperability",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/protocol-interoperability"
+        "ipg:goal/protocol-interoperability"
       ],
-      "guidance": "Import a pinned supported transferable secret key with openpgp.key.import and a new APG wrapping passphrase, or generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the APG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
+      "guidance": "Import a pinned supported transferable secret key with openpgp.key.import and a new IPG wrapping passphrase, or generate an OpenPGP key with openpgp.key.generate (algorithm p384 for CNSA-aligned deployments), export a pinned protected private-key backup with openpgp.key.export using a new passphrase file, share the public certificate from openpgp.cert.export, and review correspondents' certificates with openpgp.cert.inspect before pinning their fingerprints. openpgp.encrypt accepts up to 32 recipients; decrypt and sign with the IPG-held key; verify detached signatures with openpgp.verify or publish authenticated embedded signed content with openpgp.message.verify.",
       "id": "openpgp-interoperability",
       "keywords": [
         "pgp",
@@ -502,14 +502,14 @@
       "label": "Exchange OpenPGP messages or GPG keys",
       "limitations": [
         "Uses rPGP, not IronCrypto, for OpenPGP cryptography; the combination has not had independent review",
-        "v4 and v6 keys; APG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters",
+        "v4 and v6 keys; IPG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters",
         "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
-        "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and APG trust snapshots do not apply",
+        "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and IPG trust snapshots do not apply",
         "Certificates using SHA-1 self-signatures, RSA below 2048 bits, DSA or ElGamal are rejected",
-        "APG native envelopes, signatures and keys are never OpenPGP packets"
+        "IPG native envelopes, signatures and keys are never OpenPGP packets"
       ],
       "prerequisites": [
-        "An apg build with the openpgp feature",
+        "An ipg build with the openpgp feature",
         "Each correspondent's OpenPGP certificate and its independently trusted fingerprint (v4 40 hex or v6 64 hex)",
         "An MCP host that pins a trust policy must name the openpgp operations in --allow"
       ],
@@ -519,25 +519,25 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/openpgp.key.generate",
-        "apg:operation/openpgp.key.import",
-        "apg:operation/openpgp.key.export",
-        "apg:operation/openpgp.cert.export",
-        "apg:operation/openpgp.cert.inspect",
-        "apg:operation/openpgp.encrypt",
-        "apg:operation/openpgp.decrypt",
-        "apg:operation/openpgp.sign",
-        "apg:operation/openpgp.verify",
-        "apg:operation/openpgp.message.verify"
+        "ipg:operation/openpgp.key.generate",
+        "ipg:operation/openpgp.key.import",
+        "ipg:operation/openpgp.key.export",
+        "ipg:operation/openpgp.cert.export",
+        "ipg:operation/openpgp.cert.inspect",
+        "ipg:operation/openpgp.encrypt",
+        "ipg:operation/openpgp.decrypt",
+        "ipg:operation/openpgp.sign",
+        "ipg:operation/openpgp.verify",
+        "ipg:operation/openpgp.message.verify"
       ]
     },
     {
-      "@id": "apg:application/secure-network-channel",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/secure-network-channel",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/channel-security"
+        "ipg:goal/channel-security"
       ],
-      "guidance": "Use a complete transport protocol implementation; do not assemble a channel from APG file commands.",
+      "guidance": "Use a complete transport protocol implementation; do not assemble a channel from IPG file commands.",
       "id": "secure-network-channel",
       "keywords": [
         "tls",
@@ -549,7 +549,7 @@
       ],
       "label": "Secure a live client-server connection",
       "limitations": [
-        "APG file encryption is not a TLS handshake or record protocol"
+        "IPG file encryption is not a TLS handshake or record protocol"
       ],
       "prerequisites": [
         "A separately evaluated TLS stack and peer authentication policy"
@@ -561,12 +561,12 @@
       "tools": []
     },
     {
-      "@id": "apg:application/password-verifier-storage",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/password-verifier-storage",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/password-verification"
+        "ipg:goal/password-verification"
       ],
-      "guidance": "Use a dedicated salted password verifier API; do not use APG hash or treat key wrapping as login verification.",
+      "guidance": "Use a dedicated salted password verifier API; do not use IPG hash or treat key wrapping as login verification.",
       "id": "password-verifier-storage",
       "keywords": [
         "password hashing",
@@ -577,8 +577,8 @@
       ],
       "label": "Store and verify user login passwords",
       "limitations": [
-        "APG uses Argon2id internally but exposes no password verifier interface",
-        "APG hash is a fast file digest, not password hashing"
+        "IPG uses Argon2id internally but exposes no password verifier interface",
+        "IPG hash is a fast file digest, not password hashing"
       ],
       "prerequisites": [
         "A password hashing and verification implementation with application-specific resource policy"
@@ -590,10 +590,10 @@
       "tools": []
     },
     {
-      "@id": "apg:application/multi-recipient-encryption",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/multi-recipient-encryption",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/confidentiality"
+        "ipg:goal/confidentiality"
       ],
       "guidance": "Use stream.encrypt with a recipients list of {public, expected_fingerprint} objects; each recipient decrypts with stream.decrypt and its own key file. Streams handle files of any size in 64 KiB authenticated chunks and release plaintext only after the last chunk verifies. openpgp.encrypt covers multi-recipient OpenPGP messages.",
       "id": "multi-recipient-encryption",
@@ -608,7 +608,7 @@
       "label": "Encrypt one shared envelope for multiple recipients",
       "limitations": [
         "No sender authentication: any recipient could re-encrypt other content to the others; sign streams when origin matters",
-        "Streams are binary files; apg-envelope-v1 (encrypt) stays single-recipient JSON",
+        "Streams are binary files; ipg-envelope-v1 (encrypt) stays single-recipient JSON",
         "Post-quantum confidentiality holds only for hybrid recipients; the stream is only as strong as each recipient's wrap for that recipient"
       ],
       "prerequisites": [
@@ -617,18 +617,18 @@
       "sources": [],
       "support": "implemented",
       "tools": [
-        "apg:operation/stream.encrypt",
-        "apg:operation/stream.decrypt"
+        "ipg:operation/stream.encrypt",
+        "ipg:operation/stream.decrypt"
       ]
     },
     {
-      "@id": "apg:application/post-quantum-protection",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/post-quantum-protection",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/post-quantum-security",
-        "apg:goal/confidentiality"
+        "ipg:goal/post-quantum-security",
+        "ipg:goal/confidentiality"
       ],
-      "guidance": "Create a hybrid identity with apg key generate --identity apg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
+      "guidance": "Create a hybrid identity with ipg key generate --identity ipg-public-hybrid-v1. Encryption to that identity then always uses the hybrid envelope suite; there is no negotiation or fallback.",
       "id": "post-quantum-protection",
       "keywords": [
         "post quantum",
@@ -644,11 +644,11 @@
       "limitations": [
         "Fingerprints and trust-snapshot digests use SHA-384; signatures are composite Ed25519 plus ML-DSA-65 (see quantum-resistant-signing)",
         "Envelopes stay secure only while ML-KEM-768 or X25519 is unbroken; the combination has not had independent review",
-        "IronCrypto's ML-KEM is marked experimental upstream; APG checks it against PyCA and OpenSSL only",
+        "IronCrypto's ML-KEM is marked experimental upstream; IPG checks it against PyCA and OpenSSL only",
         "Software secret keys only; hardware identities have no post-quantum suite"
       ],
       "prerequisites": [
-        "Generate the recipient with key.generate identity apg-public-hybrid-v1",
+        "Generate the recipient with key.generate identity ipg-public-hybrid-v1",
         "Recipient hybrid public identity and independently trusted fingerprint"
       ],
       "sources": [
@@ -658,17 +658,17 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/key.generate",
-        "apg:operation/key.public",
-        "apg:operation/encrypt",
-        "apg:operation/decrypt"
+        "ipg:operation/key.generate",
+        "ipg:operation/key.public",
+        "ipg:operation/encrypt",
+        "ipg:operation/decrypt"
       ]
     },
     {
-      "@id": "apg:application/quantum-resistant-signing",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/quantum-resistant-signing",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/quantum-resistant-authenticity"
+        "ipg:goal/quantum-resistant-authenticity"
       ],
       "guidance": "Sign with a hybrid identity, or bind AWS KMS keys with mldsa_signing_key_arn for KMS custody; every signature, revocation and validity certificate then requires both the classical and the ML-DSA-65 signature to verify, so it stays unforgeable while either holds.",
       "id": "quantum-resistant-signing",
@@ -684,11 +684,11 @@
         "Composite ed25519-mldsa65 (software) or ecdsa-p384-mldsa65 (AWS KMS) only; no SLH-DSA or standalone ML-DSA",
         "PKCS#11 and TPM identities sign with ECDSA P-384 only",
         "KMS post-quantum identities keep P-384 encryption, since KMS has no ML-KEM",
-        "IronCrypto's ML-DSA is marked experimental upstream; APG checks it against PyCA and OpenSSL",
+        "IronCrypto's ML-DSA is marked experimental upstream; IPG checks it against PyCA and OpenSSL",
         "Signatures are about 3.4 KB and not interoperable with other composite-signature formats"
       ],
       "prerequisites": [
-        "A hybrid identity from key.generate identity apg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)",
+        "A hybrid identity from key.generate identity ipg-public-hybrid-v1, or an AWS KMS identity bound with an ML_DSA_65 key (mldsa_signing_key_arn)",
         "The signer's public identity and independently trusted fingerprint"
       ],
       "sources": [
@@ -696,17 +696,17 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/key.generate",
-        "apg:operation/kms.key.bind",
-        "apg:operation/sign",
-        "apg:operation/verify"
+        "ipg:operation/key.generate",
+        "ipg:operation/kms.key.bind",
+        "ipg:operation/sign",
+        "ipg:operation/verify"
       ]
     },
     {
-      "@id": "apg:application/hardware-key-custody",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/hardware-key-custody",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/hardware-custody"
+        "ipg:goal/hardware-custody"
       ],
       "guidance": "Create the identity on a token with hardware.key.generate, bind vendor-generated keys with hardware.key.bind, or create TPM keys with tpm.key.generate; then use the resulting file as the key input. MCP hosts can add --key-custody hardware to refuse software keys.",
       "id": "hardware-key-custody",
@@ -726,16 +726,16 @@
       ],
       "label": "Keep private keys in a hardware token or HSM",
       "limitations": [
-        "P-384 identities only; APG never substitutes another curve",
+        "P-384 identities only; IPG never substitutes another curve",
         "Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others, TPMs and KMS release one per-envelope ECDH shared secret into process memory",
         "Protection flags are self-reported token attributes, not vendor attestation; counterparties cannot see custody",
-        "The module runs inside the APG process with its privileges",
+        "The module runs inside the IPG process with its privileges",
         "No token PIN, object or policy administration",
         "TPM key files are the only copy of the wrapped keys and load only in the originating TPM; tpm2-pkcs11 tokens lack ECDH and cannot decrypt through PKCS#11"
       ],
       "prerequisites": [
-        "PKCS#11: an apg build with the pkcs11 feature, host-set APG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
-        "TPM: an apg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set APG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider",
+        "PKCS#11: an ipg build with the pkcs11 feature, host-set IPG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
+        "TPM: an ipg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set IPG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider",
         "PIN in an access-controlled file"
       ],
       "sources": [
@@ -746,24 +746,24 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/hardware.tokens",
-        "apg:operation/hardware.key.generate",
-        "apg:operation/hardware.key.bind",
-        "apg:operation/tpm.info",
-        "apg:operation/tpm.key.generate",
-        "apg:operation/tpm.key.delete",
-        "apg:operation/key.public",
-        "apg:operation/decrypt",
-        "apg:operation/sign",
-        "apg:operation/key.revoke",
-        "apg:operation/key.validity"
+        "ipg:operation/hardware.tokens",
+        "ipg:operation/hardware.key.generate",
+        "ipg:operation/hardware.key.bind",
+        "ipg:operation/tpm.info",
+        "ipg:operation/tpm.key.generate",
+        "ipg:operation/tpm.key.delete",
+        "ipg:operation/key.public",
+        "ipg:operation/decrypt",
+        "ipg:operation/sign",
+        "ipg:operation/key.revoke",
+        "ipg:operation/key.validity"
       ]
     },
     {
-      "@id": "apg:application/tpm-key-attestation",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/tpm-key-attestation",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/custody-assurance"
+        "ipg:goal/custody-assurance"
       ],
       "guidance": "The prover runs tpm.attest and sends the evidence. The verifier runs tpm.attestation.challenge with its accepted manufacturer roots, keeps the secret file, and sends the challenge. The prover runs tpm.attestation.respond; the verifier checks the response with tpm.attestation.verify.",
       "id": "tpm-key-attestation",
@@ -780,11 +780,11 @@
       "limitations": [
         "Proves key residency and attributes only, not host software state or PIN secrecy",
         "RSA-2048 endorsement keys only; EK certificates are not checked for revocation",
-        "apg-cng-key-v1 keys cannot be attested",
+        "ipg-cng-key-v1 keys cannot be attested",
         "A point-in-time statement; use each challenge once"
       ],
       "prerequisites": [
-        "An apg-tpm-key-v1 identity from tpm.key.generate (Linux or Windows)",
+        "An ipg-tpm-key-v1 identity from tpm.key.generate (Linux or Windows)",
         "The TPM's EK certificate (TPM NV on Linux; Windows retrieves it)",
         "Root certificates of the TPM manufacturers the verifier accepts",
         "On Windows, an elevated process for tpm.attestation.respond"
@@ -794,19 +794,19 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/tpm.attest",
-        "apg:operation/tpm.attestation.challenge",
-        "apg:operation/tpm.attestation.respond",
-        "apg:operation/tpm.attestation.verify"
+        "ipg:operation/tpm.attest",
+        "ipg:operation/tpm.attestation.challenge",
+        "ipg:operation/tpm.attestation.respond",
+        "ipg:operation/tpm.attestation.verify"
       ]
     },
     {
-      "@id": "apg:application/managed-kms-custody",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/managed-kms-custody",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/service-custody"
+        "ipg:goal/service-custody"
       ],
-      "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set APG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
+      "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set IPG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
       "id": "managed-kms-custody",
       "keywords": [
         "aws kms",
@@ -818,13 +818,13 @@
       ],
       "label": "Keep private keys in a cloud key management service",
       "limitations": [
-        "AWS KMS only; APG never creates KMS keys",
-        "SSO profiles need a current `aws sso login`; APG never refreshes SSO tokens",
+        "AWS KMS only; IPG never creates KMS keys",
+        "SSO profiles need a current `aws sso login`; IPG never refreshes SSO tokens",
         "Every private-key operation is a billable network call to AWS",
         "Decryption releases one per-envelope shared secret into process memory"
       ],
       "prerequisites": [
-        "An apg build with the kms feature",
+        "An ipg build with the kms feature",
         "Host AWS credentials allowed kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret",
         "One ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, created with infrastructure tooling; optionally an ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures"
       ],
@@ -835,21 +835,21 @@
       ],
       "support": "implemented",
       "tools": [
-        "apg:operation/kms.key.bind",
-        "apg:operation/key.public",
-        "apg:operation/decrypt",
-        "apg:operation/sign",
-        "apg:operation/key.revoke",
-        "apg:operation/key.validity"
+        "ipg:operation/kms.key.bind",
+        "ipg:operation/key.public",
+        "ipg:operation/decrypt",
+        "ipg:operation/sign",
+        "ipg:operation/key.revoke",
+        "ipg:operation/key.validity"
       ]
     },
     {
-      "@id": "apg:application/validated-cryptographic-module",
-      "@type": "apg:CryptographicApplication",
+      "@id": "ipg:application/validated-cryptographic-module",
+      "@type": "ipg:CryptographicApplication",
       "goals": [
-        "apg:goal/validated-module"
+        "ipg:goal/validated-module"
       ],
-      "guidance": "Do not infer validation from an algorithm name; APG has no validated mode. Hardware identities keep private-key operations in the PKCS#11 module, whose own validation status and approved-mode configuration must be verified separately.",
+      "guidance": "Do not infer validation from an algorithm name; IPG has no validated mode. Hardware identities keep private-key operations in the PKCS#11 module, whose own validation status and approved-mode configuration must be verified separately.",
       "id": "validated-cryptographic-module",
       "keywords": [
         "fips",
@@ -859,7 +859,7 @@
       ],
       "label": "Require a FIPS-validated cryptographic module",
       "limitations": [
-        "APG makes no FIPS validation claim",
+        "IPG makes no FIPS validation claim",
         "Outside in-token decryption, the envelope KDF and AES-GCM for hardware identities run in IronCrypto, which holds no CMVP certificate"
       ],
       "prerequisites": [
@@ -870,97 +870,97 @@
       "tools": []
     },
     {
-      "@id": "apg:goal/channel-security",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/channel-security",
+      "@type": "ipg:SecurityGoal",
       "label": "channel-security"
     },
     {
-      "@id": "apg:goal/ciphertext-integrity",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/ciphertext-integrity",
+      "@type": "ipg:SecurityGoal",
       "label": "ciphertext-integrity"
     },
     {
-      "@id": "apg:goal/confidentiality",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/confidentiality",
+      "@type": "ipg:SecurityGoal",
       "label": "confidentiality"
     },
     {
-      "@id": "apg:goal/content-authenticity",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/content-authenticity",
+      "@type": "ipg:SecurityGoal",
       "label": "content-authenticity"
     },
     {
-      "@id": "apg:goal/content-identification",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/content-identification",
+      "@type": "ipg:SecurityGoal",
       "label": "content-identification"
     },
     {
-      "@id": "apg:goal/content-integrity",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/content-integrity",
+      "@type": "ipg:SecurityGoal",
       "label": "content-integrity"
     },
     {
-      "@id": "apg:goal/custody-assurance",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/custody-assurance",
+      "@type": "ipg:SecurityGoal",
       "label": "custody-assurance"
     },
     {
-      "@id": "apg:goal/hardware-custody",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/hardware-custody",
+      "@type": "ipg:SecurityGoal",
       "label": "hardware-custody"
     },
     {
-      "@id": "apg:goal/identity-policy",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/identity-policy",
+      "@type": "ipg:SecurityGoal",
       "label": "identity-policy"
     },
     {
-      "@id": "apg:goal/password-verification",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/password-verification",
+      "@type": "ipg:SecurityGoal",
       "label": "password-verification"
     },
     {
-      "@id": "apg:goal/post-quantum-security",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/post-quantum-security",
+      "@type": "ipg:SecurityGoal",
       "label": "post-quantum-security"
     },
     {
-      "@id": "apg:goal/protocol-interoperability",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/protocol-interoperability",
+      "@type": "ipg:SecurityGoal",
       "label": "protocol-interoperability"
     },
     {
-      "@id": "apg:goal/quantum-resistant-authenticity",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/quantum-resistant-authenticity",
+      "@type": "ipg:SecurityGoal",
       "label": "quantum-resistant-authenticity"
     },
     {
-      "@id": "apg:goal/secret-protection",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/secret-protection",
+      "@type": "ipg:SecurityGoal",
       "label": "secret-protection"
     },
     {
-      "@id": "apg:goal/service-custody",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/service-custody",
+      "@type": "ipg:SecurityGoal",
       "label": "service-custody"
     },
     {
-      "@id": "apg:goal/structural-validation",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/structural-validation",
+      "@type": "ipg:SecurityGoal",
       "label": "structural-validation"
     },
     {
-      "@id": "apg:goal/validated-module",
-      "@type": "apg:SecurityGoal",
+      "@id": "ipg:goal/validated-module",
+      "@type": "ipg:SecurityGoal",
       "label": "validated-module"
     },
     {
-      "@id": "apg:operation/knowledge",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/knowledge",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/knowledge-advisory"
+        "ipg:constraint/knowledge-advisory"
       ],
       "description": "Read the centralized cryptography application knowledgebase and selection ontology",
       "deterministic": true,
@@ -990,24 +990,24 @@
       "id": "knowledge",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_knowledge",
+      "mcp_tool": "ipg_knowledge",
       "optional_inputs": [],
       "outputs": [
-        "apg:KnowledgeBase"
+        "ipg:KnowledgeBase"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "knowledge"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/knowledge.search",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/knowledge.search",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/knowledge-advisory"
+        "ipg:constraint/knowledge-advisory"
       ],
       "description": "Find application guidance by keywords or application ID; advisory only, no execution",
       "deterministic": true,
@@ -1036,27 +1036,27 @@
       ],
       "id": "knowledge.search",
       "inputs": [
-        "apg:KnowledgeQuery"
+        "ipg:KnowledgeQuery"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_knowledge_search",
+      "mcp_tool": "ipg_knowledge_search",
       "optional_inputs": [],
       "outputs": [
-        "apg:KnowledgeSelection"
+        "ipg:KnowledgeSelection"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "knowledge.search"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/request.validate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/request.validate",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/preflight-only"
+        "ipg:constraint/preflight-only"
       ],
       "description": "Preflight candidate Request JSON without execution, filesystem access or authentication",
       "deterministic": true,
@@ -1085,23 +1085,23 @@
       ],
       "id": "request.validate",
       "inputs": [
-        "apg:CandidateRequest"
+        "ipg:CandidateRequest"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_request_validate",
+      "mcp_tool": "ipg_request_validate",
       "optional_inputs": [],
       "outputs": [
-        "apg:RequestValidation"
+        "ipg:RequestValidation"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "request.validate"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/trust.compare",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.compare",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1111,8 +1111,8 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/snapshot-reconciliation"
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/snapshot-reconciliation"
       ],
       "description": "Compare two pinned snapshots without approving or publishing either",
       "deterministic": true,
@@ -1143,23 +1143,23 @@
       ],
       "id": "trust.compare",
       "inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_compare",
+      "mcp_tool": "ipg_trust_compare",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustComparison"
+        "ipg:TrustComparison"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.compare"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/trust.merge",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.merge",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1169,9 +1169,9 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/snapshot-reconciliation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/snapshot-reconciliation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Reconcile two pinned snapshots, retaining revocations and nested validity restrictions",
       "deterministic": true,
@@ -1203,24 +1203,24 @@
       ],
       "id": "trust.merge",
       "inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_merge",
+      "mcp_tool": "ipg_trust_merge",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest"
+        "ipg:TrustStore",
+        "ipg:TrustDigest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.merge"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/key.validity",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/key.validity",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:argon2id",
@@ -1231,17 +1231,17 @@
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/certificate-not-enforcement",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/certificate-not-enforcement",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/validity-window"
       ],
       "description": "Sign an identity validity window in Unix seconds",
       "deterministic": false,
@@ -1274,31 +1274,31 @@
       ],
       "id": "key.validity",
       "inputs": [
-        "apg:SecretKey",
-        "apg:Passphrase",
-        "apg:Fingerprint",
-        "apg:UnixTime"
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint",
+        "ipg:UnixTime"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_key_validity",
+      "mcp_tool": "ipg_key_validity",
       "optional_inputs": [],
       "outputs": [
-        "apg:Validity"
+        "ipg:Validity"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "key.validity"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/validity.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/validity.verify",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:ecdsa-p384-sha384",
@@ -1307,8 +1307,8 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/certificate-not-enforcement"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/certificate-not-enforcement"
       ],
       "description": "Authenticate a validity certificate without applying policy",
       "deterministic": true,
@@ -1339,25 +1339,25 @@
       ],
       "id": "validity.verify",
       "inputs": [
-        "apg:Validity",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Validity",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_validity_verify",
+      "mcp_tool": "ipg_validity_verify",
       "optional_inputs": [],
       "outputs": [
-        "apg:ValidityVerification"
+        "ipg:ValidityVerification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "validity.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/trust.validity",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.validity",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1367,10 +1367,10 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/no-clobber",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Import or narrow signed validity into a new snapshot",
       "deterministic": true,
@@ -1402,27 +1402,27 @@
       ],
       "id": "trust.validity",
       "inputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest",
-        "apg:Validity",
-        "apg:Fingerprint"
+        "ipg:TrustStore",
+        "ipg:TrustDigest",
+        "ipg:Validity",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_validity",
+      "mcp_tool": "ipg_trust_validity",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest"
+        "ipg:TrustStore",
+        "ipg:TrustDigest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.validity"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/trust.evaluate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.evaluate",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1432,8 +1432,8 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Advisory evaluation at an explicit Unix time; never authorizes operations",
       "deterministic": true,
@@ -1464,33 +1464,33 @@
       ],
       "id": "trust.evaluate",
       "inputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest",
-        "apg:Fingerprint",
-        "apg:UnixTime"
+        "ipg:TrustStore",
+        "ipg:TrustDigest",
+        "ipg:Fingerprint",
+        "ipg:UnixTime"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_evaluate",
+      "mcp_tool": "ipg_trust_evaluate",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustEvaluation"
+        "ipg:TrustEvaluation"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.evaluate"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/trust.init",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.init",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/no-clobber",
-        "apg:constraint/snapshot-policy"
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/snapshot-policy"
       ],
       "description": "Create an empty immutable trust snapshot",
       "deterministic": true,
@@ -1522,21 +1522,21 @@
       "id": "trust.init",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_init",
+      "mcp_tool": "ipg_trust_init",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest"
+        "ipg:TrustStore",
+        "ipg:TrustDigest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.init"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/trust.add",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.add",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1546,9 +1546,9 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/no-clobber",
-        "apg:constraint/snapshot-policy"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/snapshot-policy"
       ],
       "description": "Enroll a pinned identity into a new trust snapshot",
       "deterministic": true,
@@ -1580,27 +1580,27 @@
       ],
       "id": "trust.add",
       "inputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:TrustStore",
+        "ipg:TrustDigest",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_add",
+      "mcp_tool": "ipg_trust_add",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest"
+        "ipg:TrustStore",
+        "ipg:TrustDigest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.add"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/trust.revoke",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.revoke",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1610,9 +1610,9 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/no-clobber",
-        "apg:constraint/snapshot-policy"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/snapshot-policy"
       ],
       "description": "Retain a verified revocation in a new trust snapshot",
       "deterministic": true,
@@ -1644,27 +1644,27 @@
       ],
       "id": "trust.revoke",
       "inputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest",
-        "apg:Revocation",
-        "apg:Fingerprint"
+        "ipg:TrustStore",
+        "ipg:TrustDigest",
+        "ipg:Revocation",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_revoke",
+      "mcp_tool": "ipg_trust_revoke",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest"
+        "ipg:TrustStore",
+        "ipg:TrustDigest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.revoke"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/trust.status",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/trust.status",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:ed25519",
@@ -1674,7 +1674,7 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/snapshot-policy"
+        "ipg:constraint/snapshot-policy"
       ],
       "description": "Report enrollment and revocation in the pinned snapshot",
       "deterministic": true,
@@ -1705,25 +1705,25 @@
       ],
       "id": "trust.status",
       "inputs": [
-        "apg:TrustStore",
-        "apg:TrustDigest",
-        "apg:Fingerprint"
+        "ipg:TrustStore",
+        "ipg:TrustDigest",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_trust_status",
+      "mcp_tool": "ipg_trust_status",
       "optional_inputs": [],
       "outputs": [
-        "apg:TrustStatus"
+        "ipg:TrustStatus"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "trust.status"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/discover",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/discover",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [],
@@ -1755,20 +1755,20 @@
       "id": "discover",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_discover",
+      "mcp_tool": "ipg_discover",
       "optional_inputs": [],
       "outputs": [
-        "apg:CapabilityCatalog"
+        "ipg:CapabilityCatalog"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "discover"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/schema",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/schema",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [],
@@ -1800,24 +1800,24 @@
       "id": "schema",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_schema",
+      "mcp_tool": "ipg_schema",
       "optional_inputs": [],
       "outputs": [
-        "apg:Schema"
+        "ipg:Schema"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "schema"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/ontology",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/ontology",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [],
-      "description": "Get the complete APG JSON-LD graph",
+      "description": "Get the complete IPG JSON-LD graph",
       "deterministic": true,
       "effects": [],
       "errors": [
@@ -1845,20 +1845,20 @@
       "id": "ontology",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_ontology",
+      "mcp_tool": "ipg_ontology",
       "optional_inputs": [],
       "outputs": [
-        "apg:Ontology"
+        "ipg:Ontology"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "ontology"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/algorithms",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/algorithms",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [],
@@ -1890,20 +1890,20 @@
       "id": "algorithms",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_algorithms",
+      "mcp_tool": "ipg_algorithms",
       "optional_inputs": [],
       "outputs": [
-        "apg:AlgorithmCatalog"
+        "ipg:AlgorithmCatalog"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "algorithms"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/plan",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/plan",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [],
@@ -1934,23 +1934,23 @@
       ],
       "id": "plan",
       "inputs": [
-        "apg:Request"
+        "ipg:Request"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_plan",
+      "mcp_tool": "ipg_plan",
       "optional_inputs": [],
       "outputs": [
-        "apg:Plan"
+        "ipg:Plan"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "plan"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/key.generate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/key.generate",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:ed25519",
@@ -1962,10 +1962,10 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/software-key-only",
-        "apg:constraint/hybrid-post-quantum"
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/software-key-only",
+        "ipg:constraint/hybrid-post-quantum"
       ],
       "description": "Generate independent encryption and signing keys",
       "deterministic": false,
@@ -1997,23 +1997,23 @@
       ],
       "id": "key.generate",
       "inputs": [
-        "apg:Passphrase"
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_key_generate",
+      "mcp_tool": "ipg_key_generate",
       "optional_inputs": [],
       "outputs": [
-        "apg:SecretKey"
+        "ipg:SecretKey"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "key.generate"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/key.public",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/key.public",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:ed25519",
@@ -2028,13 +2028,13 @@
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/key-provider"
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider"
       ],
       "description": "Unlock and export the public identity",
       "deterministic": true,
@@ -2067,29 +2067,29 @@
       ],
       "id": "key.public",
       "inputs": [
-        "apg:SecretKey",
-        "apg:Passphrase"
+        "ipg:SecretKey",
+        "ipg:Passphrase"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_key_public",
+      "mcp_tool": "ipg_key_public",
       "optional_inputs": [],
       "outputs": [
-        "apg:PublicKey"
+        "ipg:PublicKey"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "key.public"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/encrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/encrypt",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:hkdf-sha2-256",
@@ -2105,13 +2105,13 @@
         "read pinned trust snapshot when policy is supplied"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/no-clobber",
-        "apg:constraint/no-sender-authentication",
-        "apg:constraint/size-bound",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/no-sender-authentication",
+        "ipg:constraint/size-bound",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Encrypt for one explicitly pinned recipient",
       "deterministic": false,
@@ -2143,27 +2143,27 @@
       ],
       "id": "encrypt",
       "inputs": [
-        "apg:Plaintext",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Plaintext",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_encrypt",
+      "mcp_tool": "ipg_encrypt",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:Envelope"
+        "ipg:Envelope"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "encrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/key.rewrap",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/key.rewrap",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:ed25519",
@@ -2175,11 +2175,11 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/old-copies-remain",
-        "apg:constraint/software-key-only"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/old-copies-remain",
+        "ipg:constraint/software-key-only"
       ],
       "description": "Protect the same identity with a new passphrase in a new file",
       "deterministic": false,
@@ -2212,25 +2212,25 @@
       ],
       "id": "key.rewrap",
       "inputs": [
-        "apg:SecretKey",
-        "apg:Passphrase",
-        "apg:Fingerprint"
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_key_rewrap",
+      "mcp_tool": "ipg_key_rewrap",
       "optional_inputs": [],
       "outputs": [
-        "apg:SecretKey"
+        "ipg:SecretKey"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "key.rewrap"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/key.revoke",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/key.revoke",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:argon2id",
@@ -2241,16 +2241,16 @@
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/certificate-not-enforcement",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/certificate-not-enforcement",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum"
       ],
       "description": "Create a signed self-revocation certificate for the entire identity",
       "deterministic": false,
@@ -2283,31 +2283,31 @@
       ],
       "id": "key.revoke",
       "inputs": [
-        "apg:SecretKey",
-        "apg:Passphrase",
-        "apg:Fingerprint",
-        "apg:RevocationReason"
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint",
+        "ipg:RevocationReason"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_key_revoke",
+      "mcp_tool": "ipg_key_revoke",
       "optional_inputs": [],
       "outputs": [
-        "apg:Revocation"
+        "ipg:Revocation"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "key.revoke"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/revocation.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/revocation.verify",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:ecdsa-p384-sha384",
@@ -2316,8 +2316,8 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/certificate-not-enforcement"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/certificate-not-enforcement"
       ],
       "description": "Authenticate a self-revocation certificate without applying policy",
       "deterministic": true,
@@ -2348,25 +2348,25 @@
       ],
       "id": "revocation.verify",
       "inputs": [
-        "apg:Revocation",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Revocation",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_revocation_verify",
+      "mcp_tool": "ipg_revocation_verify",
       "optional_inputs": [],
       "outputs": [
-        "apg:RevocationVerification"
+        "ipg:RevocationVerification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "revocation.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/decrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/decrypt",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:hkdf-sha2-256",
@@ -2379,15 +2379,15 @@
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/authenticate-before-release",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum"
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum"
       ],
       "description": "Authenticate before releasing plaintext",
       "deterministic": false,
@@ -2420,30 +2420,30 @@
       ],
       "id": "decrypt",
       "inputs": [
-        "apg:Envelope",
-        "apg:SecretKey",
-        "apg:Passphrase"
+        "ipg:Envelope",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_decrypt",
+      "mcp_tool": "ipg_decrypt",
       "optional_inputs": [],
       "outputs": [
-        "apg:Plaintext"
+        "ipg:Plaintext"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "decrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/sign",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/sign",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:argon2id",
@@ -2456,16 +2456,16 @@
       "conditional_effects": [
         "read pinned trust snapshot when policy is supplied",
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Create a domain-separated detached signature",
       "deterministic": false,
@@ -2498,32 +2498,32 @@
       ],
       "id": "sign",
       "inputs": [
-        "apg:Plaintext",
-        "apg:SecretKey",
-        "apg:Passphrase"
+        "ipg:Plaintext",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_sign",
+      "mcp_tool": "ipg_sign",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:Signature"
+        "ipg:Signature"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "sign"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/verify",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:ecdsa-p384-sha384",
@@ -2535,11 +2535,11 @@
         "read pinned trust snapshot when policy is supplied"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/exact-bytes",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/exact-bytes",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Verify exact bytes against a pinned signer",
       "deterministic": false,
@@ -2570,28 +2570,28 @@
       ],
       "id": "verify",
       "inputs": [
-        "apg:Plaintext",
-        "apg:Signature",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Plaintext",
+        "ipg:Signature",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_verify",
+      "mcp_tool": "ipg_verify",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:Verification"
+        "ipg:Verification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/hash",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/hash",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256"
       ],
@@ -2626,27 +2626,27 @@
       ],
       "id": "hash",
       "inputs": [
-        "apg:Plaintext"
+        "ipg:Plaintext"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_hash",
+      "mcp_tool": "ipg_hash",
       "optional_inputs": [],
       "outputs": [
-        "apg:Digest"
+        "ipg:Digest"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "hash"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/inspect",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/inspect",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/untrusted-metadata"
+        "ipg:constraint/untrusted-metadata"
       ],
       "description": "Validate artifact structure and read metadata without establishing external trust",
       "deterministic": true,
@@ -2677,27 +2677,27 @@
       ],
       "id": "inspect",
       "inputs": [
-        "apg:Artifact"
+        "ipg:Artifact"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_inspect",
+      "mcp_tool": "ipg_inspect",
       "optional_inputs": [],
       "outputs": [
-        "apg:Inspection"
+        "ipg:Inspection"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "inspect"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/hardware.tokens",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/hardware.tokens",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/host-provider"
+        "ipg:constraint/host-provider"
       ],
       "description": "List tokens behind the host-configured PKCS#11 module and their P-384 mechanism support",
       "deterministic": false,
@@ -2729,20 +2729,20 @@
       "id": "hardware.tokens",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_hardware_tokens",
+      "mcp_tool": "ipg_hardware_tokens",
       "optional_inputs": [],
       "outputs": [
-        "apg:TokenInventory"
+        "ipg:TokenInventory"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "hardware.tokens"
       },
       "retry": "Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."
     },
     {
-      "@id": "apg:operation/hardware.key.generate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/hardware.key.generate",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ecdh-p384",
         "ic:ecdsa-p384-sha384",
@@ -2751,13 +2751,13 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/host-provider",
-        "apg:constraint/pin-channel",
-        "apg:constraint/non-exportable-key",
-        "apg:constraint/possession-check",
-        "apg:constraint/token-objects-persist",
-        "apg:constraint/no-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/host-provider",
+        "ipg:constraint/pin-channel",
+        "ipg:constraint/non-exportable-key",
+        "ipg:constraint/possession-check",
+        "ipg:constraint/token-objects-persist",
+        "ipg:constraint/no-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Generate non-exportable P-384 encryption and signing key pairs on a token and write a public reference",
       "deterministic": false,
@@ -2791,25 +2791,25 @@
       ],
       "id": "hardware.key.generate",
       "inputs": [
-        "apg:TokenSerial",
-        "apg:KeyLabel",
-        "apg:TokenPin"
+        "ipg:TokenSerial",
+        "ipg:KeyLabel",
+        "ipg:TokenPin"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_hardware_key_generate",
+      "mcp_tool": "ipg_hardware_key_generate",
       "optional_inputs": [],
       "outputs": [
-        "apg:HardwareKeyReference"
+        "ipg:HardwareKeyReference"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "hardware.key.generate"
       },
       "retry": "Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."
     },
     {
-      "@id": "apg:operation/hardware.key.bind",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/hardware.key.bind",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ecdh-p384",
         "ic:ecdsa-p384-sha384",
@@ -2818,12 +2818,12 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/host-provider",
-        "apg:constraint/pin-channel",
-        "apg:constraint/non-exportable-key",
-        "apg:constraint/possession-check",
-        "apg:constraint/no-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/host-provider",
+        "ipg:constraint/pin-channel",
+        "ipg:constraint/non-exportable-key",
+        "ipg:constraint/possession-check",
+        "ipg:constraint/no-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Reference existing non-exportable P-384 token keys after proving possession",
       "deterministic": false,
@@ -2856,25 +2856,25 @@
       ],
       "id": "hardware.key.bind",
       "inputs": [
-        "apg:TokenSerial",
-        "apg:KeyId",
-        "apg:TokenPin"
+        "ipg:TokenSerial",
+        "ipg:KeyId",
+        "ipg:TokenPin"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_hardware_key_bind",
+      "mcp_tool": "ipg_hardware_key_bind",
       "optional_inputs": [],
       "outputs": [
-        "apg:HardwareKeyReference"
+        "ipg:HardwareKeyReference"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "hardware.key.bind"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/kms.key.bind",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/kms.key.bind",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ecdh-p384",
         "ic:ecdsa-p384-sha384",
@@ -2884,11 +2884,11 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/kms-provider",
-        "apg:constraint/non-exportable-key",
-        "apg:constraint/possession-check",
-        "apg:constraint/no-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/kms-provider",
+        "ipg:constraint/non-exportable-key",
+        "ipg:constraint/possession-check",
+        "ipg:constraint/no-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Adopt two existing AWS KMS ECC_NIST_P384 keys, plus an optional ML_DSA_65 key for composite post-quantum signatures, as an identity after proving possession",
       "deterministic": false,
@@ -2921,28 +2921,28 @@
       ],
       "id": "kms.key.bind",
       "inputs": [
-        "apg:AwsRegion",
-        "apg:KmsKeyArn"
+        "ipg:AwsRegion",
+        "ipg:KmsKeyArn"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_kms_key_bind",
+      "mcp_tool": "ipg_kms_key_bind",
       "optional_inputs": [],
       "outputs": [
-        "apg:KmsKeyFile"
+        "ipg:KmsKeyFile"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "kms.key.bind"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/tpm.info",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.info",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-provider"
+        "ipg:constraint/tpm-provider"
       ],
       "description": "Report the host TPM's identification, P-384 support and owner-hierarchy readiness",
       "deterministic": false,
@@ -2974,20 +2974,20 @@
       "id": "tpm.info",
       "inputs": [],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_info",
+      "mcp_tool": "ipg_tpm_info",
       "optional_inputs": [],
       "outputs": [
-        "apg:TpmInventory"
+        "ipg:TpmInventory"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.info"
       },
       "retry": "Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."
     },
     {
-      "@id": "apg:operation/tpm.key.generate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.key.generate",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ecdh-p384",
         "ic:ecdsa-p384-sha384",
@@ -2996,12 +2996,12 @@
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-provider",
-        "apg:constraint/pin-channel",
-        "apg:constraint/non-exportable-key",
-        "apg:constraint/possession-check",
-        "apg:constraint/no-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/tpm-provider",
+        "ipg:constraint/pin-channel",
+        "ipg:constraint/non-exportable-key",
+        "ipg:constraint/possession-check",
+        "ipg:constraint/no-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file",
       "deterministic": false,
@@ -3035,31 +3035,31 @@
       ],
       "id": "tpm.key.generate",
       "inputs": [
-        "apg:TokenPin"
+        "ipg:TokenPin"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_key_generate",
+      "mcp_tool": "ipg_tpm_key_generate",
       "optional_inputs": [],
       "outputs": [
-        "apg:TpmKeyFile"
+        "ipg:TpmKeyFile"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.key.generate"
       },
       "retry": "Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."
     },
     {
-      "@id": "apg:operation/tpm.key.delete",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.key.delete",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-provider",
-        "apg:constraint/pin-channel",
-        "apg:constraint/irreversible-deletion"
+        "ipg:constraint/tpm-provider",
+        "ipg:constraint/pin-channel",
+        "ipg:constraint/irreversible-deletion"
       ],
-      "description": "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN",
+      "description": "Permanently delete the persisted Windows TPM keys of an ipg-cng-key-v1 identity after checking its PIN",
       "deterministic": false,
       "effects": [
         "load_provider",
@@ -3090,24 +3090,24 @@
       ],
       "id": "tpm.key.delete",
       "inputs": [
-        "apg:TpmKeyFile",
-        "apg:TokenPin"
+        "ipg:TpmKeyFile",
+        "ipg:TokenPin"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_key_delete",
+      "mcp_tool": "ipg_tpm_key_delete",
       "optional_inputs": [],
       "outputs": [
-        "apg:KeyDeletion"
+        "ipg:KeyDeletion"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.key.delete"
       },
       "retry": "Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."
     },
     {
-      "@id": "apg:operation/stream.encrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/stream.encrypt",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:hkdf-sha2-256",
@@ -3123,15 +3123,15 @@
         "read pinned trust snapshot when policy is supplied"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/stream-envelope",
-        "apg:constraint/no-sender-authentication",
-        "apg:constraint/no-clobber",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/stream-envelope",
+        "ipg:constraint/no-sender-authentication",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
-      "description": "Encrypt a file of any size to 1..64 pinned recipients as an apg-stream-v1 stream of authenticated 64 KiB chunks",
+      "description": "Encrypt a file of any size to 1..64 pinned recipients as an ipg-stream-v1 stream of authenticated 64 KiB chunks",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -3161,27 +3161,27 @@
       ],
       "id": "stream.encrypt",
       "inputs": [
-        "apg:Plaintext",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Plaintext",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_stream_encrypt",
+      "mcp_tool": "ipg_stream_encrypt",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:StreamCiphertext"
+        "ipg:StreamCiphertext"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "stream.encrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/stream.sign",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/stream.sign",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:argon2id",
@@ -3194,17 +3194,17 @@
       "conditional_effects": [
         "read pinned trust snapshot when policy is supplied",
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/stream-signature",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/stream-signature",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
       "description": "Sign any-size exact file bytes using a domain-separated SHA-384 commitment and byte count",
       "deterministic": false,
@@ -3237,32 +3237,32 @@
       ],
       "id": "stream.sign",
       "inputs": [
-        "apg:Plaintext",
-        "apg:SecretKey",
-        "apg:Passphrase"
+        "ipg:Plaintext",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_stream_sign",
+      "mcp_tool": "ipg_stream_sign",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:StreamSignature"
+        "ipg:StreamSignature"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "stream.sign"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/stream.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/stream.verify",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:ed25519",
         "ic:ecdsa-p384-sha384",
@@ -3274,14 +3274,14 @@
         "read pinned trust snapshot when policy is supplied"
       ],
       "constraints": [
-        "apg:constraint/identity-pin",
-        "apg:constraint/exact-bytes",
-        "apg:constraint/stream-signature",
-        "apg:constraint/hybrid-post-quantum",
-        "apg:constraint/snapshot-policy",
-        "apg:constraint/validity-window"
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/exact-bytes",
+        "ipg:constraint/stream-signature",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
       ],
-      "description": "Verify an any-size file against an apg-stream-signature-v1 artifact and pinned signer",
+      "description": "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer",
       "deterministic": false,
       "effects": [
         "read_file"
@@ -3310,28 +3310,28 @@
       ],
       "id": "stream.verify",
       "inputs": [
-        "apg:Plaintext",
-        "apg:StreamSignature",
-        "apg:PublicKey",
-        "apg:Fingerprint"
+        "ipg:Plaintext",
+        "ipg:StreamSignature",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_stream_verify",
+      "mcp_tool": "ipg_stream_verify",
       "optional_inputs": [
-        "apg:TrustPolicy"
+        "ipg:TrustPolicy"
       ],
       "outputs": [
-        "apg:Verification"
+        "ipg:Verification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "stream.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/stream.decrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/stream.decrypt",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:x25519",
         "ic:hkdf-sha2-256",
@@ -3344,18 +3344,18 @@
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
-        "open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file",
-        "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file"
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
       ],
       "constraints": [
-        "apg:constraint/authenticate-before-release",
-        "apg:constraint/stream-envelope",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/key-provider",
-        "apg:constraint/hybrid-post-quantum"
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/stream-envelope",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum"
       ],
-      "description": "Decrypt an apg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
+      "description": "Decrypt an ipg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -3386,40 +3386,40 @@
       ],
       "id": "stream.decrypt",
       "inputs": [
-        "apg:StreamCiphertext",
-        "apg:SecretKey",
-        "apg:Passphrase"
+        "ipg:StreamCiphertext",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
       ],
       "key_inputs": [
-        "apg:SecretKey",
-        "apg:HardwareKeyReference",
-        "apg:TpmKeyFile",
-        "apg:KmsKeyFile"
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
       ],
-      "mcp_tool": "apg_stream_decrypt",
+      "mcp_tool": "ipg_stream_decrypt",
       "optional_inputs": [],
       "outputs": [
-        "apg:Plaintext"
+        "ipg:Plaintext"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "stream.decrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/tpm.attest",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.attest",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:sha2-384"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-provider",
-        "apg:constraint/pin-channel",
-        "apg:constraint/tpm-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/tpm-provider",
+        "ipg:constraint/pin-channel",
+        "ipg:constraint/tpm-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Certify an identity's TPM keys with the TPM's attestation key and write evidence for a verifier",
       "deterministic": false,
@@ -3452,34 +3452,34 @@
       ],
       "id": "tpm.attest",
       "inputs": [
-        "apg:TpmKeyFile",
-        "apg:TokenPin"
+        "ipg:TpmKeyFile",
+        "ipg:TokenPin"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_attest",
+      "mcp_tool": "ipg_tpm_attest",
       "optional_inputs": [],
       "outputs": [
-        "apg:TpmEvidence"
+        "ipg:TpmEvidence"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.attest"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/tpm.attestation.challenge",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.attestation.challenge",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:sha2-384"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-attestation",
-        "apg:constraint/identity-pin",
-        "apg:constraint/verifier-secret",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/tpm-attestation",
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/verifier-secret",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Verify TPM key evidence against manufacturer roots and issue a one-time credential challenge to the TPM's endorsement key",
       "deterministic": false,
@@ -3511,33 +3511,33 @@
       ],
       "id": "tpm.attestation.challenge",
       "inputs": [
-        "apg:TpmEvidence",
-        "apg:TrustAnchors",
-        "apg:Fingerprint"
+        "ipg:TpmEvidence",
+        "ipg:TrustAnchors",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_attestation_challenge",
+      "mcp_tool": "ipg_tpm_attestation_challenge",
       "optional_inputs": [],
       "outputs": [
-        "apg:TpmChallenge",
-        "apg:TpmChallengeSecret",
-        "apg:AttestationReport"
+        "ipg:TpmChallenge",
+        "ipg:TpmChallengeSecret",
+        "ipg:AttestationReport"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.attestation.challenge"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/tpm.attestation.respond",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.attestation.respond",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-provider",
-        "apg:constraint/tpm-attestation",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/tpm-provider",
+        "ipg:constraint/tpm-attestation",
+        "ipg:constraint/no-clobber"
       ],
       "description": "Release the challenge credential with TPM2_ActivateCredential, proving the attestation and endorsement keys share a TPM",
       "deterministic": false,
@@ -3569,33 +3569,33 @@
       ],
       "id": "tpm.attestation.respond",
       "inputs": [
-        "apg:TpmEvidence",
-        "apg:TpmChallenge"
+        "ipg:TpmEvidence",
+        "ipg:TpmChallenge"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_attestation_respond",
+      "mcp_tool": "ipg_tpm_attestation_respond",
       "optional_inputs": [],
       "outputs": [
-        "apg:TpmAttestationResponse"
+        "ipg:TpmAttestationResponse"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.attestation.respond"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/tpm.attestation.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/tpm.attestation.verify",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:sha2-256",
         "ic:sha2-384"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/tpm-attestation",
-        "apg:constraint/identity-pin",
-        "apg:constraint/verifier-secret"
+        "ipg:constraint/tpm-attestation",
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/verifier-secret"
       ],
       "description": "Verify the evidence and the activated credential: the identity's keys are resident, non-exportable keys of a manufacturer-certified TPM",
       "deterministic": false,
@@ -3626,37 +3626,37 @@
       ],
       "id": "tpm.attestation.verify",
       "inputs": [
-        "apg:TpmEvidence",
-        "apg:TpmAttestationResponse",
-        "apg:TpmChallengeSecret",
-        "apg:TrustAnchors",
-        "apg:Fingerprint"
+        "ipg:TpmEvidence",
+        "ipg:TpmAttestationResponse",
+        "ipg:TpmChallengeSecret",
+        "ipg:TrustAnchors",
+        "ipg:Fingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_tpm_attestation_verify",
+      "mcp_tool": "ipg_tpm_attestation_verify",
       "optional_inputs": [],
       "outputs": [
-        "apg:AttestationReport"
+        "ipg:AttestationReport"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "tpm.attestation.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/openpgp.key.generate",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.key.generate",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:argon2id",
         "ic:chacha20-poly1305"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/openpgp-user-id"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/openpgp-user-id"
       ],
       "description": "Create a v4 (default) or v6 OpenPGP key (Ed25519 or P-384), sealed under a passphrase; v4 supports existing GnuPG correspondents",
       "deterministic": false,
@@ -3688,40 +3688,40 @@
       ],
       "id": "openpgp.key.generate",
       "inputs": [
-        "apg:OpenpgpUserId",
-        "apg:Passphrase"
+        "ipg:OpenpgpUserId",
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_key_generate",
+      "mcp_tool": "ipg_openpgp_key_generate",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpKeyFile",
-        "apg:OpenpgpFingerprint"
+        "ipg:OpenpgpKeyFile",
+        "ipg:OpenpgpFingerprint"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.key.generate"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.key.import",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.key.import",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:argon2id",
         "ic:chacha20-poly1305"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-pin",
-        "apg:constraint/openpgp-secret-import",
-        "apg:constraint/openpgp-certificate-policy",
-        "apg:constraint/openpgp-user-id",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-pin",
+        "ipg:constraint/openpgp-secret-import",
+        "ipg:constraint/openpgp-certificate-policy",
+        "ipg:constraint/openpgp-user-id",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
       ],
-      "description": "Import one pinned v4 or v6 Ed25519/Curve25519 or P-384 signing primary and encryption subkey, validating bounded protection and private/public consistency before sealing under an APG passphrase",
+      "description": "Import one pinned v4 or v6 Ed25519/Curve25519 or P-384 signing primary and encryption subkey, validating bounded protection and private/public consistency before sealing under an IPG passphrase",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -3752,34 +3752,34 @@
       ],
       "id": "openpgp.key.import",
       "inputs": [
-        "apg:OpenpgpSecretKey",
-        "apg:OpenpgpFingerprint",
-        "apg:OpenpgpSourcePassword",
-        "apg:Passphrase"
+        "ipg:OpenpgpSecretKey",
+        "ipg:OpenpgpFingerprint",
+        "ipg:OpenpgpSourcePassword",
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_key_import",
+      "mcp_tool": "ipg_openpgp_key_import",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpKeyFile",
-        "apg:OpenpgpFingerprint"
+        "ipg:OpenpgpKeyFile",
+        "ipg:OpenpgpFingerprint"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.key.import"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.cert.export",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.cert.export",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/no-clobber"
       ],
-      "description": "Write the ASCII-armored OpenPGP certificate of an APG-held OpenPGP key",
+      "description": "Write the ASCII-armored OpenPGP certificate of an IPG-held OpenPGP key",
       "deterministic": true,
       "effects": [
         "read_file",
@@ -3809,37 +3809,37 @@
       ],
       "id": "openpgp.cert.export",
       "inputs": [
-        "apg:OpenpgpKeyFile"
+        "ipg:OpenpgpKeyFile"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_cert_export",
+      "mcp_tool": "ipg_openpgp_cert_export",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpCertificate",
-        "apg:OpenpgpCertificateReport"
+        "ipg:OpenpgpCertificate",
+        "ipg:OpenpgpCertificateReport"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.cert.export"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.key.export",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.key.export",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:argon2id",
         "ic:chacha20-poly1305"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-pin",
-        "apg:constraint/openpgp-secret-export",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-pin",
+        "ipg:constraint/openpgp-secret-export",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
       ],
-      "description": "Export a pinned APG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase",
+      "description": "Export a pinned IPG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -3870,34 +3870,34 @@
       ],
       "id": "openpgp.key.export",
       "inputs": [
-        "apg:OpenpgpKeyFile",
-        "apg:OpenpgpFingerprint",
-        "apg:Passphrase"
+        "ipg:OpenpgpKeyFile",
+        "ipg:OpenpgpFingerprint",
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_key_export",
+      "mcp_tool": "ipg_openpgp_key_export",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpSecretKey",
-        "apg:OpenpgpFingerprint"
+        "ipg:OpenpgpSecretKey",
+        "ipg:OpenpgpFingerprint"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.key.export"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.cert.inspect",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.cert.inspect",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-certificate-policy",
-        "apg:constraint/openpgp-user-id"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-certificate-policy",
+        "ipg:constraint/openpgp-user-id"
       ],
-      "description": "Evaluate an OpenPGP certificate under APG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
+      "description": "Evaluate an OpenPGP certificate under IPG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
       "deterministic": false,
       "effects": [
         "read_file"
@@ -3926,32 +3926,32 @@
       ],
       "id": "openpgp.cert.inspect",
       "inputs": [
-        "apg:OpenpgpCertificate"
+        "ipg:OpenpgpCertificate"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_cert_inspect",
+      "mcp_tool": "ipg_openpgp_cert_inspect",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpCertificateReport"
+        "ipg:OpenpgpCertificateReport"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.cert.inspect"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/openpgp.encrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.encrypt",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-pin",
-        "apg:constraint/openpgp-certificate-policy",
-        "apg:constraint/no-sender-authentication",
-        "apg:constraint/no-clobber",
-        "apg:constraint/openpgp-size-bound"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-pin",
+        "ipg:constraint/openpgp-certificate-policy",
+        "ipg:constraint/no-sender-authentication",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/openpgp-size-bound"
       ],
       "description": "Encrypt to 1..32 pinned OpenPGP certificates as an armored AES-256 message (SEIPDv1 for v4, SEIPDv2/OCB for v6; mixed sets refused)",
       "deterministic": false,
@@ -3983,39 +3983,39 @@
       ],
       "id": "openpgp.encrypt",
       "inputs": [
-        "apg:Plaintext",
-        "apg:OpenpgpCertificate",
-        "apg:OpenpgpFingerprint"
+        "ipg:Plaintext",
+        "ipg:OpenpgpCertificate",
+        "ipg:OpenpgpFingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_encrypt",
+      "mcp_tool": "ipg_openpgp_encrypt",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpMessage"
+        "ipg:OpenpgpMessage"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.encrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.decrypt",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.decrypt",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:argon2id",
         "ic:chacha20-poly1305"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/authenticate-before-release",
-        "apg:constraint/openpgp-embedded-signatures",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber",
-        "apg:constraint/openpgp-size-bound"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/openpgp-embedded-signatures",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/openpgp-size-bound"
       ],
-      "description": "Decrypt an integrity-protected OpenPGP message with an APG-held OpenPGP key",
+      "description": "Decrypt an integrity-protected OpenPGP message with an IPG-held OpenPGP key",
       "deterministic": true,
       "effects": [
         "read_file",
@@ -4046,36 +4046,36 @@
       ],
       "id": "openpgp.decrypt",
       "inputs": [
-        "apg:OpenpgpMessage",
-        "apg:OpenpgpKeyFile",
-        "apg:Passphrase"
+        "ipg:OpenpgpMessage",
+        "ipg:OpenpgpKeyFile",
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_decrypt",
+      "mcp_tool": "ipg_openpgp_decrypt",
       "optional_inputs": [],
       "outputs": [
-        "apg:Plaintext"
+        "ipg:Plaintext"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.decrypt"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.sign",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.sign",
+      "@type": "ipg:Operation",
       "algorithms": [
         "ic:argon2id",
         "ic:chacha20-poly1305"
       ],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/secret-channel",
-        "apg:constraint/no-clobber"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
       ],
-      "description": "Create an armored detached OpenPGP signature with an APG-held OpenPGP key",
+      "description": "Create an armored detached OpenPGP signature with an IPG-held OpenPGP key",
       "deterministic": false,
       "effects": [
         "read_file",
@@ -4106,34 +4106,34 @@
       ],
       "id": "openpgp.sign",
       "inputs": [
-        "apg:Plaintext",
-        "apg:OpenpgpKeyFile",
-        "apg:Passphrase"
+        "ipg:Plaintext",
+        "ipg:OpenpgpKeyFile",
+        "ipg:Passphrase"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_sign",
+      "mcp_tool": "ipg_openpgp_sign",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpSignature"
+        "ipg:OpenpgpSignature"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.sign"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
-      "@id": "apg:operation/openpgp.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.verify",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-pin",
-        "apg:constraint/openpgp-certificate-policy",
-        "apg:constraint/exact-bytes"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-pin",
+        "ipg:constraint/openpgp-certificate-policy",
+        "ipg:constraint/exact-bytes"
       ],
-      "description": "Verify a detached OpenPGP signature against a pinned certificate under APG policy",
+      "description": "Verify a detached OpenPGP signature against a pinned certificate under IPG policy",
       "deterministic": false,
       "effects": [
         "read_file"
@@ -4162,39 +4162,39 @@
       ],
       "id": "openpgp.verify",
       "inputs": [
-        "apg:Plaintext",
-        "apg:OpenpgpSignature",
-        "apg:OpenpgpCertificate",
-        "apg:OpenpgpFingerprint"
+        "ipg:Plaintext",
+        "ipg:OpenpgpSignature",
+        "ipg:OpenpgpCertificate",
+        "ipg:OpenpgpFingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_verify",
+      "mcp_tool": "ipg_openpgp_verify",
       "optional_inputs": [],
       "outputs": [
-        "apg:OpenpgpVerification"
+        "ipg:OpenpgpVerification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
-      "@id": "apg:operation/openpgp.message.verify",
-      "@type": "apg:Operation",
+      "@id": "ipg:operation/openpgp.message.verify",
+      "@type": "ipg:Operation",
       "algorithms": [],
       "conditional_effects": [
-        "read an APG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host"
+        "read an IPG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host"
       ],
       "constraints": [
-        "apg:constraint/openpgp-boundary",
-        "apg:constraint/openpgp-pin",
-        "apg:constraint/openpgp-certificate-policy",
-        "apg:constraint/openpgp-embedded-signatures",
-        "apg:constraint/openpgp-size-bound",
-        "apg:constraint/authenticate-before-release",
-        "apg:constraint/no-clobber",
-        "apg:constraint/secret-channel"
+        "ipg:constraint/openpgp-boundary",
+        "ipg:constraint/openpgp-pin",
+        "ipg:constraint/openpgp-certificate-policy",
+        "ipg:constraint/openpgp-embedded-signatures",
+        "ipg:constraint/openpgp-size-bound",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/secret-channel"
       ],
       "description": "Verify one embedded OpenPGP document signature against a pinned certificate, optionally decrypting, and publish authenticated literal bytes",
       "deterministic": false,
@@ -4226,29 +4226,29 @@
       ],
       "id": "openpgp.message.verify",
       "inputs": [
-        "apg:OpenpgpMessage",
-        "apg:OpenpgpCertificate",
-        "apg:OpenpgpFingerprint"
+        "ipg:OpenpgpMessage",
+        "ipg:OpenpgpCertificate",
+        "ipg:OpenpgpFingerprint"
       ],
       "key_inputs": [],
-      "mcp_tool": "apg_openpgp_message_verify",
+      "mcp_tool": "ipg_openpgp_message_verify",
       "optional_inputs": [],
       "outputs": [
-        "apg:Plaintext",
-        "apg:OpenpgpVerification"
+        "ipg:Plaintext",
+        "ipg:OpenpgpVerification"
       ],
       "request_schema": {
-        "command": "apg schema",
+        "command": "ipg schema",
         "operation_const": "openpgp.message.verify"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     }
   ],
-  "@id": "apg:knowledgebase",
+  "@id": "ipg:knowledgebase",
   "advisory": true,
   "execution": false,
   "reviewed": "2026-09-28",
-  "scope": "Curated APG application guidance, not exhaustive cryptography coverage",
+  "scope": "Curated IPG application guidance, not exhaustive cryptography coverage",
   "search": {
     "no_match": "No recommendation; consult catalog or refine keywords",
     "operation": "knowledge.search",
@@ -4256,7 +4256,7 @@
     "query": "1..256 Unicode characters, at least one alphanumeric token; case-insensitive AND substring matching over IDs, labels, keywords, goals and operation names"
   },
   "upstream_algorithms": {
-    "meaning": "Primitive availability does not imply APG protocol support",
+    "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
   "version": "1.17.0"

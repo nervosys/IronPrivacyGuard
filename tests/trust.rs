@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto, handle_call,
     lifecycle::{self, RevocationReason},
     trust::{self, TrustPolicy, TrustStore},
@@ -13,7 +13,7 @@ fn key() -> &'static crypto::SecretKey {
 }
 fn call(request: Value) -> (Value, i32) {
     handle_call(
-        &serde_json::to_vec(&json!({"protocol":"apg/1","id":"trust","request":request})).unwrap(),
+        &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"trust","request":request})).unwrap(),
     )
 }
 fn ok(request: Value) -> Value {
@@ -249,7 +249,7 @@ fn cli_policy_parsing_and_snapshot_inspection() {
         &json!({"store":path("store"),"expected_digest":store.digest().unwrap()}),
     )
     .unwrap();
-    let result = std::process::Command::new(env!("CARGO_BIN_EXE_apg"))
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args([
             "encrypt",
             "--recipient",
@@ -320,7 +320,7 @@ fn snapshot_limits_are_enforced() {
     };
     assert_eq!(trust::load(&policy).err().unwrap().code, "limit_exceeded");
     let store = TrustStore {
-        format: "apg-trust-v1".into(),
+        format: "ipg-trust-v1".into(),
         entries: (0..=trust::MAX_IDENTITIES)
             .map(|_| trust::TrustEntry {
                 public: key().public.clone(),
@@ -350,7 +350,7 @@ fn v3_writes_sha384_pins_and_legacy_pins_still_load() {
     load("v3", &digest).unwrap();
 
     let mut legacy = current.clone();
-    legacy.format = "apg-trust-v2".into();
+    legacy.format = "ipg-trust-v2".into();
     let legacy_digest = legacy.digest().unwrap();
     assert_eq!(legacy_digest.len(), 64);
     fs::write(path("v2"), serde_json::to_vec(&legacy).unwrap()).unwrap();

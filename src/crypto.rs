@@ -1,13 +1,13 @@
-//! Versioned native APG formats. All cryptographic primitives come from IronCrypto.
+//! Versioned native IPG formats. All cryptographic primitives come from IronCrypto.
 //!
-//! Three identity suites exist. `apg-public-v1` binds X25519 and Ed25519 keys.
-//! `apg-public-hybrid-v1` combines ML-KEM-768 with X25519 for encryption and ML-DSA-65
+//! Three identity suites exist. `ipg-public-v1` binds X25519 and Ed25519 keys.
+//! `ipg-public-hybrid-v1` combines ML-KEM-768 with X25519 for encryption and ML-DSA-65
 //! with Ed25519 for composite signatures, so both confidentiality and authenticity
 //! survive a break of either component; both suites have passphrase-protected
 //! software secrets.
-//! `apg-public-p384-v1` binds P-384 ECDH and ECDSA keys, the curve hardware tokens
+//! `ipg-public-p384-v1` binds P-384 ECDH and ECDSA keys, the curve hardware tokens
 //! widely support; its private keys are held by a provider such as a PKCS#11 token.
-//! `apg-public-p384-mldsa65-v1` adds an ML-DSA-65 key to the P-384 signing key for
+//! `ipg-public-p384-mldsa65-v1` adds an ML-DSA-65 key to the P-384 signing key for
 //! composite post-quantum signatures, for providers such as AWS KMS that hold
 //! ML-DSA but not ML-KEM keys; its encryption is P-384 only.
 use crate::error::{Error, Result};
@@ -29,22 +29,22 @@ use zeroize::Zeroizing;
 pub const SUITE: &str = "x25519-hkdf-sha256-chacha20poly1305";
 pub const P384_SUITE: &str = "p384-x963kdf-sha384-aes256gcm";
 pub const HYBRID_SUITE: &str = "mlkem768-x25519-hkdf-sha256-chacha20poly1305";
-pub const KEY_FORMAT: &str = "apg-public-v1";
-pub const P384_KEY_FORMAT: &str = "apg-public-p384-v1";
-pub const HYBRID_KEY_FORMAT: &str = "apg-public-hybrid-v1";
-pub const P384_MLDSA_KEY_FORMAT: &str = "apg-public-p384-mldsa65-v1";
-pub const SECRET_FORMAT: &str = "apg-secret-v1";
-pub const HYBRID_SECRET_FORMAT: &str = "apg-secret-hybrid-v1";
+pub const KEY_FORMAT: &str = "ipg-public-v1";
+pub const P384_KEY_FORMAT: &str = "ipg-public-p384-v1";
+pub const HYBRID_KEY_FORMAT: &str = "ipg-public-hybrid-v1";
+pub const P384_MLDSA_KEY_FORMAT: &str = "ipg-public-p384-mldsa65-v1";
+pub const SECRET_FORMAT: &str = "ipg-secret-v1";
+pub const HYBRID_SECRET_FORMAT: &str = "ipg-secret-hybrid-v1";
 pub const ED25519: &str = "ed25519";
 pub const ECDSA_P384: &str = "ecdsa-p384-sha384";
 /// Composite Ed25519 and ML-DSA-65 signatures; both must verify.
 pub const COMPOSITE: &str = "ed25519-mldsa65";
 /// FIPS 204 context string for the ML-DSA half of composite signatures.
-const MLDSA_CONTEXT: &[u8] = b"APG ed25519-mldsa65 v1";
+const MLDSA_CONTEXT: &[u8] = b"IPG ed25519-mldsa65 v1";
 /// Composite ECDSA P-384 and ML-DSA-65 signatures; both must verify.
 pub const P384_MLDSA: &str = "ecdsa-p384-mldsa65";
 /// FIPS 204 context string for the ML-DSA half of `ecdsa-p384-mldsa65` signatures.
-pub const P384_MLDSA_CONTEXT: &[u8] = b"APG ecdsa-p384-mldsa65 v1";
+pub const P384_MLDSA_CONTEXT: &[u8] = b"IPG ecdsa-p384-mldsa65 v1";
 /// Length of the P-384 part of `ecdsa-p384-mldsa65` keys and signatures.
 const P384_POINT_LEN: usize = 97;
 const P384_SIGNATURE_LEN: usize = 96;
@@ -115,7 +115,7 @@ impl Suite {
         }
     }
     /// The suite whose envelope construction this identity uses: P-384 for
-    /// `apg-public-p384-mldsa65-v1`, whose encryption key is a P-384 point.
+    /// `ipg-public-p384-mldsa65-v1`, whose encryption key is a P-384 point.
     pub fn envelope(self) -> Self {
         match self {
             Self::P384MlDsa => Self::P384,
@@ -165,7 +165,7 @@ impl Suite {
             Self::P384MlDsa => P384_SIGNATURE_LEN + mldsa::SIGNATURE_LEN,
         }
     }
-    /// Fingerprint length: SHA-256 for the original apg-public-v1 suite, SHA-384 for
+    /// Fingerprint length: SHA-256 for the original ipg-public-v1 suite, SHA-384 for
     /// the P-384 (CNSA-aligned) and hybrid post-quantum suites.
     pub fn fingerprint_len(self) -> usize {
         match self {
@@ -305,7 +305,7 @@ impl SecretKey {
 impl Envelope {
     /// Validate encoding only. A valid shape is not an authenticated envelope.
     pub fn validate(&self) -> Result<()> {
-        if self.format != "apg-envelope-v1" {
+        if self.format != "ipg-envelope-v1" {
             return Err(Error::new(
                 "invalid_format",
                 "Unsupported envelope format or suite",
@@ -333,7 +333,7 @@ impl Envelope {
 impl Signature {
     /// Check signature representation without authenticating signed content.
     pub fn validate(&self) -> Result<()> {
-        if self.format != "apg-signature-v1" {
+        if self.format != "ipg-signature-v1" {
             return Err(Error::new(
                 "invalid_format",
                 "Unsupported signature format or algorithm",
@@ -403,7 +403,7 @@ fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> String {
         Suite::P384 | Suite::Hybrid | Suite::P384MlDsa => hex::encode(Sha384::digest(&framed)),
     }
 }
-/// Check a fingerprint field: 32-byte (apg-public-v1) or 48-byte (P-384 and hybrid)
+/// Check a fingerprint field: 32-byte (ipg-public-v1) or 48-byte (P-384 and hybrid)
 /// lowercase hexadecimal. Pins then compare exactly, so lengths never mix.
 pub fn check_fingerprint(fingerprint: &str) -> Result<()> {
     let length = if fingerprint.len() == 96 { 48 } else { 32 };
@@ -638,7 +638,7 @@ pub fn unlock_identity(secret: &SecretKey, password: &[u8]) -> Result<SoftwareId
 
 /// FIPS 204 message representative for pure ML-DSA with a context string:
 /// `mu = SHAKE256(SHAKE256(pk, 64) || 0x00 || len(ctx) || ctx || M, 64)`. Providers
-/// such as AWS KMS sign `mu` directly (external mu), so large messages and APG's
+/// such as AWS KMS sign `mu` directly (external mu), so large messages and IPG's
 /// context never cross the provider interface, and the result verifies as an
 /// ordinary pure ML-DSA signature over `M` with that context.
 pub fn mldsa_mu(public_key: &[u8], context: &[u8], message: &[u8]) -> Result<[u8; 64]> {
@@ -780,9 +780,9 @@ pub(crate) fn password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8
 fn secret_aad(p: &PublicKey, salt: &[u8], nonce: &[u8]) -> Result<Vec<u8>> {
     // The hybrid domain keeps the two secret formats from ever sharing AAD.
     let domain = if p.format == HYBRID_KEY_FORMAT {
-        "APG secret hybrid v1 argon2id-m65536-t3-p4"
+        "IPG secret hybrid v1 argon2id-m65536-t3-p4"
     } else {
-        "APG secret v1 argon2id-m65536-t3-p4"
+        "IPG secret v1 argon2id-m65536-t3-p4"
     };
     Ok(frame(domain, &[&serde_json::to_vec(p)?, salt, nonce]))
 }
@@ -861,13 +861,13 @@ pub(crate) fn protect(
         tag: hex::encode(tag),
     })
 }
-/// Unlock an `apg-secret-v1` identity's 64 seed bytes. Hybrid secrets hold 128 seed
+/// Unlock an `ipg-secret-v1` identity's 64 seed bytes. Hybrid secrets hold 128 seed
 /// bytes; use [`unlock_identity`] for any software suite.
 pub fn unlock(secret: &SecretKey, password: &[u8]) -> Result<Zeroizing<[u8; 64]>> {
     if secret.format != SECRET_FORMAT {
         return Err(Error::new(
             "invalid_format",
-            "unlock returns apg-secret-v1 seeds only; use unlock_identity",
+            "unlock returns ipg-secret-v1 seeds only; use unlock_identity",
         ));
     }
     let seeds = unlock_seeds(secret, password)?;
@@ -898,7 +898,7 @@ pub(crate) fn unlock_seeds(secret: &SecretKey, password: &[u8]) -> Result<Zeroiz
 }
 pub(crate) fn envelope_aad(e: &Envelope) -> Vec<u8> {
     frame(
-        "APG envelope v1",
+        "IPG envelope v1",
         &[
             e.suite.as_bytes(),
             e.recipient.as_bytes(),
@@ -926,7 +926,7 @@ fn envelope_key(suite: Suite, shared: &[u8], e: &Envelope) -> Result<Zeroizing<[
     match suite {
         Suite::Curve25519 | Suite::Hybrid => {
             let mut key = Zeroizing::new([0; 32]);
-            Hkdf::<HmacSha256>::derive(shared, b"APG encryption v1", &aad, key.as_mut())?;
+            Hkdf::<HmacSha256>::derive(shared, b"IPG encryption v1", &aad, key.as_mut())?;
             Ok(key)
         }
         Suite::P384 | Suite::P384MlDsa => Ok(x963_kdf_sha384(shared, &p384_shared_info(&aad))),
@@ -1033,7 +1033,7 @@ pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> 
     let (epk, shared) = encapsulate(suite, &p.encryption_key_bytes()?)?;
     let nonce = random::<12>()?;
     let mut e = Envelope {
-        format: "apg-envelope-v1".into(),
+        format: "ipg-envelope-v1".into(),
         suite: suite.envelope_suite().into(),
         recipient: p.fingerprint.clone(),
         ephemeral_key: hex::encode(epk),
@@ -1113,7 +1113,7 @@ pub fn decrypt_with(key: &dyn IdentityKey, e: &Envelope) -> Result<Zeroizing<Vec
 }
 fn signature_message(p: &PublicKey, algorithm: &str, data: &[u8]) -> Zeroizing<Vec<u8>> {
     Zeroizing::new(frame(
-        &format!("APG detached signature v1 {algorithm}"),
+        &format!("IPG detached signature v1 {algorithm}"),
         &[p.fingerprint.as_bytes(), data],
     ))
 }
@@ -1124,7 +1124,7 @@ pub fn sign_with(key: &dyn IdentityKey, data: &[u8]) -> Result<Signature> {
     let public = key.public();
     let algorithm = public.suite()?.signature_algorithm();
     Ok(Signature {
-        format: "apg-signature-v1".into(),
+        format: "ipg-signature-v1".into(),
         signer: public.fingerprint.clone(),
         algorithm: algorithm.into(),
         signature: sign_message(key, &signature_message(public, algorithm, data))?,
@@ -1148,7 +1148,7 @@ pub fn verify(p: &PublicKey, expected: &str, s: &Signature, data: &[u8]) -> Resu
 }
 
 /// A software P-384 identity used only to exercise the provider-generic protocol
-/// in unit tests. APG ships no software P-384 secret-key format.
+/// in unit tests. IPG ships no software P-384 secret-key format.
 #[cfg(test)]
 pub(crate) mod test_identity {
     use super::*;
@@ -1223,7 +1223,7 @@ mod tests {
         let key = alice();
         let public = key.public().clone();
         let mut signature = sign_with(&key, b"content").unwrap();
-        // n - s is an equally valid ECDSA signature; APG accepts only the low-s form.
+        // n - s is an equally valid ECDSA signature; IPG accepts only the low-s form.
         let mut raw = hex_exact(&signature.signature, 96).unwrap();
         let n = hex::decode("ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973").unwrap();
         let mut borrow = 0i16;

@@ -1,4 +1,4 @@
-//! End-to-end tests against a TPM 2.0. They run only when APG_TEST_TPM_TCTI names a
+//! End-to-end tests against a TPM 2.0. They run only when IPG_TEST_TPM_TCTI names a
 //! TPM, for example `swtpm:port=2321` (see scripts/tpm-test.sh).
 //!
 //! Use a DISPOSABLE or simulated TPM: one deliberate wrong-PIN attempt increments
@@ -8,22 +8,22 @@ use serde_json::{Value, json};
 use std::{fs, io::Write, process::Command};
 
 fn tcti() -> Option<String> {
-    let tcti = std::env::var("APG_TEST_TPM_TCTI")
+    let tcti = std::env::var("IPG_TEST_TPM_TCTI")
         .ok()
         .filter(|v| !v.is_empty());
     if tcti.is_none() {
         assert!(
-            std::env::var_os("APG_TEST_TPM_REQUIRED").is_none(),
-            "APG_TEST_TPM_REQUIRED is set but APG_TEST_TPM_TCTI is missing"
+            std::env::var_os("IPG_TEST_TPM_REQUIRED").is_none(),
+            "IPG_TEST_TPM_REQUIRED is set but IPG_TEST_TPM_TCTI is missing"
         );
     }
     tcti
 }
 
 fn run(tcti: &str, args: &[&str], input: &[u8]) -> Value {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(args)
-        .env("APG_TPM_TCTI", tcti)
+        .env("IPG_TPM_TCTI", tcti)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -33,7 +33,7 @@ fn run(tcti: &str, args: &[&str], input: &[u8]) -> Value {
 }
 fn call(tcti: &str, request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"apg/1","id":"tpm","request":request})).unwrap();
+        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"tpm","request":request})).unwrap();
     run(tcti, &["call"], &body)
 }
 fn ok(tcti: &str, request: Value) -> Value {
@@ -50,7 +50,7 @@ fn fails(tcti: &str, request: Value) -> String {
 #[test]
 fn tpm_identity_lifecycle() {
     let Some(tcti) = tcti() else {
-        eprintln!("skipping: set APG_TEST_TPM_TCTI");
+        eprintln!("skipping: set IPG_TEST_TPM_TCTI");
         return;
     };
     eprintln!("live TPM via {tcti}");
@@ -64,7 +64,7 @@ fn tpm_identity_lifecycle() {
     let info = ok(tcti, json!({"operation":"tpm.info"}));
     assert_eq!(
         info["info"]["suites"],
-        json!(["apg-public-p384-v1"]),
+        json!(["ipg-public-p384-v1"]),
         "{info}"
     );
     assert_eq!(info["info"]["owner_auth_empty"], true);
@@ -172,14 +172,14 @@ fn tpm_identity_lifecycle() {
     for message in [
         json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"tpm","version":"1"}}}),
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
-        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"apg_sign","arguments":{"input":path("input"),"output":path("sig-mcp"),"key":path("key"),"passphrase_file":path("pin")}}}),
+        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ipg_sign","arguments":{"input":path("input"),"output":path("sig-mcp"),"key":path("key"),"passphrase_file":path("pin")}}}),
     ] {
         input.extend(serde_json::to_vec(&message).unwrap());
         input.push(b'\n');
     }
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["mcp", "--key-custody", "hardware"])
-        .env("APG_TPM_TCTI", tcti)
+        .env("IPG_TPM_TCTI", tcti)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()

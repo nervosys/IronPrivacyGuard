@@ -59,10 +59,10 @@ pub const MAX_REQUEST_BYTES: u64 = 64 * 1024;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SoftwareIdentity {
     /// X25519 and Ed25519.
-    #[serde(rename = "apg-public-v1")]
+    #[serde(rename = "ipg-public-v1")]
     Classical,
     /// ML-KEM-768 with X25519 for post-quantum confidentiality, and Ed25519 signatures.
-    #[serde(rename = "apg-public-hybrid-v1")]
+    #[serde(rename = "ipg-public-hybrid-v1")]
     Hybrid,
 }
 impl SoftwareIdentity {
@@ -101,7 +101,7 @@ pub enum Request {
     KeyGenerate {
         output: String,
         passphrase_file: String,
-        /// Identity suite; omitted means apg-public-v1.
+        /// Identity suite; omitted means ipg-public-v1.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         identity: Option<SoftwareIdentity>,
     },
@@ -109,8 +109,8 @@ pub enum Request {
     KeyPublic {
         key: String,
         output: String,
-        /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
-        /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
+        /// Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1
+        /// keys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS
         /// credentials.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
@@ -130,8 +130,8 @@ pub enum Request {
         output: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
-        /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
-        /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
+        /// Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1
+        /// keys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS
         /// credentials.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
@@ -158,8 +158,8 @@ pub enum Request {
         input: String,
         output: String,
         key: String,
-        /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
-        /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
+        /// Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1
+        /// keys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS
         /// credentials.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
@@ -169,8 +169,8 @@ pub enum Request {
         input: String,
         output: String,
         key: String,
-        /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
-        /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
+        /// Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1
+        /// keys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS
         /// credentials.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
@@ -191,8 +191,8 @@ pub enum Request {
         output: String,
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
-        /// Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1
-        /// keys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS
+        /// Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1
+        /// keys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS
         /// credentials.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
@@ -310,7 +310,7 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::kms_key_arn")]
         signing_key_arn: String,
         /// Optional ML_DSA_65 SIGN_VERIFY key ARN. With it the identity is
-        /// apg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384
+        /// ipg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384
         /// plus ML-DSA-65; encryption stays P-384 (KMS has no ML-KEM keys).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(schema_with = "crate::contract::optional_kms_key_arn")]
@@ -325,7 +325,7 @@ pub enum Request {
     },
     #[serde(rename = "tpm.key.delete")]
     TpmKeyDelete {
-        /// An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.
+        /// An ipg-cng-key-v1 file; its keys persist in the Windows TPM key store.
         key: String,
         /// The keys' PIN; deletion is refused without it.
         passphrase_file: String,
@@ -343,7 +343,7 @@ pub enum Request {
     },
     #[serde(rename = "stream.decrypt")]
     StreamDecrypt {
-        /// An apg-stream-v1 file.
+        /// An ipg-stream-v1 file.
         input: String,
         output: String,
         key: String,
@@ -370,7 +370,7 @@ pub enum Request {
     },
     #[serde(rename = "tpm.attest")]
     TpmAttest {
-        /// An apg-tpm-key-v1 file (Linux or Windows).
+        /// An ipg-tpm-key-v1 file (Linux or Windows).
         key: String,
         /// The key's PIN.
         passphrase_file: String,
@@ -378,7 +378,7 @@ pub enum Request {
     },
     #[serde(rename = "tpm.attestation.challenge")]
     TpmAttestationChallenge {
-        /// apg-tpm-evidence-v1 from tpm.attest.
+        /// ipg-tpm-evidence-v1 from tpm.attest.
         input: String,
         /// PEM or DER root certificates of accepted TPM manufacturers.
         trust_anchors: String,
@@ -425,7 +425,7 @@ pub enum Request {
     },
     #[serde(rename = "openpgp.key.import")]
     OpenpgpKeyImport {
-        /// One armored or binary transferable secret key in APG's supported profile.
+        /// One armored or binary transferable secret key in IPG's supported profile.
         input: String,
         output: String,
         #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
@@ -437,7 +437,7 @@ pub enum Request {
     },
     #[serde(rename = "openpgp.key.export")]
     OpenpgpKeyExport {
-        /// An APG-held software OpenPGP key, authenticated before export.
+        /// An IPG-held software OpenPGP key, authenticated before export.
         key: String,
         output: String,
         #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
@@ -448,7 +448,7 @@ pub enum Request {
     },
     #[serde(rename = "openpgp.cert.export")]
     OpenpgpCertExport {
-        /// An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.
+        /// An ipg-openpgp-key-v1 file; no passphrase is needed for its public certificate.
         key: String,
         output: String,
     },
@@ -497,7 +497,7 @@ pub enum Request {
         certificate: String,
         #[schemars(schema_with = "crate::contract::openpgp_fingerprint")]
         expected_openpgp_fingerprint: String,
-        /// APG OpenPGP decryption key, required only for encrypted messages.
+        /// IPG OpenPGP decryption key, required only for encrypted messages.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         key: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -665,7 +665,7 @@ pub enum Outcome {
         /// Every secret packet is passphrase protected; no secret bytes enter JSON.
         protected: bool,
     },
-    /// A certificate evaluated under APG policy; `path` is set when one was written.
+    /// A certificate evaluated under IPG policy; `path` is set when one was written.
     OpenpgpCertificate {
         #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
@@ -912,9 +912,9 @@ pub fn schemas() -> Value {
         "$schema":"https://json-schema.org/draft/2020-12/schema",
         "oneOf":[
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","result"],
-             "properties":{"protocol":{"const":"apg/1"},"id":{"type":["string","null"]},"ok":{"const":true},"result":outcome}},
+             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":true},"result":outcome}},
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","error"],
-             "properties":{"protocol":{"const":"apg/1"},"id":{"type":["string","null"]},"ok":{"const":false},"error":schemars::schema_for!(Error)}}
+             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":false},"error":schemars::schema_for!(Error)}}
         ]
     });
     if let Some(definitions) = definitions {
@@ -1480,7 +1480,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let KeyFile::Tpm(key) = load_key(&key)? else {
                 return Err(Error::new(
                     "invalid_request",
-                    "Only apg-tpm-key-v1 identities can be attested; apg-cng-key-v1 keys cannot, so create a new identity with tpm.key.generate",
+                    "Only ipg-tpm-key-v1 identities can be attested; ipg-cng-key-v1 keys cannot, so create a new identity with tpm.key.generate",
                 ));
             };
             host.permit(Custody::Hardware)?;
@@ -1772,11 +1772,11 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             }
             KeyFile::Tpm(_) => Err(Error::new(
                 "invalid_request",
-                "apg-tpm-key-v1 keys exist only in their key file; delete every copy of the file",
+                "ipg-tpm-key-v1 keys exist only in their key file; delete every copy of the file",
             )),
             _ => Err(Error::new(
                 "invalid_request",
-                "tpm.key.delete applies only to apg-cng-key-v1 keys",
+                "tpm.key.delete applies only to ipg-cng-key-v1 keys",
             )),
         },
         Request::TpmInfo {} => Ok(Outcome::TpmInfo {
@@ -1810,13 +1810,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
 pub fn respond(id: Option<String>, result: Result<Outcome>) -> (Value, i32) {
     match result {
         Ok(result) => (
-            json!({"protocol":"apg/1", "id":id, "ok":true, "result":result}),
+            json!({"protocol":"ipg/1", "id":id, "ok":true, "result":result}),
             0,
         ),
         Err(error) => {
             let code = error.exit_code();
             (
-                json!({"protocol":"apg/1", "id":id, "ok":false, "error":error}),
+                json!({"protocol":"ipg/1", "id":id, "ok":false, "error":error}),
                 code,
             )
         }
@@ -1834,10 +1834,10 @@ pub fn parse_call(data: &[u8]) -> Result<Call> {
 pub fn handle_call(data: &[u8]) -> (Value, i32) {
     let call = parse_call(data);
     match call {
-        Ok(call) if call.protocol == "apg/1" => respond(Some(call.id), execute(call.request)),
+        Ok(call) if call.protocol == "ipg/1" => respond(Some(call.id), execute(call.request)),
         Ok(call) => respond(
             Some(call.id),
-            Err(Error::new("invalid_request", "Supported protocol is apg/1")),
+            Err(Error::new("invalid_request", "Supported protocol is ipg/1")),
         ),
         Err(e) => respond(None, Err(e)),
     }

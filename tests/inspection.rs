@@ -1,11 +1,11 @@
-use iron_privacy_guardian::{artifact, crypto, handle_call, trust};
+use iron_privacy_guard::{artifact, crypto, handle_call, trust};
 use serde_json::{Value, json};
 use std::{fs, sync::OnceLock};
 fn fixture() -> &'static Value {
     static V: OnceLock<Value> = OnceLock::new();
     V.get_or_init(|| serde_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
 }
-fn inspect(value: &Value) -> iron_privacy_guardian::error::Result<artifact::Metadata> {
+fn inspect(value: &Value) -> iron_privacy_guard::error::Result<artifact::Metadata> {
     artifact::inspect(&serde_json::to_vec(value).unwrap())
 }
 fn artifacts() -> Vec<Value> {
@@ -27,7 +27,7 @@ fn all_formats_inspect_without_secret_access() {
     for (index, value) in artifacts().iter().enumerate() {
         let path = dir.path().join(index.to_string());
         fs::write(&path, serde_json::to_vec(value).unwrap()).unwrap();
-        let call = json!({"protocol":"apg/1","id":"inspect","request":{"operation":"inspect","input":path}});
+        let call = json!({"protocol":"ipg/1","id":"inspect","request":{"operation":"inspect","input":path}});
         let (response, code) = handle_call(&serde_json::to_vec(&call).unwrap());
         assert_eq!(code, 0, "{response}");
         assert_eq!(response["result"]["structurally_valid"], true);
@@ -75,7 +75,7 @@ fn duplicate_members_are_not_discarded_by_inspection() {
     }
     let secret = serde_json::to_string(&fixture()["secret"]).unwrap();
     let duplicate_nested =
-        secret.replace("\"public\":{", "\"public\":{\"format\":\"apg-public-v1\",");
+        secret.replace("\"public\":{", "\"public\":{\"format\":\"ipg-public-v1\",");
     assert!(artifact::inspect(duplicate_nested.as_bytes()).is_err());
 }
 #[test]
@@ -129,13 +129,10 @@ fn byte_bounds_and_ciphertext_case_match_supported_formats() {
         "limit_exceeded"
     );
     assert_eq!(
-        artifact::inspect(&vec![
-            b' ';
-            iron_privacy_guardian::MAX_FILE_BYTES as usize + 1
-        ])
-        .err()
-        .unwrap()
-        .code,
+        artifact::inspect(&vec![b' '; iron_privacy_guard::MAX_FILE_BYTES as usize + 1])
+            .err()
+            .unwrap()
+            .code,
         "limit_exceeded"
     );
     let mut envelope = fixture()["messages"][8]["envelope"].clone();

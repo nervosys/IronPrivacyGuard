@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "apg-cng"
+name = "ipg-cng"
 version = "0.1.0"
 dependencies = [
  "ic-core",

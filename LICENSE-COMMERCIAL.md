@@ -1,14 +1,14 @@
-# Commercial License for IronPrivacyGuardian
+# Commercial License for IronPrivacyGuard
 
 Copyright (C) 2026 NERVOSYS. All rights reserved.
 
 ## Dual Licensing
 
-IronPrivacyGuardian (APG) is available under two licensing options:
+IronPrivacyGuard (IPG) is available under two licensing options:
 
 ### 1. GNU Affero General Public License v3 (AGPL-3.0-or-later)
 
-The default license for APG is the **GNU Affero General Public License v3**. Under this license:
+The default license for IPG is the **GNU Affero General Public License v3**. Under this license:
 
 - You may freely use, copy, modify, and distribute the software.
 - If you modify the software and make it available over a network (e.g., as a web service), you **must** make the complete source code of your modified version available to users of that service.
@@ -16,7 +16,7 @@ The default license for APG is the **GNU Affero General Public License v3**. Und
 - Full text: [LICENSE](LICENSE)
 
 Note that the network clause has real reach for a cryptographic tool: embedding
-APG in a service that encrypts, signs, or verifies data for remote users, or
+IPG in a service that encrypts, signs, or verifies data for remote users, or
 exposing it to agents through a hosted MCP endpoint, makes that service a
 derivative work, and the AGPL's source-disclosure obligation applies to it.
 
@@ -24,17 +24,17 @@ derivative work, and the AGPL's source-disclosure obligation applies to it.
 
 If the AGPL requirements are incompatible with your use case — for example, if you want to:
 
-- Integrate APG into proprietary/closed-source software or agent platforms
+- Integrate IPG into proprietary/closed-source software or agent platforms
 - Embed it in a shipped product, appliance, firmware image, or hardware device
-- Distribute APG without disclosing your source code
-- Offer APG as part of a hosted/SaaS service without AGPL obligations
+- Distribute IPG without disclosing your source code
+- Offer IPG as part of a hosted/SaaS service without AGPL obligations
 - Use the software under terms that do not require network-use disclosure
 - Receive dedicated support, warranty, or indemnification
 
 Then a **commercial license** is available from NERVOSYS.
 
-APG links [IronCrypto](https://github.com/nervosys/IronCrypto), which is
-dual-licensed on the same terms. A commercial APG deployment that avoids AGPL
+IPG links [IronCrypto](https://github.com/nervosys/IronCrypto), which is
+dual-licensed on the same terms. A commercial IPG deployment that avoids AGPL
 obligations also requires commercial terms for IronCrypto; NERVOSYS can provide
 both under one agreement.
 
@@ -51,9 +51,9 @@ Commercial licenses are available with flexible terms tailored to your needs, in
 
 Neither license is a statement about cryptographic assurance. In particular:
 
-- **No FIPS validation.** Neither APG nor IronCrypto holds a CMVP certificate, and a commercial license does not confer one. Hardware-backed keys use whatever validation the external PKCS#11 module has; APG does not inherit or extend it. See [docs/HARDWARE.md](docs/HARDWARE.md).
-- **No security audit.** The APG protocol and implementation have not been independently reviewed by cryptographers. See [SECURITY.md](SECURITY.md).
-- **No export classification.** Licensing does not determine export-control obligations for encryption software. Obtain your own advice before distributing APG across borders or to restricted parties.
+- **No FIPS validation.** Neither IPG nor IronCrypto holds a CMVP certificate, and a commercial license does not confer one. Hardware-backed keys use whatever validation the external PKCS#11 module has; IPG does not inherit or extend it. See [docs/HARDWARE.md](docs/HARDWARE.md).
+- **No security audit.** The IPG protocol and implementation have not been independently reviewed by cryptographers. See [SECURITY.md](SECURITY.md).
+- **No export classification.** Licensing does not determine export-control obligations for encryption software. Obtain your own advice before distributing IPG across borders or to restricted parties.
 - **Warranty.** The AGPL version is provided without warranty, as stated in the licence. Warranty and indemnification terms, where offered, are set out in the commercial agreement rather than here.
 
 ## Contributor License Agreement (CLA)

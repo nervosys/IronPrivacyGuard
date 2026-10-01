@@ -1,7 +1,7 @@
 # Immutable trust snapshots
 
-APG stores explicitly enrolled public identities and authenticated self-revocation
-certificates in `apg-trust-v3` snapshots. A snapshot is an immutable file. Every
+IPG stores explicitly enrolled public identities and authenticated self-revocation
+certificates in `ipg-trust-v3` snapshots. A snapshot is an immutable file. Every
 update reads a pinned input and publishes a complete new file with no-clobber
 semantics. There is no global keyring, mutable head pointer, or implicit default
 policy.
@@ -23,14 +23,14 @@ first certificate. There is no remove, un-revoke, or identity replacement comman
 Importing an invalid certificate fails even when the identity is already revoked.
 
 Snapshots contain no private seeds or passphrases. Enrollment is a caller trust
-decision; APG does not certify a person's name or organization. Empty snapshots
+decision; IPG does not certify a person's name or organization. Empty snapshots
 trust no identities, and absence of a revocation outside the snapshot proves
 nothing about an identity's global status.
 
 ## Enforcement
 
 `encrypt`, `sign`, and `verify` accept a policy object with a snapshot path and its
-expected digest. APG validates the entire snapshot, verifies every embedded
+expected digest. IPG validates the entire snapshot, verifies every embedded
 certificate, checks the digest pin, requires the operation's identity to be
 enrolled, rejects any retained revocation, and enforces imported validity at host time. Checks happen before payload or
 passphrase reads. For signing, the identity comes from the protected key's public
@@ -50,7 +50,7 @@ the host's pin. This does not turn other operations into policy-governed operati
 use the startup `--allow` list to restrict exposed capabilities. See [MCP.md](MCP.md).
 
 Decryption remains available after retirement for recovery of historical data.
-Governed verification rejects all signatures by a revoked identity because APG
+Governed verification rejects all signatures by a revoked identity because IPG
 has no trusted signing time. Ungoverned verification remains a mathematical
 signature check and reports no policy digest. Rewrapping and certificate creation
 also remain available after retirement.
@@ -61,7 +61,7 @@ The input is never modified; using its path as output fails. Outputs use flushed
 temporary files in the destination directory and exclusive publication. Concurrent
 writers to one destination cannot overwrite each other. Writers to different
 destinations create separate branches. Explicit comparison and merging can
-reconcile their contents; APG does not declare either branch authoritative. The orchestrator must serialize updates to its externally stored
+reconcile their contents; IPG does not declare either branch authoritative. The orchestrator must serialize updates to its externally stored
 current `(path, digest)` pair and detect conflicts before advancing it.
 
 For each update, retain the old trusted pin, verify the successful returned new
@@ -80,13 +80,13 @@ retroactively cancel work authorized against an earlier snapshot.
 
 ## Wire format and commitment
 
-`apg-trust-v1` has `format` and ordered `entries`. Each entry contains `public`
-(the APG public-key object) and `revocation` (a certificate or null). Unknown
+`ipg-trust-v1` has `format` and ordered `entries`. Each entry contains `public`
+(the IPG public-key object) and `revocation` (a certificate or null). Unknown
 fields, duplicate identities, mismatched keys and invalid certificates fail.
 The maximum is 256 identities; policy reads are bounded at 8 MiB.
 
 Digest = lowercase SHA-256 hex of
-`frame("APG trust snapshot v1", [canonical snapshot JSON bytes])`, using the
+`frame("IPG trust snapshot v1", [canonical snapshot JSON bytes])`, using the
 length framing specified in [FORMAT.md](FORMAT.md). Canonical JSON is compact,
 with object keys in declared Rust/format order: snapshot `format, entries`; entry
 `public, revocation`; nested keys use the order in FORMAT.md. Entry array order is
@@ -121,7 +121,7 @@ alongside `policy_digest` (both null without policy). The host must protect cloc
 integrity. Verification applies current eligibility, not alleged signature time;
 decryption remains available after expiry.
 
-V2 uses domain `APG trust snapshot v2` for its commitment. Entry field order is
+V2 uses domain `IPG trust snapshot v2` for its commitment. Entry field order is
 `public, revocation, validity`; absent validity is omitted (not emitted as null).
 Validity fields use the declared order in FORMAT.md. V1 rejects non-null validity;
 its canonical bytes and digest are unchanged.
@@ -131,9 +131,9 @@ all eligibility constraints at a specified time.
 
 ## v3 snapshots: SHA-384 commitments
 
-`apg-trust-v3` has exactly the v2 structure and canonical JSON rules, but its
+`ipg-trust-v3` has exactly the v2 structure and canonical JSON rules, but its
 digest is lowercase SHA-384 hex (96 characters) of
-`frame("APG trust snapshot v3", [canonical snapshot JSON bytes])`. This matches
+`frame("IPG trust snapshot v3", [canonical snapshot JSON bytes])`. This matches
 the SHA-384 fingerprints of P-384 and hybrid identities, so a CNSA-style P-384
 deployment uses SHA-384 throughout.
 
@@ -184,7 +184,7 @@ Merge rules:
 - Keep a validity certificate if only one side has it. For nested windows retain
   the narrower signed certificate; equal windows retain the base certificate.
 - Partially overlapping or disjoint windows fail with `merge_conflict` (exit 3),
-  even for revoked identities. APG never fabricates an unsigned intersection.
+  even for revoked identities. IPG never fabricates an unsigned intersection.
   A signer can resolve an overlap by issuing a window contained in both and
   importing it into one branch. Disjoint windows require a new identity.
 - Publish v3 regardless of the input formats. Existing canonical formats and their
@@ -205,10 +205,10 @@ keyring, conflict-free replicated store, or rollback-protected publication servi
 Example native request:
 
 ```json
-{"protocol":"apg/1","id":"merge-1","request":{"operation":"trust.merge","base":{"store":"base.json","expected_digest":"<trusted base digest>"},"incoming":{"store":"branch.json","expected_digest":"<trusted branch digest>"},"output":"merged.json"}}
+{"protocol":"ipg/1","id":"merge-1","request":{"operation":"trust.merge","base":{"store":"base.json","expected_digest":"<trusted base digest>"},"incoming":{"store":"branch.json","expected_digest":"<trusted branch digest>"},"output":"merged.json"}}
 ```
 
 The CLI accepts `--base`, `--candidate`, and `--incoming` as JSON objects, like
-`--policy`. MCP exposes `apg_trust_compare` and `apg_trust_merge`; hosts can exclude
+`--policy`. MCP exposes `ipg_trust_compare` and `ipg_trust_merge`; hosts can exclude
 them with the existing operation allowlist. Merge never replaces the MCP host's
 pinned policy or makes a newly enrolled key available to that session implicitly.

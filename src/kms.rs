@@ -1,4 +1,4 @@
-//! AWS KMS backend. Private keys stay in KMS; APG sends digests to sign and peer
+//! AWS KMS backend. Private keys stay in KMS; IPG sends digests to sign and peer
 //! public keys to agree with. Requests use SigV4 with the host's AWS credentials over
 //! TLS from rustls with IronCrypto's provider, so no C code is compiled.
 //!
@@ -169,7 +169,7 @@ pub(crate) fn unix_time(text: &str) -> Option<u64> {
 /// IAM Identity Center credentials for a profile in `AWS_CONFIG_FILE` or
 /// `~/.aws/config` with `sso_account_id`, `sso_role_name` and either an
 /// `sso_session` or legacy `sso_start_url`/`sso_region`. Uses the token cached by
-/// `aws sso login`; APG never refreshes or creates SSO tokens.
+/// `aws sso login`; IPG never refreshes or creates SSO tokens.
 fn sso_credentials() -> Result<Option<Credentials>> {
     let env = |name| std::env::var(name).ok().filter(|v: &String| !v.is_empty());
     let Some(config) = env("AWS_CONFIG_FILE")
@@ -590,12 +590,12 @@ struct Endpoint {
 }
 /// The regional (or FIPS) endpoint, unless the host overrides it. Overrides without
 /// TLS are accepted only for loopback test services.
-/// Resolve a service endpoint: a host override (`APG_KMS_ENDPOINT`, or the SDK's
+/// Resolve a service endpoint: a host override (`IPG_KMS_ENDPOINT`, or the SDK's
 /// `AWS_ENDPOINT_URL_STS`), else the regional or FIPS endpoint. Overrides without TLS
 /// are accepted only for loopback test services.
 fn endpoint(service: &str, region: &str, partition: &str) -> Result<Endpoint> {
     let variable = if service == "kms" {
-        "APG_KMS_ENDPOINT"
+        "IPG_KMS_ENDPOINT"
     } else {
         "AWS_ENDPOINT_URL_STS"
     };
@@ -626,7 +626,7 @@ fn endpoint(service: &str, region: &str, partition: &str) -> Result<Endpoint> {
         }
         return Ok(Endpoint { tls, host, port });
     }
-    let fips = std::env::var("APG_KMS_FIPS").is_ok_and(|v| v == "1");
+    let fips = std::env::var("IPG_KMS_FIPS").is_ok_and(|v| v == "1");
     let suffix = if partition == "aws-cn" {
         "amazonaws.com.cn"
     } else {
@@ -685,7 +685,7 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
             .trim()
             .to_string(),
     );
-    let session = env("AWS_ROLE_SESSION_NAME").unwrap_or_else(|| "apg".into());
+    let session = env("AWS_ROLE_SESSION_NAME").unwrap_or_else(|| "ipg".into());
     let body = Zeroizing::new(format!(
         "Action=AssumeRoleWithWebIdentity&Version=2011-06-15&RoleArn={}&RoleSessionName={}&WebIdentityToken={}",
         form(&role),
@@ -1059,7 +1059,7 @@ impl IdentityKey for KmsIdentity {
             der_signature(&unbase64(response["Signature"].as_str().unwrap_or(""))?)?;
         if let Some((arn, public_key)) = &self.mldsa {
             // KMS signs the FIPS 204 message representative (external mu), which
-            // carries APG's context; the result is a pure ML-DSA signature over the
+            // carries IPG's context; the result is a pure ML-DSA signature over the
             // framed message.
             let mu = crypto::mldsa_mu(public_key, crypto::P384_MLDSA_CONTEXT, message)?;
             let response = self.client.call(

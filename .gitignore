@@ -2,7 +2,7 @@
 /.upstream/
 /.interop-venv/
 __pycache__/
-*.apg-secret.json
+*.ipg-secret.json
 /fuzz/target/
 /fuzz/corpus/
 /fuzz/artifacts/

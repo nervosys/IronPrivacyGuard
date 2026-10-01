@@ -1,6 +1,6 @@
 """V6 signed-message security tests with independently wrapped PyCA encryption.
 
-Document signatures are made by APG and independently verified by the caller.
+Document signatures are made by IPG and independently verified by the caller.
 Packet composition, compression, key wrapping and AEAD are external test code.
 """
 import os
@@ -8,6 +8,11 @@ from pathlib import Path
 import zlib
 
 from openpgp_aead_reference import literal, packet, packets, seal_data, wrap_session
+
+
+def raw_deflate(value):
+    compressor = zlib.compressobj(wbits=-15)
+    return compressor.compress(value) + compressor.flush()
 
 
 def embedded(signature, fingerprint, document):
@@ -29,7 +34,7 @@ def exercise_signed(call, path, cases, document):
         signature, key = case["signature"], case["key"]
         signed = embedded(signature, bytes.fromhex(key["fingerprint"]), document)
         forms = {"binary": signed,
-                 "zip": packet(8, b"\x01" + zlib.compress(signed, wbits=-15)),
+                 "zip": packet(8, b"\x01" + raw_deflate(signed)),
                  "zlib": packet(8, b"\x02" + zlib.compress(signed))}
         signer_args = {"certificate": path(signer + ".asc"),
                        "expected_openpgp_fingerprint": key["fingerprint"]}

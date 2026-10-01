@@ -1,8 +1,8 @@
 # Schema guarantees and preflight validation
 
-APG derives its request, result and artifact schemas from Rust definitions.
+IPG derives its request, result and artifact schemas from Rust definitions.
 Shared schema helpers encode static constraints using the same protocol constants
-as runtime validation. `apg schema`, MCP tool input schemas and the checked-in
+as runtime validation. `ipg schema`, MCP tool input schemas and the checked-in
 `schemas/` exports expose these constraints. They use JSON Schema Draft 2020-12.
 
 Agents should validate candidate calls before execution. Successful schema
@@ -11,7 +11,7 @@ not establish authenticity, identity, authorization or expected execution succes
 
 ## Encoded constraints
 
-- Native Call protocol is exactly `apg/1`.
+- Native Call protocol is exactly `ipg/1`.
 - Artifact version, suite, KDF, signature algorithm and certificate scope fields
   use fixed values. Trust stores accept only v1 and v2.
 - Fingerprint and digest pins, public keys, nonces, salts, signatures, tags and
@@ -51,7 +51,7 @@ without reading files. It is not a full-schema validation endpoint, an authentic
 check, an output reservation or an authorization decision. Its response explicitly
 states that semantic constraints, files and secrets were not checked. Callers
 wanting general JSON Schema validation must use a Draft 2020-12 validator.
-APG-specific built-in preflight is described below.
+IPG-specific built-in preflight is described below.
 
 Artifact inspection also does not imply authenticity: `authenticated` remains
 false. Never use schema acceptance or inspection in place of verification.
@@ -95,16 +95,16 @@ Diagnostics do not echo supplied field values or unknown field names.
 
 It checks typed operation shape, required and unknown fields, value types,
 fingerprint/digest syntax, Unix-time bounds, and `not_before < not_after`.
-Nested plans are checked recursively. This is APG-specific preflight, not a
+Nested plans are checked recursively. This is IPG-specific preflight, not a
 validator for arbitrary JSON Schemas or artifact documents. A Call envelope is
 not a candidate Request and fails the shape check.
 
 ```json
-{"protocol":"apg/1","id":"preflight-1","request":{"operation":"request.validate","request":{"operation":"hash","input":"message.bin"}}}
+{"protocol":"ipg/1","id":"preflight-1","request":{"operation":"request.validate","request":{"operation":"hash","input":"message.bin"}}}
 ```
 
-CLI: `apg request validate --request '{"operation":"hash","input":"message.bin"}'`.
-MCP: `apg_request_validate` with the candidate in its `request` argument.
+CLI: `ipg request validate --request '{"operation":"hash","input":"message.bin"}'`.
+MCP: `ipg_request_validate` with the candidate in its `request` argument.
 
 A completed validation returns native `ok: true`, exit 0 and MCP `isError: false`,
 including when the candidate is invalid. **Read `validation.valid`** before using
@@ -148,7 +148,7 @@ passphrase is processed. They are not substitutes for cryptographic verification
 ## Raw JSON ambiguity
 
 JSON Schema operates on parsed values and cannot detect duplicate members already
-discarded by a parser. APG therefore rejects repeated decoded names in native and
+discarded by a parser. IPG therefore rejects repeated decoded names in native and
 MCP control input and JSON-valued CLI flags before building those values. This
 includes the arbitrary JSON accepted by `request.validate`. Matching values and
 escaped spellings do not bypass the check. A duplicate is a transport/format error,

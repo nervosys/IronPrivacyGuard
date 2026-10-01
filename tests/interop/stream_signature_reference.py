@@ -1,4 +1,4 @@
-"""Independent PyCA oracle for apg-stream-signature-v1; PUBLIC test keys only."""
+"""Independent PyCA oracle for ipg-stream-signature-v1; PUBLIC test keys only."""
 import argparse
 import hashlib
 import json
@@ -20,7 +20,7 @@ def payload(length):
 
 
 def message(signature):
-    return v1.frame("APG stream signature v1 " + signature["algorithm"],
+    return v1.frame("IPG stream signature v1 " + signature["algorithm"],
                     signature["signer"].encode(), signature["digest_algorithm"].encode(),
                     signature["bytes"].to_bytes(8, "big"), bytes.fromhex(signature["digest"]))
 
@@ -39,7 +39,7 @@ def suites():
 
 
 def make_signature(public, algorithm, sign, data):
-    result = {"format":"apg-stream-signature-v1", "signer":public["fingerprint"],
+    result = {"format":"ipg-stream-signature-v1", "signer":public["fingerprint"],
               "algorithm":algorithm, "digest_algorithm":"sha2-384",
               "digest":hashlib.sha384(data).hexdigest(), "bytes":len(data)}
     result["signature"] = sign(message(result)).hex()
@@ -71,7 +71,7 @@ def exercise(executable, fixture):
             target.write_bytes(value if isinstance(value, bytes) else json.dumps(value).encode())
             return str(target)
         def call(operation, failure=False, **args):
-            request = {"protocol":"apg/1", "id":"stream-oracle", "request":{"operation":operation, **args}}
+            request = {"protocol":"ipg/1", "id":"stream-oracle", "request":{"operation":operation, **args}}
             result = subprocess.run([str(executable),"call"], input=json.dumps(request).encode(), capture_output=True, timeout=120)
             response = json.loads(result.stdout)
             assert response["ok"] != failure, response
@@ -90,7 +90,7 @@ def exercise(executable, fixture):
                 changed = bytearray.fromhex(signature["signature"]); changed[offset] ^= 1
                 put("signature", dict(signature, signature=changed.hex()))
                 call("stream.verify", failure=True, **args)
-        # APG -> PyCA for software suites, beyond the ordinary file limit.
+        # IPG -> PyCA for software suites, beyond the ordinary file limit.
         large = payload(32 * 1024 * 1024 + 1)
         input_path = put("large", large)
         for name, public, _, _, verify in suites()[:2]:
@@ -109,11 +109,11 @@ def exercise(executable, fixture):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-vectors", action="store_true")
-    parser.add_argument("--apg", type=Path)
+    parser.add_argument("--ipg", type=Path)
     args = parser.parse_args()
     if args.write_vectors:
         FIXTURE.write_bytes(json.dumps(vectors(), indent=2).encode() + b"\n")
     fixture = json.loads(FIXTURE.read_bytes())
     check(fixture)
-    if args.apg:
-        exercise(args.apg.resolve(), fixture)
+    if args.ipg:
+        exercise(args.ipg.resolve(), fixture)

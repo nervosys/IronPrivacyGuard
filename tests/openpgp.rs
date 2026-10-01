@@ -1,7 +1,7 @@
 //! OpenPGP boundary: round trips, pins, tampering and policy that need no GnuPG.
 //! GnuPG interoperability and live independent certificate construction are
 //! covered by tests/interop; public PyCA policy fixtures are replayed here.
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     Request, execute_with,
     mcp::{Config, tool_catalog},
     provider::Host,
@@ -350,7 +350,7 @@ fn independent_primary_policy_fixtures_gate_strong_subkeys() {
             );
             for key in &keys[1..] {
                 assert!(key["issues"].as_array().unwrap().iter().any(|issue|
-                    issue == "primary key algorithm is not accepted by APG policy"), "{name}");
+                    issue == "primary key algorithm is not accepted by IPG policy"), "{name}");
             }
         }
         let verified = call(json!({"operation":"openpgp.verify",
@@ -564,7 +564,7 @@ fn openpgp_operations_fail_closed_without_the_feature() {
     fs::write(
         f.path("sealed-key"),
         serde_json::to_vec(&json!({
-            "format":"apg-openpgp-key-v1", "fingerprint":"00".repeat(20), "algorithm":"ed25519",
+            "format":"ipg-openpgp-key-v1", "fingerprint":"00".repeat(20), "algorithm":"ed25519",
             "user_id":"Test <test@example.test>", "certificate":"00", "ciphertext":"00",
             "kdf":"argon2id-m65536-t3-p4", "salt":"00".repeat(16), "nonce":"00".repeat(12),
             "tag":"00".repeat(16)
@@ -612,12 +612,12 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
             .map(|t| t["name"].as_str().unwrap().to_owned())
             .collect()
     };
-    assert!(names(&Config::default()).contains(&"apg_openpgp_encrypt".to_string()));
+    assert!(names(&Config::default()).contains(&"ipg_openpgp_encrypt".to_string()));
     let dir = tempfile::tempdir().unwrap();
     let store = dir.path().join("store.json");
-    let empty = iron_privacy_guardian::trust::TrustStore::default();
+    let empty = iron_privacy_guard::trust::TrustStore::default();
     fs::write(&store, serde_json::to_vec(&empty).unwrap()).unwrap();
-    let policy = iron_privacy_guardian::trust::TrustPolicy {
+    let policy = iron_privacy_guard::trust::TrustPolicy {
         store: store.display().to_string(),
         expected_digest: empty.digest().unwrap(),
     };
@@ -626,14 +626,14 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
         ..Config::default()
     };
     let listed = names(&governed);
-    assert!(listed.contains(&"apg_encrypt".to_string()));
-    assert!(!listed.iter().any(|n| n.starts_with("apg_openpgp_")));
+    assert!(listed.contains(&"ipg_encrypt".to_string()));
+    assert!(!listed.iter().any(|n| n.starts_with("ipg_openpgp_")));
     let explicit = Config {
         policy: Some(policy),
         allowed: Some(["openpgp.verify".to_string()].into()),
         ..Config::default()
     };
-    assert_eq!(names(&explicit), vec!["apg_openpgp_verify".to_string()]);
+    assert_eq!(names(&explicit), vec!["ipg_openpgp_verify".to_string()]);
 }
 
 #[cfg(feature = "openpgp")]
@@ -900,7 +900,7 @@ mod enabled {
             assert!(codes.contains(&code.as_str()), "line {target}: {code}");
             assert!(!std::path::Path::new(&f.path("out")).exists());
         }
-        // A native APG key is never read as OpenPGP, and a plaintext is not a message.
+        // A native IPG key is never read as OpenPGP, and a plaintext is not a message.
         assert!(decrypt("a", "pass", "data").is_err());
 
         // A tampered key file fails authentication before any use.
@@ -930,7 +930,7 @@ mod enabled {
         );
         // Inspection reports the key file's OpenPGP fingerprint without authenticating it.
         let inspected = call(json!({"operation":"inspect","input":f.path("a")})).unwrap();
-        assert_eq!(inspected["format"], "apg-openpgp-key-v1");
+        assert_eq!(inspected["format"], "ipg-openpgp-key-v1");
         assert_eq!(inspected["fingerprint"], a);
     }
 
@@ -940,7 +940,7 @@ mod enabled {
         f.key("a", "ed25519");
         fs::write(f.path("data"), b"x").unwrap();
         let host = Host {
-            custody: iron_privacy_guardian::provider::CustodyPolicy::NonExportable,
+            custody: iron_privacy_guard::provider::CustodyPolicy::NonExportable,
         };
         for request in [
             json!({"operation":"openpgp.key.import","input":f.path("missing"),"output":f.path("imported"),"expected_openpgp_fingerprint":"00".repeat(20),"passphrase_file":f.path("missing"),"new_passphrase_file":f.path("missing")}),
@@ -973,7 +973,7 @@ mod enabled {
         }
         let a = f.key("a", "ed25519");
         let big = std::fs::File::create(f.path("big")).unwrap();
-        big.set_len(iron_privacy_guardian::openpgp::MAX_PLAINTEXT_BYTES + 1)
+        big.set_len(iron_privacy_guard::openpgp::MAX_PLAINTEXT_BYTES + 1)
             .unwrap();
         assert_eq!(
             call(

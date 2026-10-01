@@ -31,7 +31,7 @@
           "type": "string"
         },
         "fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -63,7 +63,7 @@
       "type": "object"
     },
     "Certificate": {
-      "description": "Certificate evaluated under APG policy at `evaluated_at` (host time).",
+      "description": "Certificate evaluated under IPG policy at `evaluated_at` (host time).",
       "properties": {
         "created": {
           "format": "uint64",
@@ -680,7 +680,7 @@
       "type": "object"
     },
     "TpmInfo": {
-      "description": "TPM properties relevant to APG identities.",
+      "description": "TPM properties relevant to IPG identities.",
       "properties": {
         "backend": {
           "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
@@ -845,7 +845,7 @@
           "const": true
         },
         "protocol": {
-          "const": "apg/1"
+          "const": "ipg/1"
         },
         "result": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1363,7 +1363,7 @@
                   "type": "integer"
                 },
                 "fingerprint": {
-                  "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+                  "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
                   "maxLength": 96,
                   "minLength": 64,
                   "not": {
@@ -1516,7 +1516,7 @@
               "type": "object"
             },
             {
-              "description": "A certificate evaluated under APG policy; `path` is set when one was written.",
+              "description": "A certificate evaluated under IPG policy; `path` is set when one was written.",
               "properties": {
                 "certificate": {
                   "$ref": "#/$defs/Certificate"
@@ -1733,7 +1733,7 @@
           "const": false
         },
         "protocol": {
-          "const": "apg/1"
+          "const": "ipg/1"
         }
       },
       "required": [

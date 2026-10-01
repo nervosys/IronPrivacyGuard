@@ -1,8 +1,8 @@
-//! apg-stream-v1: multi-recipient streaming encryption, chunk boundaries and every
+//! ipg-stream-v1: multi-recipient streaming encryption, chunk boundaries and every
 //! way a stream can be altered.
 use ic_core::traits::KeyAgreement;
 use ic_ec::EcdhP384;
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     Request, crypto,
     crypto::{Custody, IdentityKey, PublicKey},
     execute_with,
@@ -41,10 +41,10 @@ impl IdentityKey for FixtureToken {
     fn custody(&self) -> Custody {
         Custody::Hardware
     }
-    fn sign_raw(&self, _: &[u8]) -> iron_privacy_guardian::error::Result<Vec<u8>> {
+    fn sign_raw(&self, _: &[u8]) -> iron_privacy_guard::error::Result<Vec<u8>> {
         unreachable!("streams never sign")
     }
-    fn agree(&self, peer: &[u8]) -> iron_privacy_guardian::error::Result<Zeroizing<Vec<u8>>> {
+    fn agree(&self, peer: &[u8]) -> iron_privacy_guard::error::Result<Zeroizing<Vec<u8>>> {
         let mut shared = Zeroizing::new(vec![0; 48]);
         EcdhP384::agree(&self.encryption, peer, &mut shared)?;
         Ok(shared)
@@ -184,7 +184,7 @@ fn alterations_truncation_and_reordering_are_detected() {
     ]
     .concat();
     assert_eq!(failed(doubled), "invalid_format");
-    assert_eq!(failed(b"APGSTRM2rest".to_vec()), "invalid_format");
+    assert_eq!(failed(b"IPGSTRM2rest".to_vec()), "invalid_format");
 
     // A key that is not a recipient.
     let stranger = software(crypto::Suite::Curve25519);
@@ -204,7 +204,7 @@ fn operations_publish_only_authenticated_plaintext() {
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pass"), PASSWORD).unwrap();
     let mut recipients = Vec::new();
-    for (name, identity) in [("a", "apg-public-v1"), ("b", "apg-public-hybrid-v1")] {
+    for (name, identity) in [("a", "ipg-public-v1"), ("b", "ipg-public-hybrid-v1")] {
         let generated = call(json!({"operation":"key.generate","output":path(name),
             "passphrase_file":path("pass"),"identity":identity}))
         .unwrap();
@@ -224,7 +224,7 @@ fn operations_publish_only_authenticated_plaintext() {
     assert_eq!(sealed["kind"], "stream_encrypted");
     assert_eq!(sealed["recipients"].as_array().unwrap().len(), 2);
     let inspected = call(json!({"operation":"inspect","input":path("sealed")})).unwrap();
-    assert_eq!(inspected["format"], "apg-stream-v1");
+    assert_eq!(inspected["format"], "ipg-stream-v1");
     for (key, out) in [("a", "out-a"), ("b", "out-b")] {
         let opened = call(
             json!({"operation":"stream.decrypt","input":path("sealed"),"output":path(out),

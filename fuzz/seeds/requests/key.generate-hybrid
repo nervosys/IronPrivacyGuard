@@ -1,1 +1,1 @@
-{"protocol":"apg/1","id":"fuzz","request":{"operation":"plan","request":{"operation":"key.generate","output":"MUST-NOT-BE-WRITTEN","passphrase_file":"MUST-NOT-BE-READ","identity":"apg-public-hybrid-v1"}}}
+{"protocol":"ipg/1","id":"fuzz","request":{"operation":"plan","request":{"operation":"key.generate","output":"MUST-NOT-BE-WRITTEN","passphrase_file":"MUST-NOT-BE-READ","identity":"ipg-public-hybrid-v1"}}}
