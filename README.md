@@ -432,7 +432,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/attestation.rs` | Offline attestation verification and tamper rejection with swtpm evidence |
 | `tests/stream.rs`, `tests/vectors_stream.rs` | Stream round trips, chunk boundaries, tampering, and PyCA-made streams |
 | `tests/stream_signatures.rs`, `tests/vectors_stream_signatures.rs` | Any-size signature round trips, tampering, policy and independent all-suite vectors |
-| `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody and MCP exposure |
+| `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody, MCP exposure and independent certificate-policy/work-limit regressions |
 | `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |
 | `tests/vectors_p384.rs` | PyCA-generated P-384 suite vectors |

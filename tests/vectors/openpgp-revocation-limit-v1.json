@@ -1,0 +1,426 @@
+{
+  "provenance": "Public PyCA cryptography 50.0.1 v4/v6 P-384 certificates, bindings, back signatures, revocations and documents; corrupt hash-prefix filler packets; compact repetition recipes; no private material",
+  "document_hex": "5055424c4943207265766f636174696f6e20776f726b2d6c696d697420646f63756d656e7400ff0d0a",
+  "groups": [
+    {
+      "version": 4,
+      "fingerprint": "1de550898a9db6087b5fa7acaa0d813ad0727531",
+      "signing_fingerprint": "4ad84cc94f1ad1e19051885474982523ae7cdb6c",
+      "encryption_fingerprint": "8800c772bf36156f4bdb0c3e02058f67e50f46d5",
+      "parts": {
+        "primary": "c6ff0000006f046abd813213052b81040022030304316439cf0cfb922e4da9cc131603995b16376f29eb8ae48f04836cd4f72649b7307af3b2b8ed7333b382995095363ecf3ee138c66aca9d6e14420705135789d461c1279dc603adbe571adc0929603739c42347f4f40cb7f3dfa5ebdca384a0fc",
+        "uid": "cdff0000002f5055424c494320696e646570656e64656e74207265766f636174696f6e20776f726b2d6c696d697420706f6c696379c2ff0000008e04131309002005826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531029b0100009a2b0180e91abc60e59061ad43e60a0def6a5db944753ba171e560890a225702791bf38bd91d9000b44364ae496ba40df2ee6cc0017f7e162ca76999ad669105998a19663cf61be5d47f0f69800f67df7ca1681fd5eb4ba43c3bc258d218ab6c0515905c31a4",
+        "sign": "ceff0000006f046abd813213052b81040022030304c285885a8c0634c27088b2f0952637a446fcaffb047bad662b9f784bbaaf7acec2f8aa0ce0c02a10ec8eb4dfa61bfa8868aadc7938cc9a583f0c17d3e026095a11b75b57ce505aefb5819f118b74a03155672df2ebf158b56753cdae2332143ac2ff0000011b0418130900ad05826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531029b028c2004191309001d05826abd81321621044ad84cc94f1ad1e19051885474982523ae7cdb6c00000f71017f7109bac5193e3c6af78a61b7e04ef764bec0fa7356f9a6274a8a92299efd53202ee1b865aeaa7d4cd29e9f629a5a1fe10180a16f4b3ffe2275b9f4d59407f58b7f45f6974a1ee081bb69fa6134e7258e7cf3fb853e21ae2c28b09f9177c8d0a58a040000ff5c0180914c2e17f59b94d9669bdf53cec9e1220c682d12acc7a326ba40150b9629b8b6da29094e851364037a47896a3b79647e017e2a2785ee66aa83db7d4fa806225c33101c0e1716fe65e10695ab18b9226495cc15691a0bd2ab61a4954982ac70b8c601",
+        "encrypt": "ceff00000073046abd813212052b8104002203030419852b00771ec736fa59674f5359dc0e0f7c8443f65c784833b86f285dc2fc90e9fd5da8167d9ab104f816b31906ac215d15dd37fee6991a101147d9d84d107d69c1ece6e984181ac6aaa000027f3bf7bff444b18892b339a2dea8caea3ef55603010908c2ff0000008e04181309002005826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531029b0c00009c870180b631d49554d4fd12a691a00cfc07ef37e4461398f7198c32ce42b74b4fa9a7429898714efae8bfe757a53bae14c6ebf0017f70f8a69ad4c33dbec195a676ae9bde2fe0664a3fd40c15f8cc99370e892b14848caf25cd9ba241cf33db7d291f6be4d2"
+      },
+      "junk": {
+        "primary": "c2ff0000008b04201309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531000016530180c1c4b09ae324ed77d8519e1aaf24f661f70bd93bf938c8d78065e11f0a95a32023bfbe84b42bf96bd277e06c16186b0b017f602f7d23d271aee8ea88b393647b2be3b45ee74540595b9a00bf7db188bcaf890957efc5f6df6a7d8d699050c9b8dc20",
+        "uid": "c2ff0000008b04301309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531000016080180ec2d361d6b972e669474e761a55757b67288ff9438246000ac34a874a6f61632344e4503401b0c1468452e4209a8d1c8017e393d2f83467f17fc6563341a3b0736e89c4389d3f5571bb35db9aa037262fff083e28b32ac228f2fdcfc376bf9a31e88",
+        "sign": "c2ff0000008b04281309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad072753100002b7e017f66185748d384edb9adb01e623640a9e441e9492f14f0d8766ae8a9a4deb1946628587cbc61f505edb8336b9556845c35017f57dfecb6809507f761ed7d6a164e527843fa7bd679498ea58989e8a13d9a63c5ea803537c6149bbfffe615bc7ec0c121",
+        "encrypt": "c2ff0000008b04281309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad07275310000bf7e0180e7a723f58c77567080dc1a0aa4c0a8a7d98fe1890b7dbc5e1967a2af6c541d199c87f72062fce9f4c98cd4a0b507d538017f6fe89ef0cc50d0891842afd68de1d1786d5f1d068a51e279b8d45ef5a1705101b541da67019b1309b2bbb0e62b81a68e"
+      },
+      "revocations": {
+        "primary": "c2ff0000008b04201309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531000017530180c1c4b09ae324ed77d8519e1aaf24f661f70bd93bf938c8d78065e11f0a95a32023bfbe84b42bf96bd277e06c16186b0b017f602f7d23d271aee8ea88b393647b2be3b45ee74540595b9a00bf7db188bcaf890957efc5f6df6a7d8d699050c9b8dc20",
+        "uid": "c2ff0000008b04301309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad0727531000017080180ec2d361d6b972e669474e761a55757b67288ff9438246000ac34a874a6f61632344e4503401b0c1468452e4209a8d1c8017e393d2f83467f17fc6563341a3b0736e89c4389d3f5571bb35db9aa037262fff083e28b32ac228f2fdcfc376bf9a31e88",
+        "sign": "c2ff0000008b04281309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad072753100002a7e017f66185748d384edb9adb01e623640a9e441e9492f14f0d8766ae8a9a4deb1946628587cbc61f505edb8336b9556845c35017f57dfecb6809507f761ed7d6a164e527843fa7bd679498ea58989e8a13d9a63c5ea803537c6149bbfffe615bc7ec0c121",
+        "encrypt": "c2ff0000008b04281309001d05826abd81321621041de550898a9db6087b5fa7acaa0d813ad07275310000be7e0180e7a723f58c77567080dc1a0aa4c0a8a7d98fe1890b7dbc5e1967a2af6c541d199c87f72062fce9f4c98cd4a0b507d538017f6fe89ef0cc50d0891842afd68de1d1786d5f1d068a51e279b8d45ef5a1705101b541da67019b1309b2bbb0e62b81a68e"
+      },
+      "signature_hex": "c2ff0000008b04001309001d05826abd81321621044ad84cc94f1ad1e19051885474982523ae7cdb6c00002603017f48650476ef19147129d31f9587eb51487151aa8357fee1a0613fa955d648a0b6a35818c6a137dfc9d2a6ccf24fa3cb130180ddcf482ee70dedf2360829d038a955c6921683bbc01896c129b50e54de37eee8bbee767b88881ae06a1ea908223873dd",
+      "embedded_hex": "c4ff0000000d0300091374982523ae7cdb6c01cbff0000002f6200000000005055424c4943207265766f636174696f6e20776f726b2d6c696d697420646f63756d656e7400ff0d0ac2ff0000008b04001309001d05826abd81321621044ad84cc94f1ad1e19051885474982523ae7cdb6c00002603017f48650476ef19147129d31f9587eb51487151aa8357fee1a0613fa955d648a0b6a35818c6a137dfc9d2a6ccf24fa3cb130180ddcf482ee70dedf2360829d038a955c6921683bbc01896c129b50e54de37eee8bbee767b88881ae06a1ea908223873dd",
+      "cases": [
+        {
+          "name": "baseline",
+          "role": "primary",
+          "junk_count": 0,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 3
+        },
+        {
+          "name": "primary-boundary-live",
+          "role": "primary",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "primary-over-limit-live",
+          "role": "primary",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "primary-boundary-revoked-first",
+          "role": "primary",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": "key_revoked"
+        },
+        {
+          "name": "primary-boundary-revoked-last",
+          "role": "primary",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": "key_revoked"
+        },
+        {
+          "name": "primary-hidden-revocation",
+          "role": "primary",
+          "junk_count": 1024,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1028,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "uid-boundary-live",
+          "role": "uid",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "uid-over-limit-live",
+          "role": "uid",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "uid-boundary-revoked-first",
+          "role": "uid",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": "policy_mismatch",
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "uid-boundary-revoked-last",
+          "role": "uid",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": "policy_mismatch",
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "uid-hidden-revocation",
+          "role": "uid",
+          "junk_count": 1023,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1027,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "sign-boundary-live",
+          "role": "sign",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "sign-over-limit-live",
+          "role": "sign",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "sign-boundary-revoked-first",
+          "role": "sign",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": null
+        },
+        {
+          "name": "sign-boundary-revoked-last",
+          "role": "sign",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": null
+        },
+        {
+          "name": "sign-hidden-revocation",
+          "role": "sign",
+          "junk_count": 1023,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1027,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "encrypt-boundary-live",
+          "role": "encrypt",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "encrypt-over-limit-live",
+          "role": "encrypt",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "encrypt-boundary-revoked-first",
+          "role": "encrypt",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": null,
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "encrypt-boundary-revoked-last",
+          "role": "encrypt",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": null,
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "encrypt-hidden-revocation",
+          "role": "encrypt",
+          "junk_count": 1023,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1027,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        }
+      ]
+    },
+    {
+      "version": 6,
+      "fingerprint": "b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601",
+      "signing_fingerprint": "731e6884a71a043f545732bc97751ff6992203edd2a7c6168b67428aeeca2df6",
+      "encryption_fingerprint": "ed0201a84f962cfb595ce3ec2b1461668f62c416fd82d37cad41ddfb78904258",
+      "parts": {
+        "primary": "c6ff00000073066abd81321300000069052b8104002203030470f6d3eb734ae08af2532c22ae14d4238cf4dcf497866246fa5cbd3571678fa1badfe1e7fa27aa80b086366f3004d735e04b707c742850d401f679cabd8fbbe027ad75826c53ef48d85c865d3f9fe847aa42e262349d729bb196ce5201aa43dbc2ff000000b7061f13090000002c05826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601029b010000000095c31802547e90bf3c531a35f32b5a5574583c8ab8e346cc9f530d0180890531717db159f4510aad395a3a7866217407d10f5bf6b29912b8367a44549fb797f0da0f270dfcd2d7228ff1e89d660180c4269a35e081871e2319f0f6f426d213422125907460ff16c3ff9e8f0d53a9d044169ee562938a331bd50dfd3e1ae731",
+        "uid": "",
+        "sign": "ceff00000073066abd81321300000069052b810400220303048d548a5eb793d050e6689f4d563f4667a0673f224df9c8185b1ac93d975321fa2a5cfe24136348c3fb456d798648097d92707b3066faa7ff2ce58a3bf59516c603110deb6ff79a0915a1be8986f73ce4fc2bc7dd666b2aec792a68de5944a4a8c2ff0000016d06181309000000e205826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601029b02b520061913090000002905826abd8132222106731e6884a71a043f545732bc97751ff6992203edd2a7c6168b67428aeeca2df6000000009c301819347dbdfc56260bcd14939b93501e1bc43b9e5565148b7d017d1b28f7c15662ab872d711f67d0f94c94950ba40d2694391a336d4d281bb6da3430007cc414cf4e8cbfc54f3299c0bdca017e3dae72e3055ac36eccdb9df183ed1b93500252f129ed3a597987b2d2ed8b320d02614f6df82fc1ebac630ec83a426e0300000000444418a34821f46a833c454d5647a951545046d6573c3be2c112ac017d101a3ef8ceacab6f2f6817ef1ad992a565e3f58af7809ee9c60a8d194ef81f51be2b45f47c0e505daebd7595aca549830180dcccb72995c1009ef872749343fbae1f1d88ae54da943e3cf193154a1b005794a386c13a321d64c2185961d8c8ba190b",
+        "encrypt": "ceff00000077066abd8132120000006d052b810400220303046fba208c605581efef82773e4a8fb533a504bd3de53ce234155ed7dc302c0603acbdb9038b704c41cd069bb3b1fabef6cd6c351ed8318c197bffc039b46bfa7fcb17934ef251fe451d6bbd562da4dd94bc72d25dc962ed6fb7214f4f5e70ae3b03010908c2ff000000b7061813090000002c05826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601029b0c00000000b313182e95ef67a54a9c4c3531242c7ec9d52087d92b23bd39fbcd017f4b8340038a6065cc62856b20f9cf34bb4e74cc5b2f75719a7b41a41d723f323d0e212a35af35e8fdf0ec92350b18f048017e298ec01abe91305ecc9017f624c5af08d0fe593d48c1daa5a34a8b6cc82891d83e291e6d29abfa1a4db63dbc2871163a"
+      },
+      "junk": {
+        "primary": "c2ff000000b4062013090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601000000006da618647d129571c4b8426209ff957eddaa9fd20cde4003aaaf110180f3d3d7ce8bf90368b41064539ceef8ae51bdca59a16d9198b789f0e329028d5f636b22ba0e489e2285ee17c17cab462b017f775e7f6f53ca1e96aa47393e400b1d803f48386799caad669c37decf75fc8fd6a0bb73a5cbfa7e1602faa937b3057007",
+        "sign": "c2ff000000b4062813090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a7860100000000d6fd188d8c6713b2ac45fe2121ddff0cacae5c5d09a4e0ce15a74c0180fe6fc4d1d387d94891b12a6385ef76f3157ed2af63acdb4ef49f8ae3ce4061be1d2e6dfbf8be888027dc1065b7fe9e840180c9183b40c8fc366f71c9e714e1d0d42af926ce90265c4e7ad3c8067c3bda74d44e242d2da5339dffc11dfb9f71f7781f",
+        "encrypt": "c2ff000000b4062813090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a7860100000000e9c6189f9c612716c87d71c3d3f3ace85583fc57b8895f582918330180f549a333c47f3c97911d1b78bbc81a5a51672b4f9766463c4ba6f4c7763ce530196d6224822035a5956d4c3379adf0a4017f703390cdbf4dddd453b5d367bd28ca09577c39998f0de083787ba47434b0fc04c458fd1ed13605db23834101546cd64c"
+      },
+      "revocations": {
+        "primary": "c2ff000000b4062013090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a78601000000006ca618647d129571c4b8426209ff957eddaa9fd20cde4003aaaf110180f3d3d7ce8bf90368b41064539ceef8ae51bdca59a16d9198b789f0e329028d5f636b22ba0e489e2285ee17c17cab462b017f775e7f6f53ca1e96aa47393e400b1d803f48386799caad669c37decf75fc8fd6a0bb73a5cbfa7e1602faa937b3057007",
+        "sign": "c2ff000000b4062813090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a7860100000000d7fd188d8c6713b2ac45fe2121ddff0cacae5c5d09a4e0ce15a74c0180fe6fc4d1d387d94891b12a6385ef76f3157ed2af63acdb4ef49f8ae3ce4061be1d2e6dfbf8be888027dc1065b7fe9e840180c9183b40c8fc366f71c9e714e1d0d42af926ce90265c4e7ad3c8067c3bda74d44e242d2da5339dffc11dfb9f71f7781f",
+        "encrypt": "c2ff000000b4062813090000002905826abd8132222106b20af8f4d4ff2d4f94534bca4b3b83fc3a41cb4599341e2245a30e7401a7860100000000e8c6189f9c612716c87d71c3d3f3ace85583fc57b8895f582918330180f549a333c47f3c97911d1b78bbc81a5a51672b4f9766463c4ba6f4c7763ce530196d6224822035a5956d4c3379adf0a4017f703390cdbf4dddd453b5d367bd28ca09577c39998f0de083787ba47434b0fc04c458fd1ed13605db23834101546cd64c"
+      },
+      "signature_hex": "c2ff000000b4060013090000002905826abd8132222106731e6884a71a043f545732bc97751ff6992203edd2a7c6168b67428aeeca2df60000000099fd18cf75843bf6b8efcbcf5842699714b17b59e99921400a6c56017d1fd3b2989b384dbf5190fc1c52ea8d9c6eafe0aca665ed7ff209b5e7837f2b1c98ad4f59434f42259baa508ea017d36a017e3bed95116843a37435d1cbe5cc53614beacb3f3adfb61830f9decf87acdaf8d6feedf2f99e43aa7d42d7ef31217c0370",
+      "embedded_hex": "c4ff0000003e0600091318cf75843bf6b8efcbcf5842699714b17b59e99921400a6c56731e6884a71a043f545732bc97751ff6992203edd2a7c6168b67428aeeca2df601cbff0000004862192e2e2f2e2e2f756e747275737465642d76362d6f7574707574000000005055424c4943207265766f636174696f6e20776f726b2d6c696d697420646f63756d656e7400ff0d0ac2ff000000b4060013090000002905826abd8132222106731e6884a71a043f545732bc97751ff6992203edd2a7c6168b67428aeeca2df60000000099fd18cf75843bf6b8efcbcf5842699714b17b59e99921400a6c56017d1fd3b2989b384dbf5190fc1c52ea8d9c6eafe0aca665ed7ff209b5e7837f2b1c98ad4f59434f42259baa508ea017d36a017e3bed95116843a37435d1cbe5cc53614beacb3f3adfb61830f9decf87acdaf8d6feedf2f99e43aa7d42d7ef31217c0370",
+      "cases": [
+        {
+          "name": "baseline",
+          "role": "primary",
+          "junk_count": 0,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 3
+        },
+        {
+          "name": "primary-boundary-live",
+          "role": "primary",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "primary-over-limit-live",
+          "role": "primary",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "primary-boundary-revoked-first",
+          "role": "primary",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": "key_revoked"
+        },
+        {
+          "name": "primary-boundary-revoked-last",
+          "role": "primary",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": "key_revoked"
+        },
+        {
+          "name": "primary-hidden-revocation",
+          "role": "primary",
+          "junk_count": 1024,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1028,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "sign-boundary-live",
+          "role": "sign",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "sign-over-limit-live",
+          "role": "sign",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "sign-boundary-revoked-first",
+          "role": "sign",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": null
+        },
+        {
+          "name": "sign-boundary-revoked-last",
+          "role": "sign",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": "key_revoked",
+          "encrypt_error": null
+        },
+        {
+          "name": "sign-hidden-revocation",
+          "role": "sign",
+          "junk_count": 1023,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1027,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "encrypt-boundary-live",
+          "role": "encrypt",
+          "junk_count": 1021,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1024
+        },
+        {
+          "name": "encrypt-over-limit-live",
+          "role": "encrypt",
+          "junk_count": 1022,
+          "revoke": false,
+          "revocation_first": false,
+          "total": 1025,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        },
+        {
+          "name": "encrypt-boundary-revoked-first",
+          "role": "encrypt",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": true,
+          "total": 1024,
+          "verify_error": null,
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "encrypt-boundary-revoked-last",
+          "role": "encrypt",
+          "junk_count": 1020,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1024,
+          "verify_error": null,
+          "encrypt_error": "invalid_request"
+        },
+        {
+          "name": "encrypt-hidden-revocation",
+          "role": "encrypt",
+          "junk_count": 1023,
+          "revoke": true,
+          "revocation_first": false,
+          "total": 1027,
+          "inspect_error": "limit_exceeded",
+          "verify_error": "limit_exceeded",
+          "encrypt_error": "limit_exceeded"
+        }
+      ]
+    }
+  ]
+}

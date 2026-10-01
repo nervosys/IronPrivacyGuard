@@ -7,6 +7,9 @@ implemented surface, not feature parity with decades of GPG development.
    security testing and run sustained fuzz campaigns. Independent PyCA vectors
    and bidirectional CLI checks are implemented ([VECTORS.md](VECTORS.md)), as
    are seven boundary fuzz targets and regression replay ([FUZZING.md](FUZZING.md)).
+   OpenPGP v4/v6 testing covers independent AEAD authentication, document signatures,
+   primary-key strength, signing-subkey consent, authenticated metadata and
+   revocation visibility at certificate work limits ([OPENPGP.md](OPENPGP.md)).
    Stabilize APG v1 only after review.
 2. Extend immutable trust snapshots with managed publication, concurrency control,
    and explicit identity assertions. Passphrase rewrapping, certificates,

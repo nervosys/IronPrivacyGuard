@@ -13,6 +13,120 @@ const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
 #[cfg(feature = "openpgp")]
 #[test]
+fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
+    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let f = Fixture::new();
+    fs::write(f.path("limit-document"), &document).unwrap();
+    for group in fixture["groups"].as_array().unwrap() {
+        for (field, file) in [
+            ("signature_hex", "limit-signature"),
+            ("embedded_hex", "limit-embedded"),
+        ] {
+            fs::write(
+                f.path(file),
+                hex::decode(group[field].as_str().unwrap()).unwrap(),
+            )
+            .unwrap();
+        }
+        for case in group["cases"].as_array().unwrap() {
+            let name = format!("v{}-{}", group["version"], case["name"].as_str().unwrap());
+            let decode = |value: &Value| hex::decode(value.as_str().unwrap()).unwrap();
+            let role = case["role"].as_str().unwrap();
+            let mut certificate = Vec::new();
+            for part in ["primary", "uid", "sign", "encrypt"] {
+                certificate.extend(decode(&group["parts"][part]));
+                if part == role {
+                    let junk = decode(&group["junk"][role])
+                        .repeat(case["junk_count"].as_u64().unwrap() as usize);
+                    let revocation = if case["revoke"] == true {
+                        decode(&group["revocations"][role])
+                    } else {
+                        vec![]
+                    };
+                    if case["revocation_first"] == true {
+                        certificate.extend(revocation);
+                        certificate.extend(junk);
+                    } else {
+                        certificate.extend(junk);
+                        certificate.extend(revocation);
+                    }
+                }
+            }
+            assert!(certificate.len() < 1024 * 1024, "{name}");
+            fs::write(f.path("limit-certificate"), certificate).unwrap();
+            let inspected = call(
+                json!({"operation":"openpgp.cert.inspect", "input":f.path("limit-certificate")}),
+            );
+            if let Some(error) = case["inspect_error"].as_str() {
+                assert_eq!(inspected.unwrap_err(), error, "{name}");
+            } else {
+                let report = inspected.unwrap()["certificate"].clone();
+                let revoked = case["revoke"] == true;
+                assert_eq!(
+                    report["usable_for_signing"],
+                    !(revoked && ["primary", "uid", "sign"].contains(&role)),
+                    "{name}"
+                );
+                assert_eq!(
+                    report["usable_for_encryption"],
+                    !(revoked && ["primary", "uid", "encrypt"].contains(&role)),
+                    "{name}"
+                );
+                assert_eq!(report["revoked"], revoked && role == "primary", "{name}");
+            }
+            let verified = call(
+                json!({"operation":"openpgp.verify", "input":f.path("limit-document"),
+                "signature":f.path("limit-signature"), "certificate":f.path("limit-certificate"),
+                "expected_openpgp_fingerprint":group["fingerprint"]}),
+            );
+            if let Some(error) = case["verify_error"].as_str() {
+                assert_eq!(verified.unwrap_err(), error, "{name}");
+            } else {
+                let verified = verified.unwrap();
+                assert_eq!(verified["valid"], true, "{name}");
+                assert_eq!(
+                    verified["verification"]["signing_key"], group["signing_fingerprint"],
+                    "{name}"
+                );
+            }
+            let output = f.path(&format!("{name}.plain"));
+            let verified = call(
+                json!({"operation":"openpgp.message.verify", "input":f.path("limit-embedded"),
+                "output":output, "certificate":f.path("limit-certificate"),
+                "expected_openpgp_fingerprint":group["fingerprint"]}),
+            );
+            if let Some(error) = case["verify_error"].as_str() {
+                assert_eq!(verified.unwrap_err(), error, "{name}");
+                assert!(!std::path::Path::new(&output).exists(), "{name}");
+            } else {
+                assert_eq!(verified.unwrap()["valid"], true, "{name}");
+                assert_eq!(fs::read(&output).unwrap(), document, "{name}");
+            }
+            let output = f.path(&format!("{name}.encrypted"));
+            let encrypted = call(
+                json!({"operation":"openpgp.encrypt", "input":f.path("limit-document"),
+                "output":output, "recipients":[{"certificate":f.path("limit-certificate"),
+                "expected_openpgp_fingerprint":group["fingerprint"]}]}),
+            );
+            if let Some(error) = case["encrypt_error"].as_str() {
+                assert_eq!(encrypted.unwrap_err(), error, "{name}");
+                assert!(!std::path::Path::new(&output).exists(), "{name}");
+            } else {
+                assert_eq!(
+                    encrypted.unwrap()["recipients"][0]["encryption_keys"],
+                    json!([group["encryption_fingerprint"]]),
+                    "{name}"
+                );
+                assert!(std::path::Path::new(&output).exists(), "{name}");
+            }
+        }
+    }
+}
+
+#[cfg(feature = "openpgp")]
+#[test]
 fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
     let fixture: Value =
         serde_json::from_str(include_str!("vectors/openpgp-metadata-policy-v1.json")).unwrap();

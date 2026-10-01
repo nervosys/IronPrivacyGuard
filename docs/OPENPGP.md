@@ -84,6 +84,11 @@ rPGP parses and verifies signatures but leaves OpenPGP semantics to applications
 APG applies this policy to every certificate it reads:
 
 - V4 and v6 certificates are accepted. V4 generation remains the default for compatibility.
+- Certificates must fit within 1 MiB and contain at most 1,024 signatures in total,
+  counting primary revocations, direct-key signatures, User ID and User Attribute
+  certifications, and subkey signatures, including invalid or third-party signatures.
+  Excess is rejected with `limit_exceeded` before evaluation. APG evaluates complete
+  signature lists so added junk cannot hide a valid revocation.
 - A key is usable only with a valid binding self-signature that is in effect at the
   evaluation time and made with SHA-256, SHA-384, SHA-512, SHA3-256 or SHA3-512.
   For v4 the newest valid self-signature sets key flags and expiry, and at least
@@ -199,9 +204,10 @@ decrypts APG messages for both suites, including empty and 65,537-byte content,
 exact chunk boundaries and partial packet lengths. Negative cases alter key
 wrapping, salts, chunk sizes, ciphertext and tags, reorder/duplicate/remove
 chunks, truncate messages and authenticate a deliberately wrong final byte count.
-Every refused message must leave its output path absent. The suite makes 471 CLI
+Every refused message must leave its output path absent. The suite makes 619 CLI
 calls, with 62 independent AEAD checks, 106 signed-message checks, 20 primary
-certificate-policy checks, 72 back-signature checks, 128 metadata-policy checks and 53 PyCA-made
+certificate-policy checks, 72 back-signature checks, 128 metadata-policy checks,
+148 revocation-limit checks and 53 PyCA-made
 signature-policy checks. The signed
 matrix crosses both v6 signer suites with both recipient suites, using binary,
 ZIP and ZLIB messages inside independently constructed PyCA encryption. It
@@ -242,6 +248,14 @@ Accepted controls ignore injected permission and expiry metadata, and encryption
 selects exactly the authenticated encryption subkey. The public
 `tests/vectors/openpgp-metadata-policy-v1.json` fixture replays inspection,
 detached verification, embedded verification and encryption in Rust.
+The `openpgp_revocation_limit_reference.py` helper independently signs v4/v6
+primary-key, signing-subkey and encryption-subkey revocations, plus v4 User ID
+revocations. It checks valid revocations before and after junk signatures at the
+1,024-signature boundary, live controls at that boundary, and refusal above it.
+The compact public `tests/vectors/openpgp-revocation-limit-v1.json` fixture stores
+packet fragments and repetition recipes for Rust replay. Refused verification
+and encryption must leave their output paths absent. These expanded certificates
+exceed the packet fuzzer's 65,537-byte input cap and are covered by stable regressions.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 

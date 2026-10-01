@@ -80,6 +80,10 @@ missing, future and expired consent and preserve historical document verificatio
 when consent was live at signing time. Independent metadata injection checks
 also require authenticated key flags and expiry values: attacker-editable
 unhashed copies cannot grant permissions or extend signed validity periods.
+Certificates are refused before evaluation when their total signature count
+exceeds 1,024. Accepted certificates have complete signature lists considered, preventing
+added junk signatures from hiding a valid revocation beyond a truncated prefix.
+Independent v4/v6 revocation fixtures exercise this boundary without private keys.
 See [OpenPGP interoperability](docs/OPENPGP.md)
 for the tested scope.
 Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation

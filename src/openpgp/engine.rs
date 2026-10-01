@@ -39,8 +39,8 @@ use rand_core::OsRng;
 use std::io::{Cursor, Read};
 use zeroize::Zeroizing;
 
-/// Signatures examined per component; bounds work on hostile certificates.
-const MAX_SIGNATURES: usize = 1024;
+/// Total certificate signatures; reject excess rather than hide revocations.
+const MAX_CERTIFICATE_SIGNATURES: usize = 1024;
 
 /// Public-only packet fuzzing: mode 0 certificates, 1 detached signatures,
 /// 2 unencrypted embedded signatures, 3 framed certificate/document/signature
@@ -358,23 +358,18 @@ struct Evaluation {
 
 fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
     let primary = &cert.primary_key;
-    let revoked = cert
-        .details
-        .revocation_signatures
-        .iter()
-        .take(MAX_SIGNATURES)
-        .any(|s| {
-            s.typ() == Some(SignatureType::KeyRevocation)
-                && signature_hash_allowed(s, primary.public_params())
-                && issued_by(s, primary)
-                && s.verify_key(primary).is_ok()
-        });
+    let revoked = cert.details.revocation_signatures.iter().any(|s| {
+        s.typ() == Some(SignatureType::KeyRevocation)
+            && signature_hash_allowed(s, primary.public_params())
+            && issued_by(s, primary)
+            && s.verify_key(primary).is_ok()
+    });
     let mut user_ids = Vec::new();
     let mut self_signatures: Vec<&Signature> = Vec::new();
     for user in &cert.details.users {
         let mut certification = Vec::new();
         let mut user_revoked = false;
-        for sig in user.signatures.iter().take(MAX_SIGNATURES) {
+        for sig in &user.signatures {
             if !signature_hash_allowed(sig, primary.public_params()) || !issued_by(sig, primary) {
                 continue;
             }
@@ -406,18 +401,13 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
             self_signatures.push(sig);
         }
     }
-    let direct = cert
-        .details
-        .direct_signatures
-        .iter()
-        .take(MAX_SIGNATURES)
-        .filter(|s| {
-            s.typ() == Some(SignatureType::Key)
-                && signature_hash_allowed(s, primary.public_params())
-                && issued_by(s, primary)
-                && live(s, at)
-                && s.verify_key(primary).is_ok()
-        });
+    let direct = cert.details.direct_signatures.iter().filter(|s| {
+        s.typ() == Some(SignatureType::Key)
+            && signature_hash_allowed(s, primary.public_params())
+            && issued_by(s, primary)
+            && live(s, at)
+            && s.verify_key(primary).is_ok()
+    });
     // V6 preferences and key flags belong to direct-key self-signatures; User IDs
     // are optional and their certifications must not override these properties.
     let binding = if primary.version() == KeyVersion::V6 {
@@ -455,26 +445,15 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         let issued = |s: &&Signature| {
             signature_hash_allowed(s, primary.public_params()) && issued_by(s, primary)
         };
-        let binding = newest(
-            sub.signatures
-                .iter()
-                .take(MAX_SIGNATURES)
-                .filter(issued)
-                .filter(|s| {
-                    s.typ() == Some(SignatureType::SubkeyBinding)
-                        && live(s, at)
-                        && s.verify_subkey_binding(primary, key).is_ok()
-                }),
-        );
-        let sub_revoked = sub
-            .signatures
-            .iter()
-            .take(MAX_SIGNATURES)
-            .filter(issued)
-            .any(|s| {
-                s.typ() == Some(SignatureType::SubkeyRevocation)
-                    && s.verify_subkey_binding(primary, key).is_ok()
-            });
+        let binding = newest(sub.signatures.iter().filter(issued).filter(|s| {
+            s.typ() == Some(SignatureType::SubkeyBinding)
+                && live(s, at)
+                && s.verify_subkey_binding(primary, key).is_ok()
+        }));
+        let sub_revoked = sub.signatures.iter().filter(issued).any(|s| {
+            s.typ() == Some(SignatureType::SubkeyRevocation)
+                && s.verify_subkey_binding(primary, key).is_ok()
+        });
         let flags = binding.map(Signature::key_flags);
         let signing = flags.as_ref().is_some_and(KeyFlags::sign);
         // A signing subkey must prove it consents to the binding.
@@ -630,7 +609,34 @@ fn parse_certificate(data: &[u8]) -> Result<SignedPublicKey> {
             "Only v4 and v6 OpenPGP certificates are supported",
         ));
     }
+    check_certificate_signature_limit(&cert)?;
     Ok(cert)
+}
+
+fn check_certificate_signature_limit(cert: &SignedPublicKey) -> Result<()> {
+    let counts = [
+        cert.details.revocation_signatures.len(),
+        cert.details.direct_signatures.len(),
+    ]
+    .into_iter()
+    .chain(cert.details.users.iter().map(|u| u.signatures.len()))
+    .chain(
+        cert.details
+            .user_attributes
+            .iter()
+            .map(|u| u.signatures.len()),
+    )
+    .chain(cert.public_subkeys.iter().map(|s| s.signatures.len()));
+    let mut remaining = MAX_CERTIFICATE_SIGNATURES;
+    for count in counts {
+        remaining = remaining.checked_sub(count).ok_or_else(|| {
+            Error::new(
+                "limit_exceeded",
+                "OpenPGP certificate exceeds 1024 signatures",
+            )
+        })?;
+    }
+    Ok(())
 }
 fn pin(cert: &SignedPublicKey, expected: &str) -> Result<()> {
     if hex_fingerprint(&cert.primary_key) != normalize_fingerprint(expected)? {
@@ -1303,6 +1309,47 @@ impl<K: pgp::types::VerifyingKey> VerifyKey for K {
 mod tests {
     use super::*;
     use pgp::types::CompressionAlgorithm;
+
+    #[test]
+    fn signature_budget_counts_every_collection_and_the_certificate_total() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/vectors/openpgp-revocation-limit-v1.json"
+        ))
+        .unwrap();
+        let group = &fixture["groups"][0];
+        let bytes: Vec<u8> = ["primary", "uid", "sign", "encrypt"]
+            .into_iter()
+            .flat_map(|part| hex::decode(group["parts"][part].as_str().unwrap()).unwrap())
+            .collect();
+        let original = parse_certificate(&bytes).unwrap();
+        let signature = original.details.users[0].signatures[0].clone();
+        for collection in 0..6 {
+            let mut cert = original.clone();
+            cert.details
+                .user_attributes
+                .push(pgp::types::SignedUserAttribute::new(
+                    pgp::packet::UserAttribute::new_image(vec![0xff, 0xd8, 0xff, 0xd9].into())
+                        .unwrap(),
+                    vec![],
+                ));
+            let signatures = match collection {
+                0 => &mut cert.details.revocation_signatures,
+                1 => &mut cert.details.direct_signatures,
+                2 => &mut cert.details.users[0].signatures,
+                3 => &mut cert.details.user_attributes[0].signatures,
+                4 => &mut cert.public_subkeys[0].signatures,
+                _ => &mut cert.public_subkeys[1].signatures,
+            };
+            signatures.extend(std::iter::repeat_n(signature.clone(), 1021));
+            check_certificate_signature_limit(&cert).unwrap();
+            // The total exceeds the budget while each individual list remains below it.
+            cert.details.direct_signatures.push(signature.clone());
+            assert_eq!(
+                check_certificate_signature_limit(&cert).unwrap_err().code,
+                "limit_exceeded"
+            );
+        }
+    }
 
     #[test]
     fn published_rfc9580_v6_certificate_is_usable_without_user_ids() {

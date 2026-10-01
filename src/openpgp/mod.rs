@@ -14,8 +14,8 @@ mod engine;
 
 pub const KEY_FORMAT: &str = "apg-openpgp-key-v1";
 pub const KDF: &str = "argon2id-m65536-t3-p4";
-/// Certificates read from files; keyserver-sized certificates with many
-/// third-party certifications fit.
+/// Certificates read from files; a separate 1024-signature limit bounds
+/// evaluation work, including third-party certifications.
 pub const MAX_CERTIFICATE_BYTES: u64 = 1024 * 1024;
 /// APG-generated certificates and secret keys are small and fixed-shape.
 pub const MAX_OWN_CERTIFICATE_BYTES: usize = 16 * 1024;
