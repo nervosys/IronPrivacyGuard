@@ -7,3 +7,4 @@ __pycache__/
 /fuzz/corpus/
 /fuzz/artifacts/
 /fuzz/coverage/
+/tests/interop/node/node_modules/

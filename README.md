@@ -63,9 +63,10 @@ library, not IronCrypto, for OpenPGP packets and primitives; see
 cargo build --release --locked --features openpgp --target-dir target
 ```
 
-An external MCP integration test uses the official Python SDK to exercise the
-release binary; Python is test tooling only. See [the interoperability check](docs/MCP.md#external-client-interoperability)
-for setup and coverage. CI runs both Rust tests and this SDK check.
+External MCP integration tests use the official Python and TypeScript SDKs to
+exercise the release binary. Python and Node.js are test tooling only. See
+[the interoperability checks](docs/MCP.md#external-client-interoperability)
+for setup and coverage. CI runs Rust tests and both SDK checks.
 
 ## Agent bootstrap
 
