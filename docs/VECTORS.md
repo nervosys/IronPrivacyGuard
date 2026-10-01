@@ -63,9 +63,18 @@ no plaintext or ciphertext output. Rust replay and the live independent helper
 also assert inspection flags, bindings and expiry, plus exact encryption-key
 selection. These checks follow the trust boundary described in
 [RFC 9580 section 13.13](https://www.rfc-editor.org/rfc/rfc9580.html#section-13.13).
-The 471 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
+The [revocation-limit helper](../tests/interop/openpgp_revocation_limit_reference.py)
+constructs independent v4/v6 P-384 primary and subkey revocations and v4 User ID
+revocations. Its [compact public fixture](../tests/vectors/openpgp-revocation-limit-v1.json)
+stores packet fragments and repetition recipes for 37 cases and 148 CLI checks.
+Accepted controls contain exactly 1,024 signatures; valid revocations are honored
+both before and after junk. Above the total signature budget, inspection,
+detached/embedded verification and encryption fail with `limit_exceeded`, leaving
+output absent. Rust also checks that every signature collection contributes to
+the global budget, including User Attributes and direct-key signatures.
+The 619 CLI calls include 62 independent AEAD checks, 106 signed-message checks,
 53 PyCA signature-policy checks, 20 primary certificate-policy checks and
-72 back-signature checks and 128 metadata-policy checks.
+72 back-signature checks, 128 metadata-policy checks and 148 revocation-limit checks.
 APG test keys live in a temporary directory; additional PyCA keys stay in memory.
 The helper independently unseals only disposable APG test keys; no secret material
 is checked in.
@@ -100,6 +109,12 @@ Regenerate the public metadata fixture explicitly:
 
 ```sh
 python tests/interop/openpgp_metadata_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-metadata-policy-v1.json
+```
+
+Regenerate the compact public revocation-limit fixture explicitly:
+
+```sh
+python tests/interop/openpgp_revocation_limit_reference.py --apg target/release/apg --write-fixture tests/vectors/openpgp-revocation-limit-v1.json
 ```
 
 The checked-in [native-v1.json](../tests/vectors/native-v1.json) corpus is generated

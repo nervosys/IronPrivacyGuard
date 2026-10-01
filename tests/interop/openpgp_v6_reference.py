@@ -14,6 +14,7 @@ from openpgp_signature_reference import exercise_signatures
 from openpgp_certificate_reference import exercise_certificates
 from openpgp_backsignature_reference import exercise_backsignatures
 from openpgp_metadata_reference import exercise_metadata
+from openpgp_revocation_limit_reference import exercise_revocation_limits
 
 
 def unarmor(data):
@@ -116,10 +117,11 @@ def exercise(executable, directory, fixture_output=None):
     certificate_checks = exercise_certificates(call, path)
     back_signature_checks = exercise_backsignatures(call, path)
     metadata_checks = exercise_metadata(call, path)
+    revocation_limit_checks = exercise_revocation_limits(call, path)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
             "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks,
             "certificate_policy_checks": certificate_checks, "back_signature_checks": back_signature_checks,
-            "metadata_policy_checks": metadata_checks}
+            "metadata_policy_checks": metadata_checks, "revocation_limit_checks": revocation_limit_checks}
 
 
 if __name__ == "__main__":
