@@ -44,12 +44,19 @@ use zeroize::Zeroizing;
 /// pairs. No filesystem, entropy or password work.
 #[cfg(feature = "fuzzing")]
 pub fn fuzz_packets(input: &[u8]) {
-    if input.len() > 65_537 {
-        return;
-    }
     let Some((&mode, data)) = input.split_first() else {
         return;
     };
+    // Certificate modes reach the product's full public-certificate byte limit.
+    // Keep detached/embedded message modes at their existing smoke-run budget.
+    let limit = if matches!(mode % 4, 0 | 3) {
+        MAX_CERTIFICATE_BYTES as usize + 1
+    } else {
+        65_537
+    };
+    if input.len() > limit {
+        return;
+    }
     // A fixed time makes certificate round-trip comparisons deterministic.
     const AT: u64 = 2_000_000_000;
     if mode % 4 == 3 {

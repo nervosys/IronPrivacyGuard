@@ -255,7 +255,9 @@ revocations. It checks valid revocations before and after junk signatures at the
 The compact public `tests/vectors/openpgp-revocation-limit-v1.json` fixture stores
 packet fragments and repetition recipes for Rust replay. Refused verification
 and encryption must leave their output paths absent. These expanded certificates
-exceed the packet fuzzer's 65,537-byte input cap and are covered by stable regressions.
+are also reproduced as 74 certificate and paired-signature fuzz seeds, within
+the certificate modes' 1,048,577-byte total input budget, and replayed with
+truncations and mutations in stable regressions.
 The GnuPG suite below covers the default v4 compatibility path; it does not
 establish GnuPG v6 interoperability.
 

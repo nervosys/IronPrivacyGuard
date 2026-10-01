@@ -10,7 +10,7 @@ fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
         (u32::MAX, 0),
         (0, u32::MAX),
         (u32::MAX, u32::MAX),
-        (65_536, 65_536),
+        (1_048_576, 1_048_576),
     ] {
         let mut frame = vec![3];
         frame.extend_from_slice(&certificate.to_be_bytes());
@@ -18,11 +18,66 @@ fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
         for length in 0..=frame.len() {
             harness::openpgp_packets(&frame[..length]);
         }
-        frame.resize(65_537, 0xff);
+        frame.resize(1_048_577, 0xff);
         harness::openpgp_packets(&frame);
         frame.push(0);
         harness::openpgp_packets(&frame);
     }
+}
+
+#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[test]
+fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
+    use serde_json::Value;
+    let fixture: Value =
+        serde_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
+    let decode = |value: &Value| hex::decode(value.as_str().unwrap()).unwrap();
+    let document = decode(&fixture["document_hex"]);
+    let mut replayed = 0;
+    let mut large = 0;
+    for group in fixture["groups"].as_array().unwrap() {
+        let signature = decode(&group["signature_hex"]);
+        for case in group["cases"].as_array().unwrap() {
+            let mut certificate = Vec::new();
+            for role in ["primary", "uid", "sign", "encrypt"] {
+                certificate.extend(decode(&group["parts"][role]));
+                if role == case["role"].as_str().unwrap() {
+                    let junk = decode(&group["junk"][role])
+                        .repeat(case["junk_count"].as_u64().unwrap() as usize);
+                    let revocation = if case["revoke"] == true {
+                        decode(&group["revocations"][role])
+                    } else {
+                        vec![]
+                    };
+                    if case["revocation_first"] == true {
+                        certificate.extend(revocation);
+                        certificate.extend(junk);
+                    } else {
+                        certificate.extend(junk);
+                        certificate.extend(revocation);
+                    }
+                }
+            }
+            let mut standalone = vec![0];
+            standalone.extend_from_slice(&certificate);
+            let mut paired = vec![3];
+            paired.extend_from_slice(&(certificate.len() as u32).to_be_bytes());
+            paired.extend_from_slice(&(document.len() as u32).to_be_bytes());
+            paired.extend(certificate);
+            paired.extend_from_slice(&document);
+            paired.extend_from_slice(&signature);
+            for mut frame in [standalone, paired] {
+                assert!(frame.len() <= 1_048_577);
+                large += usize::from(frame.len() > 65_537);
+                replayed += 1;
+                harness::openpgp_packets(&frame);
+                harness::openpgp_packets(&frame[..frame.len() / 2]);
+                *frame.last_mut().unwrap() ^= 0xff;
+                harness::openpgp_packets(&frame);
+            }
+        }
+    }
+    assert_eq!((replayed, large), (74, 70));
 }
 
 #[cfg(feature = "openpgp")]

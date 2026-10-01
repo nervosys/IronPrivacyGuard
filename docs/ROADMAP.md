@@ -10,6 +10,8 @@ implemented surface, not feature parity with decades of GPG development.
    OpenPGP v4/v6 testing covers independent AEAD authentication, document signatures,
    primary-key strength, signing-subkey consent, authenticated metadata and
    revocation visibility at certificate work limits ([OPENPGP.md](OPENPGP.md)).
+   Certificate fuzzing includes the independent large revocation-limit recipes,
+   with a 1 MiB payload budget ([FUZZING.md](FUZZING.md)).
    Stabilize APG v1 only after review.
 2. Extend immutable trust snapshots with managed publication, concurrency control,
    and explicit identity assertions. Passphrase rewrapping, certificates,

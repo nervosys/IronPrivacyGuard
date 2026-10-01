@@ -24,8 +24,10 @@ KDFs, OS randomness, every cryptographic primitive, or external policy managemen
 Inputs are bounded at 65,537 bytes for requests/MCP, 65,536 for artifacts and
 131,074 for framing (individual frames still have the 65,536-byte limit),
 1,048,588 for stream headers (the 1 MiB header limit plus its 12-byte framing),
-65,536 for TPM structures, and 65,537 for OpenPGP packets (one mode byte plus
-65,536 packet bytes).
+65,536 for TPM structures. OpenPGP certificate and paired-signature modes accept
+1,048,577 bytes total (one mode byte plus a 1 MiB payload); detached and embedded
+message modes retain their 65,537-byte total budget. Paired framing, document and
+signature bytes share that payload budget with the certificate.
 The checked-in seeds include all artifact types and all three snapshot versions,
 protocol errors, duplicate native fields, plans and MCP lifecycle sequences.
 Artifact seeds use only the public test keys from the independent vector corpus.
@@ -80,8 +82,20 @@ metadata. Rebuild only these seed bytes with
 reproduction without writing. Both CI workflows check reproduction, and stable
 Rust regression tests replay every seed plus truncations and byte mutations.
 No private keys, key generation or cryptographic Python packages are needed to
-reproduce these public seeds. The 65,537-byte total cap also applies to paired
-inputs, including their nine-byte framing and document bytes.
+reproduce these public seeds. The 1,048,577-byte total cap applies to paired
+inputs, including their nine-byte framing, document and signature bytes.
+
+Run `python scripts/fuzz-openpgp-large-certificates.py` to expand the compact
+`openpgp-revocation-limit-v1.json` public recipes into the ignored OpenPGP corpus.
+The 37 independent cases produce 74 seeds: certificates and paired detached
+signatures, including live and revoked controls at 1,024 signatures and refused
+certificates above that work limit. Seventy seeds exceed the former 65,537-byte
+cap; the largest is 192,002 bytes. No private keys, key generation or cryptographic
+Python dependencies are needed. `--check` verifies byte-exact reproduction of
+these generated seeds without modifying the corpus. CI generates them before
+fuzzing, and stable Rust regressions replay the same recipes, midpoint
+truncations and final-byte mutations through both oracles. The existing CLI
+regressions separately assert the expected revocation and refusal decisions.
 
 ## Stable regression checks
 
@@ -120,7 +134,9 @@ cargo +nightly fuzz run --target-dir target/fuzz requests fuzz/corpus/requests f
 Repeat with `framing`, `artifacts`, `mcp`, `stream_headers`, `tpm_structures` and
 `openpgp_packets`.
 For stream-header campaigns use `-max_len=1048588` to reach the entire header
-boundary; other targets retain the 65,537-byte CI budget. On Unix use `mkdir -p` instead of
+boundary. For OpenPGP campaigns generate the large-certificate seeds first and
+use `-max_len=1048577`; other targets retain the 65,537-byte CI budget.
+On Unix use `mkdir -p` instead of
 `New-Item`. For longer campaigns remove `-runs` and increase `-max_total_time`.
 Windows requires the matching MSVC AddressSanitizer DLL on the process PATH; see
 [Windows setup](https://rust-fuzz.github.io/book/cargo-fuzz/windows/setup.html).
@@ -250,8 +266,10 @@ available immediately. Logs are retained locally at
 `target/fuzz-reports/openpgp-packets-asan.log` and
 `target/fuzz-reports/openpgp-packets-extended.log`. Input caps and a clean bounded
 campaign do not establish exhaustive size coverage or security. This target
-covers at most 64 KiB of packet data, a subset of the 1 MiB certificate limit;
-encrypted-message decryption, KDFs and private-key operations remain outside it.
+covered at most 64 KiB of packet data at the time of these runs, a subset of the
+1 MiB certificate limit. The later large-certificate extension described above
+expands certificate modes; encrypted-message decryption, KDFs and private-key
+operations remain outside it.
 
 ### Independent policy corpus follow-up
 
@@ -275,3 +293,30 @@ The full input cap was available immediately; this does not establish that every
 input size was exercised. Stable replay, hostile-length framing checks, strict
 Clippy, 471 independent OpenPGP CLI calls and 51 GnuPG compatibility calls also
 passed. The same public-packet, plaintext-size and secret-operation limits apply.
+
+### Large certificate corpus follow-up
+
+The certificate modes now accept a 1 MiB payload. The first local Windows MSVC
+AddressSanitizer campaign, seeded with all 74 expanded revocation recipes and
+175 curated seeds, stopped at a ten-second timeout after 506 inputs. Its saved
+input replayed successfully in 2,069 ms without an oracle or sanitizer finding;
+the original timeout was not reproduced in that replay.
+
+A follow-up continued from the discovered corpus with
+`-max_total_time=120 -max_len=1048577 -len_control=0 -timeout=10
+-rss_limit_mb=2048 -print_final_stats=1 -seed=20261001` and exited successfully.
+It executed 3,513 inputs in 122 seconds with 667 MiB peak RSS, without timeouts,
+crashes, oracle failures or sanitizer findings. The log remains locally at
+`target/fuzz-reports/openpgp-large-revocations-resumed-asan.log`; the original
+timeout log and input are retained for further investigation. This bounded run
+does not establish exhaustive coverage or rule out intermittent slow inputs.
+
+Stable regressions also replay all 74 expanded recipes, midpoint truncations and
+final-byte mutations. Default and Windows-feature Rust suites, strict Clippy,
+formatting and byte-exact reproduction of both public seed generators passed.
+The release CLI passed 619 independent OpenPGP calls (including 148
+revocation-limit checks), 51 GnuPG calls without skips, 74 official MCP SDK calls,
+2,280 schema checks, and the native, P-384, hybrid, composite, streaming,
+stream-signature and KMS-emulator reference clients. OpenPGP reference checks used
+Python 3.12, matching CI. Live hardware and remote platform CI were not rerun as
+part of this local validation.
