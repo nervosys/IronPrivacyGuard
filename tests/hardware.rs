@@ -137,8 +137,9 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     );
     let key: Value = serde_json::from_str(include_str!("vectors/tpm-key-swtpm.json")).unwrap();
     let (value, code) = run(&["tpm", "info"], None);
-    if cfg!(all(feature = "tpm", windows)) {
-        // The Platform Crypto Provider needs no host configuration.
+    if cfg!(all(feature = "tpm", windows)) && value["ok"] == true {
+        // No host configuration is needed, but the provider may be unavailable.
+        assert_eq!(code, 0, "{value}");
         assert_eq!(value["result"]["info"]["backend"], "cng", "{value}");
     } else {
         assert_eq!(value["error"]["code"], "provider_unavailable", "{value}");
