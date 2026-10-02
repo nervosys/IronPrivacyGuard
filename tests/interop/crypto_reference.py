@@ -37,7 +37,7 @@ def identity(seeds):
     encryption = X25519PrivateKey.from_private_bytes(seeds[:32]).public_key().public_bytes_raw()
     signing = Ed25519PrivateKey.from_private_bytes(seeds[32:]).public_key().public_bytes_raw()
     return {"format": "ipg-public-v1", "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha256(frame("APG identity v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha256(frame("IPG identity v1", encryption, signing)).hexdigest()}
 
 
 def password_key(password, salt):

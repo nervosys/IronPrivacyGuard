@@ -183,7 +183,7 @@ fn low_order_public_key_and_malformed_hex_fail_closed() {
     p.encryption_key = "00".repeat(32);
     let enc = [0; 32];
     let sig = hex::decode(&p.signing_key).unwrap();
-    let mut framed = b"APG identity v1".to_vec();
+    let mut framed = b"IPG identity v1".to_vec();
     for f in [&enc[..], &sig] {
         framed.extend_from_slice(&(f.len() as u64).to_be_bytes());
         framed.extend_from_slice(f);

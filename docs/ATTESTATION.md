@@ -44,7 +44,7 @@ manufacturer's CRL for the EK certificate out of band.
    its endorsement hierarchy: the same template always gives the same key, so
    nothing is persisted. The AK certifies both identity keys with TPM2_Certify. Each
    certification's qualifying data is SHA-256 of
-   `frame("APG TPM key certification v1", [fingerprint, role])`, binding it to the
+   `frame("IPG TPM key certification v1", [fingerprint, role])`, binding it to the
    identity and to the key's role. The evidence (`ipg-tpm-evidence-v1`) holds the
    identity, the EK public area, the EK certificate (from TPM NV on Linux; from the
    certificates Windows holds for the TPM, including ones Windows fetched from the

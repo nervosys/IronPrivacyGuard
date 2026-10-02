@@ -183,10 +183,10 @@ impl Suite {
     }
     fn identity_domain(self) -> &'static str {
         match self {
-            Self::Curve25519 => "APG identity v1",
-            Self::P384 => "APG identity p384 v1",
-            Self::Hybrid => "APG identity hybrid v1",
-            Self::P384MlDsa => "APG identity p384-mldsa65 v1",
+            Self::Curve25519 => "IPG identity v1",
+            Self::P384 => "IPG identity p384 v1",
+            Self::Hybrid => "IPG identity hybrid v1",
+            Self::P384MlDsa => "IPG identity p384-mldsa65 v1",
         }
     }
 }

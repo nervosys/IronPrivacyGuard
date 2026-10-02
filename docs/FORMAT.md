@@ -33,7 +33,7 @@ Generate 64 OS-random bytes: first 32 are the X25519 private input, last 32 are 
 independent Ed25519 seed. Derive each 32-byte public key with IronCrypto.
 
 Fingerprint = lowercase hex of SHA-256 of
-`frame("APG identity v1", [raw encryption public key, raw signing public key])`.
+`frame("IPG identity v1", [raw encryption public key, raw signing public key])`.
 The full 256-bit fingerprint is required, not a truncated key ID. It binds the
 two public keys, not a name, email address, organization, validity period or
 identity-provider claim.
@@ -47,7 +47,7 @@ hex characters. Compressed points, the identity and off-curve points are rejecte
 P-384 has cofactor one, so on-curve points are in the prime-order group.
 
 Fingerprint = lowercase hex of SHA-384 of
-`frame("APG identity p384 v1", [encryption point, signing point])`: 48 bytes, 96 hex
+`frame("IPG identity p384 v1", [encryption point, signing point])`: 48 bytes, 96 hex
 characters, as CNSA 1.0 expects for P-384. `ipg-public-v1` keeps 32-byte SHA-256
 fingerprints for compatibility. Every fingerprint field accepts either length and
 pins compare exactly, so the two never mix. The domain differs from v1, so equal
@@ -59,7 +59,7 @@ Fields as in v1. `encryption_key` is the 1184-byte ML-KEM-768 encapsulation key
 followed by the 32-byte X25519 public key (1216 bytes, 2432 hex characters).
 `signing_key` is the 32-byte Ed25519 key followed by the 1952-byte ML-DSA-65 key
 (1984 bytes). The encapsulation key must pass the FIPS 203 modulus check.
-Fingerprint = SHA-384 of `frame("APG identity hybrid v1", [encryption_key bytes,
+Fingerprint = SHA-384 of `frame("IPG identity hybrid v1", [encryption_key bytes,
 signing_key bytes])`, 48 bytes.
 
 The suite adds post-quantum confidentiality and composite post-quantum signatures.
@@ -80,7 +80,7 @@ Fields as in v1. `encryption_key` is a 97-byte uncompressed P-384 point, exactly
 in `ipg-public-p384-v1`, and envelopes to these identities use the
 `p384-x963kdf-sha384-aes256gcm` suite. `signing_key` is a 97-byte uncompressed P-384
 point followed by the 1952-byte ML-DSA-65 key (2049 bytes, 4098 hex characters).
-Fingerprint = SHA-384 of `frame("APG identity p384-mldsa65 v1", [encryption_key
+Fingerprint = SHA-384 of `frame("IPG identity p384-mldsa65 v1", [encryption_key
 bytes, signing_key bytes])`, 48 bytes. The suite backs AWS KMS identities that add an
 ML-DSA key; it has no software secret format, and its encryption is not post-quantum.
 

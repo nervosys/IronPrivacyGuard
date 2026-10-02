@@ -183,7 +183,7 @@ pub(crate) fn hex_field(value: &str, max: usize, what: &str) -> Result<Vec<u8>> 
 #[cfg(feature = "attestation")]
 pub(crate) fn qualifying_data(fingerprint: &str, role: Role) -> Vec<u8> {
     Sha256::digest(&crypto::frame(
-        "APG TPM key certification v1",
+        "IPG TPM key certification v1",
         &[fingerprint.as_bytes(), role.as_str().as_bytes()],
     ))
     .as_ref()

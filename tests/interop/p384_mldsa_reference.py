@@ -44,7 +44,7 @@ def identity():
     encryption = point(private(ENCRYPTION_SCALAR))
     signing = point(private(SIGNING_SCALAR)) + mldsa_key().public_key().public_bytes_raw()
     return {"format": KEY_FORMAT, "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha384(frame("APG identity p384-mldsa65 v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha384(frame("IPG identity p384-mldsa65 v1", encryption, signing)).hexdigest()}
 
 
 def ecdsa(message):

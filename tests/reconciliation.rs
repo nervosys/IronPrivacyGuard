@@ -46,7 +46,7 @@ fn distinct_public(index: u64) -> crypto::PublicKey {
     let (mut enc, mut sig) = ([0; 32], [0; 32]);
     ic_ec::X25519::public_key(&seed, &mut enc).unwrap();
     ic_ec::Ed25519::public_key(&seed, &mut sig).unwrap();
-    let mut frame = b"APG identity v1".to_vec();
+    let mut frame = b"IPG identity v1".to_vec();
     for field in [enc, sig] {
         frame.extend_from_slice(&32u64.to_be_bytes());
         frame.extend_from_slice(&field);
