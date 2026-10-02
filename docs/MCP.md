@@ -181,6 +181,34 @@ timeout is 120 seconds. Python and the SDK are test-only dependencies; the IPG
 runtime remains pure Rust. The repository's CI matrix runs this check on Windows,
 Linux and macOS; those remote jobs were configured but not run in this local session.
 
+Run the TypeScript SDK check with Node.js 22 or later:
+
+```powershell
+npm ci --prefix tests/interop/node --ignore-scripts --no-fund --no-audit
+node tests/interop/node/mcp_client.mjs --ipg target/release/ipg.exe
+```
+
+Use `target/release/ipg` on Unix. The package and lockfile pin this test-only
+dependency tree; install scripts are disabled. This JavaScript entry point uses
+the published TypeScript SDK directly. It validates every advertised input and
+output schema and checks text/structured response equality, recursive plans,
+binary encryption/decryption, rewrapping, detached and streaming signatures,
+tampering, no-clobber outputs and eight concurrent hash requests with distinct
+payloads. Five sessions cover automatic and legacy negotiation, allowlists,
+active/revoked/expired host policy and hardware-only custody. It checks 57 tool
+calls, rejects disabled tools, and requires an unsupported `2026-07-28` pin to
+fail rather than fall back. The SDK's
+[negotiation modes](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions)
+are independent of IPG's advertised protocol support; IPG continues to support
+only the two 2025 revisions above.
+
+Rust's `uint` and `uint64` schema formats are treated as annotations; explicit
+integer types and numeric bounds remain enforced by Ajv. All keys, passphrases
+and payloads are generated in a disposable directory, removed on exit. The
+whole-run deadline is 120 seconds. The CI matrix configures both SDK checks on
+Windows, Linux and macOS. Local Windows validation does not substitute for
+those platform runs.
+
 ## Duplicate-member policy
 
 Raw JSON-RPC messages must have unique decoded object member names at every depth,

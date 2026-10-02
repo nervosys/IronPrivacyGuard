@@ -32,6 +32,13 @@ jobs:
       - run: python scripts/fuzz-openpgp-large-certificates.py --check
       - run: python tests/interop/schema_contracts.py
       - run: python tests/interop/mcp_client.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/interop/node/package-lock.json
+      - run: npm ci --prefix tests/interop/node --ignore-scripts --no-fund --no-audit
+      - run: node tests/interop/node/mcp_client.mjs --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/crypto_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/stream_signature_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/p384_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}

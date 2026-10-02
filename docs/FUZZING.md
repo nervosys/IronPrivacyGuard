@@ -320,3 +320,31 @@ revocation-limit checks), 51 GnuPG calls without skips, 74 official MCP SDK call
 stream-signature and KMS-emulator reference clients. OpenPGP reference checks used
 Python 3.12, matching CI. Live hardware and remote platform CI were not rerun as
 part of this local validation.
+
+## Full-budget MCP and certificate campaigns, 2026-10-01
+
+At code baseline `6fa42ef556ee201f909a8efc5b7a72fbc5a90e0c`, the MCP and public
+OpenPGP packet targets completed separate Windows MSVC AddressSanitizer campaigns.
+Each exited cleanly without a new timeout, crash artifact, oracle failure or
+sanitizer finding. Both used `-len_control=0`, making the full configured input cap
+available from the beginning. They continued from their ignored discovery corpus
+and curated seeds.
+
+| Target | PRNG seed | Executed inputs | Elapsed seconds | Peak RSS MiB | Final edge counters / features | Max input cap |
+| --- | --- | --- | --- | --- | --- | --- |
+| `mcp` | 1704210120 | 29,046 | 603 | 514 | 8,479 / 19,286 | 65,537 bytes |
+| `openpgp_packets` | 1709234227 | 50,645 | 607 | 758 | 16,995 / 50,745 | 1,048,577 bytes |
+
+Both runs passed `-max_total_time=600 -timeout=10 -rss_limit_mb=2048
+-print_final_stats=1`; the OpenPGP target used `-max_len=1048577`, and MCP used
+`-max_len=65537`. These caps were available; the runs do not establish that every
+input size was exercised. The OpenPGP starting corpus included 74 large-certificate
+recipes and 175 curated seeds; its largest seed was 192,002 bytes. Logs are retained
+locally at `target/fuzz-reports/mcp-extended-2026-10-01.log` and
+`target/fuzz-reports/openpgp-extended-2026-10-01.log`.
+
+One ignored `timeout-*` input in `fuzz/artifacts/openpgp_packets` predates these
+runs (2026-10-01 05:36 UTC); neither campaign created a new artifact. Counters describe
+the instrumented harness and dependencies, not a coverage percentage. Remote CI
+remains blocked, and these Windows campaigns do not replace Linux fuzz CI or
+independent review.

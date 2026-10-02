@@ -24,8 +24,9 @@ implemented surface, not feature parity with decades of GPG development.
    independently. Streaming detached signatures are implemented as the separately
    versioned `ipg-stream-signature-v1` hash-then-sign protocol with SHA-384 and
    bounded memory; include it in that review.
-4. Expand MCP testing beyond the official Python SDK 2.2.0, now covered by a real
-   stdio interoperability suite in CI. Generated tools, host allowlists and
+4. Expand MCP host coverage. Official Python and TypeScript SDK 2.2.0 clients are
+   covered by real stdio interoperability suites in CI, including concurrent
+   TypeScript requests and rejection of an unsupported protocol pin. Generated tools, host allowlists and
    mandatory host trust policy are implemented; HTTP, tasks and active cancellation
    remain unsupported. Filesystem authorization remains the host's responsibility.
 5. Extend the OpenPGP compatibility boundary ([OPENPGP.md](OPENPGP.md)). v4 key
