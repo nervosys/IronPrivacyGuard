@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{crypto::*, *};
+use iron_privacy_guard::{crypto::*, *};
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -13,7 +13,7 @@ const PASSWORD: &[u8] = b"test-only strong passphrase 42";
 fn standalone_contracts_match_runtime_exports() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let ontology_file: Value =
-        serde_json::from_slice(&std::fs::read(root.join("ontology/apg.jsonld")).unwrap()).unwrap();
+        serde_json::from_slice(&std::fs::read(root.join("ontology/ipg.jsonld")).unwrap()).unwrap();
     assert_eq!(ontology_file, ontology::export());
     for (name, schema) in schemas().as_object().unwrap() {
         let exported: Value = serde_json::from_slice(
@@ -64,7 +64,7 @@ fn complete_file_workflow() {
     std::fs::write(path("input"), b"binary\0\xffmessage").unwrap();
     let invoke = |request: Value| {
         let data =
-            serde_json::to_vec(&json!({"protocol":"apg/1","id":"workflow","request":request}))
+            serde_json::to_vec(&json!({"protocol":"ipg/1","id":"workflow","request":request}))
                 .unwrap();
         let (value, code) = handle_call(&data);
         assert_eq!(code, 0, "{value}");
@@ -183,7 +183,7 @@ fn low_order_public_key_and_malformed_hex_fail_closed() {
     p.encryption_key = "00".repeat(32);
     let enc = [0; 32];
     let sig = hex::decode(&p.signing_key).unwrap();
-    let mut framed = b"APG identity v1".to_vec();
+    let mut framed = b"IPG identity v1".to_vec();
     for f in [&enc[..], &sig] {
         framed.extend_from_slice(&(f.len() as u64).to_be_bytes());
         framed.extend_from_slice(f);
@@ -268,19 +268,19 @@ fn strict_requests_plans_limits_and_correlation() {
     ] {
         assert!(serde_json::from_value::<Request>(bad).is_err());
     }
-    let (v, code) = handle_call(br#"{"protocol":"apg/1","id":"q1","request":{"operation":"plan","request":{"operation":"decrypt","input":"missing","output":"also-missing","key":"missing","passphrase_file":"missing"}}}"#);
+    let (v, code) = handle_call(br#"{"protocol":"ipg/1","id":"q1","request":{"operation":"plan","request":{"operation":"decrypt","input":"missing","output":"also-missing","key":"missing","passphrase_file":"missing"}}}"#);
     assert_eq!(code, 0);
     assert_eq!(v["id"], "q1");
     assert_eq!(v["result"]["document"]["execution"], false);
     let (_, code) =
-        handle_call(br#"{"protocol":"apg/999","id":"q1","request":{"operation":"discover"}}"#);
+        handle_call(br#"{"protocol":"ipg/999","id":"q1","request":{"operation":"discover"}}"#);
     assert_eq!(code, 2);
     assert!(read_limited(&b"12345"[..], 4).is_err());
 }
 
 #[test]
 fn cli_and_ndjson_are_machine_readable() {
-    let exe = env!("CARGO_BIN_EXE_apg");
+    let exe = env!("CARGO_BIN_EXE_ipg");
     let out = Command::new(exe).arg("discover").output().unwrap();
     assert!(out.status.success());
     assert!(out.stderr.is_empty());
@@ -298,7 +298,7 @@ fn cli_and_ndjson_are_machine_readable() {
         .spawn()
         .unwrap();
     let mut stdin = child.stdin.take().unwrap();
-    stdin.write_all(b"bad-json\n{\"protocol\":\"apg/1\",\"id\":\"next\",\"request\":{\"operation\":\"discover\"}}\n").unwrap();
+    stdin.write_all(b"bad-json\n{\"protocol\":\"ipg/1\",\"id\":\"next\",\"request\":{\"operation\":\"discover\"}}\n").unwrap();
     drop(stdin);
     let out = child.wait_with_output().unwrap();
     assert!(out.status.success());

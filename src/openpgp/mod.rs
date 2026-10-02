@@ -2,9 +2,9 @@
 //! signatures (RFC 9580) for exchanging data with GnuPG and other OpenPGP tools.
 //!
 //! Packet processing and the OpenPGP primitives come from rPGP (`openpgp` feature),
-//! not IronCrypto. APG adds certificate-validity policy on top: binding and back
+//! not IronCrypto. IPG adds certificate-validity policy on top: binding and back
 //! signatures, revocation, expiry, key flags and minimum algorithm strength. Native
-//! APG artifacts are never read as OpenPGP data, or the reverse.
+//! IPG artifacts are never read as OpenPGP data, or the reverse.
 use crate::error::{Error, Result};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "openpgp")]
 mod engine;
 
-pub const KEY_FORMAT: &str = "apg-openpgp-key-v1";
+pub const KEY_FORMAT: &str = "ipg-openpgp-key-v1";
 pub const KDF: &str = "argon2id-m65536-t3-p4";
 /// Certificates read from files; a separate 1024-signature limit bounds
 /// evaluation work, including third-party certifications.
 pub const MAX_CERTIFICATE_BYTES: u64 = 1024 * 1024;
 /// Total retained certificate signatures; excess is refused before evaluation.
 pub const MAX_CERTIFICATE_SIGNATURES: usize = 1024;
-/// APG-generated certificates and secret keys are small and fixed-shape.
+/// IPG-held certificates and secret keys use a small, fixed two-key profile.
 pub const MAX_OWN_CERTIFICATE_BYTES: usize = 16 * 1024;
 pub const MAX_SECRET_BYTES: usize = 4096;
 pub const MAX_RECIPIENTS: usize = 32;
@@ -57,7 +57,7 @@ impl Algorithm {
     }
 }
 
-/// An APG-held OpenPGP secret key. The binary transferable secret key (with
+/// An IPG-held OpenPGP secret key. The binary transferable secret key (with
 /// unprotected OpenPGP secret packets) is sealed with Argon2id and
 /// ChaCha20-Poly1305 under the passphrase; the certificate is public.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -125,7 +125,7 @@ pub struct Recipient {
     pub expected_openpgp_fingerprint: String,
 }
 
-/// Certificate evaluated under APG policy at `evaluated_at` (host time).
+/// Certificate evaluated under IPG policy at `evaluated_at` (host time).
 #[derive(Clone, Debug, Serialize, JsonSchema)]
 pub struct Certificate {
     #[schemars(schema_with = "crate::contract::openpgp_key_fingerprint")]
@@ -238,8 +238,8 @@ pub fn check_user_id(user_id: &str) -> Result<()> {
 
 #[cfg(feature = "openpgp")]
 pub(crate) use engine::{
-    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
-    verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
+    verify, verify_message,
 };
 
 /// In-memory public-packet oracle, exposed only to the fuzz tooling.
@@ -253,13 +253,16 @@ mod unavailable {
     fn unavailable<T>() -> Result<T> {
         Err(Error::new(
             "provider_unavailable",
-            "This apg build has no OpenPGP support; rebuild with --features openpgp",
+            "This ipg build has no OpenPGP support; rebuild with --features openpgp",
         ))
     }
     pub(crate) fn generate_version(_: &str, _: Algorithm, _: Version, _: &[u8]) -> Result<KeyFile> {
         unavailable()
     }
     pub(crate) fn export(_: &KeyFile) -> Result<(String, Certificate)> {
+        unavailable()
+    }
+    pub(crate) fn import_secret(_: &[u8], _: &str, _: &[u8], _: &[u8]) -> Result<KeyFile> {
         unavailable()
     }
     pub(crate) fn export_secret(
@@ -299,6 +302,6 @@ mod unavailable {
 }
 #[cfg(not(feature = "openpgp"))]
 pub(crate) use unavailable::{
-    decrypt, encrypt, export, export_secret, generate_version, inspect, sign, verify,
-    verify_message,
+    decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
+    verify, verify_message,
 };

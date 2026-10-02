@@ -1,4 +1,4 @@
-//! TPM 2.0 backend over tpm2-tss (ESAPI), connected through the host's APG_TPM_TCTI.
+//! TPM 2.0 backend over tpm2-tss (ESAPI), connected through the host's IPG_TPM_TCTI.
 //!
 //! Each identity is two P-384 keys (ECDH and ECDSA) created under a storage root key
 //! that the TPM re-derives from its owner-hierarchy seed with a fixed template. The
@@ -78,7 +78,7 @@ fn context() -> Result<Context> {
     let name = TctiNameConf::from_str(&tcti).map_err(|_| {
         Error::new(
             "provider_unavailable",
-            "APG_TPM_TCTI is not a valid TCTI configuration",
+            "IPG_TPM_TCTI is not a valid TCTI configuration",
         )
     })?;
     Context::new(name).map_err(|e| {
@@ -92,7 +92,7 @@ fn context() -> Result<Context> {
 /// Key authorization bound to the PIN. Hashing fixes the length at the SHA-384 name
 /// digest size; the TPM's dictionary-attack lockout limits guessing.
 fn authorization(pin: &[u8]) -> Result<Auth> {
-    let digest = Sha384::digest(&crypto::frame("APG TPM authorization v1", &[pin]));
+    let digest = Sha384::digest(&crypto::frame("IPG TPM authorization v1", &[pin]));
     Auth::try_from(digest.as_ref().to_vec()).map_err(map)
 }
 

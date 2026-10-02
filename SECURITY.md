@@ -1,6 +1,6 @@
 # Security model
 
-APG 0.1 and its native protocol have not received an independent security audit.
+IPG 0.1 and its native protocol have not received an independent security audit.
 Tests establish specific behaviors; they do not establish cryptographic security.
 Do not treat this initial release as a production-complete GPG successor.
 
@@ -19,7 +19,7 @@ Hardware identities ([HARDWARE.md](docs/HARDWARE.md)) move the long-term private
 keys into a PKCS#11 token, so a compromise of the host no longer yields copies of
 them. It does not stop misuse: anything with the PIN file and token access can
 decrypt and sign while it holds that access. The host-selected PKCS#11 module is
-trusted native code running inside the APG process. TPM identities keep keys in
+trusted native code running inside the IPG process. TPM identities keep keys in
 wrapped blobs that only the originating TPM can load; the key file is the only copy,
 and an attacker who can read it and knows the PIN can use the keys on that machine.
 AWS KMS identities depend on the host's AWS credentials and IAM policy: anyone with
@@ -61,14 +61,17 @@ than IronCrypto. It holds only Ed25519 and P-384 secret keys, because rPGP's RSA
 dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); RSA is
 used only for public operations. `openpgp.message.verify` authenticates one embedded
 document signature against a pinned certificate before publishing plaintext;
-`openpgp.decrypt` still does not authenticate the sender. APG trust snapshots do
+`openpgp.decrypt` still does not authenticate the sender. IPG trust snapshots do
 not govern OpenPGP. Protected secret-key export authenticates the source key and its
 fingerprint pin, then protects both secret packets with a separate passphrase.
 V4 exports use AES-256 CFB with iterated-and-salted SHA-256 S2K and a SHA-1
 integrity checksum; this compatibility format lacks the memory-hard KDF of the
-APG key file. V6 exports use AES-256 OCB and Argon2id (64 MiB, three passes, four
+IPG key file. V6 exports use AES-256 OCB and Argon2id (64 MiB, three passes, four
 lanes). Hosts requiring non-exportable or hardware custody refuse export.
-Exported keys can be used outside APG policy; secret-key import remains unsupported.
+Exported keys can be used outside IPG policy. Secret-key import requires a pinned
+fingerprint, current certificate usability, bounded protection settings and derived
+private/public consistency for both supported key packets before IPG sealing.
+See [the import profile](docs/OPENPGP.md#secret-key-import) for exact limits.
 V6 keys use direct-key certificate policy and SEIPDv2/OCB
 encryption; mixed v4/v6 recipient sets are refused. PyCA independently checks v6
 fingerprints, signatures, X25519/P-384 session-key wrapping and AES-256/OCB
@@ -93,9 +96,9 @@ added junk signatures from hiding a valid revocation beyond a truncated prefix.
 Independent v4/v6 revocation fixtures exercise this boundary without private keys.
 See [OpenPGP interoperability](docs/OPENPGP.md)
 for the tested scope.
-Multi-recipient streams (`apg-stream-v1`) authenticate content and detect truncation
+Multi-recipient streams (`ipg-stream-v1`) authenticate content and detect truncation
 but do not authenticate the sender; any recipient could re-encrypt other content to
-the rest. `apg-stream-signature-v1` provides separate any-size native signatures
+the rest. `ipg-stream-signature-v1` provides separate any-size native signatures
 over domain-separated SHA-384 commitments and byte counts, bounded by SHA-384
 collision resistance; it needs independent review. No private-key keyring,
 identity certification, PKCS#11 or KMS attestation, post-quantum PKCS#11 or TPM keys,
@@ -123,12 +126,12 @@ trusted compromise or signing time is asserted. See [lifecycle](docs/LIFECYCLE.m
 
 `inspect` is explicitly unauthenticated. Hashes do not prove authenticity.
 The ontology's constraint text is not an authorization engine. `plan` performs
-schema validation only. Paths may follow symlinks on reads; APG assumes protected
+schema validation only. Paths may follow symlinks on reads; IPG assumes protected
 directories and does not defend against hostile same-account filesystem changes.
 
 ## MCP host controls
 
-`apg mcp` exposes the operation registry unless the host supplies `--allow`.
+`ipg mcp` exposes the operation registry unless the host supplies `--allow`.
 Disabled tools cannot be called by name. A host-pinned trust policy is validated at
 startup, injected into encrypt/sign/verify, and reloaded and verified by those
 operations. Tool arguments cannot override the host's selected path or digest.
@@ -137,7 +140,7 @@ The host must restart with a new pin after publishing a newer snapshot.
 session, including key generation and rewrapping; callers cannot change it.
 
 These controls govern only this server session. They do not restrict shell access,
-other APG processes, direct library calls, or filesystem paths. An untrusted client
+other IPG processes, direct library calls, or filesystem paths. An untrusted client
 must run under a separately sandboxed OS identity with appropriately scoped
 secrets and files. Tool annotations are hints, not authorization. MCP client roots
 are not a sandbox and this adapter does not request or enforce them.

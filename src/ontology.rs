@@ -116,7 +116,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "ontology",
-        "Get the complete APG JSON-LD graph",
+        "Get the complete IPG JSON-LD graph",
         &[],
         &["Ontology"],
         &[],
@@ -266,14 +266,14 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "tpm.key.delete",
-        "Permanently delete the persisted Windows TPM keys of an apg-cng-key-v1 identity after checking its PIN",
+        "Permanently delete the persisted Windows TPM keys of an ipg-cng-key-v1 identity after checking its PIN",
         &["TpmKeyFile", "TokenPin"],
         &["KeyDeletion"],
         &["load_provider", "read_pin", "delete_token_object"],
     ),
     (
         "stream.encrypt",
-        "Encrypt a file of any size to 1..64 pinned recipients as an apg-stream-v1 stream of authenticated 64 KiB chunks",
+        "Encrypt a file of any size to 1..64 pinned recipients as an ipg-stream-v1 stream of authenticated 64 KiB chunks",
         &["Plaintext", "PublicKey", "Fingerprint"],
         &["StreamCiphertext"],
         &["read_file", "create_file"],
@@ -287,14 +287,14 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "stream.verify",
-        "Verify an any-size file against an apg-stream-signature-v1 artifact and pinned signer",
+        "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer",
         &["Plaintext", "StreamSignature", "PublicKey", "Fingerprint"],
         &["Verification"],
         &["read_file"],
     ),
     (
         "stream.decrypt",
-        "Decrypt an apg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
+        "Decrypt an ipg-stream-v1 stream, releasing plaintext only after every chunk authenticates",
         &["StreamCiphertext", "SecretKey", "Passphrase"],
         &["Plaintext"],
         &["read_file", "read_passphrase", "create_file"],
@@ -341,22 +341,34 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_passphrase", "create_file"],
     ),
     (
+        "openpgp.key.import",
+        "Import one pinned v4 or v6 Ed25519/Curve25519 or P-384 signing primary and encryption subkey, validating bounded protection and private/public consistency before sealing under an IPG passphrase",
+        &[
+            "OpenpgpSecretKey",
+            "OpenpgpFingerprint",
+            "OpenpgpSourcePassword",
+            "Passphrase",
+        ],
+        &["OpenpgpKeyFile", "OpenpgpFingerprint"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
         "openpgp.cert.export",
-        "Write the ASCII-armored OpenPGP certificate of an APG-held OpenPGP key",
+        "Write the ASCII-armored OpenPGP certificate of an IPG-held OpenPGP key",
         &["OpenpgpKeyFile"],
         &["OpenpgpCertificate", "OpenpgpCertificateReport"],
         &["read_file", "create_file"],
     ),
     (
         "openpgp.key.export",
-        "Export a pinned APG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase",
+        "Export a pinned IPG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase",
         &["OpenpgpKeyFile", "OpenpgpFingerprint", "Passphrase"],
         &["OpenpgpSecretKey", "OpenpgpFingerprint"],
         &["read_file", "read_passphrase", "create_file"],
     ),
     (
         "openpgp.cert.inspect",
-        "Evaluate an OpenPGP certificate under APG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
+        "Evaluate an OpenPGP certificate under IPG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation",
         &["OpenpgpCertificate"],
         &["OpenpgpCertificateReport"],
         &["read_file"],
@@ -370,21 +382,21 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "openpgp.decrypt",
-        "Decrypt an integrity-protected OpenPGP message with an APG-held OpenPGP key",
+        "Decrypt an integrity-protected OpenPGP message with an IPG-held OpenPGP key",
         &["OpenpgpMessage", "OpenpgpKeyFile", "Passphrase"],
         &["Plaintext"],
         &["read_file", "read_passphrase", "create_file"],
     ),
     (
         "openpgp.sign",
-        "Create an armored detached OpenPGP signature with an APG-held OpenPGP key",
+        "Create an armored detached OpenPGP signature with an IPG-held OpenPGP key",
         &["Plaintext", "OpenpgpKeyFile", "Passphrase"],
         &["OpenpgpSignature"],
         &["read_file", "read_passphrase", "create_file"],
     ),
     (
         "openpgp.verify",
-        "Verify a detached OpenPGP signature against a pinned certificate under APG policy",
+        "Verify a detached OpenPGP signature against a pinned certificate under IPG policy",
         &[
             "Plaintext",
             "OpenpgpSignature",
@@ -496,6 +508,15 @@ pub fn operation(id: &str) -> Value {
             "openpgp-user-id",
         ],
         "openpgp.cert.export" => vec!["openpgp-boundary", "no-clobber"],
+        "openpgp.key.import" => vec![
+            "openpgp-boundary",
+            "openpgp-pin",
+            "openpgp-secret-import",
+            "openpgp-certificate-policy",
+            "openpgp-user-id",
+            "secret-channel",
+            "no-clobber",
+        ],
         "openpgp.key.export" => vec![
             "openpgp-boundary",
             "openpgp-pin",
@@ -632,7 +653,11 @@ pub fn operation(id: &str) -> Value {
         }
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "hash" => vec!["sha2-256"],
-        "openpgp.key.generate" | "openpgp.key.export" | "openpgp.decrypt" | "openpgp.sign" => {
+        "openpgp.key.generate"
+        | "openpgp.key.import"
+        | "openpgp.key.export"
+        | "openpgp.decrypt"
+        | "openpgp.sign" => {
             vec!["argon2id", "chacha20-poly1305"]
         }
         "tpm.attest" | "tpm.attestation.challenge" | "tpm.attestation.verify" => {
@@ -711,6 +736,7 @@ pub fn operation(id: &str) -> Value {
                     | "tpm.attestation.respond"
                     | "tpm.attestation.verify"
                     | "openpgp.key.generate"
+                    | "openpgp.key.import"
                     | "openpgp.key.export"
                     | "openpgp.cert.inspect"
                     | "openpgp.encrypt"
@@ -720,7 +746,7 @@ pub fn operation(id: &str) -> Value {
             ));
     let mut conditional_effects = Vec::new();
     if *id == "openpgp.message.verify" {
-        conditional_effects.push("read an APG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host");
+        conditional_effects.push("read an IPG OpenPGP key and passphrase file when decrypting a signed encrypted message; software custody must be permitted by the host");
     }
     if governed {
         conditional_effects.push("read pinned trust snapshot when policy is supplied");
@@ -730,29 +756,29 @@ pub fn operation(id: &str) -> Value {
             "load the host PKCS#11 module and log in to a token when key is a hardware reference",
         );
         conditional_effects
-            .push("open the host TPM and load wrapped keys when key is an apg-tpm-key-v1 file");
+            .push("open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file");
         conditional_effects.push(
-            "call AWS KMS with host credentials over the network when key is an apg-kms-key-v1 file",
+            "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file",
         );
     }
-    json!({"@id":format!("apg:operation/{id}"), "@type":"apg:Operation", "id":id,
-        "description":description, "inputs":inputs.iter().map(|s|format!("apg:{s}")).collect::<Vec<_>>(),
+    json!({"@id":format!("ipg:operation/{id}"), "@type":"ipg:Operation", "id":id,
+        "description":description, "inputs":inputs.iter().map(|s|format!("ipg:{s}")).collect::<Vec<_>>(),
         "mcp_tool":crate::mcp::tool_name(id),
-        "outputs":outputs.iter().map(|s|format!("apg:{s}")).collect::<Vec<_>>(),
+        "outputs":outputs.iter().map(|s|format!("ipg:{s}")).collect::<Vec<_>>(),
         "effects":effects, "deterministic": deterministic,
-        "optional_inputs":if governed {vec!["apg:TrustPolicy"]} else {vec![]},
-        "key_inputs":if key_provider {vec!["apg:SecretKey","apg:HardwareKeyReference","apg:TpmKeyFile","apg:KmsKeyFile"]} else {vec![]},
+        "optional_inputs":if governed {vec!["ipg:TrustPolicy"]} else {vec![]},
+        "key_inputs":if key_provider {vec!["ipg:SecretKey","ipg:HardwareKeyReference","ipg:TpmKeyFile","ipg:KmsKeyFile"]} else {vec![]},
         "conditional_effects":conditional_effects,
         "retry": if effects.contains(&"delete_token_object") {"Deletion is irreversible; after an ambiguous failure, check with key.public whether the keys still exist before retrying."} else if effects.contains(&"create_token_object") {"Do not retry blindly; a failed or ambiguous run may have created token objects. Inspect the token with its tooling and bind or delete reported key IDs before retrying."} else if effects.contains(&"create_file") {"Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."} else if effects.contains(&"load_provider") || key_provider {"Safe to retry if inputs are unchanged, except authentication_failed and pin_locked: failed PIN attempts consume token retry counters."} else {"Safe to retry if inputs are unchanged."},
-        "constraints":constraints.iter().map(|s|format!("apg:constraint/{s}")).collect::<Vec<_>>(),
+        "constraints":constraints.iter().map(|s|format!("ipg:constraint/{s}")).collect::<Vec<_>>(),
         "algorithms":algorithms.iter().map(|s|format!("ic:{s}")).collect::<Vec<_>>(),
-        "request_schema":{"command":"apg schema", "operation_const":id},
+        "request_schema":{"command":"ipg schema", "operation_const":id},
         "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked"]})
 }
 pub fn discover() -> Value {
-    json!({"name":"IronPrivacyGuardian", "binary":"apg", "version":env!("CARGO_PKG_VERSION"),
-        "protocol":"apg/1", "status":"experimental", "interaction":"noninteractive", "control_json":"unique decoded object member names at every depth; duplicates fail before dispatch",
-        "transports":[{"command":"apg <operation> --field value", "format":"one JSON response"},{"command":"apg call", "format":"one Call JSON on stdin"},{"command":"apg serve", "format":"Call NDJSON on stdin; one response per line"},{"command":"apg mcp", "format":"MCP JSON-RPC on newline-delimited stdio", "protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"startup_flags":["--allow","--trust-store","--expected-store-digest","--key-custody"],"tool_calls_per_minute":crate::mcp::MAX_CALLS_PER_MINUTE}],
+    json!({"name":"IronPrivacyGuard", "binary":"ipg", "version":env!("CARGO_PKG_VERSION"),
+        "protocol":"ipg/1", "status":"experimental", "interaction":"noninteractive", "control_json":"unique decoded object member names at every depth; duplicates fail before dispatch",
+        "transports":[{"command":"ipg <operation> --field value", "format":"one JSON response"},{"command":"ipg call", "format":"one Call JSON on stdin"},{"command":"ipg serve", "format":"Call NDJSON on stdin; one response per line"},{"command":"ipg mcp", "format":"MCP JSON-RPC on newline-delimited stdio", "protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"startup_flags":["--allow","--trust-store","--expected-store-digest","--key-custody"],"tool_calls_per_minute":crate::mcp::MAX_CALLS_PER_MINUTE}],
         "operations":OPERATIONS.iter().map(|o|operation(o.0)).collect::<Vec<_>>(),
         "knowledgebase":{"catalog":"knowledge","search":"knowledge.search","version":crate::knowledge::VERSION,"selection":"advisory; check prerequisites and limitations; unsupported applications have no executable tools"},
         "limits":{"request_bytes":crate::MAX_REQUEST_BYTES,"file_bytes":crate::MAX_FILE_BYTES,"plaintext_encryption_bytes":(crate::MAX_FILE_BYTES-4096)/2,"passphrase_bytes_min":16,"passphrase_bytes_max":4096,"trust_store_bytes":crate::trust::MAX_STORE_BYTES,"trust_identities":crate::trust::MAX_IDENTITIES,"pin_bytes_min":crate::provider::PIN_BYTES_MIN,"pin_bytes_max":crate::provider::PIN_BYTES_MAX,"key_label_bytes_max":crate::provider::LABEL_BYTES_MAX,"unix_seconds_max":crate::lifecycle::MAX_UNIX_TIME,"preflight_depth":crate::validation::MAX_DEPTH,"preflight_issues":crate::validation::MAX_ISSUES},
@@ -761,8 +787,8 @@ pub fn discover() -> Value {
         "suites":{"identities":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"software_secret_keys":[crate::crypto::KEY_FORMAT,crate::crypto::HYBRID_KEY_FORMAT],"post_quantum":{"confidentiality":[crate::crypto::HYBRID_KEY_FORMAT],"signatures":[crate::crypto::HYBRID_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT]},"hardware_keys":[crate::crypto::P384_KEY_FORMAT],"service_keys":[crate::crypto::P384_KEY_FORMAT,crate::crypto::P384_MLDSA_KEY_FORMAT],"substitution":"never; every artifact names its suite and mismatches fail"},
         "hardware":crate::provider::status(),
         "openpgp":{"feature":"openpgp","available":cfg!(feature = "openpgp"),"implementation":"rPGP 0.20 (not IronCrypto)","key_format":crate::openpgp::KEY_FORMAT,"key_versions":[4,6],"generated_keys":["ed25519","p384"],"encryption":"AES-256: SEIPDv1 for v4 recipients, SEIPDv2/OCB for v6 recipients; mixed versions refused","max_recipients":crate::openpgp::MAX_RECIPIENTS,"max_plaintext_bytes":crate::openpgp::MAX_PLAINTEXT_BYTES,"max_certificate_bytes":crate::openpgp::MAX_CERTIFICATE_BYTES,"max_certificate_signatures":crate::openpgp::MAX_CERTIFICATE_SIGNATURES,"trust_snapshots":"not applied; pin certificates by OpenPGP fingerprint"},
-        "unsupported":["OpenPGP v3 or v5 keys","OpenPGP secret-key import","OpenPGP web of trust and designated revokers","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of apg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
-        "example":{"protocol":"apg/1","id":"discovery-1","request":{"operation":"discover"}}})
+        "unsupported":["OpenPGP v3 or v5 keys","OpenPGP secret-key import outside the supported two-key profile","OpenPGP web of trust and designated revokers","keyservers","web of trust","automatic revocation distribution","global policy enforcement","PKCS#11 or KMS key attestation","EK certificate revocation checking","attestation of ipg-cng-key-v1 keys","KMS key creation","AWS SSO token refresh","software P-384 secret keys","token PIN and object administration","RSA or post-quantum token keys","post-quantum PKCS#11 or TPM keys","post-quantum encryption with KMS keys (KMS has no ML-KEM)","FIPS validated mode","MCP HTTP transport","MCP tasks and active cancellation"],
+        "example":{"protocol":"ipg/1","id":"discovery-1","request":{"operation":"discover"}}})
 }
 pub fn export() -> Value {
     let entities = [
@@ -783,7 +809,7 @@ pub fn export() -> Value {
         ),
         (
             "CandidateRequest",
-            "Untrusted JSON proposed as an APG Request object; not a Call envelope",
+            "Untrusted JSON proposed as an IPG Request object; not a Call envelope",
             "untrusted",
         ),
         (
@@ -858,17 +884,17 @@ pub fn export() -> Value {
         ),
         (
             "StreamCiphertext",
-            "apg-stream-v1: a binary stream with a header wrapping one content key for each of 1..64 recipients and authenticated 64 KiB chunks; does not identify a sender",
+            "ipg-stream-v1: a binary stream with a header wrapping one content key for each of 1..64 recipients and authenticated 64 KiB chunks; does not identify a sender",
             "ciphertext",
         ),
         (
             "StreamSignature",
-            "apg-stream-signature-v1: detached signature binding the signer, algorithm, SHA-384 digest and u64 byte count of an any-size file; distinct from ordinary detached signatures and external prehash modes",
+            "ipg-stream-signature-v1: detached signature binding the signer, algorithm, SHA-384 digest and u64 byte count of an any-size file; distinct from ordinary detached signatures and external prehash modes",
             "public",
         ),
         (
             "TpmEvidence",
-            "apg-tpm-evidence-v1: the identity, the TPM's EK public area and certificates, its attestation key and two TPM2_Certify certifications; public, and not a proof until verified with a credential challenge",
+            "ipg-tpm-evidence-v1: the identity, the TPM's EK public area and certificates, its attestation key and two TPM2_Certify certifications; public, and not a proof until verified with a credential challenge",
             "public",
         ),
         (
@@ -878,17 +904,17 @@ pub fn export() -> Value {
         ),
         (
             "TpmChallenge",
-            "apg-tpm-challenge-v1: a credential encrypted to the TPM's endorsement key for the evidence's attestation key (software TPM2_MakeCredential)",
+            "ipg-tpm-challenge-v1: a credential encrypted to the TPM's endorsement key for the evidence's attestation key (software TPM2_MakeCredential)",
             "public",
         ),
         (
             "TpmChallengeSecret",
-            "apg-tpm-challenge-secret-v1: the verifier's copy of the challenge credential; keep private and use once",
+            "ipg-tpm-challenge-secret-v1: the verifier's copy of the challenge credential; keep private and use once",
             "secret",
         ),
         (
             "TpmAttestationResponse",
-            "apg-tpm-response-v1: the credential the TPM released through TPM2_ActivateCredential",
+            "ipg-tpm-response-v1: the credential the TPM released through TPM2_ActivateCredential",
             "public",
         ),
         (
@@ -898,7 +924,7 @@ pub fn export() -> Value {
         ),
         (
             "OpenpgpKeyFile",
-            "apg-openpgp-key-v1: a v4 or v6 OpenPGP key generated by APG whose transferable secret key is sealed with Argon2id and ChaCha20-Poly1305; the certificate is public",
+            "ipg-openpgp-key-v1: a v4 or v6 OpenPGP key generated by IPG whose transferable secret key is sealed with Argon2id and ChaCha20-Poly1305; the certificate is public",
             "encrypted-secret",
         ),
         (
@@ -908,12 +934,12 @@ pub fn export() -> Value {
         ),
         (
             "OpenpgpSecretKey",
-            "ASCII-armored transferable OpenPGP private key; every secret packet is protected by a passphrase and must be kept private",
-            "encrypted-secret",
+            "Transferable OpenPGP private key, armored or binary; imports may be unprotected, exports always protect every secret packet; keep private",
+            "secret",
         ),
         (
             "OpenpgpFingerprint",
-            "OpenPGP primary-key fingerprint: v4 40 or v6 64 hexadecimal characters, either case; distinct from APG fingerprints",
+            "OpenPGP primary-key fingerprint: v4 40 or v6 64 hexadecimal characters, either case; distinct from IPG fingerprints",
             "public",
         ),
         (
@@ -923,7 +949,7 @@ pub fn export() -> Value {
         ),
         (
             "OpenpgpMessage",
-            "ASCII-armored or binary OpenPGP message; APG writes armored AES-256 messages: SEIPDv1 for v4, SEIPDv2/OCB for v6",
+            "ASCII-armored or binary OpenPGP message; IPG writes armored AES-256 messages: SEIPDv1 for v4, SEIPDv2/OCB for v6",
             "ciphertext",
         ),
         (
@@ -933,7 +959,7 @@ pub fn export() -> Value {
         ),
         (
             "OpenpgpCertificateReport",
-            "A certificate evaluated under APG policy at host time: per-key algorithm, flags, expiry, revocation, usability and issues",
+            "A certificate evaluated under IPG policy at host time: per-key algorithm, flags, expiry, revocation, usability and issues",
             "control",
         ),
         (
@@ -943,7 +969,7 @@ pub fn export() -> Value {
         ),
         (
             "KmsKeyFile",
-            "Public apg-kms-key-v1 file binding an identity to AWS KMS key ARNs in one region: two P-384 keys (apg-public-p384-v1), plus an ML_DSA_65 key for composite post-quantum signatures (apg-public-p384-mldsa65-v1); using it needs host AWS credentials",
+            "Public ipg-kms-key-v1 file binding an identity to AWS KMS key ARNs in one region: two P-384 keys (ipg-public-p384-v1), plus an ML_DSA_65 key for composite post-quantum signatures (ipg-public-p384-mldsa65-v1); using it needs host AWS credentials",
             "public",
         ),
         (
@@ -963,17 +989,17 @@ pub fn export() -> Value {
         ),
         (
             "TpmKeyFile",
-            "Host TPM key file for a P-384 identity: apg-tpm-key-v1 (Linux) holds TPM-wrapped fixedTPM blobs only the originating TPM can load, so deleting every copy destroys the identity; apg-cng-key-v1 (Windows) names persisted Platform Crypto Provider keys, removed with tpm.key.delete",
+            "Host TPM key file for a P-384 identity: ipg-tpm-key-v1 (Linux) holds TPM-wrapped fixedTPM blobs only the originating TPM can load, so deleting every copy destroys the identity; ipg-cng-key-v1 (Windows) names persisted Platform Crypto Provider keys, removed with tpm.key.delete",
             "encrypted-secret",
         ),
         (
             "HardwareKeyReference",
-            "Public apg-pkcs11-key-v1 file binding a P-384 identity to token serial, label, manufacturer, model and two key IDs; holds no secret material",
+            "Public ipg-pkcs11-key-v1 file binding a P-384 identity to token serial, label, manufacturer, model and two key IDs; holds no secret material",
             "public",
         ),
         (
             "ToolAllowlist",
-            "Host-selected APG operation IDs exposed and callable in this MCP session; not a filesystem sandbox",
+            "Host-selected IPG operation IDs exposed and callable in this MCP session; not a filesystem sandbox",
             "control",
         ),
         (
@@ -983,7 +1009,7 @@ pub fn export() -> Value {
         ),
         (
             "TrustDigest",
-            "Externally pinned commitment to a canonical trust snapshot: SHA-384 for apg-trust-v3, SHA-256 for legacy v1 and v2; not a signature or freshness proof",
+            "Externally pinned commitment to a canonical trust snapshot: SHA-384 for ipg-trust-v3, SHA-256 for legacy v1 and v2; not a signature or freshness proof",
             "control",
         ),
         (
@@ -1013,12 +1039,17 @@ pub fn export() -> Value {
         ),
         (
             "Artifact",
-            "A versioned native APG JSON file or raw data",
+            "A versioned native IPG JSON file or raw data",
             "public",
         ),
         (
             "Plaintext",
             "Exact binary content; never emitted in control responses",
+            "secret",
+        ),
+        (
+            "OpenpgpSourcePassword",
+            "0..4096 exact file bytes for importing an external secret key; an empty file supports unprotected source packets",
             "secret",
         ),
         (
@@ -1028,17 +1059,17 @@ pub fn export() -> Value {
         ),
         (
             "PublicKey",
-            "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (apg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (apg-public-hybrid-v1), P-384 ECDH and ECDSA (apg-public-p384-v1), or P-384 ECDH with ECDSA P-384 plus ML-DSA-65 (apg-public-p384-mldsa65-v1)",
+            "Independent encryption and signing public keys bound by a fingerprint: X25519 and Ed25519 (ipg-public-v1), ML-KEM-768 plus X25519 with Ed25519 plus ML-DSA-65 (ipg-public-hybrid-v1), P-384 ECDH and ECDSA (ipg-public-p384-v1), or P-384 ECDH with ECDSA P-384 plus ML-DSA-65 (ipg-public-p384-mldsa65-v1)",
             "public",
         ),
         (
             "SecretKey",
-            "Software identity seeds protected by Argon2id and ChaCha20-Poly1305: 64 bytes (apg-secret-v1) or 160 bytes including the ML-KEM-768 and ML-DSA-65 seeds (apg-secret-hybrid-v1)",
+            "Software identity seeds protected by Argon2id and ChaCha20-Poly1305: 64 bytes (ipg-secret-v1) or 160 bytes including the ML-KEM-768 and ML-DSA-65 seeds (ipg-secret-hybrid-v1)",
             "encrypted-secret",
         ),
         (
             "Fingerprint",
-            "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for apg-public-v1, SHA-384 (48 bytes) for P-384, P-384 plus ML-DSA-65 and hybrid identities",
+            "Hash of a suite-specific domain-separated length-framed pair of public keys: SHA-256 (32 bytes) for ipg-public-v1, SHA-384 (48 bytes) for P-384, P-384 plus ML-DSA-65 and hybrid identities",
             "public",
         ),
         (
@@ -1083,7 +1114,7 @@ pub fn export() -> Value {
         ),
         (
             "AlgorithmCatalog",
-            "Upstream IronCrypto ontology; presence does not enable an APG suite",
+            "Upstream IronCrypto ontology; presence does not enable an IPG suite",
             "control",
         ),
         (
@@ -1097,12 +1128,12 @@ pub fn export() -> Value {
             "control",
         ),
     ];
-    let mut graph: Vec<Value> = entities.iter().map(|(id, description, sensitivity)| json!({"@id":format!("apg:{id}"),"@type":"apg:Entity","description":description,"sensitivity":sensitivity})).collect();
+    let mut graph: Vec<Value> = entities.iter().map(|(id, description, sensitivity)| json!({"@id":format!("ipg:{id}"),"@type":"ipg:Entity","description":description,"sensitivity":sensitivity})).collect();
     graph.extend(OPERATIONS.iter().map(|o| operation(o.0)));
     for (id, requirement) in [
         (
             "knowledge-advisory",
-            "Selection is advisory, never execution or authorization. Check support, prerequisites and limitations. External-required applications expose no APG tools. Unknown queries produce no recommendation.",
+            "Selection is advisory, never execution or authorization. Check support, prerequisites and limitations. External-required applications expose no IPG tools. Unknown queries produce no recommendation.",
         ),
         (
             "preflight-only",
@@ -1146,7 +1177,7 @@ pub fn export() -> Value {
         ),
         (
             "stream-signature",
-            "apg-stream-signature-v1 signs a domain-separated SHA-384 digest and u64 byte count with 64 KiB input memory. It is not ordinary apg-signature-v1, Ed25519ph, HashML-DSA or OpenPGP. Exact content, signer, signature algorithm and digest algorithm are bound together; independent review is still required.",
+            "ipg-stream-signature-v1 signs a domain-separated SHA-384 digest and u64 byte count with 64 KiB input memory. It is not ordinary ipg-signature-v1, Ed25519ph, HashML-DSA or OpenPGP. Exact content, signer, signature algorithm and digest algorithm are bound together; independent review is still required.",
         ),
         (
             "authenticate-before-release",
@@ -1170,19 +1201,19 @@ pub fn export() -> Value {
         ),
         (
             "host-provider",
-            "The PKCS#11 module loads only from the absolute path in the host's APG_PKCS11_MODULE; requests can never name a module. Loading runs vendor code inside the APG process. Builds without the pkcs11 feature fail with provider_unavailable.",
+            "The PKCS#11 module loads only from the absolute path in the host's IPG_PKCS11_MODULE; requests can never name a module. Loading runs vendor code inside the IPG process. Builds without the pkcs11 feature fail with provider_unavailable.",
         ),
         (
             "kms-provider",
-            "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. APG_KMS_FIPS=1 selects FIPS endpoints; APG_KMS_ENDPOINT is for local test services. Keys are never created by APG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; APG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with APG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
+            "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. IPG_KMS_FIPS=1 selects FIPS endpoints; IPG_KMS_ENDPOINT is for local test services. Keys are never created by IPG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; IPG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with IPG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
             "stream-envelope",
-            "apg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an apg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
+            "ipg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an ipg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
         ),
         (
             "tpm-attestation",
-            "TPM attestation proves that an apg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. apg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
+            "TPM attestation proves that an ipg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. ipg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
         ),
         (
             "verifier-secret",
@@ -1190,23 +1221,27 @@ pub fn export() -> Value {
         ),
         (
             "openpgp-boundary",
-            "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native APG artifacts, and native operations never read OpenPGP data. APG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, secret-key export, decryption and signing.",
+            "OpenPGP operations use rPGP, not IronCrypto, and need a build with the openpgp feature (otherwise provider_unavailable). They never read native IPG artifacts, and native operations never read OpenPGP data. IPG trust snapshots do not apply; an MCP host with a pinned trust policy exposes OpenPGP tools only when --allow names them. OpenPGP secret keys are software keys, so host key-custody policies other than any refuse key generation, secret-key import/export, decryption and signing.",
         ),
         (
             "openpgp-pin",
             "Each certificate must match an independently trusted fingerprint in expected_openpgp_fingerprint (v4 40 hex or v6 64 hex, either case). A certificate file must hold exactly one v4 or v6 certificate.",
         ),
         (
+            "openpgp-secret-import",
+            "Import one complete v4 or v6 Ed25519/Curve25519 or P-384 key with one signing primary and one encryption subkey, valid current bindings and a valid User ID. Pin before unlock; preflight both packets: unprotected, AES-CFB iterated salted SHA-1/SHA-2 (encoded count at most 255), or AES-256 OCB Argon2id up to 64 MiB, 3 passes, 4 lanes. Refuse extra or unknown packets, excessive protection parameters and private/public disagreement. Source passwords contain exact 0..4096 bytes; new IPG passwords contain 16..4096. Publish only IPG-sealed secrets.",
+        ),
+        (
             "openpgp-secret-export",
-            "Export only an authenticated APG-held software key matching expected_openpgp_fingerprint. The source is unchanged. Both passphrase files contain 16..4096 exact bytes. Every primary and subkey secret packet is protected with fresh salts and IVs: v4 AES-256 CFB with SHA-256 iterated-and-salted S2K (encoded count 224) and SHA-1 integrity checksum; v6 AES-256 OCB with Argon2id (64 MiB, 3 passes, 4 lanes). No unprotected export or secret bytes in JSON. Revocation or expiry does not prevent backup/export; those remain certificate policy decisions for use.",
+            "Export only an authenticated IPG-held software key matching expected_openpgp_fingerprint. The source is unchanged. Both passphrase files contain 16..4096 exact bytes. Every primary and subkey secret packet is protected with fresh salts and IVs: v4 AES-256 CFB with SHA-256 iterated-and-salted S2K (encoded count 224) and SHA-1 integrity checksum; v6 AES-256 OCB with Argon2id (64 MiB, 3 passes, 4 lanes). No unprotected export or secret bytes in JSON. Revocation or expiry does not prevent backup/export; those remain certificate policy decisions for use.",
         ),
         (
             "openpgp-certificate-policy",
-            "APG evaluates certificates itself at host time (verification: at the signature's creation time, plus revocation now). Certificates exceeding 1 MiB or 1024 total retained signatures (including invalid and third-party signatures across all components and User Attributes) fail with limit_exceeded before evaluation; accepted signature lists are never truncated. V4 requires a valid self-certified User ID; v6 requires a direct-key self-signature and permits absent User IDs. A key is usable only with a valid unexpired binding self-signature using SHA-256 or stronger and matching key flags; signing subkeys need a valid back signature and subkeys must match their primary's version. Any valid revocation by the primary key revokes, whatever its reason. RSA below 2048 bits, DSA, ElGamal, SHA-1 and MD5 are refused. Third-party certifications and designated revokers are ignored. Encryption uses every usable encryption key of each certificate.",
+            "IPG evaluates certificates itself at host time (verification: at the signature's creation time, plus revocation now). Certificates exceeding 1 MiB or 1024 total retained signatures (including invalid and third-party signatures across all components and User Attributes) fail with limit_exceeded before evaluation; accepted signature lists are never truncated. V4 requires a valid self-certified User ID; v6 requires a direct-key self-signature and permits absent User IDs. A key is usable only with a valid unexpired binding self-signature using SHA-256 or stronger and matching key flags; signing subkeys need a valid back signature and subkeys must match their primary's version. Any valid revocation by the primary key revokes, whatever its reason. RSA below 2048 bits, DSA, ElGamal, SHA-1 and MD5 are refused. Third-party certifications and designated revokers are ignored. Encryption uses every usable encryption key of each certificate.",
         ),
         (
             "openpgp-user-id",
-            "User IDs are self-asserted labels. APG reports only those with a valid self-certification and never treats them as identity proof; pin fingerprints instead.",
+            "User IDs are self-asserted labels. IPG reports only those with a valid self-certification and never treats them as identity proof; pin fingerprints instead.",
         ),
         (
             "openpgp-embedded-signatures",
@@ -1218,11 +1253,11 @@ pub fn export() -> Value {
         ),
         (
             "irreversible-deletion",
-            "Deleting TPM keys destroys the identity permanently: nothing encrypted to it can be decrypted and it can never sign again. APG checks the PIN and the pinned identity first. Publish a revocation beforehand if others trust the identity.",
+            "Deleting TPM keys destroys the identity permanently: nothing encrypted to it can be decrypted and it can never sign again. IPG checks the PIN and the pinned identity first. Publish a revocation beforehand if others trust the identity.",
         ),
         (
             "tpm-provider",
-            "On Windows, tpm builds use the Microsoft Platform Crypto Provider through CNG: keys persist in the user's TPM key store, are non-exportable, and are authorized by a PIN-derived usage authorization under the TPM's dictionary-attack lockout. On Linux, the TPM connection comes only from the host's APG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Linux builds need the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
+            "On Windows, tpm builds use the Microsoft Platform Crypto Provider through CNG: keys persist in the user's TPM key store, are non-exportable, and are authorized by a PIN-derived usage authorization under the TPM's dictionary-attack lockout. On Linux, the TPM connection comes only from the host's IPG_TPM_TCTI (for example device:/dev/tpmrm0); requests can never name it. Linux builds need the tpm2-tss libraries. The owner hierarchy must have empty authorization. Keys are fixedTPM, fixedParent blobs under a storage root the TPM re-derives from a fixed template; back up the key file, since it is the only copy. Signing and ECDH authorize through HMAC sessions without sending the PIN-derived authorization; key creation sends it parameter-encrypted. Sessions are salted with the storage root key, which protects against passive TPM-bus observers but not an active interposer. Guessing is limited by the TPM dictionary-attack lockout.",
         ),
         (
             "pin-channel",
@@ -1230,7 +1265,7 @@ pub fn export() -> Value {
         ),
         (
             "non-exportable-key",
-            "Private keys are created and accepted only as P-384 objects with CKA_SENSITIVE true and CKA_EXTRACTABLE false. APG never requests private key values. Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others release one per-envelope ECDH shared secret into process memory for the X9.63 KDF. Long-term keys stay on the token.",
+            "Private keys are created and accepted only as P-384 objects with CKA_SENSITIVE true and CKA_EXTRACTABLE false. IPG never requests private key values. Tokens supporting CKD_SHA384_KDF and CKM_AES_GCM decrypt entirely in-token; others release one per-envelope ECDH shared secret into process memory for the X9.63 KDF. Long-term keys stay on the token.",
         ),
         (
             "possession-check",
@@ -1246,18 +1281,18 @@ pub fn export() -> Value {
         ),
         (
             "key-provider",
-            "key accepts a software secret (passphrase_file holds its passphrase), an apg-pkcs11-key-v1 or apg-tpm-key-v1 key (passphrase_file holds the PIN), or an apg-kms-key-v1 key (omit passphrase_file; host AWS credentials are used). Device and service keys must match the pinned identity exactly, and every signature is self-verified. Hosts may require non-exportable or hardware custody and refuse other keys with policy_mismatch.",
+            "key accepts a software secret (passphrase_file holds its passphrase), an ipg-pkcs11-key-v1 or ipg-tpm-key-v1 key (passphrase_file holds the PIN), or an ipg-kms-key-v1 key (omit passphrase_file; host AWS credentials are used). Device and service keys must match the pinned identity exactly, and every signature is self-verified. Hosts may require non-exportable or hardware custody and refuse other keys with policy_mismatch.",
         ),
         (
             "hybrid-post-quantum",
-            "Hybrid identities (key.generate identity apg-public-hybrid-v1) receive envelopes keyed by HKDF over both an ML-KEM-768 and an X25519 shared secret, binding both ciphertexts, and sign with composite ed25519-mldsa65 signatures that verify only if both halves verify over the same framed message. Confidentiality and authenticity hold while either component of each pair is unbroken. Fingerprints use SHA-384; snapshot digests use SHA-256. Suites follow the identity; there is no negotiation, downgrade or stripping to Ed25519.",
+            "Hybrid identities (key.generate identity ipg-public-hybrid-v1) receive envelopes keyed by HKDF over both an ML-KEM-768 and an X25519 shared secret, binding both ciphertexts, and sign with composite ed25519-mldsa65 signatures that verify only if both halves verify over the same framed message. Confidentiality and authenticity hold while either component of each pair is unbroken. Fingerprints use SHA-384; snapshot digests use SHA-256. Suites follow the identity; there is no negotiation, downgrade or stripping to Ed25519.",
         ),
         (
             "software-key-only",
-            "Applies only to apg-secret-v1 software keys. Refused with policy_mismatch when the host requires hardware key custody.",
+            "Applies only to ipg-secret-v1 software keys. Refused with policy_mismatch when the host requires hardware key custody.",
         ),
     ] {
-        graph.push(json!({"@id":format!("apg:constraint/{id}"),"@type":"apg:Constraint","severity":"critical","requirement":requirement}));
+        graph.push(json!({"@id":format!("ipg:constraint/{id}"),"@type":"ipg:Constraint","severity":"critical","requirement":requirement}));
     }
     for (id, exit, recovery) in [
         (
@@ -1330,7 +1365,7 @@ pub fn export() -> Value {
         (
             "provider_unavailable",
             5,
-            "The host must use a pkcs11 build with APG_PKCS11_MODULE set to an absolute module path, a Linux tpm build with APG_TPM_TCTI set, or a kms build with AWS credentials; callers cannot supply any of these.",
+            "The host must use a pkcs11 build with IPG_PKCS11_MODULE set to an absolute module path, a Linux tpm build with IPG_TPM_TCTI set, or a kms build with AWS credentials; callers cannot supply any of these.",
         ),
         (
             "hardware_not_found",
@@ -1340,7 +1375,7 @@ pub fn export() -> Value {
         (
             "mechanism_unsupported",
             5,
-            "Use a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE; APG never substitutes another curve.",
+            "Use a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE; IPG never substitutes another curve.",
         ),
         (
             "provider_error",
@@ -1353,10 +1388,10 @@ pub fn export() -> Value {
             "Token administration must unblock or reset the PIN; never retry.",
         ),
     ] {
-        graph.push(json!({"@id":format!("apg:error/{id}"),"@type":"apg:Error","code":id,"exit_code":exit,"retryable":false,"recovery":recovery}));
+        graph.push(json!({"@id":format!("ipg:error/{id}"),"@type":"ipg:Error","code":id,"exit_code":exit,"retryable":false,"recovery":recovery}));
     }
-    graph.push(json!({"@id":"apg:error/rate_limited","@type":"apg:Error","code":"rate_limited","exit_code":5,"retryable":true,"recovery":"Wait until the MCP session's current 60-second window ends before retrying; no operation was executed."}));
-    graph.push(json!({"@id":"apg:transport/mcp","@type":"apg:McpTransport","protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"constraints":["apg:constraint/mcp-host-boundary"],"methods":["initialize","notifications/initialized","ping","tools/list","tools/call"],"configuration":["apg:McpHostPolicy","apg:ToolAllowlist"]}));
+    graph.push(json!({"@id":"ipg:error/rate_limited","@type":"ipg:Error","code":"rate_limited","exit_code":5,"retryable":true,"recovery":"Wait until the MCP session's current 60-second window ends before retrying; no operation was executed."}));
+    graph.push(json!({"@id":"ipg:transport/mcp","@type":"ipg:McpTransport","protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"constraints":["ipg:constraint/mcp-host-boundary"],"methods":["initialize","notifications/initialized","ping","tools/list","tools/call"],"configuration":["ipg:McpHostPolicy","ipg:ToolAllowlist"]}));
     for (id, steps) in [
         (
             "reconcile-trust",
@@ -1437,9 +1472,9 @@ pub fn export() -> Value {
             vec!["discover", "schema", "ontology", "request.validate", "plan"],
         ),
     ] {
-        graph.push(json!({"@id":format!("apg:workflow/{id}"),"@type":"apg:Workflow","steps":{"@list":steps.iter().map(|s|json!({"@id":format!("apg:operation/{s}")})).collect::<Vec<_>>()}}));
+        graph.push(json!({"@id":format!("ipg:workflow/{id}"),"@type":"ipg:Workflow","steps":{"@list":steps.iter().map(|s|json!({"@id":format!("ipg:operation/{s}")})).collect::<Vec<_>>()}}));
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"apg:ontology", "version":"1.27.0", "scope":"Complete implemented APG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.27.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

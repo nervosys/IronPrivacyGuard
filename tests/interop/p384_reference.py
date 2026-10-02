@@ -1,10 +1,10 @@
-"""Independent oracle for the APG P-384 identity suite using PyCA, never IronCrypto.
+"""Independent oracle for the IPG P-384 identity suite using PyCA, never IronCrypto.
 
-The suite backs PKCS#11, TPM and KMS identities: apg-public-p384-v1 keys, the
+The suite backs PKCS#11, TPM and KMS identities: ipg-public-p384-v1 keys, the
 p384-x963kdf-sha384-aes256gcm envelope suite (ANSI X9.63 KDF, as PKCS#11
 CKD_SHA384_KDF, so FIPS-mode tokens can decrypt in-token), and low-s ECDSA P-384/SHA-384
 signatures.
-APG has no software P-384 secret-key format, so this oracle holds the private
+IPG has no software P-384 secret-key format, so this oracle holds the private
 scalars that a token would hold. All scalars, nonces and messages are PUBLIC TEST
 DATA. Do not reuse them.
 """
@@ -27,7 +27,7 @@ from crypto_reference import compact, frame, snapshot_digest
 
 FIXTURE = Path(__file__).resolve().parents[1] / "vectors" / "native-p384-v1.json"
 SUITE = "p384-x963kdf-sha384-aes256gcm"
-KEY_FORMAT = "apg-public-p384-v1"
+KEY_FORMAT = "ipg-public-p384-v1"
 ALGORITHM = "ecdsa-p384-sha384"
 CURVE = ec.SECP384R1()
 ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973
@@ -51,11 +51,11 @@ def peer(encoded):
 def identity():
     encryption, signing = point(private(ENCRYPTION_SCALAR)), point(private(SIGNING_SCALAR))
     return {"format": KEY_FORMAT, "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha384(frame("APG identity p384 v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha384(frame("IPG identity p384 v1", encryption, signing)).hexdigest()}
 
 
 def envelope_aad(envelope):
-    return frame("APG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
+    return frame("IPG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
 
 
 def content_key(shared, aad):
@@ -66,7 +66,7 @@ def content_key(shared, aad):
 
 def encrypt(public, plaintext, ephemeral_scalar, nonce):
     ephemeral = private(ephemeral_scalar)
-    envelope = {"format": "apg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
+    envelope = {"format": "ipg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
                 "ephemeral_key": point(ephemeral).hex(), "nonce": nonce.hex()}
     shared = ephemeral.exchange(ec.ECDH(), peer(bytes.fromhex(public["encryption_key"])))
     aad = envelope_aad(envelope)
@@ -78,7 +78,7 @@ def encrypt(public, plaintext, ephemeral_scalar, nonce):
 
 
 def decrypt(envelope):
-    assert envelope["format"] == "apg-envelope-v1" and envelope["suite"] == SUITE
+    assert envelope["format"] == "ipg-envelope-v1" and envelope["suite"] == SUITE
     assert envelope["recipient"] == identity()["fingerprint"]
     shared = private(ENCRYPTION_SCALAR).exchange(ec.ECDH(), peer(bytes.fromhex(envelope["ephemeral_key"])))
     aad = envelope_aad(envelope)
@@ -106,29 +106,29 @@ def ecdsa_verify(signature, message):
 
 
 def signature_message(fingerprint, message):
-    return frame(f"APG detached signature v1 {ALGORITHM}", fingerprint.encode("ascii"), message)
+    return frame(f"IPG detached signature v1 {ALGORITHM}", fingerprint.encode("ascii"), message)
 
 
 def sign(message):
     fingerprint = identity()["fingerprint"]
-    return {"format": "apg-signature-v1", "signer": fingerprint, "algorithm": ALGORITHM,
+    return {"format": "ipg-signature-v1", "signer": fingerprint, "algorithm": ALGORITHM,
             "signature": ecdsa(signature_message(fingerprint, message)).hex()}
 
 
 def certificate_message(certificate):
     fields = [certificate[k].encode("ascii") for k in ("format", "fingerprint", "scope")]
-    if certificate["format"] == "apg-validity-v1":
-        domain = "APG validity v1"
+    if certificate["format"] == "ipg-validity-v1":
+        domain = "IPG validity v1"
         fields += [certificate[k].to_bytes(8, "big") for k in ("not_before", "not_after")]
     else:
-        domain = "APG revocation v1"
+        domain = "IPG revocation v1"
         fields += [certificate["reason"].encode("ascii")]
     return frame(domain, *fields, certificate["algorithm"].encode("ascii"))
 
 
 def certificate(*, reason=None, start=1700000000, end=1900000000):
     kind = "revocation" if reason else "validity"
-    value = {"format": f"apg-{kind}-v1", "fingerprint": identity()["fingerprint"], "scope": "entire-identity"}
+    value = {"format": f"ipg-{kind}-v1", "fingerprint": identity()["fingerprint"], "scope": "entire-identity"}
     value.update({"reason": reason} if reason else {"not_before": start, "not_after": end})
     value["algorithm"] = ALGORITHM
     value["signature"] = ecdsa(certificate_message(value)).hex()
@@ -148,10 +148,10 @@ def vectors():
     revocations = [certificate(reason=reason) for reason in ("compromised", "superseded", "retired")]
     validity = certificate()
     snapshots = []
-    for fmt, revoked, window in [("apg-trust-v1", False, None), ("apg-trust-v1", True, None),
-                                 ("apg-trust-v2", False, validity), ("apg-trust-v2", True, validity),
-                                 ("apg-trust-v3", False, None), ("apg-trust-v3", False, validity),
-                                 ("apg-trust-v3", True, validity)]:
+    for fmt, revoked, window in [("ipg-trust-v1", False, None), ("ipg-trust-v1", True, None),
+                                 ("ipg-trust-v2", False, validity), ("ipg-trust-v2", True, validity),
+                                 ("ipg-trust-v3", False, None), ("ipg-trust-v3", False, validity),
+                                 ("ipg-trust-v3", True, validity)]:
         entry = {"public": public, "revocation": revocations[0] if revoked else None}
         if window:
             entry["validity"] = window
@@ -176,7 +176,7 @@ def self_check(fixture):
 
 
 # The CLI must not see a host PKCS#11 module: references are expected to fail closed.
-ENVIRONMENT = {k: v for k, v in os.environ.items() if k != "APG_PKCS11_MODULE"}
+ENVIRONMENT = {k: v for k, v in os.environ.items() if k != "IPG_PKCS11_MODULE"}
 
 
 def exercise(executable, fixture, directory):
@@ -189,7 +189,7 @@ def exercise(executable, fixture, directory):
 
     def call(operation, expect_ok=True, **arguments):
         nonlocal calls
-        request = {"protocol": "apg/1", "id": operation, "request": {"operation": operation, **arguments}}
+        request = {"protocol": "ipg/1", "id": operation, "request": {"operation": operation, **arguments}}
         result = subprocess.run([str(executable), "call"], input=compact(request), capture_output=True, timeout=30,
                                 env=ENVIRONMENT)
         calls += 1
@@ -203,7 +203,7 @@ def exercise(executable, fixture, directory):
     inspected = call("inspect", input=public_path)
     assert inspected["format"] == KEY_FORMAT and inspected["fingerprint"] == fingerprint
 
-    # APG-generated envelopes must decrypt with the independent implementation.
+    # IPG-generated envelopes must decrypt with the independent implementation.
     for length in [0, 1, 4096]:
         message = bytes(range(256)) * (length // 256) + bytes(range(length % 256))
         output = str(directory / f"envelope-{length}")
@@ -212,7 +212,7 @@ def exercise(executable, fixture, directory):
         envelope = json.loads(Path(output).read_text(encoding="utf-8"))
         assert envelope["suite"] == SUITE and decrypt(envelope) == message
 
-    # Independent signatures and certificates must verify in APG; high-s must not.
+    # Independent signatures and certificates must verify in IPG; high-s must not.
     for index, item in enumerate(fixture["messages"]):
         message_path = put(f"message-{index}", bytes.fromhex(item["message_hex"]))
         call("verify", input=message_path, signature=put(f"signature-{index}", item["signature"]),
@@ -227,7 +227,7 @@ def exercise(executable, fixture, directory):
     validity_path = put("validity", fixture["validity"])
     call("validity.verify", input=validity_path, signer=public_path, expected_fingerprint=fingerprint)
 
-    # Trust snapshots built by APG commit to the same digests as the oracle.
+    # Trust snapshots built by IPG commit to the same digests as the oracle.
     store = str(directory / "store-0")
     digest = call("trust.init", output=store)["digest"]
     added = call("trust.add", store=store, expected_digest=digest, public=public_path,
@@ -242,8 +242,8 @@ def exercise(executable, fixture, directory):
     assert revoked["digest"] == fixture["snapshots"][6]["digest"]
 
     # A hardware reference is public data; without a configured module it cannot sign.
-    reference = {"format": "apg-pkcs11-key-v1", "public": public,
-                 "token": {"serial": "0123456789abcdef", "label": "apg-test", "manufacturer": "Test", "model": "Oracle"},
+    reference = {"format": "ipg-pkcs11-key-v1", "public": public,
+                 "token": {"serial": "0123456789abcdef", "label": "ipg-test", "manufacturer": "Test", "model": "Oracle"},
                  "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16}
     reference_path = put("reference", reference)
     assert call("inspect", input=reference_path)["fingerprint"] == fingerprint
@@ -256,16 +256,16 @@ def exercise(executable, fixture, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="explicitly regenerate the checked-in PUBLIC fixture")
-    parser.add_argument("--apg", type=Path, help="also check bidirectional release CLI interoperability")
+    parser.add_argument("--ipg", type=Path, help="also check bidirectional release CLI interoperability")
     args = parser.parse_args()
     if args.write:
         FIXTURE.write_bytes((json.dumps(vectors(), indent=2) + "\n").encode("utf-8"))
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     self_check(fixture)
     calls = 0
-    if args.apg:
+    if args.ipg:
         with tempfile.TemporaryDirectory() as directory:
-            calls = exercise(args.apg.resolve(), fixture, Path(directory))
+            calls = exercise(args.ipg.resolve(), fixture, Path(directory))
     print(json.dumps({"ok": True, "suite": SUITE, "message_vectors": len(fixture["messages"]), "cli_calls": calls}))
 
 

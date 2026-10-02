@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason},
     reconciliation::{self, Change, WindowRelation},
@@ -46,13 +46,13 @@ fn distinct_public(index: u64) -> crypto::PublicKey {
     let (mut enc, mut sig) = ([0; 32], [0; 32]);
     ic_ec::X25519::public_key(&seed, &mut enc).unwrap();
     ic_ec::Ed25519::public_key(&seed, &mut sig).unwrap();
-    let mut frame = b"APG identity v1".to_vec();
+    let mut frame = b"IPG identity v1".to_vec();
     for field in [enc, sig] {
         frame.extend_from_slice(&32u64.to_be_bytes());
         frame.extend_from_slice(&field);
     }
     crypto::PublicKey {
-        format: "apg-public-v1".into(),
+        format: "ipg-public-v1".into(),
         encryption_key: hex::encode(enc),
         signing_key: hex::encode(sig),
         fingerprint: hex::encode(ic_hash::Sha256::digest(&frame)),
@@ -197,7 +197,7 @@ fn union_order_capacity_and_invalid_inputs_are_checked() {
         let public = distinct_public(index);
         incoming
             .entries
-            .push(iron_privacy_guardian::trust::TrustEntry {
+            .push(iron_privacy_guard::trust::TrustEntry {
                 public,
                 revocation: None,
                 validity: None,
@@ -238,7 +238,7 @@ fn cli_pins_no_clobber_and_conflict_publication() {
     let base = put("base", bounded(100, 200));
     let incoming = put("incoming", revoked(RevocationReason::Retired));
     let output = dir.path().join("merged");
-    let result = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let result = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args([
             "trust.merge",
             "--base",
@@ -261,8 +261,8 @@ fn cli_pins_no_clobber_and_conflict_publication() {
         expected_digest: response["result"]["digest"].as_str().unwrap().into(),
     };
     let call = |r: Value| {
-        iron_privacy_guardian::handle_call(
-            &serde_json::to_vec(&json!({"protocol":"apg/1","id":"merge","request":r})).unwrap(),
+        iron_privacy_guard::handle_call(
+            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"merge","request":r})).unwrap(),
         )
     };
     let report = call(json!({"operation":"trust.compare","base":base,"candidate":candidate}));

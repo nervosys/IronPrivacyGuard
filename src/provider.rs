@@ -3,7 +3,7 @@
 //! only the originating TPM can load. Hardware references hold no usable secret
 //! material; the device performs every private-key operation.
 //!
-//! The PKCS#11 module (`APG_PKCS11_MODULE`) and the TPM connection (`APG_TPM_TCTI`)
+//! The PKCS#11 module (`IPG_PKCS11_MODULE`) and the TPM connection (`IPG_TPM_TCTI`)
 //! are host configuration, never request values.
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, SecretKey, Suite},
@@ -14,15 +14,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 
-pub const HARDWARE_KEY_FORMAT: &str = "apg-pkcs11-key-v1";
-pub const TPM_KEY_FORMAT: &str = "apg-tpm-key-v1";
-pub const KMS_KEY_FORMAT: &str = "apg-kms-key-v1";
-pub const CNG_KEY_FORMAT: &str = "apg-cng-key-v1";
+pub const HARDWARE_KEY_FORMAT: &str = "ipg-pkcs11-key-v1";
+pub const TPM_KEY_FORMAT: &str = "ipg-tpm-key-v1";
+pub const KMS_KEY_FORMAT: &str = "ipg-kms-key-v1";
+pub const CNG_KEY_FORMAT: &str = "ipg-cng-key-v1";
 pub const CNG_PROVIDER: &str = "Microsoft Platform Crypto Provider";
-pub const MODULE_ENV: &str = "APG_PKCS11_MODULE";
-pub const TPM_TCTI_ENV: &str = "APG_TPM_TCTI";
+pub const MODULE_ENV: &str = "IPG_PKCS11_MODULE";
+pub const TPM_TCTI_ENV: &str = "IPG_TPM_TCTI";
 /// Name of the fixed storage-root template every TPM identity is created under.
-pub const TPM_PARENT: &str = "apg-owner-ecc-p384-srk-v1";
+pub const TPM_PARENT: &str = "ipg-owner-ecc-p384-srk-v1";
 /// Keys created under the Windows storage root key (persistent handle 0x81000001).
 pub const WINDOWS_TPM_PARENT: &str = "windows-srk-81000001";
 const TPM_BLOB_BYTES_MAX: usize = 2048;
@@ -69,7 +69,7 @@ impl TokenBinding {
 pub struct HardwareKey {
     #[schemars(schema_with = "crate::contract::hardware_key_format")]
     pub format: String,
-    /// Always an apg-public-p384-v1 identity (checked at runtime).
+    /// Always an ipg-public-p384-v1 identity (checked at runtime).
     pub public: PublicKey,
     pub token: TokenBinding,
     #[schemars(schema_with = "crate::contract::key_id")]
@@ -89,7 +89,7 @@ impl HardwareKey {
         if self.public.suite()? != Suite::P384 {
             return Err(Error::new(
                 "invalid_format",
-                "Hardware key references bind only apg-public-p384-v1 identities",
+                "Hardware key references bind only ipg-public-p384-v1 identities",
             ));
         }
         self.token.validate()?;
@@ -153,7 +153,7 @@ impl TpmBlob {
 pub struct TpmKey {
     #[schemars(schema_with = "crate::contract::tpm_key_format")]
     pub format: String,
-    /// Always an apg-public-p384-v1 identity (checked at runtime).
+    /// Always an ipg-public-p384-v1 identity (checked at runtime).
     pub public: PublicKey,
     pub tpm: TpmBinding,
     #[schemars(schema_with = "crate::contract::tpm_parent")]
@@ -175,7 +175,7 @@ impl TpmKey {
         if self.public.suite()? != Suite::P384 {
             return Err(Error::new(
                 "invalid_format",
-                "TPM keys bind only apg-public-p384-v1 identities",
+                "TPM keys bind only ipg-public-p384-v1 identities",
             ));
         }
         if self.tpm.manufacturer.chars().count() > 4 || self.tpm.vendor.chars().count() > 16 {
@@ -189,7 +189,7 @@ impl TpmKey {
 
 /// A P-384 identity whose private keys are two existing AWS KMS keys: an
 /// ECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. With a third,
-/// ML_DSA_65 SIGN_VERIFY key it is an `apg-public-p384-mldsa65-v1` identity whose
+/// ML_DSA_65 SIGN_VERIFY key it is an `ipg-public-p384-mldsa65-v1` identity whose
 /// signatures are composite ECDSA P-384 plus ML-DSA-65. The file is public; using it
 /// requires the host's AWS credentials and KMS key permissions.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -197,7 +197,7 @@ impl TpmKey {
 pub struct KmsKey {
     #[schemars(schema_with = "crate::contract::kms_key_format")]
     pub format: String,
-    /// apg-public-p384-v1, or apg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`
+    /// ipg-public-p384-v1, or ipg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`
     /// (checked at runtime).
     pub public: PublicKey,
     #[schemars(schema_with = "crate::contract::aws_region")]
@@ -225,7 +225,7 @@ impl KmsKey {
         if self.public.suite()? != expected {
             return Err(Error::new(
                 "invalid_format",
-                "KMS keys bind apg-public-p384-v1 identities, or apg-public-p384-mldsa65-v1 identities with an ML-DSA key",
+                "KMS keys bind ipg-public-p384-v1 identities, or ipg-public-p384-mldsa65-v1 identities with an ML-DSA key",
             ));
         }
         check_kms_keys(
@@ -330,7 +330,7 @@ pub fn check_kms_keys(
 pub struct CngKey {
     #[schemars(schema_with = "crate::contract::cng_key_format")]
     pub format: String,
-    /// Always an apg-public-p384-v1 identity (checked at runtime).
+    /// Always an ipg-public-p384-v1 identity (checked at runtime).
     pub public: PublicKey,
     #[schemars(schema_with = "crate::contract::cng_provider")]
     pub provider: String,
@@ -346,7 +346,7 @@ impl CngKey {
     pub fn validate(&self) -> Result<()> {
         let name = |value: &str, role: &str| {
             value.len() == 40
-                && value.starts_with("apg-")
+                && value.starts_with("ipg-")
                 && value.ends_with(role)
                 && value[4..36]
                     .bytes()
@@ -368,7 +368,7 @@ impl CngKey {
         if self.public.suite()? != Suite::P384 {
             return Err(Error::new(
                 "invalid_format",
-                "CNG keys bind only apg-public-p384-v1 identities",
+                "CNG keys bind only ipg-public-p384-v1 identities",
             ));
         }
         Ok(())
@@ -377,9 +377,9 @@ impl CngKey {
 
 /// A key file produced by tpm.key.generate on the host platform.
 pub enum TpmKeyFile {
-    /// Linux: TPM-wrapped blobs (apg-tpm-key-v1).
+    /// Linux: TPM-wrapped blobs (ipg-tpm-key-v1).
     Wrapped(TpmKey),
-    /// Windows: persisted Platform Crypto Provider keys (apg-cng-key-v1).
+    /// Windows: persisted Platform Crypto Provider keys (ipg-cng-key-v1).
     Cng(CngKey),
 }
 impl TpmKeyFile {
@@ -451,7 +451,7 @@ impl KeyFile {
             }
             _ => Err(Error::new(
                 "invalid_format",
-                "Key must be an apg-secret-v1 or apg-secret-hybrid-v1 file, or an apg-pkcs11-key-v1, apg-tpm-key-v1, apg-cng-key-v1 or apg-kms-key-v1 key",
+                "Key must be an ipg-secret-v1 or ipg-secret-hybrid-v1 file, or an ipg-pkcs11-key-v1, ipg-tpm-key-v1, ipg-cng-key-v1 or ipg-kms-key-v1 key",
             )),
         }
     }
@@ -593,7 +593,7 @@ pub(crate) fn prove_possession(
     identity: &dyn IdentityKey,
     generated_on_device: bool,
 ) -> Result<Protection> {
-    crypto::sign_message(identity, b"APG device possession check v1")?;
+    crypto::sign_message(identity, b"IPG device possession check v1")?;
     let public = identity.public();
     let challenge = crypto::random::<32>()?;
     let envelope = crypto::encrypt(public, &public.fingerprint, challenge.as_ref())?;
@@ -621,14 +621,14 @@ pub fn module_path() -> Result<PathBuf> {
     let path = PathBuf::from(std::env::var_os(MODULE_ENV).ok_or_else(|| {
         Error::new(
             "provider_unavailable",
-            "Host has not configured APG_PKCS11_MODULE",
+            "Host has not configured IPG_PKCS11_MODULE",
         )
     })?);
     // A bare name would make the loader search PATH or the working directory.
     if !path.is_absolute() || !path.is_file() {
         return Err(Error::new(
             "provider_unavailable",
-            "APG_PKCS11_MODULE must be an absolute path to an existing module file",
+            "IPG_PKCS11_MODULE must be an absolute path to an existing module file",
         ));
     }
     Ok(path)
@@ -642,7 +642,7 @@ pub fn tpm_tcti() -> Result<String> {
         .ok_or_else(|| {
             Error::new(
                 "provider_unavailable",
-                "Host has not configured APG_TPM_TCTI (for example device:/dev/tpmrm0)",
+                "Host has not configured IPG_TPM_TCTI (for example device:/dev/tpmrm0)",
             )
         })
 }
@@ -650,9 +650,9 @@ pub fn tpm_tcti() -> Result<String> {
 /// Provider status for discovery. Never loads the module or opens the TPM.
 pub fn status() -> Value {
     json!({"windows_tpm":{"compiled":cfg!(all(feature = "tpm", windows)),"provider":CNG_PROVIDER,
-        "key_format":CNG_KEY_FORMAT,"persistence":"apg-cng-key-v1 keys persist in the user's key store until tpm.key.delete; new keys use TPM Base Services","attestation":false,"tbs_keys":{"parent":WINDOWS_TPM_PARENT,"attestation":cfg!(all(feature = "tpm", windows))}},
+        "key_format":CNG_KEY_FORMAT,"persistence":"ipg-cng-key-v1 keys persist in the user's key store until tpm.key.delete; new keys use TPM Base Services","attestation":false,"tbs_keys":{"parent":WINDOWS_TPM_PARENT,"attestation":cfg!(all(feature = "tpm", windows))}},
         "kms":{"compiled":cfg!(feature = "kms"),"credentials":"environment, web identity (STS), static profile, IAM Identity Center profile (cached aws sso login token), ECS/EKS container credentials, then EC2 IMDSv2 instance profile",
-        "endpoint_env":"APG_KMS_ENDPOINT","fips_env":"APG_KMS_FIPS","key_spec":"ECC_NIST_P384",
+        "endpoint_env":"IPG_KMS_ENDPOINT","fips_env":"IPG_KMS_FIPS","key_spec":"ECC_NIST_P384",
         "key_usages":{"encryption":"KEY_AGREEMENT","signing":"SIGN_VERIFY"},"key_creation":false,"attestation":false},
         "tpm":{"compiled":cfg!(all(feature = "tpm", target_os = "linux")),"tcti_env":TPM_TCTI_ENV,
         "tcti_configured":std::env::var_os(TPM_TCTI_ENV).is_some(),"suites":[crypto::P384_KEY_FORMAT],
@@ -711,7 +711,7 @@ pub struct Protection {
     pub possession_verified: bool,
 }
 
-/// TPM properties relevant to APG identities.
+/// TPM properties relevant to IPG identities.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct TpmInfo {
     pub tpm: TpmBinding,
@@ -739,7 +739,7 @@ mod tpm_backend {
     fn unavailable() -> Error {
         Error::new(
             "provider_unavailable",
-            "This apg build has no TPM support; rebuild on Linux with --features tpm",
+            "This ipg build has no TPM support; rebuild on Linux with --features tpm",
         )
     }
     pub fn info() -> Result<TpmInfo> {
@@ -763,7 +763,7 @@ mod kms_backend {
     fn unavailable() -> Error {
         Error::new(
             "provider_unavailable",
-            "This apg build has no AWS KMS support; rebuild with --features kms",
+            "This ipg build has no AWS KMS support; rebuild with --features kms",
         )
     }
     pub fn open(_: &KmsKey) -> Result<Box<dyn IdentityKey>> {
@@ -804,7 +804,7 @@ mod cng_backend {
     fn unavailable() -> Error {
         Error::new(
             "provider_unavailable",
-            "This apg build has no Windows TPM support; rebuild on Windows with --features tpm",
+            "This ipg build has no Windows TPM support; rebuild on Windows with --features tpm",
         )
     }
     #[allow(dead_code)]
@@ -830,7 +830,7 @@ pub fn tpm_info() -> Result<TpmInfo> {
 pub fn tpm_generate(pin: &[u8]) -> Result<(TpmKeyFile, Protection)> {
     check_pin(pin)?;
     // Windows keys live under the Windows storage root key through TPM Base
-    // Services, so they can be attested; apg-cng-key-v1 keys remain usable.
+    // Services, so they can be attested; ipg-cng-key-v1 keys remain usable.
     if cfg!(windows) {
         native_backend::generate(pin)
             .map(|(key, protection)| (TpmKeyFile::Wrapped(key), protection))
@@ -862,7 +862,7 @@ mod native_backend {
     fn unavailable() -> Error {
         Error::new(
             "provider_unavailable",
-            "This apg build has no TPM support; rebuild with --features tpm",
+            "This ipg build has no TPM support; rebuild with --features tpm",
         )
     }
     pub fn generate(_: &[u8]) -> Result<(TpmKey, Protection)> {
@@ -881,7 +881,7 @@ mod native_backend {
         Err(unavailable())
     }
 }
-/// Delete the persisted keys of an apg-cng-key-v1 identity after checking the PIN.
+/// Delete the persisted keys of an ipg-cng-key-v1 identity after checking the PIN.
 pub fn tpm_delete(key: &CngKey, pin: &[u8]) -> Result<()> {
     check_pin(pin)?;
     cng_backend::delete(key, pin)
@@ -894,7 +894,7 @@ mod backend {
     fn unavailable() -> Error {
         Error::new(
             "provider_unavailable",
-            "This apg build has no PKCS#11 support; rebuild with --features pkcs11",
+            "This ipg build has no PKCS#11 support; rebuild with --features pkcs11",
         )
     }
     pub fn inventory() -> Result<Inventory> {

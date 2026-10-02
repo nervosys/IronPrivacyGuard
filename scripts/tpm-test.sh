@@ -29,11 +29,11 @@ swtpm socket --tpm2 --tpmstate "dir=$WORK/state" --flags startup-clear \
   --daemon --pid "file=$WORK/swtpm.pid"
 SWTPM_PID="$(cat "$WORK/swtpm.pid")"
 
-export APG_TEST_TPM_TCTI="swtpm:port=$PORT"
-export APG_TEST_TPM_REQUIRED=1
-export APG_TEST_TPM_ATTEST=1
-export APG_TEST_EK_ANCHORS="$WORK/ca/swtpm-localca-rootca-cert.pem"
-export APG_TEST_EK_INTERMEDIATES="$WORK/ca/issuercert.pem"
+export IPG_TEST_TPM_TCTI="swtpm:port=$PORT"
+export IPG_TEST_TPM_REQUIRED=1
+export IPG_TEST_TPM_ATTEST=1
+export IPG_TEST_EK_ANCHORS="$WORK/ca/swtpm-localca-rootca-cert.pem"
+export IPG_TEST_EK_INTERMEDIATES="$WORK/ca/issuercert.pem"
 echo "swtpm on port $PORT"
 export RUST_TEST_THREADS=1
 cargo test --locked --features tpm "$@"

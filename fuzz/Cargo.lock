@@ -48,10 +48,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "apg-fuzz-support"
+name = "ipg-fuzz-support"
 version = "0.0.0"
 dependencies = [
- "iron-privacy-guardian",
+ "iron-privacy-guard",
  "libfuzzer-sys",
  "serde_json",
 ]
@@ -900,7 +900,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "iron-privacy-guardian"
+name = "iron-privacy-guard"
 version = "0.1.0"
 dependencies = [
  "getrandom 0.3.4",

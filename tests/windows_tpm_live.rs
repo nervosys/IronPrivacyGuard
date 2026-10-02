@@ -1,19 +1,19 @@
 //! End-to-end test of Windows TPM identities through TPM Base Services against this
-//! machine's real TPM. Runs only with APG_TEST_WINDOWS_TPM=1. Keys are TPM-wrapped
+//! machine's real TPM. Runs only with IPG_TEST_WINDOWS_TPM=1. Keys are TPM-wrapped
 //! blobs in a temporary file, so nothing persists in the TPM.
 //!
 //! Wrong-PIN attempts count toward the TPM dictionary-attack lockout, so that check
-//! runs only with APG_TEST_WINDOWS_TPM_WRONG_PIN=1.
+//! runs only with IPG_TEST_WINDOWS_TPM_WRONG_PIN=1.
 #![cfg(all(feature = "tpm", windows))]
 use serde_json::{Value, json};
 use std::{fs, process::Command};
 
 fn call(request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"apg/1","id":"tbs","request":request})).unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"tbs","request":request})).unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("call")
-        .env_remove("APG_TPM_TCTI")
+        .env_remove("IPG_TPM_TCTI")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -35,8 +35,8 @@ fn fails(request: Value) -> String {
 
 #[test]
 fn windows_tpm_identity_lifecycle() {
-    if std::env::var("APG_TEST_WINDOWS_TPM").as_deref() != Ok("1") {
-        eprintln!("skipping: set APG_TEST_WINDOWS_TPM=1 to use this machine's TPM");
+    if std::env::var("IPG_TEST_WINDOWS_TPM").as_deref() != Ok("1") {
+        eprintln!("skipping: set IPG_TEST_WINDOWS_TPM=1 to use this machine's TPM");
         return;
     }
     let dir = tempfile::tempdir().unwrap();
@@ -49,7 +49,7 @@ fn windows_tpm_identity_lifecycle() {
     assert_eq!(generated["provider"], "tpm");
     assert_eq!(generated["protection"]["possession_verified"], true);
     let key: Value = serde_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
-    assert_eq!(key["format"], "apg-tpm-key-v1");
+    assert_eq!(key["format"], "ipg-tpm-key-v1");
     assert_eq!(key["parent"], "windows-srk-81000001");
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
     assert_eq!(fingerprint.len(), 96);
@@ -97,7 +97,7 @@ fn windows_tpm_identity_lifecycle() {
         ),
         "identity_mismatch"
     );
-    if std::env::var("APG_TEST_WINDOWS_TPM_WRONG_PIN").as_deref() == Ok("1") {
+    if std::env::var("IPG_TEST_WINDOWS_TPM_WRONG_PIN").as_deref() == Ok("1") {
         fs::write(path("wrong"), b"windows-tpm-test-pinx").unwrap();
         assert_eq!(
             fails(

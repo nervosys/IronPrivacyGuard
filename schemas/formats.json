@@ -8,7 +8,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -30,7 +30,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -52,7 +52,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -74,7 +74,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -105,7 +105,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -116,10 +116,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -150,11 +150,11 @@
       "encryption_key_name": {
         "maxLength": 40,
         "minLength": 40,
-        "pattern": "^apg-[0-9a-f]{32}-enc$",
+        "pattern": "^ipg-[0-9a-f]{32}-enc$",
         "type": "string"
       },
       "format": {
-        "const": "apg-cng-key-v1",
+        "const": "ipg-cng-key-v1",
         "type": "string"
       },
       "provider": {
@@ -163,12 +163,12 @@
       },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+        "description": "Always an ipg-public-p384-v1 identity (checked at runtime)."
       },
       "signing_key_name": {
         "maxLength": 40,
         "minLength": 40,
-        "pattern": "^apg-[0-9a-f]{32}-sig$",
+        "pattern": "^ipg-[0-9a-f]{32}-sig$",
         "type": "string"
       },
       "vendor": {
@@ -260,7 +260,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-envelope-v1",
+        "const": "ipg-envelope-v1",
         "type": "string"
       },
       "nonce": {
@@ -270,7 +270,7 @@
         "type": "string"
       },
       "recipient": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -315,7 +315,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -337,7 +337,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -359,7 +359,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -381,7 +381,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -412,7 +412,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -423,10 +423,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -495,12 +495,12 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-pkcs11-key-v1",
+        "const": "ipg-pkcs11-key-v1",
         "type": "string"
       },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+        "description": "Always an ipg-public-p384-v1 identity (checked at runtime)."
       },
       "signing_key_id": {
         "maxLength": 128,
@@ -534,7 +534,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -556,7 +556,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -578,7 +578,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -600,7 +600,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -631,7 +631,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -642,10 +642,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -671,7 +671,7 @@
     },
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,
-    "description": "A P-384 identity whose private keys are two existing AWS KMS keys: an\nECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. With a third,\nML_DSA_65 SIGN_VERIFY key it is an `apg-public-p384-mldsa65-v1` identity whose\nsignatures are composite ECDSA P-384 plus ML-DSA-65. The file is public; using it\nrequires the host's AWS credentials and KMS key permissions.",
+    "description": "A P-384 identity whose private keys are two existing AWS KMS keys: an\nECC_NIST_P384 KEY_AGREEMENT key and an ECC_NIST_P384 SIGN_VERIFY key. With a third,\nML_DSA_65 SIGN_VERIFY key it is an `ipg-public-p384-mldsa65-v1` identity whose\nsignatures are composite ECDSA P-384 plus ML-DSA-65. The file is public; using it\nrequires the host's AWS credentials and KMS key permissions.",
     "properties": {
       "encryption_key_arn": {
         "maxLength": 160,
@@ -682,7 +682,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-kms-key-v1",
+        "const": "ipg-kms-key-v1",
         "type": "string"
       },
       "mldsa_signing_key_arn": {
@@ -699,7 +699,7 @@
       },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "apg-public-p384-v1, or apg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`\n(checked at runtime)."
+        "description": "ipg-public-p384-v1, or ipg-public-p384-mldsa65-v1 with `mldsa_signing_key_arn`\n(checked at runtime)."
       },
       "region": {
         "maxLength": 32,
@@ -826,7 +826,7 @@
     },
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,
-    "description": "An APG-held OpenPGP secret key. The binary transferable secret key (with\nunprotected OpenPGP secret packets) is sealed with Argon2id and\nChaCha20-Poly1305 under the passphrase; the certificate is public.",
+    "description": "An IPG-held OpenPGP secret key. The binary transferable secret key (with\nunprotected OpenPGP secret packets) is sealed with Argon2id and\nChaCha20-Poly1305 under the passphrase; the certificate is public.",
     "properties": {
       "algorithm": {
         "$ref": "#/$defs/Algorithm"
@@ -861,7 +861,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-openpgp-key-v1",
+        "const": "ipg-openpgp-key-v1",
         "type": "string"
       },
       "kdf": {
@@ -917,7 +917,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-public-v1"
+              "const": "ipg-public-v1"
             }
           }
         },
@@ -939,7 +939,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-public-p384-v1"
+              "const": "ipg-public-p384-v1"
             }
           }
         },
@@ -961,7 +961,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-public-hybrid-v1"
+              "const": "ipg-public-hybrid-v1"
             }
           }
         },
@@ -983,7 +983,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-public-p384-mldsa65-v1"
+              "const": "ipg-public-p384-mldsa65-v1"
             }
           }
         },
@@ -1014,7 +1014,7 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1025,10 +1025,10 @@
       },
       "format": {
         "enum": [
-          "apg-public-v1",
-          "apg-public-p384-v1",
-          "apg-public-hybrid-v1",
-          "apg-public-p384-mldsa65-v1"
+          "ipg-public-v1",
+          "ipg-public-p384-v1",
+          "ipg-public-hybrid-v1",
+          "ipg-public-p384-mldsa65-v1"
         ],
         "type": "string"
       },
@@ -1143,7 +1143,7 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1153,7 +1153,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-revocation-v1",
+        "const": "ipg-revocation-v1",
         "type": "string"
       },
       "reason": {
@@ -1192,7 +1192,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-secret-v1"
+              "const": "ipg-secret-v1"
             }
           }
         },
@@ -1204,7 +1204,7 @@
             "public": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             }
@@ -1215,7 +1215,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-secret-hybrid-v1"
+              "const": "ipg-secret-hybrid-v1"
             }
           }
         },
@@ -1227,7 +1227,7 @@
             "public": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             }
@@ -1247,8 +1247,8 @@
       },
       "format": {
         "enum": [
-          "apg-secret-v1",
-          "apg-secret-hybrid-v1"
+          "ipg-secret-v1",
+          "ipg-secret-hybrid-v1"
         ],
         "type": "string"
       },
@@ -1282,7 +1282,7 @@
                 "type": "string"
               },
               "format": {
-                "const": "apg-public-v1",
+                "const": "ipg-public-v1",
                 "type": "string"
               },
               "signing_key": {
@@ -1319,7 +1319,7 @@
                 "type": "string"
               },
               "format": {
-                "const": "apg-public-hybrid-v1",
+                "const": "ipg-public-hybrid-v1",
                 "type": "string"
               },
               "signing_key": {
@@ -1446,7 +1446,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-signature-v1",
+        "const": "ipg-signature-v1",
         "type": "string"
       },
       "signature": {
@@ -1459,7 +1459,7 @@
         "type": "string"
       },
       "signer": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1558,7 +1558,7 @@
             "type": "string"
           },
           "format": {
-            "const": "apg-envelope-v1",
+            "const": "ipg-envelope-v1",
             "type": "string"
           },
           "nonce": {
@@ -1568,7 +1568,7 @@
             "type": "string"
           },
           "recipient": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -1616,7 +1616,7 @@
         "$ref": "#/$defs/Cipher"
       },
       "format": {
-        "const": "apg-stream-v1",
+        "const": "ipg-stream-v1",
         "type": "string"
       },
       "nonce_prefix": {
@@ -1626,7 +1626,7 @@
         "type": "string"
       },
       "recipients": {
-        "description": "One `apg-envelope-v1` per recipient over `stream_id || content key`.",
+        "description": "One `ipg-envelope-v1` per recipient over `stream_id || content key`.",
         "items": {
           "$ref": "#/$defs/Envelope"
         },
@@ -1749,7 +1749,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-stream-signature-v1",
+        "const": "ipg-stream-signature-v1",
         "type": "string"
       },
       "signature": {
@@ -1762,7 +1762,7 @@
         "type": "string"
       },
       "signer": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1806,7 +1806,7 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1816,7 +1816,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-tpm-challenge-v1",
+        "const": "ipg-tpm-challenge-v1",
         "type": "string"
       },
       "id_object": {
@@ -1858,7 +1858,7 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -1868,7 +1868,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-tpm-challenge-secret-v1",
+        "const": "ipg-tpm-challenge-secret-v1",
         "type": "string"
       }
     },
@@ -1935,7 +1935,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -1957,7 +1957,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -1979,7 +1979,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -2001,7 +2001,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -2032,7 +2032,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -2043,10 +2043,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -2125,12 +2125,12 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-tpm-evidence-v1",
+        "const": "ipg-tpm-evidence-v1",
         "type": "string"
       },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "The attested apg-public-p384-v1 identity."
+        "description": "The attested ipg-public-p384-v1 identity."
       }
     },
     "required": [
@@ -2153,7 +2153,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -2175,7 +2175,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -2197,7 +2197,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -2219,7 +2219,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -2250,7 +2250,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -2261,10 +2261,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -2344,20 +2344,20 @@
         "$ref": "#/$defs/TpmBlob"
       },
       "format": {
-        "const": "apg-tpm-key-v1",
+        "const": "ipg-tpm-key-v1",
         "type": "string"
       },
       "parent": {
-        "description": "APG's owner-hierarchy P-384 storage root (Linux) or the Windows storage root key at 0x81000001.",
+        "description": "IPG's owner-hierarchy P-384 storage root (Linux) or the Windows storage root key at 0x81000001.",
         "enum": [
-          "apg-owner-ecc-p384-srk-v1",
+          "ipg-owner-ecc-p384-srk-v1",
           "windows-srk-81000001"
         ],
         "type": "string"
       },
       "public": {
         "$ref": "#/$defs/PublicKey",
-        "description": "Always an apg-public-p384-v1 identity (checked at runtime)."
+        "description": "Always an ipg-public-p384-v1 identity (checked at runtime)."
       },
       "signing_key": {
         "$ref": "#/$defs/TpmBlob"
@@ -2395,7 +2395,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-tpm-response-v1",
+        "const": "ipg-tpm-response-v1",
         "type": "string"
       }
     },
@@ -2416,7 +2416,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-v1"
+                  "const": "ipg-public-v1"
                 }
               }
             },
@@ -2438,7 +2438,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-v1"
+                  "const": "ipg-public-p384-v1"
                 }
               }
             },
@@ -2460,7 +2460,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-hybrid-v1"
+                  "const": "ipg-public-hybrid-v1"
                 }
               }
             },
@@ -2482,7 +2482,7 @@
             "if": {
               "properties": {
                 "format": {
-                  "const": "apg-public-p384-mldsa65-v1"
+                  "const": "ipg-public-p384-mldsa65-v1"
                 }
               }
             },
@@ -2513,7 +2513,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -2524,10 +2524,10 @@
           },
           "format": {
             "enum": [
-              "apg-public-v1",
-              "apg-public-p384-v1",
-              "apg-public-hybrid-v1",
-              "apg-public-p384-mldsa65-v1"
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
             ],
             "type": "string"
           },
@@ -2630,7 +2630,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -2640,7 +2640,7 @@
             "type": "string"
           },
           "format": {
-            "const": "apg-revocation-v1",
+            "const": "ipg-revocation-v1",
             "type": "string"
           },
           "reason": {
@@ -2790,7 +2790,7 @@
             "type": "string"
           },
           "fingerprint": {
-            "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
             "maxLength": 96,
             "minLength": 64,
             "not": {
@@ -2800,7 +2800,7 @@
             "type": "string"
           },
           "format": {
-            "const": "apg-validity-v1",
+            "const": "ipg-validity-v1",
             "type": "string"
           },
           "not_after": {
@@ -2848,7 +2848,7 @@
         "if": {
           "properties": {
             "format": {
-              "const": "apg-trust-v1"
+              "const": "ipg-trust-v1"
             }
           }
         },
@@ -2877,11 +2877,11 @@
         "type": "array"
       },
       "format": {
-        "description": "APG writes apg-trust-v3; v1 and v2 snapshots remain readable.",
+        "description": "IPG writes ipg-trust-v3; v1 and v2 snapshots remain readable.",
         "enum": [
-          "apg-trust-v1",
-          "apg-trust-v2",
-          "apg-trust-v3"
+          "ipg-trust-v1",
+          "ipg-trust-v2",
+          "ipg-trust-v3"
         ],
         "type": "string"
       }
@@ -2974,7 +2974,7 @@
         "type": "string"
       },
       "fingerprint": {
-        "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
         "maxLength": 96,
         "minLength": 64,
         "not": {
@@ -2984,7 +2984,7 @@
         "type": "string"
       },
       "format": {
-        "const": "apg-validity-v1",
+        "const": "ipg-validity-v1",
         "type": "string"
       },
       "not_after": {

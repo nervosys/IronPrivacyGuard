@@ -1,10 +1,10 @@
-use iron_privacy_guardian::knowledge::{self, Support};
+use iron_privacy_guard::knowledge::{self, Support};
 use serde_json::{Value, json};
 use std::{collections::HashSet, process::Command};
 
 #[test]
 fn catalog_links_resolve_and_support_matches_tools() {
-    let graph = iron_privacy_guardian::ontology::export();
+    let graph = iron_privacy_guard::ontology::export();
     let nodes = graph["@graph"].as_array().unwrap();
     let ids: HashSet<_> = nodes.iter().map(|n| n["@id"].as_str().unwrap()).collect();
     assert_eq!(ids.len(), nodes.len());
@@ -19,8 +19,8 @@ fn catalog_links_resolve_and_support_matches_tools() {
             app.operations.is_empty()
         );
         for op in app.operations {
-            assert!(ids.contains(format!("apg:operation/{op}").as_str()));
-            assert!(!iron_privacy_guardian::ontology::operation(&op).is_null());
+            assert!(ids.contains(format!("ipg:operation/{op}").as_str()));
+            assert!(!iron_privacy_guard::ontology::operation(&op).is_null());
         }
     }
     for node in nodes {
@@ -31,7 +31,7 @@ fn catalog_links_resolve_and_support_matches_tools() {
                 }
             }
         }
-        if node["@type"] == "apg:CryptographicPrimitive" {
+        if node["@type"] == "ipg:CryptographicPrimitive" {
             assert!(
                 ic_ontology::get(node["@id"].as_str().unwrap().strip_prefix("ic:").unwrap())
                     .is_some()
@@ -92,7 +92,7 @@ fn invalid_queries_fail_execution_and_preflight() {
             "invalid_request"
         );
         let candidate = json!({"operation":"knowledge.search","query":query});
-        let report = iron_privacy_guardian::validation::validate(candidate);
+        let report = iron_privacy_guard::validation::validate(candidate);
         let report = serde_json::to_value(report).unwrap();
         assert_eq!(report["valid"], false);
         assert_eq!(report["issues"][0]["path"], "/query");
@@ -110,7 +110,7 @@ fn standalone_export_is_current_and_deterministic() {
 
 #[test]
 fn cli_and_native_calls_expose_knowledge() {
-    let output = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let output = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["knowledge", "search", "--query", "file digest"])
         .output()
         .unwrap();
@@ -120,12 +120,12 @@ fn cli_and_native_calls_expose_knowledge() {
         result["result"]["document"]["matches"][0]["tools"][0]["id"],
         "hash"
     );
-    let (result, code) = iron_privacy_guardian::handle_call(
-        br#"{"protocol":"apg/1","id":"knowledge","request":{"operation":"knowledge"}}"#,
+    let (result, code) = iron_privacy_guard::handle_call(
+        br#"{"protocol":"ipg/1","id":"knowledge","request":{"operation":"knowledge"}}"#,
     );
     assert_eq!(code, 0);
     assert_eq!(result["result"]["document"]["version"], knowledge::VERSION);
-    let output = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let output = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("knowledge")
         .output()
         .unwrap();
@@ -150,7 +150,7 @@ fn knowledge_search_requires_valid_arguments() {
             "digest",
         ],
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_apg"))
+        let output = Command::new(env!("CARGO_BIN_EXE_ipg"))
             .args(args)
             .output()
             .unwrap();

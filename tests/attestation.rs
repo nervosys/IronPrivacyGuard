@@ -1,10 +1,10 @@
 //! Offline TPM attestation verification against evidence a swtpm produced
 //! (tests/vectors/tpm-attestation-swtpm, captured by tests/tpm_attest_live.rs with
-//! APG_TEST_WRITE_ATTESTATION_FIXTURE). Everything here is PUBLIC test data: a
+//! IPG_TEST_WRITE_ATTESTATION_FIXTURE). Everything here is PUBLIC test data: a
 //! throwaway local CA and a software TPM. The TPM-side protocol is covered by the
 //! live tests.
 #![cfg(feature = "attestation")]
-use iron_privacy_guardian::attest::{
+use iron_privacy_guard::attest::{
     self, AttestationResponse, ChallengeSecret, Evidence, parse_certificates,
 };
 
@@ -150,7 +150,7 @@ fn every_component_of_the_evidence_is_bound() {
         "ok"
     );
     assert_ne!(check(&|e| flip(&mut e.ek_public, 10)), "ok");
-    // The AK must use APG's template exactly.
+    // The AK must use IPG's template exactly.
     assert_eq!(check(&|e| flip(&mut e.ak_public, 10)), "policy_mismatch");
     // A changed AK key no longer verifies the certifications.
     assert_eq!(

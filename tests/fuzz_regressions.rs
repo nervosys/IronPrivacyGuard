@@ -83,7 +83,7 @@ fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
 #[cfg(feature = "openpgp")]
 #[test]
 fn one_pass_metadata_mismatches_never_publish_plaintext() {
-    use iron_privacy_guardian::{Request, execute};
+    use iron_privacy_guard::{Request, execute};
     use serde_json::{Value, json};
     let fixture: Value =
         serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
@@ -128,7 +128,7 @@ fn one_pass_metadata_mismatches_never_publish_plaintext() {
 #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
 #[test]
 fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {
-    use iron_privacy_guardian::{Request, execute};
+    use iron_privacy_guard::{Request, execute};
     use serde_json::{Value, json};
     let fixture: Value =
         serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
@@ -231,7 +231,7 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
 
 #[test]
 fn stream_header_limits_and_valid_seed_consumption() {
-    use iron_privacy_guardian::stream;
+    use iron_privacy_guard::stream;
     use std::io::Cursor;
     for entry in fs::read_dir("fuzz/seeds/stream_headers").unwrap() {
         let mut data = fs::read(entry.unwrap().path()).unwrap();
@@ -265,7 +265,7 @@ fn stream_header_limits_and_valid_seed_consumption() {
 
 #[test]
 fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
-    use iron_privacy_guardian::stream;
+    use iron_privacy_guard::stream;
     use std::io::Cursor;
     let framed = fs::read("fuzz/seeds/stream_headers/three-recipients").unwrap();
     let mut header: stream::Header = serde_json::from_slice(&framed[12..]).unwrap();
@@ -313,7 +313,7 @@ fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
 
 #[test]
 fn frame_limits_hold_across_fragment_sizes_and_line_endings() {
-    let limit = iron_privacy_guardian::MAX_REQUEST_BYTES as usize;
+    let limit = iron_privacy_guard::MAX_REQUEST_BYTES as usize;
     for size in [limit - 1, limit, limit + 1] {
         let data = vec![b'x'; size];
         harness::framing(&data);
@@ -333,13 +333,13 @@ fn frame_limits_hold_across_fragment_sizes_and_line_endings() {
 
 #[test]
 fn direct_native_calls_enforce_request_size_before_parsing() {
-    let mut request = br#"{"protocol":"apg/1","id":"bounded","request":{"operation":"plan","request":{"operation":"hash","input":"MUST-NOT-BE-READ"}}}"#.to_vec();
-    request.resize(iron_privacy_guardian::MAX_REQUEST_BYTES as usize, b' ');
-    assert!(iron_privacy_guardian::parse_call(&request).is_ok());
-    assert_eq!(iron_privacy_guardian::handle_call(&request).1, 0);
+    let mut request = br#"{"protocol":"ipg/1","id":"bounded","request":{"operation":"plan","request":{"operation":"hash","input":"MUST-NOT-BE-READ"}}}"#.to_vec();
+    request.resize(iron_privacy_guard::MAX_REQUEST_BYTES as usize, b' ');
+    assert!(iron_privacy_guard::parse_call(&request).is_ok());
+    assert_eq!(iron_privacy_guard::handle_call(&request).1, 0);
     request.push(b' ');
     harness::requests(&request);
-    let (response, status) = iron_privacy_guardian::handle_call(&request);
+    let (response, status) = iron_privacy_guard::handle_call(&request);
     assert_eq!(status, 2);
     assert_eq!(response["error"]["code"], "limit_exceeded");
     assert!(response["id"].is_null());
@@ -352,7 +352,7 @@ fn deeply_nested_untrusted_json_is_rejected_without_execution() {
         harness::requests(data.as_bytes());
         harness::mcp(data.as_bytes());
         harness::artifacts(data.as_bytes());
-        assert!(iron_privacy_guardian::parse_call(data.as_bytes()).is_err());
+        assert!(iron_privacy_guard::parse_call(data.as_bytes()).is_err());
     }
 }
 
@@ -363,14 +363,14 @@ fn nested_plan_requests_are_bounded_without_executing_inner_work() {
         for _ in 0..depth {
             request = format!(r#"{{"operation":"plan","request":{request}}}"#);
         }
-        let call = format!(r#"{{"protocol":"apg/1","id":"nested","request":{request}}}"#);
+        let call = format!(r#"{{"protocol":"ipg/1","id":"nested","request":{request}}}"#);
         harness::requests(call.as_bytes());
         let rpc = format!(
-            r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"apg_plan","arguments":{{"request":{request}}}}}}}"#
+            r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"ipg_plan","arguments":{{"request":{request}}}}}}}"#
         );
         harness::mcp(rpc.as_bytes());
         if depth >= 128 {
-            assert!(iron_privacy_guardian::parse_call(call.as_bytes()).is_err());
+            assert!(iron_privacy_guard::parse_call(call.as_bytes()).is_err());
         }
     }
 }

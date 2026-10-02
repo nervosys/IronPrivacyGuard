@@ -1,6 +1,6 @@
 """Exercise the release executable through the official MCP Python SDK.
 
-External test tooling only. APG production code and cryptography remain Rust.
+External test tooling only. IPG production code and cryptography remain Rust.
 """
 
 import argparse
@@ -26,7 +26,7 @@ class CheckedClient:
             Draft202012Validator.check_schema(tool.output_schema)
 
     async def call(self, operation, arguments=None, error=None, invalid_input=False):
-        name = "apg_" + operation.replace(".", "_")
+        name = "ipg_" + operation.replace(".", "_")
         arguments = arguments or {}
         definition = self.tools[name]
         if not invalid_input:
@@ -36,7 +36,7 @@ class CheckedClient:
         Draft202012Validator(definition.output_schema).validate(envelope)
         assert len(result.content) == 1 and result.content[0].type == "text"
         assert json.loads(result.content[0].text) == envelope
-        assert envelope["protocol"] == "apg/1" and envelope["id"] is None
+        assert envelope["protocol"] == "ipg/1" and envelope["id"] is None
         assert result.is_error == (error is not None), envelope
         self.calls += 1
         if error is not None:
@@ -68,7 +68,7 @@ async def exercise(executable, directory):
         checked = CheckedClient(client, catalog.tools)
         discovery = (await checked.call("discover"))["document"]
         operations = {op["id"] for op in discovery["operations"]}
-        assert set(checked.tools) == {"apg_" + op.replace(".", "_") for op in operations}
+        assert set(checked.tools) == {"ipg_" + op.replace(".", "_") for op in operations}
         summary["tools"] = len(catalog.tools)
         summary["sessions"].append({"mode": "auto", "protocol": client.protocol_version})
         schemas = (await checked.call("schema"))["document"]
@@ -114,7 +114,7 @@ async def exercise(executable, directory):
         assert inspected["structurally_valid"] and not inspected["authenticated"]
         await checked.call("plan", {"request": {"operation": "hash", "input": path("missing")}})
         await checked.call("plan", {"request": {"operation": "plan", "request": {"operation": "hash", "input": path("missing")}}})
-        assert not Draft202012Validator(checked.tools["apg_plan"].input_schema).is_valid(
+        assert not Draft202012Validator(checked.tools["ipg_plan"].input_schema).is_valid(
             {"request": {"operation": "hash", "input": path("missing"), "unknown": True}}
         )
         empty = await checked.call("trust.init", {"output": path("empty")})
@@ -159,7 +159,7 @@ async def exercise(executable, directory):
         assert client.protocol_version == "2025-11-25"
         catalog = await client.list_tools()
         checked = CheckedClient(client, catalog.tools)
-        assert set(checked.tools) == {"apg_" + op.replace(".", "_") for op in allowed.split(",")}
+        assert set(checked.tools) == {"ipg_" + op.replace(".", "_") for op in allowed.split(",")}
         summary["sessions"].append({"mode": "legacy", "policy": "active", "protocol": client.protocol_version})
         for operation, arguments in [
             ("encrypt", {"input": path("message"), "output": path("governed-encrypted"), "recipient": path("public"), "expected_fingerprint": fingerprint}),
@@ -174,7 +174,7 @@ async def exercise(executable, directory):
             assert isinstance(result["policy_checked_at"], int) and result["policy_checked_at"] > 0
         # A disabled tool must be rejected by the server, not merely hidden.
         try:
-            await client.call_tool("apg_trust_init", {"output": path("forbidden")})
+            await client.call_tool("ipg_trust_init", {"output": path("forbidden")})
         except MCPError as error:
             assert error.code == -32602, repr(error)
         else:
@@ -221,10 +221,10 @@ async def exercise(executable, directory):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--apg", required=True, type=Path)
+    parser.add_argument("--ipg", required=True, type=Path)
     args = parser.parse_args()
-    executable = args.apg.resolve(strict=True)
-    with tempfile.TemporaryDirectory(prefix="apg-mcp-interop-") as directory:
+    executable = args.ipg.resolve(strict=True)
+    with tempfile.TemporaryDirectory(prefix="ipg-mcp-interop-") as directory:
         result = asyncio.run(asyncio.wait_for(exercise(executable, Path(directory)), timeout=120))
     print(json.dumps({"ok": True, **result}, indent=2))
 

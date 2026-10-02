@@ -12,17 +12,17 @@ implemented surface, not feature parity with decades of GPG development.
    revocation visibility at certificate work limits ([OPENPGP.md](OPENPGP.md)).
    Certificate fuzzing includes the independent large revocation-limit recipes,
    with a 1 MiB payload budget ([FUZZING.md](FUZZING.md)).
-   Stabilize APG v1 only after review.
+   Stabilize IPG v1 only after review.
 2. Extend immutable trust snapshots with managed publication, concurrency control,
    and explicit identity assertions. Passphrase rewrapping, certificates,
    snapshot updates, signed validity windows and opt-in revocation/expiry
    enforcement, pinned comparison and conservative branch merging are implemented.
    Latest-pin management, publication concurrency control and rollback protection
    remain external orchestrator duties.
-3. Have the multi-recipient streaming format (`apg-stream-v1`: 64 KiB chunks,
+3. Have the multi-recipient streaming format (`ipg-stream-v1`: 64 KiB chunks,
    STREAM nonces with a final-chunk flag, header-committed associated data) reviewed
    independently. Streaming detached signatures are implemented as the separately
-   versioned `apg-stream-signature-v1` hash-then-sign protocol with SHA-384 and
+   versioned `ipg-stream-signature-v1` hash-then-sign protocol with SHA-384 and
    bounded memory; include it in that review.
 4. Expand MCP testing beyond the official Python SDK 2.2.0, now covered by a real
    stdio interoperability suite in CI. Generated tools, host allowlists and
@@ -33,10 +33,10 @@ implemented surface, not feature parity with decades of GPG development.
    decryption and detached signatures interoperate with GnuPG through rPGP. V6 key
    generation and SEIPDv2/OCB encryption are implemented, with independent PyCA
    checks of v6 key wrapping and chunk authentication in both directions.
-   Protected secret-key export is implemented. Secret-key import
-   and OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
+   Protected secret-key export and bounded import of supported two-key profiles
+   are implemented. OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
    document signatures, optionally decrypting, before publishing literal bytes.
-   Never silently reinterpret native APG data
+   Never silently reinterpret native IPG data
    as OpenPGP.
 6. Extend post-quantum and hardware coverage. Hybrid ML-KEM-768 + X25519
    confidentiality and composite Ed25519 + ML-DSA-65 signatures are implemented for
@@ -45,7 +45,7 @@ implemented surface, not feature parity with decades of GPG development.
    post-quantum encryption. P-384 identities are implemented on PKCS#11 tokens, Linux
    and Windows TPMs and AWS KMS
    ([HARDWARE.md](HARDWARE.md)), with SHA-384 fingerprints and SHA-384
-   (`apg-trust-v3`) trust-snapshot digests, and TPM identities can be attested
+   (`ipg-trust-v3`) trust-snapshot digests, and TPM identities can be attested
    ([ATTESTATION.md](ATTESTATION.md)). Remaining work includes PKCS#11 and KMS
    attestation, ECC endorsement keys, EK certificate revocation checking, other cloud
    KMS providers and live testing of in-token decryption on FIPS-mode HSMs. Never silently substitute a weaker suite.

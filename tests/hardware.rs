@@ -1,6 +1,6 @@
 //! Hardware-provider behavior that needs no token: fail-closed configuration, host
 //! custody policy, preflight and cheap checks that must run before any token login.
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     Request, execute_with,
     mcp::{Config, Server},
     provider::{CustodyPolicy, HARDWARE_KEY_FORMAT, Host, MODULE_ENV},
@@ -11,11 +11,11 @@ use std::{fs, process::Command};
 const PASSWORD: &[u8] = b"test-only strong passphrase 42";
 
 fn run(args: &[&str], module: Option<&str>) -> (Value, i32) {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_apg"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_ipg"));
     command
         .args(args)
         .env_remove(MODULE_ENV)
-        .env_remove("APG_TPM_TCTI");
+        .env_remove("IPG_TPM_TCTI");
     if let Some(module) = module {
         command.env(MODULE_ENV, module);
     }
@@ -30,7 +30,7 @@ fn run(args: &[&str], module: Option<&str>) -> (Value, i32) {
 fn reference(dir: &std::path::Path) -> (String, Value) {
     let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
     let reference = json!({"format":HARDWARE_KEY_FORMAT,"public":v["public"],
-        "token":{"serial":"0123456789abcdef","label":"apg-test","manufacturer":"Test","model":"Fixture"},
+        "token":{"serial":"0123456789abcdef","label":"ipg-test","manufacturer":"Test","model":"Fixture"},
         "encryption_key_id":"01".repeat(16),"signing_key_id":"02".repeat(16)});
     let path = dir.join("reference.json");
     fs::write(&path, serde_json::to_vec(&reference).unwrap()).unwrap();
@@ -81,9 +81,9 @@ fn references_fail_closed_after_cheap_checks() {
     assert!(!dir.path().join("sig").exists());
 
     // Envelope recipient checks happen before any PIN is read or token opened.
-    let other = iron_privacy_guardian::crypto::generate(PASSWORD).unwrap();
+    let other = iron_privacy_guard::crypto::generate(PASSWORD).unwrap();
     let envelope =
-        iron_privacy_guardian::crypto::encrypt(&other.public, &other.public.fingerprint, b"secret")
+        iron_privacy_guard::crypto::encrypt(&other.public, &other.public.fingerprint, b"secret")
             .unwrap();
     fs::write(path("envelope"), serde_json::to_vec(&envelope).unwrap()).unwrap();
     let decrypted = execute_with(
@@ -146,13 +146,13 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
         assert_eq!(code, 5);
     }
     let (value, _) = run(&["inspect", "--input", fixture], None);
-    assert_eq!(value["result"]["format"], "apg-tpm-key-v1");
+    assert_eq!(value["result"]["format"], "ipg-tpm-key-v1");
     assert_eq!(value["result"]["fingerprint"], key["public"]["fingerprint"]);
 
     let dir = tempfile::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"fixture-pin-public").unwrap();
-    let mut command = Command::new(env!("CARGO_BIN_EXE_apg"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_ipg"));
     let output = command
         .args([
             "key",
@@ -164,7 +164,7 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
         ])
         .args(["--passphrase-file", &path("pin")])
         .env_remove(MODULE_ENV)
-        .env_remove("APG_TPM_TCTI")
+        .env_remove("IPG_TPM_TCTI")
         .output()
         .unwrap();
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -172,25 +172,24 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     assert!(!dir.path().join("public").exists());
     for (field, bad) in [
         ("parent", json!("another-template")),
-        ("format", json!("apg-tpm-key-v2")),
+        ("format", json!("ipg-tpm-key-v2")),
     ] {
         let mut altered = key.clone();
         altered[field] = bad;
-        let error =
-            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
-                .err()
-                .unwrap();
+        let error = iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
+            .err()
+            .unwrap();
         assert_eq!(error.code, "invalid_format", "{field}");
     }
     let mut odd = key.clone();
     odd["signing_key"]["private"] = "abc".into();
-    assert!(iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&odd).unwrap()).is_err());
+    assert!(iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&odd).unwrap()).is_err());
 }
 
 #[test]
 fn kms_keys_fail_closed_and_refuse_pins() {
     let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
-    let key = json!({"format":"apg-kms-key-v1","public":v["public"],"region":"us-gov-west-1",
+    let key = json!({"format":"ipg-kms-key-v1","public":v["public"],"region":"us-gov-west-1",
         "encryption_key_arn":"arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/11111111-1111-1111-1111-111111111111",
         "signing_key_arn":"arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/22222222-2222-2222-2222-222222222222"});
     let dir = tempfile::tempdir().unwrap();
@@ -199,7 +198,7 @@ fn kms_keys_fail_closed_and_refuse_pins() {
     fs::write(path("input"), b"data").unwrap();
     fs::write(path("pin"), b"1234").unwrap();
     let inspected =
-        iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+        iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(inspected.fingerprint.unwrap(), v["public"]["fingerprint"]);
     let host = Host::default();
     // A credential file is refused before any network access.
@@ -236,7 +235,7 @@ fn kms_keys_fail_closed_and_refuse_pins() {
     for (field, bad) in [
         (
             "encryption_key_arn",
-            "arn:aws-us-gov:kms:us-gov-west-1:123456789012:alias/apg",
+            "arn:aws-us-gov:kms:us-gov-west-1:123456789012:alias/ipg",
         ),
         (
             "signing_key_arn",
@@ -246,12 +245,11 @@ fn kms_keys_fail_closed_and_refuse_pins() {
         let mut altered = key.clone();
         altered[field] = bad.into();
         assert!(
-            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
-                .is_err(),
+            iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
             "{field}"
         );
     }
-    let software = iron_privacy_guardian::crypto::generate(PASSWORD).unwrap();
+    let software = iron_privacy_guard::crypto::generate(PASSWORD).unwrap();
     fs::write(path("software"), serde_json::to_vec(&software).unwrap()).unwrap();
     let missing = execute_with(
         request(
@@ -266,26 +264,25 @@ fn kms_keys_fail_closed_and_refuse_pins() {
 #[test]
 fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
     let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
-    let key = json!({"format":"apg-cng-key-v1","public":v["public"],
+    let key = json!({"format":"ipg-cng-key-v1","public":v["public"],
         "provider":"Microsoft Platform Crypto Provider","vendor":"AMD",
-        "encryption_key_name":format!("apg-{}-enc", "0".repeat(32)),
-        "signing_key_name":format!("apg-{}-sig", "0".repeat(32))});
+        "encryption_key_name":format!("ipg-{}-enc", "0".repeat(32)),
+        "signing_key_name":format!("ipg-{}-sig", "0".repeat(32))});
     let metadata =
-        iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+        iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(metadata.fingerprint.unwrap(), v["public"]["fingerprint"]);
     for (field, bad) in [
         ("provider", json!("Microsoft Software Key Storage Provider")),
         ("encryption_key_name", json!("my-key-enc")),
         (
             "signing_key_name",
-            json!(format!("apg-{}-sig", "1".repeat(32))),
+            json!(format!("ipg-{}-sig", "1".repeat(32))),
         ),
     ] {
         let mut altered = key.clone();
         altered[field] = bad;
         assert!(
-            iron_privacy_guardian::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
-                .is_err(),
+            iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
             "{field}"
         );
     }
@@ -399,7 +396,7 @@ fn mcp_hosts_pin_key_custody_at_startup() {
             .contains("hardware key custody")
     );
     server.handle(br#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#);
-    let call = json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"apg_key_generate","arguments":{"output":path("key"),"passphrase_file":path("pass")}}});
+    let call = json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ipg_key_generate","arguments":{"output":path("key"),"passphrase_file":path("pass")}}});
     let response = server.handle(&serde_json::to_vec(&call).unwrap()).unwrap();
     assert_eq!(
         response["result"]["structuredContent"]["error"]["code"],
@@ -410,7 +407,7 @@ fn mcp_hosts_pin_key_custody_at_startup() {
         .handle(br#"{"jsonrpc":"2.0","id":3,"method":"tools/list"}"#)
         .unwrap();
     for tool in list["result"]["tools"].as_array().unwrap() {
-        assert_eq!(tool["_meta"]["apg/keyCustody"], "hardware");
+        assert_eq!(tool["_meta"]["ipg/keyCustody"], "hardware");
     }
 }
 

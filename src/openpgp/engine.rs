@@ -1,6 +1,6 @@
-//! rPGP-backed implementation with APG's certificate-validity policy.
+//! rPGP-backed implementation with IPG's certificate-validity policy.
 //!
-//! Policy (applied to every certificate APG reads):
+//! Policy (applied to every certificate IPG reads):
 //! - exactly one v4 or v6 certificate per file;
 //! - a component is usable only with a valid, unexpired binding self-signature
 //!   made with SHA-256 or stronger; signing subkeys also need a valid back signature;
@@ -29,10 +29,11 @@ use pgp::{
         hash::HashAlgorithm,
         sym::SymmetricKeyAlgorithm,
     },
-    packet::{KeyFlags, Signature, SignatureType},
+    packet::{KeyFlags, Packet, PacketParser, Signature, SignatureType},
     ser::Serialize as _,
     types::{
-        EcdhPublicParams, EcdsaPublicParams, KeyDetails, KeyVersion, Password, PublicParams, Tag,
+        EcdhPublicParams, EcdsaPublicParams, KeyDetails, KeyVersion, Password, PlainSecretParams,
+        PublicParams, S2kParams, SecretParams, StringToKey, Tag,
     },
 };
 use rand_core::OsRng;
@@ -489,7 +490,7 @@ fn evaluate(cert: &SignedPublicKey, at: u64) -> Evaluation {
         if !capability.sign {
             entry
                 .issues
-                .push("primary key algorithm is not accepted by APG policy".into());
+                .push("primary key algorithm is not accepted by IPG policy".into());
         }
         keys.push(entry);
     }
@@ -544,7 +545,7 @@ fn component(
     }
     if !capability.sign && !capability.encrypt {
         issues.push(format!(
-            "algorithm {} is not accepted by APG policy",
+            "algorithm {} is not accepted by IPG policy",
             capability.name
         ));
     }
@@ -654,7 +655,7 @@ fn pin(cert: &SignedPublicKey, expected: &str) -> Result<()> {
 
 fn secret_aad(key: &KeyFile, certificate: &[u8], salt: &[u8], nonce: &[u8]) -> Vec<u8> {
     crypto::frame(
-        "APG openpgp secret v1 argon2id-m65536-t3-p4",
+        "IPG openpgp secret v1 argon2id-m65536-t3-p4",
         &[
             key.format.as_bytes(),
             key.fingerprint.as_bytes(),
@@ -750,15 +751,28 @@ pub(crate) fn generate_version(
         .generate(OsRng)
         .map_err(|e| generation(&e))?;
     secret.verify_bindings().map_err(|e| generation(&e))?;
+    seal_secret(&secret, algorithm, user_id, password)
+}
+
+fn seal_secret(
+    secret: &SignedSecretKey,
+    algorithm: Algorithm,
+    user_id: &str,
+    password: &[u8],
+) -> Result<KeyFile> {
     let certificate = secret
         .to_public_key()
         .to_bytes()
-        .map_err(|e| generation(&e))?;
-    let mut sealed = Zeroizing::new(secret.to_bytes().map_err(|e| generation(&e))?);
+        .map_err(|_| Error::new("invalid_format", "Cannot serialize OpenPGP certificate"))?;
+    let mut sealed = Zeroizing::new(
+        secret
+            .to_bytes()
+            .map_err(|_| Error::new("invalid_format", "Cannot serialize OpenPGP secret key"))?,
+    );
     if certificate.len() > MAX_OWN_CERTIFICATE_BYTES || sealed.len() > MAX_SECRET_BYTES {
         return Err(Error::new(
             "limit_exceeded",
-            "Generated OpenPGP key is too large",
+            "OpenPGP key exceeds the IPG key-file limits",
         ));
     }
     let salt = crypto::random::<16>()?;
@@ -845,6 +859,268 @@ pub(crate) fn export(key: &KeyFile) -> Result<(String, Certificate)> {
     Ok((armored, evaluate(&cert, now()?).summary))
 }
 
+/// Refuse unsupported protection and excessive work before unlocking either packet.
+fn import_protection(params: &SecretParams) -> Result<()> {
+    let SecretParams::Encrypted(encrypted) = params else {
+        return Ok(());
+    };
+    let aes = |alg| {
+        matches!(
+            alg,
+            SymmetricKeyAlgorithm::AES128
+                | SymmetricKeyAlgorithm::AES192
+                | SymmetricKeyAlgorithm::AES256
+        )
+    };
+    let allowed = match encrypted.string_to_key_params() {
+        S2kParams::Cfb {
+            sym_alg,
+            s2k: StringToKey::IteratedAndSalted { hash_alg, .. },
+            ..
+        } => {
+            aes(*sym_alg)
+                && matches!(
+                    hash_alg,
+                    HashAlgorithm::Sha1
+                        | HashAlgorithm::Sha256
+                        | HashAlgorithm::Sha384
+                        | HashAlgorithm::Sha512
+                )
+        }
+        S2kParams::Aead {
+            sym_alg: SymmetricKeyAlgorithm::AES256,
+            aead_mode: AeadAlgorithm::Ocb,
+            s2k: StringToKey::Argon2 { t, p, m_enc, .. },
+            ..
+        } => {
+            (1..=3).contains(t)
+                && (1..=4).contains(p)
+                && (5..=16).contains(m_enc)
+                && (1u32 << *m_enc) >= 8 * u32::from(*p)
+        }
+        _ => false,
+    };
+    if !allowed {
+        return Err(Error::new(
+            "invalid_format",
+            "Unsupported or excessive OpenPGP secret-key protection",
+        ));
+    }
+    Ok(())
+}
+
+/// Compare derived public keys; serialized certificate equality alone does not
+/// establish that the private scalar belongs to the advertised public key.
+fn private_matches(public: &PublicParams, private: &SecretParams) -> bool {
+    let SecretParams::Plain(private) = private else {
+        return false;
+    };
+    match (public, private) {
+        (PublicParams::Ed25519(p), PlainSecretParams::Ed25519(s)) => *p == s.into(),
+        (PublicParams::EdDSALegacy(p), PlainSecretParams::EdDSALegacy(s)) => {
+            pgp::types::EddsaLegacyPublicParams::try_from(s).is_ok_and(|derived| *p == derived)
+        }
+        (PublicParams::X25519(p), PlainSecretParams::X25519(s)) => *p == s.into(),
+        (PublicParams::ECDSA(p), PlainSecretParams::ECDSA(s)) => {
+            EcdsaPublicParams::try_from(s).is_ok_and(|derived| *p == derived)
+        }
+        (PublicParams::ECDH(p), PlainSecretParams::ECDH(s)) => EcdhPublicParams::try_from(s)
+            .is_ok_and(|derived| match (p, derived) {
+                (EcdhPublicParams::P384 { p, .. }, EcdhPublicParams::P384 { p: other, .. }) => {
+                    *p == other
+                }
+                (
+                    EcdhPublicParams::Curve25519Legacy { p, .. },
+                    EcdhPublicParams::Curve25519Legacy { p: other, .. },
+                ) => *p == other,
+                _ => false,
+            }),
+        _ => false,
+    }
+}
+
+/// Import one small, fully certified signing primary and encryption subkey.
+pub(crate) fn import_secret(
+    data: &[u8],
+    expected: &str,
+    password: &[u8],
+    new_password: &[u8],
+) -> Result<KeyFile> {
+    let invalid = || {
+        Error::new(
+            "invalid_format",
+            "Unreadable or unsupported OpenPGP secret key",
+        )
+    };
+    if data.len() as u64 > MAX_CERTIFICATE_BYTES {
+        return Err(Error::new(
+            "limit_exceeded",
+            "OpenPGP secret key exceeds 1 MiB",
+        ));
+    }
+    if password.len() > 4096 || !(16..=4096).contains(&new_password.len()) {
+        return Err(Error::new(
+            "invalid_request",
+            "Source password must be at most 4096 bytes; IPG passphrase must contain 16..4096 bytes",
+        ));
+    }
+    single_armor_block(data, "secret key")?;
+    let mut binary = Zeroizing::new(Vec::new());
+    if data.first().is_some_and(|byte| byte & 0x80 != 0) {
+        binary.extend_from_slice(data);
+    } else {
+        let mut armor = pgp::armor::Dearmor::new(Cursor::new(data));
+        armor.read_header().map_err(|_| invalid())?;
+        if armor.typ != Some(pgp::armor::BlockType::PrivateKey) {
+            return Err(invalid());
+        }
+        armor.read_to_end(&mut binary).map_err(|_| invalid())?;
+        let (_, _, _, mut rest) = armor.into_parts();
+        let mut trailing = Zeroizing::new(Vec::new());
+        rest.read_to_end(&mut trailing).map_err(|_| invalid())?;
+        if trailing.iter().any(|b| !b.is_ascii_whitespace()) {
+            return Err(invalid());
+        }
+    }
+    if binary.len() > MAX_OWN_CERTIFICATE_BYTES {
+        return Err(Error::new(
+            "limit_exceeded",
+            "Imported binary key exceeds 16 KiB",
+        ));
+    }
+    // Use the unfiltered packet parser: composed parsing otherwise drops
+    // unsupported packets, malformed components and unsigned subkeys.
+    let packets = PacketParser::new(Cursor::new(&binary[..]))
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|_| invalid())?;
+    let mut counts = [0usize; 4];
+    for packet in &packets {
+        let index = match packet {
+            Packet::SecretKey(_) => 0,
+            Packet::SecretSubkey(_) => 1,
+            Packet::UserId(_) => 2,
+            Packet::Signature(_) => 3,
+            _ => return Err(invalid()),
+        };
+        counts[index] += 1;
+    }
+    if counts[0] != 1 || counts[1] != 1 || counts[2] == 0 || counts[3] > MAX_CERTIFICATE_SIGNATURES
+    {
+        return Err(invalid());
+    }
+    let mut keys = SignedSecretKey::from_packets(packets.into_iter().map(Ok).peekable());
+    let mut secret = keys.next().ok_or_else(invalid)?.map_err(|_| invalid())?;
+    if keys.next().is_some() {
+        return Err(invalid());
+    }
+    let algorithm = secret_shape(&secret)?;
+    let cert = secret.to_public_key();
+    check_certificate_signature_limit(&cert)?;
+    // Check the composition retained every input signature and User ID.
+    let retained_signatures = cert.details.revocation_signatures.len()
+        + cert.details.direct_signatures.len()
+        + cert
+            .details
+            .users
+            .iter()
+            .map(|u| u.signatures.len())
+            .sum::<usize>()
+        + cert
+            .public_subkeys
+            .iter()
+            .map(|s| s.signatures.len())
+            .sum::<usize>();
+    if retained_signatures != counts[3] || cert.details.users.len() != counts[2] {
+        return Err(invalid());
+    }
+    pin(&cert, expected)?;
+    let summary = evaluate(&cert, now()?).summary;
+    if !summary.keys.first().is_some_and(|k| k.usable_for_signing) || !summary.usable_for_encryption
+    {
+        return Err(Error::new(
+            "invalid_format",
+            "Imported key must be currently usable for signing and encryption",
+        ));
+    }
+    let user_id = summary.user_ids.first().ok_or_else(invalid)?.clone();
+    check_user_id(&user_id)?;
+    if cert.to_bytes().map_err(|_| invalid())?.len() > MAX_OWN_CERTIFICATE_BYTES {
+        return Err(Error::new(
+            "limit_exceeded",
+            "Imported key exceeds the IPG key-file limits",
+        ));
+    }
+    import_protection(secret.primary_key.secret_params())?;
+    import_protection(secret.secret_subkeys[0].key.secret_params())?;
+    let authentication = || {
+        Error::new(
+            "authentication_failed",
+            "OpenPGP secret key cannot be unlocked or does not match its certificate",
+        )
+    };
+    let credential = Password::from(password);
+    secret
+        .primary_key
+        .remove_password(&credential)
+        .map_err(|_| authentication())?;
+    secret.secret_subkeys[0]
+        .key
+        .remove_password(&credential)
+        .map_err(|_| authentication())?;
+    if !private_matches(
+        secret.primary_key.public_params(),
+        secret.primary_key.secret_params(),
+    ) || !private_matches(
+        secret.secret_subkeys[0].key.public_params(),
+        secret.secret_subkeys[0].key.secret_params(),
+    ) {
+        return Err(authentication());
+    }
+    secret.verify_bindings().map_err(|_| invalid())?;
+    seal_secret(&secret, algorithm, &user_id, new_password)
+}
+
+fn secret_shape(secret: &SignedSecretKey) -> Result<Algorithm> {
+    let algorithm = match (
+        secret.primary_key.version(),
+        secret.primary_key.public_params(),
+    ) {
+        (KeyVersion::V4, PublicParams::EdDSALegacy(_))
+        | (KeyVersion::V6, PublicParams::Ed25519(_)) => Algorithm::Ed25519,
+        (KeyVersion::V4 | KeyVersion::V6, PublicParams::ECDSA(EcdsaPublicParams::P384 { .. })) => {
+            Algorithm::P384
+        }
+        _ => {
+            return Err(Error::new(
+                "invalid_format",
+                "Unsupported OpenPGP primary key",
+            ));
+        }
+    };
+    let supported_subkey = secret.secret_subkeys.first().is_some_and(|subkey| {
+        matches!(
+            (algorithm, subkey.key.version(), subkey.key.public_params()),
+            (
+                Algorithm::Ed25519,
+                KeyVersion::V4,
+                PublicParams::ECDH(EcdhPublicParams::Curve25519Legacy { .. })
+            ) | (Algorithm::Ed25519, KeyVersion::V6, PublicParams::X25519(_))
+                | (
+                    Algorithm::P384,
+                    KeyVersion::V4 | KeyVersion::V6,
+                    PublicParams::ECDH(EcdhPublicParams::P384 { .. })
+                )
+        ) && subkey.key.version() == secret.primary_key.version()
+    });
+    if !supported_subkey || secret.secret_subkeys.len() != 1 || !secret.public_subkeys.is_empty() {
+        return Err(Error::new(
+            "invalid_format",
+            "Unsupported IPG OpenPGP secret-key shape",
+        ));
+    }
+    Ok(algorithm)
+}
+
 /// Export only passphrase-protected secret packets. The fingerprint is checked
 /// before unsealing, and all salts and IVs are freshly chosen by rPGP.
 pub(crate) fn export_secret(
@@ -861,38 +1137,10 @@ pub(crate) fn export_secret(
         ));
     }
     let mut secret = unseal(key, password)?;
-    // Bound protection work to the fixed shape generated by APG.
-    let supported_primary = matches!(
-        (key.algorithm, secret.primary_key.public_params()),
-        (
-            Algorithm::Ed25519,
-            PublicParams::EdDSALegacy(_) | PublicParams::Ed25519(_)
-        ) | (
-            Algorithm::P384,
-            PublicParams::ECDSA(EcdsaPublicParams::P384 { .. })
-        )
-    );
-    let supported_subkey = secret.secret_subkeys.first().is_some_and(|subkey| {
-        matches!(
-            (key.algorithm, subkey.key.public_params()),
-            (
-                Algorithm::Ed25519,
-                PublicParams::ECDH(EcdhPublicParams::Curve25519Legacy { .. })
-                    | PublicParams::X25519(_)
-            ) | (
-                Algorithm::P384,
-                PublicParams::ECDH(EcdhPublicParams::P384 { .. })
-            )
-        ) && subkey.key.version() == secret.primary_key.version()
-    });
-    if !supported_primary
-        || !supported_subkey
-        || secret.secret_subkeys.len() != 1
-        || !secret.public_subkeys.is_empty()
-    {
+    if secret_shape(&secret)? != key.algorithm {
         return Err(Error::new(
             "invalid_format",
-            "Unsupported APG OpenPGP secret-key shape",
+            "OpenPGP algorithm metadata disagrees",
         ));
     }
     let credential = Password::from(new_password);
@@ -972,7 +1220,7 @@ pub(crate) fn encrypt(
             return Err(Error::new(
                 "invalid_request",
                 format!(
-                    "Certificate {} has no valid encryption key under APG policy",
+                    "Certificate {} has no valid encryption key under IPG policy",
                     summary.fingerprint
                 ),
             ));
@@ -1105,6 +1353,13 @@ pub(crate) fn decrypt(key: &KeyFile, password: &[u8], message: &[u8]) -> Result<
 
 /// Detached binary signature by the primary key: SHA-512 for Ed25519, SHA-384 for P-384.
 pub(crate) fn sign(key: &KeyFile, password: &[u8], data: &[u8]) -> Result<Signed> {
+    let summary = evaluate(&own_certificate(key)?, now()?).summary;
+    if !summary.keys.first().is_some_and(|k| k.usable_for_signing) {
+        return Err(Error::new(
+            "key_not_trusted",
+            "OpenPGP primary key is not currently usable for signing",
+        ));
+    }
     let secret = unseal(key, password)?;
     let hash = match key.algorithm {
         Algorithm::Ed25519 => HashAlgorithm::Sha512,
@@ -1179,7 +1434,7 @@ fn verify_with_clock(
         return Err(Error::new(
             "authentication_failed",
             format!(
-                "Signature hash {} is below APG policy (SHA-256 or stronger)",
+                "Signature hash {} is below IPG policy (SHA-256 or stronger)",
                 hash_name(sig.hash_alg())
             ),
         ));
@@ -1224,7 +1479,7 @@ fn verify_with_clock(
                 Error::new(
                     "policy_mismatch",
                     format!(
-                        "The signing key was not usable for signing under APG policy when the signature was made: {}",
+                        "The signing key was not usable for signing under IPG policy when the signature was made: {}",
                         if at_signing.issues.is_empty() {
                             "no sign key flag".to_string()
                         } else {
@@ -1390,9 +1645,201 @@ mod tests {
     use pgp::types::CompressionAlgorithm;
 
     #[test]
+    fn imported_certificate_expiry_and_revocation_prevent_signing() {
+        use pgp::packet::{SignatureConfig, Subpacket, SubpacketData};
+        let password = b"IPG validity test passphrase";
+        let mut subkey = SubkeyParamsBuilder::default();
+        subkey
+            .key_type(KeyType::ECDH(ECCCurve::Curve25519Legacy))
+            .can_encrypt(EncryptionCaps::All);
+        let mut params = SecretKeyParamsBuilder::default();
+        params
+            .key_type(KeyType::Ed25519Legacy)
+            .can_sign(true)
+            .can_certify(true)
+            .created_at(pgp::types::Timestamp::from_secs(1_600_000_000))
+            .primary_user_id("Validity <validity@example.test>".into())
+            .subkeys(vec![subkey.build().unwrap()]);
+        let secret = params.build().unwrap().generate(OsRng).unwrap();
+        for expired in [true, false] {
+            let mut changed = secret.clone();
+            if expired {
+                let user = &mut changed.details.users[0];
+                let mut config = user.signatures[0].config().unwrap().clone();
+                config.hashed_subpackets.push(
+                    Subpacket::regular(SubpacketData::KeyExpirationTime(
+                        pgp::types::Duration::from_secs(1),
+                    ))
+                    .unwrap(),
+                );
+                user.signatures[0] = config
+                    .sign_certification(
+                        &changed.primary_key,
+                        changed.primary_key.public_key(),
+                        &Password::empty(),
+                        Tag::UserId,
+                        &user.id,
+                    )
+                    .unwrap();
+            } else {
+                let revocation = SignatureConfig::v4(
+                    SignatureType::KeyRevocation,
+                    changed.primary_key.algorithm(),
+                    HashAlgorithm::Sha512,
+                )
+                .sign_key(
+                    &changed.primary_key,
+                    &Password::empty(),
+                    changed.primary_key.public_key(),
+                )
+                .unwrap();
+                changed.details.revocation_signatures.push(revocation);
+            }
+            let report = evaluate(&changed.to_public_key(), now().unwrap()).summary;
+            assert!(if expired {
+                report.expired
+            } else {
+                report.revoked
+            });
+            let key = seal_secret(
+                &changed,
+                Algorithm::Ed25519,
+                "Validity <validity@example.test>",
+                password,
+            )
+            .unwrap();
+            assert_eq!(
+                import_secret(
+                    &changed.to_bytes().unwrap(),
+                    &key.fingerprint,
+                    b"",
+                    password
+                )
+                .unwrap_err()
+                .code,
+                "invalid_format"
+            );
+            assert_eq!(
+                sign(&key, b"wrong password", b"document")
+                    .err()
+                    .unwrap()
+                    .code,
+                "key_not_trusted"
+            );
+        }
+    }
+
+    #[test]
+    fn import_rejects_mismatched_private_keys_and_preflights_both_packets() {
+        let password = b"IPG import test passphrase";
+        for version in [Version::V4, Version::V6] {
+            for algorithm in [Algorithm::Ed25519, Algorithm::P384] {
+                let key =
+                    generate_version("Import <import@example.test>", algorithm, version, password)
+                        .unwrap();
+                let other =
+                    generate_version("Other <other@example.test>", algorithm, version, password)
+                        .unwrap();
+                let secret = unseal(&key, password).unwrap();
+                let other = unseal(&other, password).unwrap();
+                for primary in [true, false] {
+                    let mut changed = secret.clone();
+                    if primary {
+                        changed.primary_key = pgp::packet::SecretKey::new(
+                            changed.primary_key.public_key().clone(),
+                            other.primary_key.secret_params().clone(),
+                        )
+                        .unwrap();
+                    } else {
+                        changed.secret_subkeys[0].key = pgp::packet::SecretSubkey::new(
+                            changed.secret_subkeys[0].key.public_key().clone(),
+                            other.secret_subkeys[0].key.secret_params().clone(),
+                        )
+                        .unwrap();
+                    }
+                    // Bindings are unchanged and valid; only private derivation detects this.
+                    changed.verify_bindings().unwrap();
+                    assert_eq!(
+                        import_secret(
+                            &changed.to_bytes().unwrap(),
+                            &key.fingerprint,
+                            b"",
+                            password
+                        )
+                        .unwrap_err()
+                        .code,
+                        "authentication_failed"
+                    );
+                }
+                let mut changed = secret.clone();
+                changed
+                    .secret_subkeys
+                    .push(changed.secret_subkeys[0].clone());
+                changed.secret_subkeys[1].signatures.clear();
+                assert_eq!(
+                    import_secret(
+                        &changed.to_bytes().unwrap(),
+                        &key.fingerprint,
+                        b"",
+                        password
+                    )
+                    .unwrap_err()
+                    .code,
+                    "invalid_format"
+                );
+                let mut changed = secret.clone();
+                changed
+                    .primary_key
+                    .set_password(OsRng, &Password::from(password.as_slice()))
+                    .unwrap();
+                let excessive = SecretParams::Encrypted(pgp::types::EncryptedSecretParams::new(
+                    vec![0; 64].into(),
+                    S2kParams::Aead {
+                        sym_alg: SymmetricKeyAlgorithm::AES256,
+                        aead_mode: AeadAlgorithm::Ocb,
+                        s2k: StringToKey::Argon2 {
+                            salt: [0; 16],
+                            t: 255,
+                            p: 4,
+                            m_enc: 31,
+                        },
+                        nonce: vec![0; 15].into(),
+                    },
+                ));
+                changed.secret_subkeys[0].key = pgp::packet::SecretSubkey::new(
+                    changed.secret_subkeys[0].key.public_key().clone(),
+                    excessive,
+                )
+                .unwrap();
+                // The primary password is wrong: invalid_format proves both settings
+                // were inspected before attempting the first unlock.
+                assert_eq!(
+                    import_secret(
+                        &changed.to_bytes().unwrap(),
+                        &key.fingerprint,
+                        b"wrong",
+                        password
+                    )
+                    .unwrap_err()
+                    .code,
+                    "invalid_format"
+                );
+                let mut bytes = secret.to_bytes().unwrap();
+                bytes.push(0);
+                assert_eq!(
+                    import_secret(&bytes, &key.fingerprint, b"", password)
+                        .unwrap_err()
+                        .code,
+                    "invalid_format"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn protected_exports_preserve_both_secrets_for_v4_and_v6() {
         use pgp::types::{S2kParams, SecretParams, StringToKey};
-        let password = b"APG source passphrase test-only";
+        let password = b"IPG source passphrase test-only";
         let export_password = b"export passphrase test-only\0\xff";
         let check = |params: &SecretParams, version: Version| {
             let SecretParams::Encrypted(encrypted) = params else {
@@ -1449,6 +1896,38 @@ mod tests {
                 .unwrap();
                 let another =
                     export_secret(&key, &key.fingerprint, password, export_password).unwrap();
+                let imported = import_secret(
+                    armored.as_bytes(),
+                    &key.fingerprint.to_uppercase(),
+                    export_password,
+                    password,
+                )
+                .unwrap();
+                assert_eq!(imported.certificate, key.certificate);
+                assert_eq!(
+                    unseal(&imported, password).unwrap().to_bytes().unwrap(),
+                    *original
+                );
+                let imported_plain =
+                    import_secret(&original, &key.fingerprint, b"", password).unwrap();
+                assert_eq!(imported_plain.certificate, key.certificate);
+                assert_eq!(
+                    import_secret(
+                        armored.as_bytes(),
+                        &"00".repeat(key.fingerprint.len() / 2),
+                        b"wrong",
+                        password
+                    )
+                    .unwrap_err()
+                    .code,
+                    "identity_mismatch"
+                );
+                assert_eq!(
+                    import_secret(armored.as_bytes(), &key.fingerprint, b"wrong", password)
+                        .unwrap_err()
+                        .code,
+                    "authentication_failed"
+                );
                 assert_ne!(&*armored, &*another);
                 assert!(armored.starts_with("-----BEGIN PGP PRIVATE KEY BLOCK-----"));
                 let mut exported = SignedSecretKey::from_string(&armored).unwrap().0;

@@ -1,7 +1,7 @@
 """Independent public certificates with accepted and refused primary algorithms.
 
 PyCA makes all disposable keys and signatures. Only public packets enter fixtures;
-RSA/DSA private operations occur here, never in APG or rPGP.
+RSA/DSA private operations occur here, never in IPG or rPGP.
 """
 import argparse
 import hashlib
@@ -148,7 +148,7 @@ def exercise_certificates(call, path, fixture_output=None):
         if not accepted:
             assert all(not key["usable_for_encryption"] and not key["usable_for_signing"]
                        for key in report["keys"]), report
-            assert all("primary key algorithm is not accepted by APG policy" in key["issues"]
+            assert all("primary key algorithm is not accepted by IPG policy" in key["issues"]
                        for key in report["keys"][1:]), report
         signature = path(name + ".sig")
         Path(signature).write_bytes(bytes.fromhex(case["signature_hex"]))
@@ -174,14 +174,14 @@ def exercise_certificates(call, path, fixture_output=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--apg", required=True, type=Path)
+    parser.add_argument("--ipg", required=True, type=Path)
     parser.add_argument("--write-fixture", type=Path)
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="apg-primary-policy-") as directory:
+    with tempfile.TemporaryDirectory(prefix="ipg-primary-policy-") as directory:
         def call(operation, error=None, **arguments):
-            request = {"protocol": "apg/1", "id": "primary-policy",
+            request = {"protocol": "ipg/1", "id": "primary-policy",
                        "request": {"operation": operation, **arguments}}
-            result = subprocess.run([str(args.apg.resolve(strict=True)), "call"],
+            result = subprocess.run([str(args.ipg.resolve(strict=True)), "call"],
                                     input=json.dumps(request).encode(), capture_output=True, timeout=120)
             response = json.loads(result.stdout)
             assert response["ok"] is (error is None), response

@@ -1,9 +1,9 @@
 //! End-to-end TPM identity and attestation test against a real TPM (Windows TPM
 //! Base Services) or swtpm (Linux, `scripts/tpm-test.sh`). Opt-in with
-//! APG_TEST_TPM_ATTEST=1, because it runs TPM commands on this machine.
+//! IPG_TEST_TPM_ATTEST=1, because it runs TPM commands on this machine.
 //!
-//! Trust anchors come from APG_TEST_EK_ANCHORS (PEM roots of the TPM manufacturer)
-//! and optional APG_TEST_EK_INTERMEDIATES. Keys are wrapped blobs in a temporary
+//! Trust anchors come from IPG_TEST_EK_ANCHORS (PEM roots of the TPM manufacturer)
+//! and optional IPG_TEST_EK_INTERMEDIATES. Keys are wrapped blobs in a temporary
 //! file: nothing persists in the TPM.
 #![cfg(feature = "tpm")]
 use serde_json::{Value, json};
@@ -11,11 +11,11 @@ use std::{fs, process::Command};
 
 fn call(request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"apg/1","id":"attest","request":request})).unwrap();
-    let mut command = Command::new(env!("CARGO_BIN_EXE_apg"));
+        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"attest","request":request})).unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_ipg"));
     command.arg("call");
-    if let Ok(tcti) = std::env::var("APG_TEST_TPM_TCTI") {
-        command.env("APG_TPM_TCTI", tcti);
+    if let Ok(tcti) = std::env::var("IPG_TEST_TPM_TCTI") {
+        command.env("IPG_TPM_TCTI", tcti);
     }
     let mut child = command
         .stdin(std::process::Stdio::piped())
@@ -40,12 +40,12 @@ fn fails(request: Value) -> String {
 
 #[test]
 fn tpm_identity_attestation_round_trip() {
-    if std::env::var("APG_TEST_TPM_ATTEST").as_deref() != Ok("1") {
-        eprintln!("skipping: set APG_TEST_TPM_ATTEST=1 and APG_TEST_EK_ANCHORS");
+    if std::env::var("IPG_TEST_TPM_ATTEST").as_deref() != Ok("1") {
+        eprintln!("skipping: set IPG_TEST_TPM_ATTEST=1 and IPG_TEST_EK_ANCHORS");
         return;
     }
-    let anchors = std::env::var("APG_TEST_EK_ANCHORS").expect("APG_TEST_EK_ANCHORS");
-    let intermediates = std::env::var("APG_TEST_EK_INTERMEDIATES").ok();
+    let anchors = std::env::var("IPG_TEST_EK_ANCHORS").expect("IPG_TEST_EK_ANCHORS");
+    let intermediates = std::env::var("IPG_TEST_EK_INTERMEDIATES").ok();
     let dir = tempfile::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"tpm-attestation-test-pin").unwrap();
@@ -55,7 +55,7 @@ fn tpm_identity_attestation_round_trip() {
         ok(json!({"operation":"tpm.key.generate","output":path("key"),"pin_file":path("pin")}));
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
     let key: Value = serde_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
-    assert_eq!(key["format"], "apg-tpm-key-v1");
+    assert_eq!(key["format"], "ipg-tpm-key-v1");
     eprintln!("parent {}", key["parent"]);
 
     // The key works for every private-key operation.
@@ -84,7 +84,7 @@ fn tpm_identity_attestation_round_trip() {
         json!({"operation":"tpm.attest","key":path("key"),"passphrase_file":path("pin"),"output":path("evidence")}),
     );
     // Optionally keep PUBLIC evidence and CA certificates as an offline test fixture.
-    if let Ok(out) = std::env::var("APG_TEST_WRITE_ATTESTATION_FIXTURE") {
+    if let Ok(out) = std::env::var("IPG_TEST_WRITE_ATTESTATION_FIXTURE") {
         let out = std::path::Path::new(&out);
         fs::create_dir_all(out).unwrap();
         fs::copy(path("evidence"), out.join("evidence.json")).unwrap();
@@ -113,7 +113,7 @@ fn tpm_identity_attestation_round_trip() {
         let message = responded["error"]["message"].as_str().unwrap_or_default();
         if cfg!(windows)
             && message.contains("0x147")
-            && std::env::var("APG_TEST_TPM_REQUIRE_ACTIVATION").as_deref() != Ok("1")
+            && std::env::var("IPG_TEST_TPM_REQUIRE_ACTIVATION").as_deref() != Ok("1")
         {
             eprintln!(
                 "activation needs an elevated process on Windows; stopping after the verifier checks"

@@ -171,7 +171,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Identity suite; omitted means apg-public-v1."
+              "description": "Identity suite; omitted means ipg-public-v1."
             },
             "operation": {
               "const": "key.generate",
@@ -205,7 +205,7 @@
               "type": "string"
             },
             "passphrase_file": {
-              "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+              "description": "Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1\nkeys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS\ncredentials.",
               "type": [
                 "string",
                 "null"
@@ -223,7 +223,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -263,7 +263,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -283,7 +283,7 @@
               "type": "string"
             },
             "passphrase_file": {
-              "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+              "description": "Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1\nkeys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS\ncredentials.",
               "type": [
                 "string",
                 "null"
@@ -306,7 +306,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -338,7 +338,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -397,7 +397,7 @@
               "type": "string"
             },
             "passphrase_file": {
-              "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+              "description": "Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1\nkeys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS\ncredentials.",
               "type": [
                 "string",
                 "null"
@@ -429,7 +429,7 @@
               "type": "string"
             },
             "passphrase_file": {
-              "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+              "description": "Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1\nkeys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS\ncredentials.",
               "type": [
                 "string",
                 "null"
@@ -458,7 +458,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -504,7 +504,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -536,7 +536,7 @@
               "type": "string"
             },
             "passphrase_file": {
-              "description": "Passphrase for software keys, or the PIN for apg-pkcs11-key-v1 and apg-tpm-key-v1\nkeys. Required for those keys; omitted for apg-kms-key-v1, which uses host AWS\ncredentials.",
+              "description": "Passphrase for software keys, or the PIN for ipg-pkcs11-key-v1 and ipg-tpm-key-v1\nkeys. Required for those keys; omitted for ipg-kms-key-v1, which uses host AWS\ncredentials.",
               "type": [
                 "string",
                 "null"
@@ -557,7 +557,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -589,7 +589,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -599,7 +599,7 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -641,7 +641,7 @@
               "type": "integer"
             },
             "expected_digest": {
-              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -651,7 +651,7 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -744,7 +744,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -754,7 +754,7 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -791,7 +791,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -801,7 +801,7 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -838,7 +838,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_digest": {
-              "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+              "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -848,7 +848,7 @@
               "type": "string"
             },
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -1031,7 +1031,7 @@
               "type": "string"
             },
             "mldsa_signing_key_arn": {
-              "description": "Optional ML_DSA_65 SIGN_VERIFY key ARN. With it the identity is\napg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384\nplus ML-DSA-65; encryption stays P-384 (KMS has no ML-KEM keys).",
+              "description": "Optional ML_DSA_65 SIGN_VERIFY key ARN. With it the identity is\nipg-public-p384-mldsa65-v1 and every signature is composite ECDSA P-384\nplus ML-DSA-65; encryption stays P-384 (KMS has no ML-KEM keys).",
               "maxLength": 160,
               "not": {
                 "pattern": "[^A-Za-z0-9:/-]"
@@ -1103,7 +1103,7 @@
           "additionalProperties": false,
           "properties": {
             "key": {
-              "description": "An apg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
+              "description": "An ipg-cng-key-v1 file; its keys persist in the Windows TPM key store.",
               "type": "string"
             },
             "operation": {
@@ -1169,7 +1169,7 @@
           "additionalProperties": false,
           "properties": {
             "input": {
-              "description": "An apg-stream-v1 file.",
+              "description": "An ipg-stream-v1 file.",
               "type": "string"
             },
             "key": {
@@ -1242,7 +1242,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -1288,7 +1288,7 @@
           "additionalProperties": false,
           "properties": {
             "key": {
-              "description": "An apg-tpm-key-v1 file (Linux or Windows).",
+              "description": "An ipg-tpm-key-v1 file (Linux or Windows).",
               "type": "string"
             },
             "operation": {
@@ -1315,7 +1315,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -1325,7 +1325,7 @@
               "type": "string"
             },
             "input": {
-              "description": "apg-tpm-evidence-v1 from tpm.attest.",
+              "description": "ipg-tpm-evidence-v1 from tpm.attest.",
               "type": "string"
             },
             "intermediates": {
@@ -1392,7 +1392,7 @@
           "additionalProperties": false,
           "properties": {
             "expected_fingerprint": {
-              "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,
               "minLength": 64,
               "not": {
@@ -1485,8 +1485,51 @@
               "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
               "type": "string"
             },
+            "input": {
+              "description": "One armored or binary transferable secret key in IPG's supported profile.",
+              "type": "string"
+            },
+            "new_passphrase_file": {
+              "description": "Seal the imported key under these 16..4096 exact passphrase bytes.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "openpgp.key.import",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "description": "Exact source password bytes; an empty file supports unprotected packets.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "expected_openpgp_fingerprint",
+            "passphrase_file",
+            "new_passphrase_file"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_openpgp_fingerprint": {
+              "description": "OpenPGP primary-key fingerprint: v4 40 hex or v6 64 hex characters, no spaces.",
+              "maxLength": 64,
+              "minLength": 40,
+              "not": {
+                "pattern": "[^0-9A-Fa-f]"
+              },
+              "pattern": "^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$",
+              "type": "string"
+            },
             "key": {
-              "description": "An APG-held software OpenPGP key, authenticated before export.",
+              "description": "An IPG-held software OpenPGP key, authenticated before export.",
               "type": "string"
             },
             "new_passphrase_file": {
@@ -1518,7 +1561,7 @@
           "additionalProperties": false,
           "properties": {
             "key": {
-              "description": "An apg-openpgp-key-v1 file; no passphrase is needed for its public certificate.",
+              "description": "An ipg-openpgp-key-v1 file; no passphrase is needed for its public certificate.",
               "type": "string"
             },
             "operation": {
@@ -1701,7 +1744,7 @@
               "type": "string"
             },
             "key": {
-              "description": "APG OpenPGP decryption key, required only for encrypted messages.",
+              "description": "IPG OpenPGP decryption key, required only for encrypted messages.",
               "type": [
                 "string",
                 "null"
@@ -1745,12 +1788,12 @@
       "description": "Identity suites that have software secret keys.",
       "oneOf": [
         {
-          "const": "apg-public-v1",
+          "const": "ipg-public-v1",
           "description": "X25519 and Ed25519.",
           "type": "string"
         },
         {
-          "const": "apg-public-hybrid-v1",
+          "const": "ipg-public-hybrid-v1",
           "description": "ML-KEM-768 with X25519 for post-quantum confidentiality, and Ed25519 signatures.",
           "type": "string"
         }
@@ -1761,7 +1804,7 @@
       "description": "A stream recipient: a public identity file and its independently trusted fingerprint.",
       "properties": {
         "expected_fingerprint": {
-          "description": "64 hex characters for apg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -1784,7 +1827,7 @@
       "additionalProperties": false,
       "properties": {
         "expected_digest": {
-          "description": "SHA-384 snapshot digest (96 hex) for apg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
+          "description": "SHA-384 snapshot digest (96 hex) for ipg-trust-v3; SHA-256 (64 hex) for v1 and v2.",
           "maxLength": 96,
           "minLength": 64,
           "not": {
@@ -1819,7 +1862,7 @@
       "type": "string"
     },
     "protocol": {
-      "const": "apg/1",
+      "const": "ipg/1",
       "type": "string"
     },
     "request": {

@@ -1,6 +1,6 @@
 use ic_core::traits::Digest;
 use ic_hash::Sha384;
-use iron_privacy_guardian::{Request, crypto, execute, stream_signature};
+use iron_privacy_guard::{Request, crypto, execute, stream_signature};
 use serde_json::json;
 use std::{
     fs,
@@ -19,7 +19,7 @@ fn large_files_round_trip_without_in_memory_limit_and_never_clobber() {
     fs::write(path("pass"), PASSWORD).unwrap();
     let input = fs::File::create(path("input")).unwrap();
     input
-        .set_len(iron_privacy_guardian::MAX_FILE_BYTES + 17)
+        .set_len(iron_privacy_guard::MAX_FILE_BYTES + 17)
         .unwrap();
     let sign = json!({"operation":"stream.sign","input":path("input"),"output":path("sig"),"key":path("key"),"passphrase_file":path("pass")});
     let outcome = execute(serde_json::from_value(sign.clone()).unwrap()).unwrap();
@@ -44,7 +44,7 @@ fn large_files_round_trip_without_in_memory_limit_and_never_clobber() {
     );
     let signature = fs::read(path("sig")).unwrap();
     assert_eq!(
-        iron_privacy_guardian::artifact::inspect(&signature)
+        iron_privacy_guard::artifact::inspect(&signature)
             .unwrap()
             .format,
         stream_signature::FORMAT
@@ -103,7 +103,7 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
                     "signer" => changed[field] = json!("00".repeat(suite.fingerprint_len())),
                     "signature" => changed[field] = json!("00".repeat(suite.signature_len())),
                     "algorithm" => changed[field] = json!("ecdsa-p384-sha384"),
-                    "format" => changed[field] = json!("apg-signature-v1"),
+                    "format" => changed[field] = json!("ipg-signature-v1"),
                     _ => changed[field] = json!("sha2-256"),
                 }
                 let bad = serde_json::from_value(changed).unwrap();
@@ -119,7 +119,7 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
                 );
             }
             let ordinary = crypto::Signature {
-                format: "apg-signature-v1".into(),
+                format: "ipg-signature-v1".into(),
                 signer: sig.signer.clone(),
                 algorithm: sig.algorithm.clone(),
                 signature: sig.signature.clone(),

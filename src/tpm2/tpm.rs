@@ -1,5 +1,5 @@
 //! A minimal TPM 2.0 command layer: command execution with password, salted HMAC
-//! and policy sessions, parameter encryption, and the commands APG needs.
+//! and policy sessions, parameter encryption, and the commands IPG needs.
 //!
 //! HMAC sessions are salted with an RSA storage or endorsement key, so their
 //! session key never appears on the TPM interface; authorization values are never

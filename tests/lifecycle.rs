@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto, handle_call,
     lifecycle::{self, Revocation, RevocationReason},
 };
@@ -84,7 +84,7 @@ fn revocation_supports_all_reasons_and_requires_pinned_identity() {
 fn all_revocation_fields_are_bound_or_rejected() {
     let r = certificate();
     for (field, replacement) in [
-        ("format", "apg-revocation-v2".into()),
+        ("format", "ipg-revocation-v2".into()),
         ("scope", "signing-only".into()),
         ("algorithm", "other".into()),
         ("fingerprint", "0".repeat(64)),
@@ -113,7 +113,7 @@ fn certificates_cannot_be_substituted_for_content_signatures() {
     let k = key();
     let r = certificate();
     // Even the identical unwrapped revocation message must use a distinct domain.
-    let mut message = b"APG revocation v1".to_vec();
+    let mut message = b"IPG revocation v1".to_vec();
     for field in [
         &r.format,
         &r.fingerprint,
@@ -129,7 +129,7 @@ fn certificates_cannot_be_substituted_for_content_signatures() {
     substituted.signature = ordinary.signature;
     assert!(lifecycle::verify_revocation(&k.public, &k.public.fingerprint, &substituted).is_err());
     let ordinary = crypto::Signature {
-        format: "apg-signature-v1".into(),
+        format: "ipg-signature-v1".into(),
         signer: k.public.fingerprint.clone(),
         algorithm: "ed25519".into(),
         signature: r.signature,
@@ -148,7 +148,7 @@ fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
     fs::write(path("new"), NEW).unwrap();
     let pin = &key().public.fingerprint;
     let invoke = |args: &[&str]| {
-        let output = Command::new(env!("CARGO_BIN_EXE_apg"))
+        let output = Command::new(env!("CARGO_BIN_EXE_ipg"))
             .args(args)
             .output()
             .unwrap();
@@ -196,7 +196,7 @@ fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
     let inspected = invoke(&["inspect", "--input", &path("revocation")]);
     assert_eq!(inspected["result"]["authenticated"], false);
     assert_eq!(fs::read(path("key")).unwrap(), original);
-    let request = json!({"protocol":"apg/1","id":"no-clobber","request":{
+    let request = json!({"protocol":"ipg/1","id":"no-clobber","request":{
         "operation":"key.rewrap","key":path("key"),"output":path("key"),
         "expected_fingerprint":pin,"passphrase_file":path("old"),"new_passphrase_file":path("new")}});
     let (response, code) = handle_call(&serde_json::to_vec(&request).unwrap());
@@ -220,12 +220,12 @@ fn failures_and_plans_never_publish_lifecycle_artifacts() {
             request["reason"] = json!("compromised");
         }
         let (response, code) = handle_call(
-            &serde_json::to_vec(&json!({"protocol":"apg/1","id":"bad","request":request})).unwrap(),
+            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"bad","request":request})).unwrap(),
         );
         assert_eq!(code, 3, "{response}");
         assert!(!dir.path().join("output").exists());
         request["key"] = json!(path("nonexistent"));
-        let (_, code) = handle_call(&serde_json::to_vec(&json!({"protocol":"apg/1","id":"plan","request":{"operation":"plan","request":request}})).unwrap());
+        let (_, code) = handle_call(&serde_json::to_vec(&json!({"protocol":"ipg/1","id":"plan","request":{"operation":"plan","request":request}})).unwrap());
         assert_eq!(code, 0);
         assert!(!dir.path().join("output").exists());
     }

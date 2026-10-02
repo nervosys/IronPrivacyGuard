@@ -1,10 +1,10 @@
-//! apg-stream-v1 fixtures made by the independent PyCA oracle
-//! (tests/interop/stream_reference.py), decrypted by APG with the fixture
-//! identities: apg-public-v1 and hybrid software keys, and the P-384 identity
+//! ipg-stream-v1 fixtures made by the independent PyCA oracle
+//! (tests/interop/stream_reference.py), decrypted by IPG with the fixture
+//! identities: ipg-public-v1 and hybrid software keys, and the P-384 identity
 //! through the provider interface. All keys are PUBLIC TEST DATA.
 use ic_core::traits::KeyAgreement;
 use ic_ec::EcdhP384;
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto::{self, Custody, IdentityKey, PublicKey, SecretKey},
     stream,
 };
@@ -38,10 +38,10 @@ impl IdentityKey for P384Token {
     fn custody(&self) -> Custody {
         Custody::Hardware
     }
-    fn sign_raw(&self, _: &[u8]) -> iron_privacy_guardian::error::Result<Vec<u8>> {
+    fn sign_raw(&self, _: &[u8]) -> iron_privacy_guard::error::Result<Vec<u8>> {
         unreachable!("streams never sign")
     }
-    fn agree(&self, peer: &[u8]) -> iron_privacy_guardian::error::Result<Zeroizing<Vec<u8>>> {
+    fn agree(&self, peer: &[u8]) -> iron_privacy_guard::error::Result<Zeroizing<Vec<u8>>> {
         let mut shared = Zeroizing::new(vec![0; 48]);
         EcdhP384::agree(&self.scalar, peer, &mut shared)?;
         Ok(shared)

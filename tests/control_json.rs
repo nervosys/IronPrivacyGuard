@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     control_json, handle_call,
     mcp::{Config, Server},
 };
@@ -48,7 +48,7 @@ fn ordinary_json_numbers_strings_and_limits_remain_compatible() {
         assert!(control_json::parse(data.as_bytes()).is_err());
     }
     let mut exact = b"null".to_vec();
-    exact.resize(iron_privacy_guardian::MAX_REQUEST_BYTES as usize, b' ');
+    exact.resize(iron_privacy_guard::MAX_REQUEST_BYTES as usize, b' ');
     assert!(control_json::parse(&exact).is_ok());
     exact.push(b' ');
     assert_eq!(
@@ -61,9 +61,9 @@ fn ordinary_json_numbers_strings_and_limits_remain_compatible() {
 #[test]
 fn native_raw_preflight_candidates_cannot_hide_duplicate_fields() {
     for request in [
-        r#"{"protocol":"apg/1","id":"x","request":{"operation":"request.validate","request":{"operation":"hash","input":"one","input":"two"}}}"#,
-        r#"{"protocol":"apg/1","id":"x","request":{"operation":"request.validate","request":{"unknown":1,"unknown":2}}}"#,
-        r#"{"protocol":"apg/1","id":"x","request":{"operation":"plan","request":{"operation":"trust.compare","base":{"store":"x","store":"y","expected_digest":"bad"},"candidate":{"store":"x","expected_digest":"bad"}}}}"#,
+        r#"{"protocol":"ipg/1","id":"x","request":{"operation":"request.validate","request":{"operation":"hash","input":"one","input":"two"}}}"#,
+        r#"{"protocol":"ipg/1","id":"x","request":{"operation":"request.validate","request":{"unknown":1,"unknown":2}}}"#,
+        r#"{"protocol":"ipg/1","id":"x","request":{"operation":"plan","request":{"operation":"trust.compare","base":{"store":"x","store":"y","expected_digest":"bad"},"candidate":{"store":"x","expected_digest":"bad"}}}}"#,
     ] {
         let (result, status) = handle_call(request.as_bytes());
         assert_eq!(status, 2);
@@ -88,9 +88,9 @@ fn mcp_duplicate_requests_do_not_initialize_or_execute() {
     server.handle(br#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#);
     for bad in [
         r#"{"jsonrpc":"2.0","id":5,"method":"ping","method":"tools/list"}"#,
-        r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"apg_hash","arguments":{"input":"one","\u0069nput":"two"}}}"#,
-        r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"apg_request_validate","arguments":{"request":{"unknown":1,"unknown":2}}}}"#,
-        r#"{"jsonrpc":"2.0","method":"tools/call","params":{"name":"apg_hash","name":"apg_discover"}}"#,
+        r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"ipg_hash","arguments":{"input":"one","\u0069nput":"two"}}}"#,
+        r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"ipg_request_validate","arguments":{"request":{"unknown":1,"unknown":2}}}}"#,
+        r#"{"jsonrpc":"2.0","method":"tools/call","params":{"name":"ipg_hash","name":"ipg_discover"}}"#,
     ] {
         let response = server.handle(bad.as_bytes()).unwrap();
         assert_eq!(response["error"]["code"], -32700);
@@ -113,7 +113,7 @@ fn cli_json_flags_reject_duplicates_without_publishing() {
         r#"{{"operation":"key.generate","output":{},"passphrase_file":"one","passphrase_file":"two"}}"#,
         json!(output)
     );
-    let cli = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["request.validate", "--request", &request])
         .output()
         .unwrap();
@@ -121,7 +121,7 @@ fn cli_json_flags_reject_duplicates_without_publishing() {
     let response: Value = serde_json::from_slice(&cli.stdout).unwrap();
     assert_eq!(response["error"]["code"], "invalid_format");
     assert_eq!(fs::read(&output).unwrap(), b"sentinel");
-    let cli = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args([
             "sign",
             "--input",

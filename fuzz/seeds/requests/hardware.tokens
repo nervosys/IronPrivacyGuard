@@ -1,1 +1,1 @@
-{"protocol":"apg/1","id":"fuzz","request":{"operation":"plan","request":{"operation":"hardware.tokens"}}}
+{"protocol":"ipg/1","id":"fuzz","request":{"operation":"plan","request":{"operation":"hardware.tokens"}}}

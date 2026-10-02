@@ -1,4 +1,4 @@
-//! TPM 2.0 public areas, attestation structures, signatures and the templates APG
+//! TPM 2.0 public areas, attestation structures, signatures and the templates IPG
 //! uses. Parsing is strict: unknown algorithms and trailing bytes are refused.
 use super::marshal::{Reader, Writer};
 use crate::error::{Error, Result};
@@ -218,7 +218,7 @@ impl Template {
     }
 }
 
-/// APG's Linux storage root: a restricted P-384 decryption key under the owner
+/// IPG's Linux storage root: a restricted P-384 decryption key under the owner
 /// hierarchy (the same template tss-esapi builds in the Linux backend).
 pub(crate) fn owner_srk_template() -> Template {
     Template {
@@ -247,7 +247,7 @@ pub(crate) fn owner_srk_template() -> Template {
     }
 }
 
-/// An APG identity key: P-384 ECDSA (SHA-384) for signing or ECDH for decryption.
+/// An IPG identity key: P-384 ECDSA (SHA-384) for signing or ECDH for decryption.
 pub(crate) fn identity_key_template(signing: bool) -> Template {
     let role = if signing { SIGN } else { DECRYPT };
     Template {
@@ -301,7 +301,7 @@ pub(crate) fn ek_rsa_template() -> Template {
     }
 }
 
-/// APG's attestation key: a restricted RSA-2048 RSASSA-SHA256 signing key created as
+/// IPG's attestation key: a restricted RSA-2048 RSASSA-SHA256 signing key created as
 /// a primary in the endorsement hierarchy, so the same template always yields the
 /// same key and nothing is persisted.
 pub(crate) fn ak_template() -> Template {

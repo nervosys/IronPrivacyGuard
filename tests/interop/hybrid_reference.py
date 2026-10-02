@@ -1,6 +1,6 @@
-"""Independent oracle for the APG hybrid post-quantum suite using PyCA (OpenSSL).
+"""Independent oracle for the IPG hybrid post-quantum suite using PyCA (OpenSSL).
 
-Covers apg-public-hybrid-v1 identities, apg-secret-hybrid-v1 protection, the
+Covers ipg-public-hybrid-v1 identities, ipg-secret-hybrid-v1 protection, the
 mlkem768-x25519-hkdf-sha256-chacha20poly1305 envelope suite and composite
 ed25519-mldsa65 signatures and certificates. ML-KEM encapsulation and ML-DSA signing
 are randomized in PyCA, so fixtures are recorded once (with their intermediates) and
@@ -26,25 +26,25 @@ from crypto_reference import compact, frame, password_key
 
 FIXTURE = Path(__file__).resolve().parents[1] / "vectors" / "native-hybrid-v1.json"
 SUITE = "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
-KEY_FORMAT = "apg-public-hybrid-v1"
-SECRET_FORMAT = "apg-secret-hybrid-v1"
+KEY_FORMAT = "ipg-public-hybrid-v1"
+SECRET_FORMAT = "ipg-secret-hybrid-v1"
 KDF = "argon2id-m65536-t3-p4"
-PASSWORD = b"PUBLIC APG hybrid vector password\x00\xff\r\n"
+PASSWORD = b"PUBLIC IPG hybrid vector password\x00\xff\r\n"
 SEEDS = bytes(range(160))
 COMPOSITE = "ed25519-mldsa65"
-MLDSA_CONTEXT = b"APG ed25519-mldsa65 v1"
+MLDSA_CONTEXT = b"IPG ed25519-mldsa65 v1"
 LENGTHS = [0, 1, 15, 16, 17, 63, 64, 65, 255]
 KEM_KEY, KEM_CIPHERTEXT = 1184, 1088
-ENVIRONMENT = {k: v for k, v in os.environ.items() if k != "APG_PKCS11_MODULE"}
+ENVIRONMENT = {k: v for k, v in os.environ.items() if k != "IPG_PKCS11_MODULE"}
 
 
 def kem_private(seeds):
-    # FIPS 203 seed format d || z, as APG stores it in seeds[64:128].
+    # FIPS 203 seed format d || z, as IPG stores it in seeds[64:128].
     return mlkem.MLKEM768PrivateKey.from_seed_bytes(seeds[64:128])
 
 
 def dsa_private(seeds):
-    # FIPS 204 seed, as APG stores it in seeds[128:160].
+    # FIPS 204 seed, as IPG stores it in seeds[128:160].
     return mldsa.MLDSA65PrivateKey.from_seed_bytes(seeds[128:160])
 
 
@@ -55,12 +55,12 @@ def identity(seeds):
         dsa_private(seeds).public_key().public_bytes_raw()
     encryption = kem_key + x25519
     return {"format": KEY_FORMAT, "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha384(frame("APG identity hybrid v1", encryption, signing)).hexdigest()}
+            "fingerprint": hashlib.sha384(frame("IPG identity hybrid v1", encryption, signing)).hexdigest()}
 
 
 def secret_aad(public, salt, nonce):
     canonical = {field: public[field] for field in ("format", "encryption_key", "signing_key", "fingerprint")}
-    return frame("APG secret hybrid v1 " + KDF, compact(canonical), salt, nonce)
+    return frame("IPG secret hybrid v1 " + KDF, compact(canonical), salt, nonce)
 
 
 def protect(seeds, password, salt, nonce):
@@ -80,11 +80,11 @@ def unlock(secret, password):
 
 
 def envelope_aad(envelope):
-    return frame("APG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
+    return frame("IPG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
 
 
 def content_key(shared, aad):
-    return HKDF(algorithm=hashes.SHA256(), length=32, salt=b"APG encryption v1", info=aad).derive(shared)
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=b"IPG encryption v1", info=aad).derive(shared)
 
 
 def encrypt(public, plaintext, ephemeral_seed, nonce):
@@ -92,7 +92,7 @@ def encrypt(public, plaintext, ephemeral_seed, nonce):
     kem_shared, kem_ciphertext = mlkem.MLKEM768PublicKey.from_public_bytes(encryption[:KEM_KEY]).encapsulate()
     ephemeral = X25519PrivateKey.from_private_bytes(ephemeral_seed)
     x25519_shared = ephemeral.exchange(X25519PublicKey.from_public_bytes(encryption[KEM_KEY:]))
-    envelope = {"format": "apg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
+    envelope = {"format": "ipg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
                 "ephemeral_key": (kem_ciphertext + ephemeral.public_key().public_bytes_raw()).hex(), "nonce": nonce.hex()}
     shared = kem_shared + x25519_shared
     aad = envelope_aad(envelope)
@@ -104,7 +104,7 @@ def encrypt(public, plaintext, ephemeral_seed, nonce):
 
 
 def decrypt(seeds, envelope):
-    assert envelope["format"] == "apg-envelope-v1" and envelope["suite"] == SUITE
+    assert envelope["format"] == "ipg-envelope-v1" and envelope["suite"] == SUITE
     assert envelope["recipient"] == identity(seeds)["fingerprint"]
     ephemeral = bytes.fromhex(envelope["ephemeral_key"])
     assert len(ephemeral) == KEM_CIPHERTEXT + 32
@@ -117,7 +117,7 @@ def decrypt(seeds, envelope):
 
 
 def signature_message(fingerprint, message):
-    return frame(f"APG detached signature v1 {COMPOSITE}", fingerprint.encode("ascii"), message)
+    return frame(f"IPG detached signature v1 {COMPOSITE}", fingerprint.encode("ascii"), message)
 
 
 def composite_sign(seeds, framed):
@@ -135,7 +135,7 @@ def composite_verify(public, signature, framed):
 
 def sign(seeds, message):
     fingerprint = identity(seeds)["fingerprint"]
-    return {"format": "apg-signature-v1", "signer": fingerprint, "algorithm": COMPOSITE,
+    return {"format": "ipg-signature-v1", "signer": fingerprint, "algorithm": COMPOSITE,
             "signature": composite_sign(seeds, signature_message(fingerprint, message)).hex()}
 
 
@@ -143,7 +143,7 @@ def certificate(seeds, reason=None):
     """A composite revocation (with reason) or validity certificate."""
     from crypto_reference import certificate_message
     kind = "revocation" if reason else "validity"
-    value = {"format": f"apg-{kind}-v1", "fingerprint": identity(seeds)["fingerprint"], "scope": "entire-identity"}
+    value = {"format": f"ipg-{kind}-v1", "fingerprint": identity(seeds)["fingerprint"], "scope": "entire-identity"}
     value.update({"reason": reason} if reason else {"not_before": 1700000000, "not_after": 1900000000})
     value["algorithm"] = COMPOSITE
     value["signature"] = composite_sign(seeds, certificate_message(value)).hex()
@@ -192,7 +192,7 @@ def exercise(executable, fixture, directory):
 
     def call(operation, expect_ok=True, **arguments):
         nonlocal calls
-        request = {"protocol": "apg/1", "id": operation, "request": {"operation": operation, **arguments}}
+        request = {"protocol": "ipg/1", "id": operation, "request": {"operation": operation, **arguments}}
         result = subprocess.run([str(executable), "call"], input=compact(request), capture_output=True, timeout=60,
                                 env=ENVIRONMENT)
         calls += 1
@@ -234,11 +234,11 @@ def exercise(executable, fixture, directory):
                  key=secret_path, passphrase_file=password_path)
     assert error["code"] == "authentication_failed", error
 
-    # OpenSSL decapsulates IronCrypto ML-KEM ciphertexts in APG envelopes.
+    # OpenSSL decapsulates IronCrypto ML-KEM ciphertexts in IPG envelopes.
     for length in [0, 1, 4096]:
         message = bytes(range(256)) * (length // 256) + bytes(range(length % 256))
-        output = str(directory / f"apg-envelope-{length}")
-        call("encrypt", input=put(f"apg-plain-{length}", message), output=output, recipient=public_path,
+        output = str(directory / f"ipg-envelope-{length}")
+        call("encrypt", input=put(f"ipg-plain-{length}", message), output=output, recipient=public_path,
              expected_fingerprint=fingerprint)
         envelope = json.loads(Path(output).read_text(encoding="utf-8"))
         assert envelope["suite"] == SUITE and decrypt(seeds, envelope) == message
@@ -249,12 +249,12 @@ def exercise(executable, fixture, directory):
     generated_secret = json.loads(Path(generated_path).read_text(encoding="utf-8"))
     generated_seeds = unlock(generated_secret, PASSWORD)
     assert generated["fingerprint"] == identity(generated_seeds)["fingerprint"]
-    envelope, _ = encrypt(generated_secret["public"], b"to a fresh APG identity", os.urandom(32), os.urandom(12))
+    envelope, _ = encrypt(generated_secret["public"], b"to a fresh IPG identity", os.urandom(32), os.urandom(12))
     output = str(directory / "fresh-plain")
     call("decrypt", input=put("fresh-envelope", envelope), output=output, key=generated_path,
          passphrase_file=password_path)
-    assert Path(output).read_bytes() == b"to a fresh APG identity"
-    signed = str(directory / "apg-signature")
+    assert Path(output).read_bytes() == b"to a fresh IPG identity"
+    signed = str(directory / "ipg-signature")
     call("sign", input=put("signed-message", b"hybrid signer"), output=signed, key=generated_path,
          passphrase_file=password_path)
     signature = json.loads(Path(signed).read_text(encoding="utf-8"))
@@ -268,7 +268,7 @@ def exercise(executable, fixture, directory):
          passphrase_file=password_path, new_passphrase_file=put("new-password", new_password))
     assert unlock(json.loads(Path(rewrapped).read_text(encoding="utf-8")), new_password) == generated_seeds
     # The v1 unlock format must never accept hybrid seeds.
-    relabeled = {**generated_secret, "format": "apg-secret-v1"}
+    relabeled = {**generated_secret, "format": "ipg-secret-v1"}
     error = call("key.public", expect_ok=False, key=put("relabeled", relabeled), output=str(directory / "never2"),
                  passphrase_file=password_path)
     assert error["code"] == "invalid_format", error
@@ -278,16 +278,16 @@ def exercise(executable, fixture, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="explicitly regenerate the checked-in PUBLIC fixture")
-    parser.add_argument("--apg", type=Path, help="also check bidirectional release CLI interoperability")
+    parser.add_argument("--ipg", type=Path, help="also check bidirectional release CLI interoperability")
     args = parser.parse_args()
     if args.write:
         FIXTURE.write_bytes((json.dumps(vectors(), indent=2) + "\n").encode("utf-8"))
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     self_check(fixture)
     calls = 0
-    if args.apg:
+    if args.ipg:
         with tempfile.TemporaryDirectory() as directory:
-            calls = exercise(args.apg.resolve(), fixture, Path(directory))
+            calls = exercise(args.ipg.resolve(), fixture, Path(directory))
     print(json.dumps({"ok": True, "suite": SUITE, "message_vectors": len(fixture["messages"]), "cli_calls": calls}))
 
 

@@ -1,6 +1,6 @@
 # MCP stdio adapter
 
-Run `apg mcp` to expose APG through MCP. This adapter implements initialization,
+Run `ipg mcp` to expose IPG through MCP. This adapter implements initialization,
 version negotiation, `ping`, `tools/list`, and `tools/call` over newline-delimited
 JSON-RPC stdio. The implementation follows the MCP
 [transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports),
@@ -17,8 +17,8 @@ For clients that accept an `mcpServers` object, use an absolute executable path:
 ```json
 {
   "mcpServers": {
-    "iron-privacy-guardian": {
-      "command": "C:/path/to/IronPrivacyGuardian/target/release/apg.exe",
+    "iron-privacy-guard": {
+      "command": "C:/path/to/IronPrivacyGuard/target/release/ipg.exe",
       "args": ["mcp", "--allow", "discover,schema,ontology,plan,hash,inspect"]
     }
   }
@@ -27,7 +27,7 @@ For clients that accept an `mcpServers` object, use an absolute executable path:
 
 This example exposes only read-only tools. Each client's configuration format may
 differ; the process contract is an executable plus arguments. No client settings
-are modified automatically by building APG. Use `apg` instead of `apg.exe` on Unix.
+are modified automatically by building IPG. Use `ipg` instead of `ipg.exe` on Unix.
 File paths in tool arguments resolve relative to the child process's working
 directory; absolute paths avoid client-specific working-directory assumptions.
 
@@ -35,7 +35,7 @@ For encryption, signing and verification under a mandatory host policy, use:
 
 ```json
 {
-  "command": "C:/path/to/apg.exe",
+  "command": "C:/path/to/ipg.exe",
   "args": [
     "mcp",
     "--allow", "discover,schema,ontology,plan,encrypt,sign,verify",
@@ -53,15 +53,15 @@ PKCS#11 module in the server environment (the `pkcs11` build feature is required
 
 ```json
 {
-  "command": "/opt/apg/bin/apg",
+  "command": "/opt/ipg/bin/ipg",
   "args": ["mcp", "--key-custody", "hardware", "--allow", "hardware.tokens,decrypt,sign,verify,encrypt"],
-  "env": {"APG_PKCS11_MODULE": "/usr/lib/softhsm/libsofthsm2.so"}
+  "env": {"IPG_PKCS11_MODULE": "/usr/lib/softhsm/libsofthsm2.so"}
 }
 ```
 
 Software private-key operations then fail with `policy_mismatch`; the default is
 `any`. `non-exportable` also accepts AWS KMS keys, while `hardware` accepts only
-PKCS#11 and TPM keys. Tools report the setting in `_meta["apg/keyCustody"]`, and hardware-capable
+PKCS#11 and TPM keys. Tools report the setting in `_meta["ipg/keyCustody"]`, and hardware-capable
 tools carry `openWorldHint: true` because they reach an external token. See
 [hardware identities](HARDWARE.md). Unknown flags, duplicate flags, invalid allowlists and invalid trust
 snapshots cause startup failure. Startup diagnostics are JSON on stderr, with no
@@ -71,8 +71,8 @@ stdout content; there is no request ID to answer yet.
 
 Complete `initialize`, then send `notifications/initialized`. `tools/list` returns
 the session's permitted tools. It is a single fixed catalog without pagination or
-list-change notifications. Tool names are `apg_` plus the operation name with dots
-replaced by underscores: `key.rewrap` becomes `apg_key_rewrap`. Parameters omit the
+list-change notifications. Tool names are `ipg_` plus the operation name with dots
+replaced by underscores: `key.rewrap` becomes `ipg_key_rewrap`. Parameters omit the
 native `operation` field. Both schemas and dispatch use the existing Rust Request
 enum; there is no alternate cryptographic implementation.
 
@@ -80,25 +80,25 @@ enum; there is no alternate cryptographic implementation.
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"example-agent","version":"1"}}}
 {"jsonrpc":"2.0","method":"notifications/initialized"}
 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"apg_hash","arguments":{"input":"C:/work/message.bin"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ipg_hash","arguments":{"input":"C:/work/message.bin"}}}
 ```
 
 Each line is a separate message. No responses are emitted for valid notifications.
 Tool calls sent as notifications never execute. Request IDs remain unchanged in
-JSON-RPC responses. `structuredContent` contains the APG response envelope with
+JSON-RPC responses. `structuredContent` contains the IPG response envelope with
 its inner `id` set to null; the same envelope is serialized into a text content
 block. Correlate calls using the outer JSON-RPC ID. Tool definitions include
 input/output schemas and conservative behavior annotations.
 
-APG operation failures, including input validation and policy rejection, produce
-`isError: true` with a stable APG error code. Unknown/disabled tools and malformed
+IPG operation failures, including input validation and policy rejection, produce
+`isError: true` with a stable IPG error code. Unknown/disabled tools and malformed
 call envelopes produce JSON-RPC errors. Parse errors use `-32700`, invalid
 requests `-32600`, unsupported methods `-32601`, and invalid parameters `-32602`.
 Calls before completed initialization fail with `-32002`.
 
 ## Host controls
 
-Without `--allow`, all operations are exposed. With it, only the listed APG
+Without `--allow`, all operations are exposed. With it, only the listed IPG
 operation IDs are advertised and accepted. The list is fixed for the session;
 tool arguments cannot expand it. `plan` describes nested requests but never
 executes them, even if the nested operation is excluded by the allowlist.
@@ -119,10 +119,10 @@ private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 
 ## Limits and unsupported capabilities
 
-Maximum input frame size is 65,536 bytes including the newline. Oversized frames
+Maximum input frame size is 65,546 bytes including the newline. Oversized frames
 produce a JSON-RPC error and close the session. Input is processed sequentially;
 EOF ends the process, with a final non-newline-terminated frame accepted.
-The native `apg serve` protocol remains separate from MCP.
+The native `ipg serve` protocol remains separate from MCP.
 
 At most 60 validly addressed tool calls may be dispatched per fixed 60-second
 session window. After that, results use `rate_limited` with `retryable: true` and
@@ -147,8 +147,8 @@ enforcement, schema references and rate limits.
 The release binary has been exercised on Windows with the
 [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) 2.2.0 and
 `jsonschema` 4.26.0. The suite uses real stdio subprocesses in both automatic and
-legacy negotiation modes, negotiating APG's `2025-11-25` protocol. It lists all
-53 tools, validates advertised schemas and returned envelopes, checks generated
+legacy negotiation modes, negotiating IPG's `2025-11-25` protocol. It lists all
+54 tools, validates advertised schemas and returned envelopes, checks generated
 artifact schemas, preflights valid and invalid candidates, reconciles trust branches, and exercises active, revoked and
 expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also
@@ -164,7 +164,7 @@ with SDK 2.2.0 in the local validation run.
 The test discovered and fixed a recursive-schema relocation bug: extracting the
 `plan` variant as a standalone tool changed the meaning of the Request schema's
 root reference. MCP tool schemas now keep the full tagged Request in
-`$defs/ApgFullRequest`, preserving nested plans and all operation types within
+`$defs/IpgFullRequest`, preserving nested plans and all operation types within
 the existing request limits.
 
 Run the integration check after building the release binary:
@@ -172,12 +172,12 @@ Run the integration check after building the release binary:
 ```powershell
 python -m venv .interop-venv
 .\.interop-venv\Scripts\python.exe -m pip install -r tests/interop/requirements.txt
-.\.interop-venv\Scripts\python.exe tests/interop/mcp_client.py --apg target/release/apg.exe
+.\.interop-venv\Scripts\python.exe tests/interop/mcp_client.py --ipg target/release/ipg.exe
 ```
 
-On Unix, use `.interop-venv/bin/python` and `target/release/apg`. The script uses
+On Unix, use `.interop-venv/bin/python` and `target/release/ipg`. The script uses
 temporary, generated test keys and removes its fixtures on exit. Its whole-run
-timeout is 120 seconds. Python and the SDK are test-only dependencies; the APG
+timeout is 120 seconds. Python and the SDK are test-only dependencies; the IPG
 runtime remains pure Rust. The repository's CI matrix runs this check on Windows,
 Linux and macOS; those remote jobs were configured but not run in this local session.
 

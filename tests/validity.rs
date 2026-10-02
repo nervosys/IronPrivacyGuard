@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason, Validity},
     trust::{self, Eligibility, TrustPolicy, TrustStore},
@@ -58,7 +58,7 @@ fn windows_are_half_open_and_updates_only_narrow() {
     let fp = &key().public.fingerprint;
     let old = s.digest().unwrap();
     s.set_validity(certificate(100, 200), fp).unwrap();
-    assert_eq!(s.format, "apg-trust-v3");
+    assert_eq!(s.format, "ipg-trust-v3");
     assert_ne!(s.digest().unwrap(), old);
     for (at, status) in [
         (99, Eligibility::NotYetValid),
@@ -85,7 +85,7 @@ fn windows_are_half_open_and_updates_only_narrow() {
         assert_eq!(s.evaluate(fp, at).unwrap(), Eligibility::Revoked);
     }
     assert!(s.evaluate(fp, lifecycle::MAX_UNIX_TIME + 1).is_err());
-    s.format = "apg-trust-v1".into();
+    s.format = "ipg-trust-v1".into();
     assert!(s.validate().is_err());
 }
 #[test]
@@ -95,23 +95,23 @@ fn legacy_snapshot_commitment_is_unchanged() {
     let mut s = store();
     // v3 has the v2 canonical bytes but commits with SHA-384.
     let current = format!(
-        "{{\"format\":\"apg-trust-v3\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
+        "{{\"format\":\"ipg-trust-v3\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
         serde_json::to_string(&key().public).unwrap()
     );
     assert_eq!(serde_json::to_string(&s).unwrap(), current);
-    let mut frame = b"APG trust snapshot v3".to_vec();
+    let mut frame = b"IPG trust snapshot v3".to_vec();
     frame.extend_from_slice(&(current.len() as u64).to_be_bytes());
     frame.extend_from_slice(current.as_bytes());
     assert_eq!(s.digest().unwrap(), hex::encode(Sha384::digest(&frame)));
 
-    s.format = "apg-trust-v1".into();
+    s.format = "ipg-trust-v1".into();
     let legacy = format!(
-        "{{\"format\":\"apg-trust-v1\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
+        "{{\"format\":\"ipg-trust-v1\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
         serde_json::to_string(&key().public).unwrap()
     );
     assert_eq!(serde_json::to_string(&s).unwrap(), legacy);
     // Independent construction of the previously specified length framing.
-    let mut frame = b"APG trust snapshot v1".to_vec();
+    let mut frame = b"IPG trust snapshot v1".to_vec();
     frame.extend_from_slice(&(legacy.len() as u64).to_be_bytes());
     frame.extend_from_slice(legacy.as_bytes());
     assert_eq!(s.digest().unwrap(), hex::encode(Sha256::digest(&frame)));
@@ -124,7 +124,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
     fs::write(p("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
     fs::write(p("pass"), PASSWORD).unwrap();
     let fp = &key().public.fingerprint;
-    let cli = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args([
             "key.validity",
             "--key",
@@ -148,8 +148,8 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
         String::from_utf8_lossy(&cli.stdout)
     );
     let run = |request: Value| {
-        iron_privacy_guardian::handle_call(
-            &serde_json::to_vec(&json!({"protocol":"apg/1","id":"expiry","request":request}))
+        iron_privacy_guard::handle_call(
+            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"expiry","request":request}))
                 .unwrap(),
         )
         .0

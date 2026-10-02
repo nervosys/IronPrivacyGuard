@@ -65,7 +65,7 @@ def exercise(executable, directory, fixture_output=None):
         return str(directory / name)
     def call(operation, error=None, **arguments):
         nonlocal calls
-        request = {"protocol": "apg/1", "id": "v6", "request": {"operation": operation, **arguments}}
+        request = {"protocol": "ipg/1", "id": "v6", "request": {"operation": operation, **arguments}}
         result = subprocess.run([str(executable), "call"], input=json.dumps(request).encode(), capture_output=True, timeout=120)
         response = json.loads(result.stdout)
         calls += 1
@@ -122,7 +122,7 @@ def exercise(executable, directory, fixture_output=None):
     metadata_checks = exercise_metadata(call, path)
     revocation_limit_checks = exercise_revocation_limits(call, path)
     return {"ok": True, "cli_calls": calls, "independent_aead_checks": aead_checks,
-            "secret_export_checks": export_checks,
+            "secret_export_and_import_checks": export_checks,
             "signed_message_checks": signed_checks, "pyca_signature_checks": signature_checks,
             "certificate_policy_checks": certificate_checks, "back_signature_checks": back_signature_checks,
             "metadata_policy_checks": metadata_checks, "revocation_limit_checks": revocation_limit_checks}
@@ -130,8 +130,8 @@ def exercise(executable, directory, fixture_output=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--apg", required=True, type=Path)
+    parser.add_argument("--ipg", required=True, type=Path)
     parser.add_argument("--write-policy-fixture", type=Path, help="Explicitly freeze public PyCA signature-policy fixtures")
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="apg-v6-interop-") as directory:
-        print(json.dumps(exercise(args.apg.resolve(strict=True), Path(directory), args.write_policy_fixture), indent=2))
+    with tempfile.TemporaryDirectory(prefix="ipg-v6-interop-") as directory:
+        print(json.dumps(exercise(args.ipg.resolve(strict=True), Path(directory), args.write_policy_fixture), indent=2))

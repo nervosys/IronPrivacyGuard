@@ -37,10 +37,10 @@ use ic_hash::Sha384;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const EVIDENCE_FORMAT: &str = "apg-tpm-evidence-v1";
-pub const CHALLENGE_FORMAT: &str = "apg-tpm-challenge-v1";
-pub const CHALLENGE_SECRET_FORMAT: &str = "apg-tpm-challenge-secret-v1";
-pub const RESPONSE_FORMAT: &str = "apg-tpm-response-v1";
+pub const EVIDENCE_FORMAT: &str = "ipg-tpm-evidence-v1";
+pub const CHALLENGE_FORMAT: &str = "ipg-tpm-challenge-v1";
+pub const CHALLENGE_SECRET_FORMAT: &str = "ipg-tpm-challenge-secret-v1";
+pub const RESPONSE_FORMAT: &str = "ipg-tpm-response-v1";
 /// EK certificate plus any intermediates the platform supplied.
 pub const MAX_EK_CERTIFICATES: usize = 4;
 #[cfg(feature = "attestation")]
@@ -88,7 +88,7 @@ pub struct KeyCertification {
 pub struct Evidence {
     #[schemars(schema_with = "crate::contract::evidence_format")]
     pub format: String,
-    /// The attested apg-public-p384-v1 identity.
+    /// The attested ipg-public-p384-v1 identity.
     pub public: PublicKey,
     /// The RSA-2048 endorsement key's TPMT_PUBLIC (TCG default template), lowercase hex.
     #[schemars(schema_with = "crate::contract::tpm_structure")]
@@ -183,7 +183,7 @@ pub(crate) fn hex_field(value: &str, max: usize, what: &str) -> Result<Vec<u8>> 
 #[cfg(feature = "attestation")]
 pub(crate) fn qualifying_data(fingerprint: &str, role: Role) -> Vec<u8> {
     Sha256::digest(&crypto::frame(
-        "APG TPM key certification v1",
+        "IPG TPM key certification v1",
         &[fingerprint.as_bytes(), role.as_str().as_bytes()],
     ))
     .as_ref()
@@ -224,7 +224,7 @@ fn require_rsa_template(public: &Public, template: structures::Template, what: &
     if expected.marshal()? != public.raw || modulus.len() != 256 {
         return Err(Error::new(
             "policy_mismatch",
-            format!("{what} does not use APG's required template"),
+            format!("{what} does not use IPG's required template"),
         ));
     }
     Ok(())
@@ -255,7 +255,7 @@ pub(crate) fn check_evidence(
     if evidence.public.suite()? != Suite::P384 {
         return Err(Error::new(
             "invalid_format",
-            "Only apg-public-p384-v1 identities can be TPM-attested",
+            "Only ipg-public-p384-v1 identities can be TPM-attested",
         ));
     }
     let ek = Public::parse(&hex_field(
@@ -540,7 +540,7 @@ mod unavailable {
     fn unavailable<T>() -> Result<T> {
         Err(Error::new(
             "provider_unavailable",
-            "This apg build cannot verify TPM attestations; rebuild with --features attestation",
+            "This ipg build cannot verify TPM attestations; rebuild with --features attestation",
         ))
     }
     pub fn challenge(

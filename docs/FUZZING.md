@@ -1,4 +1,4 @@
-# APG boundary fuzzing
+# IPG boundary fuzzing
 
 Seven cargo-fuzz targets share their oracles with the normal stable Rust regression
 suite. The product remains pure Rust; libFuzzer and its C++ runtime are isolated
@@ -56,7 +56,7 @@ deterministic; ordinary verification still reads the host clock at its existing
 validation point. The target never generates keys, opens
 secret keys, derives passwords or decrypts encrypted messages. Embedded-message
 decompression remains bounded at the product's 16 MiB plaintext limit.
-The original parser fixtures are APG/rPGP-generated test data. Additional policy
+The original parser fixtures are IPG/rPGP-generated test data. Additional policy
 seeds come from the independent PyCA fixtures, and the RFC certificate supplies
 a separate published reference.
 
@@ -65,8 +65,8 @@ uncompressed, ZIP and ZLIB signed messages, and the RFC 9580 Appendix A.3
 certificate. `tests/vectors/openpgp-parser-v1.json` holds only public artifacts
 and the test document. Rebuild the seed bytes from that frozen corpus with
 `python scripts/fuzz-openpgp-seeds.py --from-fixture`. Explicitly replacing the
-corpus with fresh disposable keys requires `--apg <OpenPGP-enabled executable>`;
-the script validates each uncompressed message through APG before saving it and
+corpus with fresh disposable keys requires `--ipg <OpenPGP-enabled executable>`;
+the script validates each uncompressed message through IPG before saving it and
 deletes the temporary secret keys and test passphrase. The independent stdlib
 packet wrapper constructs one-pass/literal/signature packets and ZIP/ZLIB layers.
 Normal regression tests validate all variants and never regenerate keys.

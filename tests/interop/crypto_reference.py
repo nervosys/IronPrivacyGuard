@@ -1,4 +1,4 @@
-"""Independent APG format oracle using PyCA, never IronCrypto or APG bindings.
+"""Independent IPG format oracle using PyCA, never IronCrypto or IPG bindings.
 
 All deterministic seeds/passwords/nonces are PUBLIC TEST DATA. Do not reuse them.
 This intentionally implements only the specified positive formats for tests.
@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 FIXTURE = Path(__file__).resolve().parents[1] / "vectors" / "native-v1.json"
 SUITE = "x25519-hkdf-sha256-chacha20poly1305"
 KDF = "argon2id-m65536-t3-p4"
-PASSWORD = b"PUBLIC APG vector password\x00\xff\r\n"
+PASSWORD = b"PUBLIC IPG vector password\x00\xff\r\n"
 SEEDS = bytes(range(64))
 
 
@@ -36,8 +36,8 @@ def frame(domain, *fields):
 def identity(seeds):
     encryption = X25519PrivateKey.from_private_bytes(seeds[:32]).public_key().public_bytes_raw()
     signing = Ed25519PrivateKey.from_private_bytes(seeds[32:]).public_key().public_bytes_raw()
-    return {"format": "apg-public-v1", "encryption_key": encryption.hex(), "signing_key": signing.hex(),
-            "fingerprint": hashlib.sha256(frame("APG identity v1", encryption, signing)).hexdigest()}
+    return {"format": "ipg-public-v1", "encryption_key": encryption.hex(), "signing_key": signing.hex(),
+            "fingerprint": hashlib.sha256(frame("IPG identity v1", encryption, signing)).hexdigest()}
 
 
 def password_key(password, salt):
@@ -47,7 +47,7 @@ def password_key(password, salt):
 def secret_aad(public, salt, nonce):
     # Reconstruct declared field order rather than trusting incoming JSON ordering.
     canonical = {field: public[field] for field in ("format", "encryption_key", "signing_key", "fingerprint")}
-    return frame("APG secret v1 " + KDF, compact(canonical), salt, nonce)
+    return frame("IPG secret v1 " + KDF, compact(canonical), salt, nonce)
 
 
 def protect(seeds, password, salt, nonce):
@@ -55,13 +55,13 @@ def protect(seeds, password, salt, nonce):
     key = password_key(password, salt)
     aad = secret_aad(public, salt, nonce)
     sealed = ChaCha20Poly1305(key).encrypt(nonce, seeds, aad)
-    return ({"format": "apg-secret-v1", "public": public, "kdf": KDF, "salt": salt.hex(),
+    return ({"format": "ipg-secret-v1", "public": public, "kdf": KDF, "salt": salt.hex(),
              "nonce": nonce.hex(), "ciphertext": sealed[:-16].hex(), "tag": sealed[-16:].hex()},
             {"derived_key_hex": key.hex(), "aad_hex": aad.hex()})
 
 
 def unlock(secret, password):
-    assert secret["format"] == "apg-secret-v1" and secret["kdf"] == KDF
+    assert secret["format"] == "ipg-secret-v1" and secret["kdf"] == KDF
     salt, nonce = bytes.fromhex(secret["salt"]), bytes.fromhex(secret["nonce"])
     seeds = ChaCha20Poly1305(password_key(password, salt)).decrypt(
         nonce, bytes.fromhex(secret["ciphertext"] + secret["tag"]), secret_aad(secret["public"], salt, nonce))
@@ -70,16 +70,16 @@ def unlock(secret, password):
 
 
 def envelope_aad(envelope):
-    return frame("APG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
+    return frame("IPG envelope v1", *(envelope[k].encode("ascii") for k in ("suite", "recipient", "ephemeral_key", "nonce")))
 
 
 def content_key(shared, aad):
-    return HKDF(algorithm=hashes.SHA256(), length=32, salt=b"APG encryption v1", info=aad).derive(shared)
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=b"IPG encryption v1", info=aad).derive(shared)
 
 
 def encrypt(public, plaintext, ephemeral_seed, nonce):
     ephemeral = X25519PrivateKey.from_private_bytes(ephemeral_seed)
-    envelope = {"format": "apg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
+    envelope = {"format": "ipg-envelope-v1", "suite": SUITE, "recipient": public["fingerprint"],
                 "ephemeral_key": ephemeral.public_key().public_bytes_raw().hex(), "nonce": nonce.hex()}
     shared = ephemeral.exchange(X25519PublicKey.from_public_bytes(bytes.fromhex(public["encryption_key"])))
     aad = envelope_aad(envelope)
@@ -90,7 +90,7 @@ def encrypt(public, plaintext, ephemeral_seed, nonce):
 
 
 def decrypt(seeds, envelope):
-    assert envelope["format"] == "apg-envelope-v1" and envelope["suite"] == SUITE
+    assert envelope["format"] == "ipg-envelope-v1" and envelope["suite"] == SUITE
     assert envelope["recipient"] == identity(seeds)["fingerprint"]
     shared = X25519PrivateKey.from_private_bytes(seeds[:32]).exchange(
         X25519PublicKey.from_public_bytes(bytes.fromhex(envelope["ephemeral_key"])))
@@ -100,30 +100,30 @@ def decrypt(seeds, envelope):
 
 
 def signature_message(fingerprint, message):
-    return frame("APG detached signature v1 ed25519", fingerprint.encode("ascii"), message)
+    return frame("IPG detached signature v1 ed25519", fingerprint.encode("ascii"), message)
 
 
 def sign(seeds, message):
     fingerprint = identity(seeds)["fingerprint"]
-    return {"format": "apg-signature-v1", "signer": fingerprint, "algorithm": "ed25519",
+    return {"format": "ipg-signature-v1", "signer": fingerprint, "algorithm": "ed25519",
             "signature": Ed25519PrivateKey.from_private_bytes(seeds[32:]).sign(signature_message(fingerprint, message)).hex()}
 
 
 def certificate_message(certificate):
     fields = [certificate[k].encode("ascii") for k in ("format", "fingerprint", "scope")]
-    if certificate["format"] == "apg-validity-v1":
-        domain = "APG validity v1"
+    if certificate["format"] == "ipg-validity-v1":
+        domain = "IPG validity v1"
         fields += [certificate[k].to_bytes(8, "big") for k in ("not_before", "not_after")]
     else:
-        assert certificate["format"] == "apg-revocation-v1"
-        domain = "APG revocation v1"
+        assert certificate["format"] == "ipg-revocation-v1"
+        domain = "IPG revocation v1"
         fields += [certificate["reason"].encode("ascii")]
     return frame(domain, *fields, certificate["algorithm"].encode("ascii"))
 
 
 def certificate(seeds, *, reason=None, start=1700000000, end=1900000000):
     kind = "revocation" if reason else "validity"
-    value = {"format": f"apg-{kind}-v1", "fingerprint": identity(seeds)["fingerprint"], "scope": "entire-identity"}
+    value = {"format": f"ipg-{kind}-v1", "fingerprint": identity(seeds)["fingerprint"], "scope": "entire-identity"}
     value.update({"reason": reason} if reason else {"not_before": start, "not_after": end})
     value["algorithm"] = "ed25519"
     value["signature"] = Ed25519PrivateKey.from_private_bytes(seeds[32:]).sign(certificate_message(value)).hex()
@@ -131,9 +131,9 @@ def certificate(seeds, *, reason=None, start=1700000000, end=1900000000):
 
 
 def snapshot_digest(snapshot):
-    version = {"apg-trust-v1": "v1", "apg-trust-v2": "v2", "apg-trust-v3": "v3"}[snapshot["format"]]
+    version = {"ipg-trust-v1": "v1", "ipg-trust-v2": "v2", "ipg-trust-v3": "v3"}[snapshot["format"]]
     digest = hashlib.sha384 if version == "v3" else hashlib.sha256
-    return digest(frame("APG trust snapshot " + version, compact(snapshot))).hexdigest()
+    return digest(frame("IPG trust snapshot " + version, compact(snapshot))).hexdigest()
 
 
 def vectors():
@@ -154,10 +154,10 @@ def vectors():
         entry = {"public": public, "revocation": revocations[2] if revoked else None}
         if bounded:
             entry["validity"] = validity
-        snapshot = {"format": f"apg-trust-v{version}", "entries": [entry]}
+        snapshot = {"format": f"ipg-trust-v{version}", "entries": [entry]}
         snapshots.append({"snapshot": snapshot, "digest": snapshot_digest(snapshot)})
-    return {"format": "apg-test-vectors-v1", "warning": "PUBLIC TEST KEYS AND PASSWORD; NEVER USE FOR REAL DATA",
-            "generator": "PyCA cryptography 50.0.1; independent APG format implementation",
+    return {"format": "ipg-test-vectors-v1", "warning": "PUBLIC TEST KEYS AND PASSWORD; NEVER USE FOR REAL DATA",
+            "generator": "PyCA cryptography 50.0.1; independent IPG format implementation",
             "seeds_hex": SEEDS.hex(), "password_hex": PASSWORD.hex(), "public": public, "secret": secret,
             "secret_trace": secret_trace, "messages": messages, "revocations": revocations,
             "validity": validity, "snapshots": snapshots}
@@ -175,7 +175,7 @@ def exercise(executable, fixture, directory):
         return str(directory / name)
     def call(operation, **arguments):
         nonlocal calls
-        result = subprocess.run([str(executable), "call"], input=compact({"protocol": "apg/1", "id": "reference", "request": {"operation": operation, **arguments}}), capture_output=True, timeout=30)
+        result = subprocess.run([str(executable), "call"], input=compact({"protocol": "ipg/1", "id": "reference", "request": {"operation": operation, **arguments}}), capture_output=True, timeout=30)
         assert not result.stderr, result.stderr
         response = json.loads(result.stdout)
         assert result.returncode == 0 and response["ok"], response
@@ -200,24 +200,24 @@ def exercise(executable, fixture, directory):
         call("verify", input=plaintext, signature=signature, signer=public, expected_fingerprint=fp)
     message = bytes.fromhex(fixture["messages"][-1]["plaintext_hex"])
     source = put("message", message)
-    call("sign", input=source, output=output("apg-signature"), key=key, passphrase_file=password)
-    assert read("apg-signature") == fixture["messages"][-1]["signature"]
+    call("sign", input=source, output=output("ipg-signature"), key=key, passphrase_file=password)
+    assert read("ipg-signature") == fixture["messages"][-1]["signature"]
     Ed25519PublicKey.from_public_bytes(bytes.fromhex(fixture["public"]["signing_key"])).verify(
-        bytes.fromhex(read("apg-signature")["signature"]), signature_message(fp, message))
+        bytes.fromhex(read("ipg-signature")["signature"]), signature_message(fp, message))
     for index, cert in enumerate(fixture["revocations"]):
         call("key.revoke", key=key, output=output(f"revocation-{index}"), passphrase_file=password, expected_fingerprint=fp, reason=cert["reason"])
         assert read(f"revocation-{index}") == cert
     call("key.validity", key=key, output=output("validity"), passphrase_file=password, expected_fingerprint=fp, not_before=1700000000, not_after=1900000000)
     assert read("validity") == fixture["validity"]
-    call("encrypt", input=source, output=output("apg-envelope"), recipient=public, expected_fingerprint=fp)
-    assert decrypt(SEEDS, read("apg-envelope")) == message
+    call("encrypt", input=source, output=output("ipg-envelope"), recipient=public, expected_fingerprint=fp)
+    assert decrypt(SEEDS, read("ipg-envelope")) == message
     new_password = put("new-password", b"PUBLIC replacement vector password")
     call("key.rewrap", key=key, output=output("rewrapped"), expected_fingerprint=fp, passphrase_file=password, new_passphrase_file=new_password)
     assert unlock(read("rewrapped"), Path(new_password).read_bytes()) == SEEDS
     for i, item in enumerate(fixture["snapshots"]):
         result = call("trust.evaluate", store=put(f"snapshot-{i}", item["snapshot"]), expected_digest=item["digest"], expected_fingerprint=fp, at_time=1800000000)
         assert result["eligibility"] == ("revoked" if item["snapshot"]["entries"][0]["revocation"] else "permitted")
-    # Fresh APG keys are also readable by the independent implementation.
+    # Fresh IPG keys are also readable by the independent implementation.
     generated = call("key.generate", output=output("generated"), passphrase_file=password)
     generated_secret = read("generated")
     generated_seeds = unlock(generated_secret, PASSWORD)
@@ -231,7 +231,7 @@ def exercise(executable, fixture, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="explicitly regenerate checked-in PUBLIC fixtures")
-    parser.add_argument("--apg", type=Path, help="also check bidirectional release CLI interoperability")
+    parser.add_argument("--ipg", type=Path, help="also check bidirectional release CLI interoperability")
     args = parser.parse_args()
     assert cryptography.__version__ == "50.0.1", "Use pinned test requirements"
     reference = vectors()
@@ -241,9 +241,9 @@ def main():
     checked = json.loads(FIXTURE.read_text(encoding="utf-8"))
     assert checked == reference, "Checked-in vectors differ; investigate before regenerating"
     calls = 0
-    if args.apg:
-        with tempfile.TemporaryDirectory(prefix="apg-reference-") as directory:
-            calls = exercise(args.apg.resolve(strict=True), checked, Path(directory))
+    if args.ipg:
+        with tempfile.TemporaryDirectory(prefix="ipg-reference-") as directory:
+            calls = exercise(args.ipg.resolve(strict=True), checked, Path(directory))
     print(json.dumps({"ok": True, "cryptography": cryptography.__version__, "message_vectors": len(reference["messages"]), "cli_calls": calls}))
 
 

@@ -3,10 +3,10 @@
 ## Passphrase rewrapping
 
 `key.rewrap` reads a protected key, its current passphrase and a new passphrase.
-The caller pins the expected identity. APG authenticates the existing protected
+The caller pins the expected identity. IPG authenticates the existing protected
 artifact, verifies its private/public correspondence, and encrypts the same
 64 private seed bytes with the new passphrase, a fresh salt and a fresh nonce.
-The output remains `apg-secret-v1` with unchanged public identity. Both passphrases
+The output remains `ipg-secret-v1` with unchanged public identity. Both passphrases
 follow the exact-byte 16–4096 byte contract.
 
 Publication uses the existing no-clobber path; source files are never changed.
@@ -15,7 +15,7 @@ passphrases do not create an output artifact. The new key can decrypt existing
 envelopes and make signatures verifiable with the existing public key.
 
 This is password protection rotation, not key-material rotation. Anyone retaining
-the old artifact and its passphrase still has the private keys. APG does not
+the old artifact and its passphrase still has the private keys. IPG does not
 delete backups, erase storage, or change a secret manager. After checking the new
 artifact, the caller must handle deployment and retirement of old copies under
 its own recovery policy. Compromised seeds require a new identity.
@@ -32,7 +32,7 @@ It has three closed reasons:
 | superseded | Another identity should be used; replacement identity is not certified here |
 | retired | The identity is no longer intended for use |
 
-The certificate is signed with a dedicated APG revocation domain. An ordinary
+The certificate is signed with a dedicated IPG revocation domain. An ordinary
 detached content signature cannot be reinterpreted as a revocation certificate.
 Revocation certificates have no undo, future effective date, or expiry. Multiple valid
 certificates for one identity are consistent requests for retirement even if
@@ -68,12 +68,12 @@ remain ungoverned. Certificate verification alone still applies no policy.
 
 The orchestrator must distribute snapshots and keep their latest digest in trusted
 configuration. A pin detects snapshot tampering, including deletion of a retained
-certificate, but cannot detect rollback of both snapshot and external pin. APG
+certificate, but cannot detect rollback of both snapshot and external pin. IPG
 does not maintain a global current snapshot or synchronize concurrent updates.
 See [the trust-store contract](TRUST.md).
 
 Historical signature validity and acceptance after revocation are distinct
-questions. APG has no trusted signing time. These certificates cannot prove that
+questions. IPG has no trusted signing time. These certificates cannot prove that
 a particular signature predates compromise. Decryption of historical data may
 remain necessary after retirement; the certificate does not destroy that ability.
 

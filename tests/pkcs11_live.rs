@@ -1,5 +1,5 @@
 //! End-to-end tests against a real PKCS#11 module. They run only when all of
-//! APG_TEST_PKCS11_MODULE, APG_TEST_PKCS11_SERIAL and APG_TEST_PKCS11_PIN are set.
+//! IPG_TEST_PKCS11_MODULE, IPG_TEST_PKCS11_SERIAL and IPG_TEST_PKCS11_PIN are set.
 //!
 //! Use a DISPOSABLE token such as a SoftHSMv2 slot: each run creates persistent key
 //! objects, and one deliberate wrong-PIN attempt consumes a retry counter.
@@ -15,18 +15,18 @@ struct Token {
 fn token() -> Option<Token> {
     let var = |name| std::env::var(name).ok().filter(|v: &String| !v.is_empty());
     Some(Token {
-        module: var("APG_TEST_PKCS11_MODULE")?,
-        serial: var("APG_TEST_PKCS11_SERIAL")?,
-        pin: var("APG_TEST_PKCS11_PIN")?,
+        module: var("IPG_TEST_PKCS11_MODULE")?,
+        serial: var("IPG_TEST_PKCS11_SERIAL")?,
+        pin: var("IPG_TEST_PKCS11_PIN")?,
     })
 }
 
 fn call(token: &Token, request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"apg/1","id":"live","request":request})).unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"live","request":request})).unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("call")
-        .env("APG_PKCS11_MODULE", &token.module)
+        .env("IPG_PKCS11_MODULE", &token.module)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -50,14 +50,14 @@ fn fails(token: &Token, request: Value) -> String {
 #[test]
 fn hardware_identity_lifecycle_on_a_real_token() {
     let Some(token) = token() else {
-        // Runners that provision a token set APG_TEST_PKCS11_REQUIRED so a
+        // Runners that provision a token set IPG_TEST_PKCS11_REQUIRED so a
         // misconfiguration cannot silently turn this test into a no-op.
         assert!(
-            std::env::var_os("APG_TEST_PKCS11_REQUIRED").is_none(),
-            "APG_TEST_PKCS11_REQUIRED is set but the token variables are incomplete"
+            std::env::var_os("IPG_TEST_PKCS11_REQUIRED").is_none(),
+            "IPG_TEST_PKCS11_REQUIRED is set but the token variables are incomplete"
         );
         eprintln!(
-            "skipping: set APG_TEST_PKCS11_MODULE, APG_TEST_PKCS11_SERIAL and APG_TEST_PKCS11_PIN"
+            "skipping: set IPG_TEST_PKCS11_MODULE, IPG_TEST_PKCS11_SERIAL and IPG_TEST_PKCS11_PIN"
         );
         return;
     };
@@ -76,11 +76,11 @@ fn hardware_identity_lifecycle_on_a_real_token() {
         .find(|t| t["token"]["serial"] == token.serial.as_str())
         .expect("configured token is listed")
         .clone();
-    assert_eq!(listed["suites"], json!(["apg-public-p384-v1"]), "{listed}");
+    assert_eq!(listed["suites"], json!(["ipg-public-p384-v1"]), "{listed}");
 
     let generated = ok(
         &token,
-        json!({"operation":"hardware.key.generate","token_serial":token.serial,"label":"apg-live-test","output":path("ref"),"pin_file":path("pin")}),
+        json!({"operation":"hardware.key.generate","token_serial":token.serial,"label":"ipg-live-test","output":path("ref"),"pin_file":path("pin")}),
     );
     assert_eq!(generated["kind"], "hardware_key");
     assert_eq!(generated["custody"], "hardware");
@@ -92,7 +92,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
     let reference: Value = serde_json::from_slice(&fs::read(path("ref")).unwrap()).unwrap();
     assert_eq!(reference["token"], listed["token"]);
     let inspected = ok(&token, json!({"operation":"inspect","input":path("ref")}));
-    assert_eq!(inspected["format"], "apg-pkcs11-key-v1");
+    assert_eq!(inspected["format"], "ipg-pkcs11-key-v1");
 
     let public = ok(
         &token,
@@ -210,16 +210,16 @@ fn hardware_identity_lifecycle_on_a_real_token() {
     let messages = [
         json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"live","version":"1"}}}),
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
-        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"apg_sign","arguments":{"input":path("input"),"output":path("sig4"),"key":path("ref"),"passphrase_file":path("pin")}}}),
+        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ipg_sign","arguments":{"input":path("input"),"output":path("sig4"),"key":path("ref"),"passphrase_file":path("pin")}}}),
     ];
     let mut input = Vec::new();
     for message in messages {
         input.extend(serde_json::to_vec(&message).unwrap());
         input.push(b'\n');
     }
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["mcp", "--key-custody", "hardware"])
-        .env("APG_PKCS11_MODULE", &token.module)
+        .env("IPG_PKCS11_MODULE", &token.module)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()

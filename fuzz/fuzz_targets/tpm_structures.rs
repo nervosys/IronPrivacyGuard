@@ -1,2 +1,2 @@
 #![no_main]
-libfuzzer_sys::fuzz_target!(|data: &[u8]| apg_fuzz_support::tpm_structures(data));
+libfuzzer_sys::fuzz_target!(|data: &[u8]| ipg_fuzz_support::tpm_structures(data));

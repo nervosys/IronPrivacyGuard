@@ -1,7 +1,7 @@
 //! Shared oracles used by libFuzzer and stable Rust regression tests.
 //! Never execute attacker-selected file operations or password KDFs.
 #![forbid(unsafe_code)]
-use iron_privacy_guardian::{Call, MAX_REQUEST_BYTES, Request, crypto, lifecycle, mcp, trust};
+use iron_privacy_guard::{Call, MAX_REQUEST_BYTES, Request, crypto, lifecycle, mcp, trust};
 use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
@@ -10,7 +10,7 @@ use std::{
 };
 
 pub fn stream_headers(data: &[u8]) {
-    use iron_privacy_guardian::stream;
+    use iron_privacy_guard::stream;
     if data.len() > stream::MAX_HEADER_BYTES as usize + 12 {
         return;
     }
@@ -63,37 +63,37 @@ pub fn stream_headers(data: &[u8]) {
 
 #[cfg(feature = "fuzzing")]
 pub fn tpm_structures(data: &[u8]) {
-    iron_privacy_guardian::fuzz_support::tpm_structures(data);
+    iron_privacy_guard::fuzz_support::tpm_structures(data);
 }
 
 #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
 pub fn openpgp_packets(data: &[u8]) {
-    iron_privacy_guardian::openpgp::fuzz_packets(data);
+    iron_privacy_guard::openpgp::fuzz_packets(data);
 }
 
 pub fn requests(data: &[u8]) {
     if data.len() <= MAX_REQUEST_BYTES as usize
         && let Ok(candidate) = serde_json::from_slice::<Value>(data)
     {
-        let report = iron_privacy_guardian::validation::validate(candidate);
+        let report = iron_privacy_guard::validation::validate(candidate);
         assert!(!report.execution);
         assert_eq!(report.valid, report.issues.is_empty());
-        assert!(report.issues.len() <= iron_privacy_guardian::validation::MAX_ISSUES);
+        assert!(report.issues.len() <= iron_privacy_guard::validation::MAX_ISSUES);
     }
 
-    if let Ok(value) = iron_privacy_guardian::control_json::parse(data) {
+    if let Ok(value) = iron_privacy_guard::control_json::parse(data) {
         // Default serde_json float parsing is not a bit-exact serialization
         // roundtrip. Require parity with the standard decoder on identical bytes.
         assert_eq!(value, serde_json::from_slice::<Value>(data).unwrap());
         let encoded = serde_json::to_vec(&value).unwrap();
         if encoded.len() <= MAX_REQUEST_BYTES as usize {
             assert_eq!(
-                iron_privacy_guardian::control_json::parse(&encoded).unwrap(),
+                iron_privacy_guard::control_json::parse(&encoded).unwrap(),
                 serde_json::from_slice::<Value>(&encoded).unwrap()
             );
         }
     }
-    let parsed = iron_privacy_guardian::parse_call(data);
+    let parsed = iron_privacy_guard::parse_call(data);
     if data.len() > MAX_REQUEST_BYTES as usize {
         assert!(matches!(parsed, Err(e) if e.code == "limit_exceeded"));
         return;
@@ -110,7 +110,7 @@ pub fn requests(data: &[u8]) {
             serde_json::from_slice::<Value>(&encoded).unwrap()
         );
         // Only plan is executed: its nested request is NEVER executed.
-        let planned = iron_privacy_guardian::execute(Request::Plan {
+        let planned = iron_privacy_guard::execute(Request::Plan {
             request: Box::new(call.request),
         })
         .unwrap();
@@ -132,7 +132,7 @@ pub fn framing(data: &[u8]) {
                 .iter()
                 .position(|b| *b == b'\n')
                 .map_or(data.len(), |n| start + n + 1);
-            let result = iron_privacy_guardian::transport::read_frame(&mut reader);
+            let result = iron_privacy_guard::transport::read_frame(&mut reader);
             if expected_end - start > MAX_REQUEST_BYTES as usize {
                 assert_eq!(result.unwrap_err().code, "limit_exceeded");
                 break;
@@ -174,10 +174,10 @@ pub fn artifacts(data: &[u8]) {
             serde_json::from_value::<trust::TrustStore>(base.clone()),
             serde_json::from_value::<trust::TrustStore>(incoming.clone()),
         )
-        && let Ok(merged) = iron_privacy_guardian::reconciliation::merge(&base, &incoming)
+        && let Ok(merged) = iron_privacy_guard::reconciliation::merge(&base, &incoming)
     {
         assert!(
-            iron_privacy_guardian::reconciliation::compare(&base, &merged)
+            iron_privacy_guard::reconciliation::compare(&base, &merged)
                 .unwrap()
                 .compatible_extension
         );
@@ -191,13 +191,13 @@ pub fn artifacts(data: &[u8]) {
             }
         }
     }
-    let _ = iron_privacy_guardian::artifact::inspect(data);
+    let _ = iron_privacy_guard::artifact::inspect(data);
     if let Ok(signature) =
-        serde_json::from_slice::<iron_privacy_guardian::stream_signature::Signature>(data)
+        serde_json::from_slice::<iron_privacy_guard::stream_signature::Signature>(data)
     {
         let _ = signature.validate();
         for signer in [public(), p384_public()] {
-            let _ = iron_privacy_guardian::stream_signature::verify(
+            let _ = iron_privacy_guard::stream_signature::verify(
                 signer,
                 &signer.fingerprint,
                 &signature,
@@ -214,8 +214,7 @@ pub fn artifacts(data: &[u8]) {
         }
         let _ = public.pin(&public.fingerprint);
     }
-    if let Ok(reference) =
-        serde_json::from_slice::<iron_privacy_guardian::provider::HardwareKey>(data)
+    if let Ok(reference) = serde_json::from_slice::<iron_privacy_guard::provider::HardwareKey>(data)
         && reference.validate().is_ok()
     {
         assert_eq!(reference.public.suite().unwrap(), crypto::Suite::P384);
@@ -256,15 +255,14 @@ pub fn artifacts(data: &[u8]) {
             serde_json::from_slice(&serde_json::to_vec(&store).unwrap()).unwrap();
         assert_eq!(roundtrip.digest().unwrap(), digest);
         let _ = store.evaluate(&public().fingerprint, 1800000000);
-        let comparison =
-            iron_privacy_guardian::reconciliation::compare(&store, &roundtrip).unwrap();
+        let comparison = iron_privacy_guard::reconciliation::compare(&store, &roundtrip).unwrap();
         assert!(
             comparison.same_digest
                 && comparison.compatible_extension
                 && comparison.changes.is_empty()
         );
         // Self-merge only upgrades the format, so a v3 snapshot keeps its digest.
-        let merged = iron_privacy_guardian::reconciliation::merge(&store, &roundtrip).unwrap();
+        let merged = iron_privacy_guard::reconciliation::merge(&store, &roundtrip).unwrap();
         let mut upgraded = store.clone();
         upgraded.format = trust::FORMAT.into();
         assert!(merged == upgraded);
@@ -272,7 +270,7 @@ pub fn artifacts(data: &[u8]) {
             assert_eq!(merged.digest().unwrap(), digest);
         }
         assert!(
-            iron_privacy_guardian::reconciliation::compare(&store, &merged)
+            iron_privacy_guard::reconciliation::compare(&store, &merged)
                 .unwrap()
                 .compatible_extension
         );
@@ -322,7 +320,7 @@ pub fn mcp(data: &[u8]) {
             }
         }
         // Disabled filesystem operations must remain inaccessible after any sequence.
-        let probe = json!({"jsonrpc":"2.0","id":"probe","method":"tools/call","params":{"name":"apg_hash","arguments":{"input":"MUST-NOT-BE-READ"}}});
+        let probe = json!({"jsonrpc":"2.0","id":"probe","method":"tools/call","params":{"name":"ipg_hash","arguments":{"input":"MUST-NOT-BE-READ"}}});
         let response = server.handle(&serde_json::to_vec(&probe).unwrap()).unwrap();
         assert!(response.get("error").is_some());
     }

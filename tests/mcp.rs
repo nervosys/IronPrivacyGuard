@@ -1,4 +1,4 @@
-use iron_privacy_guardian::{
+use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason},
     mcp::{self, Config, Server},
@@ -114,10 +114,10 @@ fn protocol_errors_are_distinct_from_execution_errors() {
         -32602
     );
     assert_eq!(
-        tool(&mut server, "apg_hash", json!([]))["error"]["code"],
+        tool(&mut server, "ipg_hash", json!([]))["error"]["code"],
         -32602
     );
-    let invalid = tool(&mut server, "apg_hash", json!({"unexpected":true}));
+    let invalid = tool(&mut server, "ipg_hash", json!({"unexpected":true}));
     assert_eq!(invalid["result"]["isError"], true);
     assert_eq!(
         invalid["result"]["structuredContent"]["error"]["code"],
@@ -125,7 +125,7 @@ fn protocol_errors_are_distinct_from_execution_errors() {
     );
     let attempted_override = tool(
         &mut server,
-        "apg_discover",
+        "ipg_discover",
         json!({"operation":"key.generate"}),
     );
     assert_eq!(attempted_override["result"]["isError"], true);
@@ -161,10 +161,7 @@ fn catalog_is_complete_with_resolvable_schemas_and_annotations() {
     }
     let catalog = mcp::tool_catalog(&Config::default());
     let tools = catalog["tools"].as_array().unwrap();
-    assert_eq!(
-        tools.len(),
-        iron_privacy_guardian::ontology::OPERATIONS.len()
-    );
+    assert_eq!(tools.len(), iron_privacy_guard::ontology::OPERATIONS.len());
     let names: BTreeSet<_> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     assert_eq!(names.len(), tools.len());
     for t in tools {
@@ -174,11 +171,11 @@ fn catalog_is_complete_with_resolvable_schemas_and_annotations() {
         refs(&t["outputSchema"], &t["outputSchema"]);
     }
     assert_eq!(
-        tools.iter().find(|t| t["name"] == "apg_sign").unwrap()["annotations"]["readOnlyHint"],
+        tools.iter().find(|t| t["name"] == "ipg_sign").unwrap()["annotations"]["readOnlyHint"],
         false
     );
     assert_eq!(
-        tools.iter().find(|t| t["name"] == "apg_hash").unwrap()["annotations"]["readOnlyHint"],
+        tools.iter().find(|t| t["name"] == "ipg_hash").unwrap()["annotations"]["readOnlyHint"],
         true
     );
     let exported: Value = serde_json::from_slice(
@@ -196,7 +193,7 @@ fn plan_tool_recursion_targets_full_request_not_tool_arguments() {
         .as_array()
         .unwrap()
         .iter()
-        .find(|t| t["name"] == "apg_plan")
+        .find(|t| t["name"] == "ipg_plan")
         .unwrap();
     let schema = &plan["inputSchema"];
     let reference = schema["properties"]["request"]["$ref"].as_str().unwrap();
@@ -207,7 +204,7 @@ fn plan_tool_recursion_targets_full_request_not_tool_arguments() {
     let variants = request["oneOf"].as_array().unwrap();
     assert_eq!(
         variants.len(),
-        iron_privacy_guardian::ontology::OPERATIONS.len()
+        iron_privacy_guard::ontology::OPERATIONS.len()
     );
     assert!(
         variants
@@ -237,11 +234,11 @@ fn notifications_cannot_execute_tools_and_allowlist_is_enforced() {
     .unwrap();
     assert_eq!(listed["result"]["tools"].as_array().unwrap().len(), 1);
     assert_eq!(
-        tool(&mut server, "apg_trust_init", json!({"output":target}))["error"]["code"],
+        tool(&mut server, "ipg_trust_init", json!({"output":target}))["error"]["code"],
         -32602
     );
     let mut server = ready(Config::default());
-    assert!(send(&mut server,json!({"jsonrpc":"2.0","method":"tools/call","params":{"name":"apg_trust_init","arguments":{"output":target}}})).is_none());
+    assert!(send(&mut server,json!({"jsonrpc":"2.0","method":"tools/call","params":{"name":"ipg_trust_init","arguments":{"output":target}}})).is_none());
     assert!(!target.exists());
 }
 
@@ -287,37 +284,37 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
             a["policy"] = p;
         }
         assert_eq!(
-            tool(&mut server, "apg_encrypt", a)["result"]["structuredContent"]["error"]["code"],
+            tool(&mut server, "ipg_encrypt", a)["result"]["structuredContent"]["error"]["code"],
             "key_revoked"
         );
     }
     let mut changed = args.clone();
     changed["policy"] = json!({"store":path("store"),"expected_digest":old_digest});
     assert_eq!(
-        tool(&mut server, "apg_encrypt", changed)["result"]["structuredContent"]["error"]["code"],
+        tool(&mut server, "ipg_encrypt", changed)["result"]["structuredContent"]["error"]["code"],
         "policy_mismatch"
     );
     let sign = json!({"input":path("missing"),"output":path("out"),"key":path("key"),"passphrase_file":path("missing")});
     assert_eq!(
-        tool(&mut server, "apg_sign", sign)["result"]["structuredContent"]["error"]["code"],
+        tool(&mut server, "ipg_sign", sign)["result"]["structuredContent"]["error"]["code"],
         "key_revoked"
     );
     let verify = json!({"input":path("missing"),"signature":path("missing"),"signer":path("public"),"expected_fingerprint":key.public.fingerprint});
     assert_eq!(
-        tool(&mut server, "apg_verify", verify)["result"]["structuredContent"]["error"]["code"],
+        tool(&mut server, "ipg_verify", verify)["result"]["structuredContent"]["error"]["code"],
         "key_revoked"
     );
     let cases = [
         (
-            "apg_stream_encrypt",
+            "ipg_stream_encrypt",
             json!({"input":path("missing"),"output":path("stream-out"),"recipients":[{"public":path("public"),"expected_fingerprint":key.public.fingerprint}]}),
         ),
         (
-            "apg_stream_sign",
+            "ipg_stream_sign",
             json!({"input":path("missing"),"output":path("stream-sig"),"key":path("key"),"passphrase_file":path("missing")}),
         ),
         (
-            "apg_stream_verify",
+            "ipg_stream_verify",
             json!({"input":path("missing"),"signature":path("missing"),"signer":path("public"),"expected_fingerprint":key.public.fingerprint}),
         ),
     ];
@@ -345,7 +342,7 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
     }
     fs::write(path("store"), b"corrupt").unwrap();
     assert_eq!(
-        tool(&mut server, "apg_encrypt", args)["result"]["isError"],
+        tool(&mut server, "ipg_encrypt", args)["result"]["isError"],
         true
     );
     assert!(!dir.path().join("out").exists());
@@ -358,13 +355,13 @@ fn tool_rate_limit_is_reported_without_execution() {
         assert_eq!(
             tool(
                 &mut server,
-                "apg_plan",
+                "ipg_plan",
                 json!({"request":{"operation":"discover"}})
             )["result"]["isError"],
             false
         );
     }
-    let response = tool(&mut server, "apg_discover", json!({}));
+    let response = tool(&mut server, "ipg_discover", json!({}));
     assert_eq!(
         response["result"]["structuredContent"]["error"]["code"],
         "rate_limited"
@@ -377,7 +374,7 @@ fn tool_rate_limit_is_reported_without_execution() {
 
 #[test]
 fn real_stdio_session_has_only_correlated_jsonrpc_responses() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["mcp", "--allow", "discover,trust.init"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -390,7 +387,7 @@ fn real_stdio_session_has_only_correlated_jsonrpc_responses() {
         json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}),
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
         json!({"jsonrpc":"2.0","id":"list","method":"tools/list"}),
-        json!({"jsonrpc":"2.0","id":"write","method":"tools/call","params":{"name":"apg_trust_init","arguments":{"output":target}}}),
+        json!({"jsonrpc":"2.0","id":"write","method":"tools/call","params":{"name":"ipg_trust_init","arguments":{"output":target}}}),
     ];
     let mut stdin = child.stdin.take().unwrap();
     for frame in frames {
@@ -426,36 +423,36 @@ fn startup_and_frame_errors_fail_closed() {
     ] {
         assert!(Config::parse(&args.into_iter().map(String::from).collect::<Vec<_>>()).is_err());
     }
-    let out = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let out = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .args(["mcp", "--trust-store", "missing"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
     assert!(out.stdout.is_empty());
     assert!(!out.stderr.is_empty());
-    let data = vec![b'x'; iron_privacy_guardian::MAX_REQUEST_BYTES as usize + 1];
+    let data = vec![b'x'; iron_privacy_guard::MAX_REQUEST_BYTES as usize + 1];
     let mut input = std::io::Cursor::new(data);
     assert_eq!(
-        iron_privacy_guardian::transport::read_frame(&mut input)
+        iron_privacy_guard::transport::read_frame(&mut input)
             .unwrap_err()
             .code,
         "limit_exceeded"
     );
     let mut input = std::io::Cursor::new(b"one\ntwo");
     assert_eq!(
-        iron_privacy_guardian::transport::read_frame(&mut input)
+        iron_privacy_guard::transport::read_frame(&mut input)
             .unwrap()
             .unwrap(),
         b"one\n"
     );
     assert_eq!(
-        iron_privacy_guardian::transport::read_frame(&mut input)
+        iron_privacy_guard::transport::read_frame(&mut input)
             .unwrap()
             .unwrap(),
         b"two"
     );
     assert!(
-        iron_privacy_guardian::transport::read_frame(&mut input)
+        iron_privacy_guard::transport::read_frame(&mut input)
             .unwrap()
             .is_none()
     );
@@ -491,15 +488,15 @@ fn host_policy_allows_a_trusted_workflow_and_reports_its_digest() {
     });
     for (name, args) in [
         (
-            "apg_encrypt",
+            "ipg_encrypt",
             json!({"input":path("message"),"output":path("encrypted"),"recipient":path("public"),"expected_fingerprint":key.public.fingerprint}),
         ),
         (
-            "apg_sign",
+            "ipg_sign",
             json!({"input":path("message"),"output":path("signature"),"key":path("key"),"passphrase_file":path("pass"),"policy":null}),
         ),
         (
-            "apg_verify",
+            "ipg_verify",
             json!({"input":path("message"),"signature":path("signature"),"signer":path("public"),"expected_fingerprint":key.public.fingerprint}),
         ),
     ] {
@@ -512,7 +509,7 @@ fn host_policy_allows_a_trusted_workflow_and_reports_its_digest() {
     }
     let result = tool(
         &mut server,
-        "apg_decrypt",
+        "ipg_decrypt",
         json!({"input":path("encrypted"),"output":path("decrypted"),"key":path("key"),"passphrase_file":path("pass")}),
     );
     assert_eq!(result["result"]["isError"], false);
@@ -524,7 +521,7 @@ fn host_policy_allows_a_trusted_workflow_and_reports_its_digest() {
 
 #[test]
 fn oversized_mcp_subprocess_frame_emits_protocol_error_and_exits() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_apg"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("mcp")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -535,7 +532,7 @@ fn oversized_mcp_subprocess_frame_emits_protocol_error_and_exits() {
     // The server may close stdin while the final bytes are being written.
     let _ = input.write_all(&vec![
         b'x';
-        iron_privacy_guardian::MAX_REQUEST_BYTES as usize + 1
+        iron_privacy_guard::MAX_REQUEST_BYTES as usize + 1
     ]);
     drop(input);
     let output = child.wait_with_output().unwrap();

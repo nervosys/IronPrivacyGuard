@@ -1,5 +1,5 @@
 [package]
-name = "iron-privacy-guardian"
+name = "iron-privacy-guard"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
@@ -8,10 +8,10 @@ description = "Agent-first privacy CLI and discoverable cryptographic workflows 
 keywords = ["cryptography", "agents", "mcp", "pkcs11", "hsm"]
 
 [lib]
-name = "iron_privacy_guardian"
+name = "iron_privacy_guard"
 
 [[bin]]
-name = "apg"
+name = "ipg"
 path = "src/main.rs"
 
 [dependencies]
@@ -37,7 +37,7 @@ ic-rustls = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac40
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
 webpki-roots = { version = "1", optional = true }
 # OpenPGP compatibility boundary. rPGP is pinned exactly: it supplies its own
-# (RustCrypto) primitives, and APG adds certificate-validity policy on top.
+# (RustCrypto) primitives, and IPG adds certificate-validity policy on top.
 pgp = { version = "=0.20.0", default-features = false, optional = true }
 rand_core = { version = "0.6", features = ["getrandom"], optional = true }
 # TPM attestation verification: IronCrypto RSA and rustls-webpki path validation
@@ -48,15 +48,15 @@ webpki = { package = "rustls-webpki", version = "0.103", default-features = fals
 pki-types = { package = "rustls-pki-types", version = "1", optional = true }
 
 # TPM access: the system TPM2 software stack (tpm2-tss) on Linux, CNG's Platform
-# Crypto Provider on Windows (FFI isolated in crates/apg-cng).
+# Crypto Provider on Windows (FFI isolated in crates/ipg-cng).
 [target.'cfg(target_os = "linux")'.dependencies]
 tss-esapi = { version = "7", optional = true }
 
 [target.'cfg(windows)'.dependencies]
-apg-cng = { path = "crates/apg-cng", optional = true }
+ipg-cng = { path = "crates/ipg-cng", optional = true }
 
 [workspace]
-members = ["crates/apg-cng"]
+members = ["crates/ipg-cng"]
 
 [features]
 default = []
@@ -67,7 +67,7 @@ fuzzing = ["attestation"]
 pkcs11 = ["dep:cryptoki", "dep:secrecy"]
 # TPM 2.0 identities: tpm2-tss (ESAPI) on Linux, linking libtss2 dynamically; the
 # Microsoft Platform Crypto Provider on Windows.
-tpm = ["dep:tss-esapi", "dep:apg-cng", "attestation"]
+tpm = ["dep:tss-esapi", "dep:ipg-cng", "attestation"]
 # Verify TPM key attestations (EK certificate chains, TPM2_Certify evidence and
 # credential activation) without a TPM.
 attestation = ["dep:ic-rsa", "dep:ic-pkix", "dep:webpki", "dep:pki-types", "dep:ic-rustls"]

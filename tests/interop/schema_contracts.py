@@ -1,4 +1,4 @@
-"""Exercise exported APG constraints with an independent Draft 2020-12 validator."""
+"""Exercise exported IPG constraints with an independent Draft 2020-12 validator."""
 import copy
 import json
 from pathlib import Path
@@ -62,8 +62,8 @@ def main():
                     check(schema, {**artifact, field: bad}, False)
     # Suite-conditional encodings: each suite accepts only its own key and signature widths.
     v1_public, p384_public = vectors["public"], p384["public"]
-    check(schemas["formats"]["public_key"], {**v1_public, "format": "apg-public-p384-v1"}, False)
-    check(schemas["formats"]["public_key"], {**p384_public, "format": "apg-public-v1"}, False)
+    check(schemas["formats"]["public_key"], {**v1_public, "format": "ipg-public-p384-v1"}, False)
+    check(schemas["formats"]["public_key"], {**p384_public, "format": "ipg-public-v1"}, False)
     # Python-style `$` matches before a final newline; variable-width fields must still refuse it.
     for name, artifact, field in [("public_key", p384_public, "fingerprint"), ("public_key", p384_public, "signing_key"),
                                   ("public_key", hybrid["public"], "encryption_key"),
@@ -87,18 +87,18 @@ def main():
         check(schemas["formats"][name], {**value, "algorithm": "ed25519"}, False)
         check(schemas["formats"][name], {**value, "algorithm": "ecdsa-p256-sha256"}, False)
     # Each secret format binds exactly its own identity suite and seed length.
-    check(schemas["formats"]["secret_key"], {**hybrid["secret"], "format": "apg-secret-v1"}, False)
-    check(schemas["formats"]["secret_key"], {**vectors["secret"], "format": "apg-secret-hybrid-v1"}, False)
+    check(schemas["formats"]["secret_key"], {**hybrid["secret"], "format": "ipg-secret-v1"}, False)
+    check(schemas["formats"]["secret_key"], {**vectors["secret"], "format": "ipg-secret-hybrid-v1"}, False)
     check(schemas["formats"]["secret_key"], {**hybrid["secret"], "public": v1_public}, False)
-    check(schemas["formats"]["public_key"], {**hybrid["public"], "format": "apg-public-v1"}, False)
+    check(schemas["formats"]["public_key"], {**hybrid["public"], "format": "ipg-public-v1"}, False)
     composite = hybrid["messages"][2]["signature"]
     check(schemas["formats"]["signature"], {**composite, "algorithm": "ed25519"}, False)
     check(schemas["formats"]["signature"], {**composite, "signature": composite["signature"][:128]}, False)
     hybrid_envelope = hybrid["messages"][2]["envelope"]
     check(schemas["formats"]["envelope"], {**hybrid_envelope, "suite": v1_envelope["suite"]}, False)
     check(schemas["formats"]["envelope"], {**v1_envelope, "suite": hybrid_envelope["suite"]}, False)
-    reference = {"format": "apg-pkcs11-key-v1", "public": p384_public,
-                 "token": {"serial": "0123456789abcdef", "label": "apg-test", "manufacturer": "Test", "model": "Oracle"},
+    reference = {"format": "ipg-pkcs11-key-v1", "public": p384_public,
+                 "token": {"serial": "0123456789abcdef", "label": "ipg-test", "manufacturer": "Test", "model": "Oracle"},
                  "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16}
     tpm_key = json.loads((ROOT / "tests/vectors/tpm-key-swtpm.json").read_text())
     tpm_schema = schemas["formats"]["tpm_key"]
@@ -108,12 +108,12 @@ def main():
     check(tpm_schema, {**tpm_key, "encryption_key": {**tpm_key["encryption_key"], "private": "ABC"}}, False)
     check(tpm_schema, {**tpm_key, "tpm": {**tpm_key["tpm"], "manufacturer": "TOOLONG"}}, False)
     check(tpm_schema, {**tpm_key, "signing_key": {**tpm_key["signing_key"], "public": tpm_key["signing_key"]["public"] + "\n"}}, False)
-    kms_key = {"format": "apg-kms-key-v1", "public": p384_public, "region": "us-gov-west-1",
+    kms_key = {"format": "ipg-kms-key-v1", "public": p384_public, "region": "us-gov-west-1",
                "encryption_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/11111111-1111-1111-1111-111111111111",
                "signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/22222222-2222-2222-2222-222222222222"}
     kms_schema = schemas["formats"]["kms_key"]
     check(kms_schema, kms_key)
-    check(kms_schema, {**kms_key, "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:alias/apg"}, False)
+    check(kms_schema, {**kms_key, "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:alias/ipg"}, False)
     check(kms_schema, {**kms_key, "region": "US-EAST-1"}, False)
     check(kms_schema, {**kms_key, "unknown": True}, False)
     check(kms_schema, {**kms_key, "region": "us-gov-west-1\n"}, False)
@@ -125,7 +125,7 @@ def main():
         raw = bytes.fromhex(case["stream_hex"])
         header = json.loads(raw[12:12 + int.from_bytes(raw[8:12], "big")])
         check(header_schema, header)
-        for field, bad in [("chunk_size", 1024), ("content_cipher", "aes-128-gcm"), ("format", "apg-stream-v2"),
+        for field, bad in [("chunk_size", 1024), ("content_cipher", "aes-128-gcm"), ("format", "ipg-stream-v2"),
                            ("nonce_prefix", "00" * 8), ("stream_id", "AB" * 16), ("recipients", [])]:
             check(header_schema, {**header, field: bad}, False)
         check(header_schema, {**header, "recipients": header["recipients"] * 65}, False)
@@ -135,7 +135,7 @@ def main():
     for case in signature_vectors["cases"]:
         signature = case["signature"]
         check(stream_signature_schema, signature)
-        for field, bad in [("format", "apg-signature-v1"), ("digest_algorithm", "sha2-256"),
+        for field, bad in [("format", "ipg-signature-v1"), ("digest_algorithm", "sha2-256"),
                            ("digest", "00" * 32), ("bytes", -1), ("bytes", 2**64),
                            ("signature", "00" * 63)]:
             check(stream_signature_schema, {**signature, field:bad}, False)
@@ -144,7 +144,7 @@ def main():
     evidence_schema = schemas["formats"]["tpm_evidence"]
     check(evidence_schema, evidence)
     check(evidence_schema, {**evidence, "unknown": 1}, False)
-    check(evidence_schema, {**evidence, "format": "apg-tpm-evidence-v2"}, False)
+    check(evidence_schema, {**evidence, "format": "ipg-tpm-evidence-v2"}, False)
     check(evidence_schema, {**evidence, "ek_certificates": []}, False)
     check(evidence_schema, {**evidence, "ek_certificates": evidence["ek_certificates"] * 5}, False)
     check(evidence_schema, {**evidence, "certifications": evidence["certifications"][:1]}, False)
@@ -152,17 +152,17 @@ def main():
     check(evidence_schema, {**evidence, "ak_public": evidence["ak_public"] + "\n"}, False)
     certification = evidence["certifications"][0]
     check(evidence_schema, {**evidence, "certifications": [{**certification, "role": "admin"}, certification]}, False)
-    challenge = {"format": "apg-tpm-challenge-v1", "fingerprint": evidence["public"]["fingerprint"],
+    challenge = {"format": "ipg-tpm-challenge-v1", "fingerprint": evidence["public"]["fingerprint"],
                  "evidence_digest": "ab" * 48, "id_object": "00" * 50, "encrypted_secret": "11" * 256}
     check(schemas["formats"]["tpm_challenge"], challenge)
     check(schemas["formats"]["tpm_challenge"], {**challenge, "evidence_digest": "ab" * 32}, False)
-    secret = {"format": "apg-tpm-challenge-secret-v1", "fingerprint": evidence["public"]["fingerprint"],
+    secret = {"format": "ipg-tpm-challenge-secret-v1", "fingerprint": evidence["public"]["fingerprint"],
               "evidence_digest": "ab" * 48, "credential": "cd" * 32}
     check(schemas["formats"]["tpm_challenge_secret"], secret)
     check(schemas["formats"]["tpm_challenge_secret"], {**secret, "credential": "cd" * 31}, False)
-    response = {"format": "apg-tpm-response-v1", "evidence_digest": "ab" * 48, "credential": "cd" * 32}
+    response = {"format": "ipg-tpm-response-v1", "evidence_digest": "ab" * 48, "credential": "cd" * 32}
     check(schemas["formats"]["tpm_response"], response)
-    check(schemas["formats"]["tpm_response"], {**response, "format": "apg-tpm-challenge-v1"}, False)
+    check(schemas["formats"]["tpm_response"], {**response, "format": "ipg-tpm-challenge-v1"}, False)
     # The optional ML-DSA key: an exact key ARN or absent.
     pq_kms = {**kms_key, "public": pq["public"],
               "mldsa_signing_key_arn": "arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/33333333-3333-3333-3333-333333333333"}
@@ -171,23 +171,23 @@ def main():
     check(kms_schema, {**pq_kms, "mldsa_signing_key_arn": pq_kms["mldsa_signing_key_arn"] + "\n"}, False)
     # The composite suite's widths: its keys and signatures fit no other suite.
     pq_public, pq_signature = pq["public"], pq["messages"][0]["signature"]
-    for fmt in ["apg-public-p384-v1", "apg-public-hybrid-v1"]:
+    for fmt in ["ipg-public-p384-v1", "ipg-public-hybrid-v1"]:
         check(schemas["formats"]["public_key"], {**pq_public, "format": fmt}, False)
-    check(schemas["formats"]["public_key"], {**p384_public, "format": "apg-public-p384-mldsa65-v1"}, False)
+    check(schemas["formats"]["public_key"], {**p384_public, "format": "ipg-public-p384-mldsa65-v1"}, False)
     for algorithm in ["ecdsa-p384-sha384", "ed25519-mldsa65"]:
         check(schemas["formats"]["signature"], {**pq_signature, "algorithm": algorithm}, False)
     check(schemas["formats"]["signature"], {**pq_signature, "signature": pq_signature["signature"][:192]}, False)
-    cng_key = {"format": "apg-cng-key-v1", "public": p384_public, "provider": "Microsoft Platform Crypto Provider",
-               "vendor": "AMD", "encryption_key_name": "apg-" + "0" * 32 + "-enc", "signing_key_name": "apg-" + "0" * 32 + "-sig"}
+    cng_key = {"format": "ipg-cng-key-v1", "public": p384_public, "provider": "Microsoft Platform Crypto Provider",
+               "vendor": "AMD", "encryption_key_name": "ipg-" + "0" * 32 + "-enc", "signing_key_name": "ipg-" + "0" * 32 + "-sig"}
     cng_schema = schemas["formats"]["cng_key"]
     check(cng_schema, cng_key)
     check(cng_schema, {**cng_key, "provider": "Microsoft Software Key Storage Provider"}, False)
-    check(cng_schema, {**cng_key, "encryption_key_name": "apg-" + "0" * 32 + "-sig"}, False)
-    check(cng_schema, {**cng_key, "signing_key_name": "apg-" + "0" * 32 + "-sig\n"}, False)
+    check(cng_schema, {**cng_key, "encryption_key_name": "ipg-" + "0" * 32 + "-sig"}, False)
+    check(cng_schema, {**cng_key, "signing_key_name": "ipg-" + "0" * 32 + "-sig\n"}, False)
     hardware = schemas["formats"]["hardware_key"]
     check(hardware, reference)
     check(hardware, {**reference, "unknown": True}, False)
-    check(hardware, {**reference, "format": "apg-pkcs11-key-v2"}, False)
+    check(hardware, {**reference, "format": "ipg-pkcs11-key-v2"}, False)
     for field, bad in [("encryption_key_id", ""), ("encryption_key_id", "0"), ("encryption_key_id", "AB"), ("signing_key_id", "ab" * 65)]:
         check(hardware, {**reference, field: bad}, False)
     for field, bad in [("serial", ""), ("serial", "x" * 17), ("model", "x" * 17), ("label", "x" * 33)]:
@@ -206,26 +206,26 @@ def main():
     store = copy.deepcopy(vectors["snapshots"][0]["snapshot"])
     store["entries"][0]["validity"] = vectors["validity"]
     check(schemas["formats"]["trust_store"], store, False)
-    store["format"] = "apg-trust-v2"
+    store["format"] = "ipg-trust-v2"
     check(schemas["formats"]["trust_store"], store)
-    store["format"] = "apg-trust-v3"
+    store["format"] = "ipg-trust-v3"
     check(schemas["formats"]["trust_store"], store)
-    store["format"] = "apg-trust-v4"
+    store["format"] = "ipg-trust-v4"
     check(schemas["formats"]["trust_store"], store, False)
-    store["format"] = "apg-trust-v2"
+    store["format"] = "ipg-trust-v2"
     # Shape-only fixtures: identity uniqueness is a semantic runtime check.
     store["entries"] *= 256
     check(schemas["formats"]["trust_store"], store)
     store["entries"].append(store["entries"][0])
     check(schemas["formats"]["trust_store"], store, False)
-    openpgp_key = {"format": "apg-openpgp-key-v1", "fingerprint": "ab" * 20, "algorithm": "ed25519",
+    openpgp_key = {"format": "ipg-openpgp-key-v1", "fingerprint": "ab" * 20, "algorithm": "ed25519",
                    "user_id": "Alice <alice@example.test>", "certificate": "99" * 300,
                    "kdf": "argon2id-m65536-t3-p4", "salt": "00" * 16, "nonce": "00" * 12, "ciphertext": "01" * 200,
                    "tag": "00" * 16}
     openpgp_schema = schemas["formats"]["openpgp_key"]
     check(openpgp_schema, openpgp_key)
     check(openpgp_schema, {**openpgp_key, "fingerprint": "ab" * 32})
-    for field, bad in [("format", "apg-secret-v1"), ("fingerprint", "AB" * 20), ("fingerprint", "ab" * 31),
+    for field, bad in [("format", "ipg-secret-v1"), ("fingerprint", "AB" * 20), ("fingerprint", "ab" * 31),
                        ("algorithm", "rsa"), ("certificate", "999"), ("certificate", "99" * 16385),
                        ("ciphertext", "01" * 4097), ("kdf", "pbkdf2"), ("salt", "00" * 15), ("user_id", "a\nb")]:
         check(openpgp_schema, {**openpgp_key, field: bad}, False)
@@ -244,11 +244,11 @@ def main():
         if operation == "stream.encrypt":
             values["recipients"] = [{"public": "path", "expected_fingerprint": pin}]
         check(schemas["request"], values)
-        call = {"protocol": "apg/1", "id": "schema", "request": values}
+        call = {"protocol": "ipg/1", "id": "schema", "request": values}
         check(schemas["call"], call)
-        check(schemas["call"], {**call, "protocol": "apg/2"}, False)
+        check(schemas["call"], {**call, "protocol": "ipg/2"}, False)
         arguments = {k: v for k, v in values.items() if k != "operation"}
-        tool_schema = tools["apg_" + operation.replace(".", "_")]
+        tool_schema = tools["ipg_" + operation.replace(".", "_")]
         check(tool_schema, arguments)
         if operation == "knowledge.search":
             for query, valid in [("", False), ("a" * 257, False), ("é" * 256, True), ("file digest", True)]:

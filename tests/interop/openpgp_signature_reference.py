@@ -1,6 +1,6 @@
-"""Make RFC 9580 document signatures with PyCA, without APG/rPGP signing.
+"""Make RFC 9580 document signatures with PyCA, without IPG/rPGP signing.
 
-Only disposable APG test keys are independently unsealed. Private material is
+Only disposable IPG test keys are independently unsealed. Private material is
 never written to fixtures. This implements the tested profiles, not a product API.
 """
 import hashlib
@@ -152,7 +152,7 @@ def exercise_signatures(call, path, cases, fixture_output=None):
             damaged = bytearray(valid)
             damaged[offset] ^= 1
             verify(name, document, bytes(damaged), error="authentication_failed")
-        # APG must also accept a PyCA-made signature in an independently composed message.
+        # IPG must also accept a PyCA-made signature in an independently composed message.
         source, output = path("pyca-embedded"), path("pyca-verified-" + algorithm)
         Path(source).write_bytes(embedded(valid, bytes.fromhex(fingerprint_hex), document))
         result = call("openpgp.message.verify", input=source, output=output, **recipient)
@@ -177,7 +177,7 @@ def exercise_signatures(call, path, cases, fixture_output=None):
                                  "short_digest_certificate_hex": certificates["short"]} if algorithm == "p384" else {})})
     checks += exercise_extra_curves(call, path, public_cases, document)
     if fixture_output:
-        fixture = {"provenance": "Public disposable APG v6 Ed25519/P-384 and PyCA v6 P-521/Ed448 certificates; document and direct-key signatures independently made with PyCA cryptography 50.0.1",
+        fixture = {"provenance": "Public disposable IPG v6 Ed25519/P-384 and PyCA v6 P-521/Ed448 certificates; document and direct-key signatures independently made with PyCA cryptography 50.0.1",
                    "document_hex": document.hex(), "cases": public_cases}
         fixture_output.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8", newline="\n")
     return checks

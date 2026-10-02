@@ -1,5 +1,5 @@
 //! PKCS#11 backend over the host-configured module. Private keys are generated and
-//! used on the token as sensitive, non-extractable objects. APG never requests
+//! used on the token as sensitive, non-extractable objects. IPG never requests
 //! private key values; only ECDH shared secrets for single envelopes and public
 //! points cross the module boundary.
 use crate::{
@@ -236,7 +236,7 @@ fn private_key(session: &Session, id: &[u8], usage: AttributeType) -> Result<(Ob
     if !sensitive || extractable {
         return Err(Error::new(
             "policy_mismatch",
-            "APG requires sensitive, non-extractable private keys",
+            "IPG requires sensitive, non-extractable private keys",
         ));
     }
     Ok((handle, local && always_sensitive && never_extractable))
@@ -614,16 +614,16 @@ mod tests {
         assert!(decode_point(&point[..96]).is_err());
     }
 
-    /// Live check of in-token decryption against APG_TEST_PKCS11_* (a disposable
-    /// token). Reports which path the token supports; APG_TEST_PKCS11_REQUIRE_IN_TOKEN=1
+    /// Live check of in-token decryption against IPG_TEST_PKCS11_* (a disposable
+    /// token). Reports which path the token supports; IPG_TEST_PKCS11_REQUIRE_IN_TOKEN=1
     /// makes the in-token path mandatory, as a FIPS-mode HSM acceptance test.
     #[test]
     fn in_token_decryption_matches_software_derivation() {
         let var = |name| std::env::var(name).ok().filter(|v: &String| !v.is_empty());
         let (Some(module), Some(serial), Some(pin)) = (
-            var("APG_TEST_PKCS11_MODULE"),
-            var("APG_TEST_PKCS11_SERIAL"),
-            var("APG_TEST_PKCS11_PIN"),
+            var("IPG_TEST_PKCS11_MODULE"),
+            var("IPG_TEST_PKCS11_SERIAL"),
+            var("IPG_TEST_PKCS11_PIN"),
         ) else {
             return;
         };
@@ -637,8 +637,8 @@ mod tests {
         let (encryption_id, signing_id) = {
             let session = login(&context, slot, pin.as_bytes(), true).unwrap();
             let ids = fresh_ids(&session).unwrap();
-            key_pair(&session, &ids.0, "apg-in-token-test", false).unwrap();
-            key_pair(&session, &ids.1, "apg-in-token-test", true).unwrap();
+            key_pair(&session, &ids.0, "ipg-in-token-test", false).unwrap();
+            key_pair(&session, &ids.1, "ipg-in-token-test", true).unwrap();
             ids
         };
         let (identity, _) =
@@ -676,7 +676,7 @@ mod tests {
                     "in-token X9.63 derivation and AES-GCM: not supported; software KDF fallback"
                 );
                 assert!(
-                    var("APG_TEST_PKCS11_REQUIRE_IN_TOKEN").is_none(),
+                    var("IPG_TEST_PKCS11_REQUIRE_IN_TOKEN").is_none(),
                     "token lacks the in-token decryption path"
                 );
             }

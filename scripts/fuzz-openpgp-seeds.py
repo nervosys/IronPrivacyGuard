@@ -1,7 +1,7 @@
-"""Freeze public OpenPGP parser fixtures and seeds from disposable APG test keys.
+"""Freeze public OpenPGP parser fixtures and seeds from disposable IPG test keys.
 
 Stdlib-only; no secret keys or passphrases are copied out of the temporary folder.
-Run explicitly with --apg after building with the openpgp feature.
+Run explicitly with --ipg after building with the openpgp feature.
 """
 import argparse
 import base64
@@ -12,7 +12,12 @@ import tempfile
 import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENT = b"PUBLIC APG OpenPGP parser fixture\0\xff\r\n"
+DOCUMENT = b"PUBLIC IPG OpenPGP parser fixture\0\xff\r\n"
+
+
+def raw_deflate(value):
+    compressor = zlib.compressobj(wbits=-15)
+    return compressor.compress(value) + compressor.flush()
 
 
 def packet(tag, body):
@@ -55,7 +60,7 @@ def generate(executable, directory):
     def path(name):
         return str(directory / name)
     def call(operation, **arguments):
-        request = {"protocol": "apg/1", "id": "public-fuzz-fixture", "request": {"operation": operation, **arguments}}
+        request = {"protocol": "ipg/1", "id": "public-fuzz-fixture", "request": {"operation": operation, **arguments}}
         process = subprocess.run([str(executable), "call"], input=json.dumps(request).encode(), capture_output=True, timeout=120)
         response = json.loads(process.stdout)
         assert response["ok"], response
@@ -79,24 +84,24 @@ def generate(executable, directory):
             cases.append({"name": name, "fingerprint": result["fingerprint"], "certificate_hex": key["certificate"],
                           "signature_hex": packet(2, signature).hex(), "embedded_hex": message.hex(),
                           "certificate_armor": Path(path(name + ".asc")).read_text(), "signature_armor": Path(path(name + ".sig")).read_text()})
-    return {"provenance": "Disposable APG/rPGP public test keys; packet-message wrappers built independently by scripts/fuzz-openpgp-seeds.py", "document_hex": DOCUMENT.hex(), "cases": cases}
+    return {"provenance": "Disposable IPG/rPGP public test keys; packet-message wrappers built independently by scripts/fuzz-openpgp-seeds.py", "document_hex": DOCUMENT.hex(), "cases": cases}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--apg", type=Path)
+    source.add_argument("--ipg", type=Path)
     source.add_argument("--from-fixture", action="store_true", help="Replay the frozen public fixtures without generating keys")
     args = parser.parse_args()
     if args.from_fixture:
         fixture = json.loads((ROOT / "tests/vectors/openpgp-parser-v1.json").read_text())
     else:
-        with tempfile.TemporaryDirectory(prefix="apg-public-packet-fixtures-") as directory:
-            fixture = generate(args.apg.resolve(strict=True), Path(directory))
+        with tempfile.TemporaryDirectory(prefix="ipg-public-packet-fixtures-") as directory:
+            fixture = generate(args.ipg.resolve(strict=True), Path(directory))
     for case in fixture["cases"]:
         message = bytes.fromhex(case["embedded_hex"])
         case["embedded_zlib_hex"] = packet(8, b"\x02" + zlib.compress(message)).hex()
-        case["embedded_zip_hex"] = packet(8, b"\x01" + zlib.compress(message, wbits=-15)).hex()
+        case["embedded_zip_hex"] = packet(8, b"\x01" + raw_deflate(message)).hex()
     (ROOT / "tests/vectors/openpgp-parser-v1.json").write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8", newline="\n")
     seeds = ROOT / "fuzz/seeds/openpgp_packets"
     seeds.mkdir(parents=True, exist_ok=True)
