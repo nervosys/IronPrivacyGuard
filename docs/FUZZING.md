@@ -348,3 +348,83 @@ runs (2026-10-01 05:36 UTC); neither campaign created a new artifact. Counters d
 the instrumented harness and dependencies, not a coverage percentage. Remote CI
 remains blocked, and these Windows campaigns do not replace Linux fuzz CI or
 independent review.
+
+## Seven-target follow-up campaign, 2026-10-02
+
+At source baseline `60bcbeb16712e0ad6e103042c7b456eacf2b54c6`, all seven targets
+completed fresh Windows x64 MSVC AddressSanitizer campaigns from their checked-in
+seeds and existing ignored discovery corpora. Runs used
+`-max_total_time=60 -len_control=0 -timeout=10 -rss_limit_mb=2048`, with a
+target-appropriate `-max_len` equal to the documented boundary. There were no
+crashes, timeouts, oracle failures, sanitizer findings or new crash artifacts.
+
+| Target | PRNG seed | Executed inputs | Elapsed seconds | Peak RSS MiB | Max input |
+| --- | --- | --- | --- | --- | --- |
+| `requests` | 202610021 | 138,687 | 61 | 536 | 65,537 bytes |
+| `framing` | 202610022 | 192,985 | 61 | 554 | 131,074 bytes |
+| `artifacts` | 202610023 | 72,937 | 61 | 524 | 65,536 bytes |
+| `mcp` | 202610024 | 1,368 | 65 | 480 | 65,537 bytes |
+| `stream_headers` | 202610025 | 17,648 | 61 | 408 | 1,048,588 bytes |
+| `tpm_structures` | 202610026 | 1,544,106 | 61 | 488 | 65,536 bytes |
+| `openpgp_packets` | 202610027 | 4,931 | 212 | 657 | 1,048,577 bytes |
+
+The OpenPGP run's 212 seconds includes replaying its 4,754-file, 21.9 MiB
+discovery corpus before the 60-second campaign. The other elapsed times include
+normal target startup. Six detailed logs are retained locally under the ignored
+`target/fuzz-reports/*-followup-2026-10-02.log`; the request-target summary is
+captured in this table. The runs added discoveries only to ignored corpora. These
+bounded Windows results do not replace platform CI, extended campaigns or an
+independent review.
+
+### Linux stable regression replay, 2026-10-02
+
+The full Linux all-target suite passed under Debian WSL with `pkcs11,kms,openpgp`
+enabled, and the feature-gated OpenPGP fuzz regression suite passed separately:
+
+```sh
+cargo test --locked --all-targets --features pkcs11,kms,openpgp
+cargo test --locked --features fuzzing,openpgp --test fuzz_regressions
+python3 tests/interop/schema_contracts.py
+```
+
+The first command passed all unit and integration tests; the second replayed all
+11 parser regression tests, including the curated OpenPGP seeds, large-certificate
+recipes and deterministic mutations. The schema check passed 2,302 checks over
+54 operations using `jsonschema` 4.26.0. The Linux run did not enable the TPM
+feature or configure physical PKCS#11, TPM or KMS devices, so it covers software
+and fail-closed provider behavior rather than live hardware. Coverage-guided runs
+in this follow-up were Windows-only; Linux stable replay does not replace the
+configured Linux libFuzzer workflow.
+
+Strict Linux Clippy also passed with `-D warnings`. It first identified a
+nonminimal negated expiry predicate in OpenPGP component eligibility; the
+equivalent `Option::is_none_or` expression now states the half-open expiry rule
+directly. The expiry-boundary unit test and all 12 OpenPGP integration tests
+passed after the change on both Debian Linux and Windows.
+
+### Linux coverage-guided campaigns, 2026-10-02
+
+All seven targets then completed one-minute Debian 13 x86-64 AddressSanitizer
+campaigns with cargo-fuzz 0.13.2, Rust 1.101.0 nightly and Clang 19. The working
+tree was based on `60bcbeb16712e0ad6e103042c7b456eacf2b54c6` and included the
+expiry-predicate simplification described above. Each run used the checked-in
+seed corpus, an empty writable corpus under `/tmp`, `-len_control=0`, a 10-second
+per-input timeout and a 2 GiB RSS limit. All exited cleanly without crashes,
+timeouts, oracle failures, sanitizer findings or crash artifacts.
+
+| Target | PRNG seed | Executed inputs | Elapsed seconds | Peak RSS MiB | Max input |
+| --- | --- | --- | --- | --- | --- |
+| `requests` | 202610111 | 840,340 | 61 | 527 | 65,537 bytes |
+| `framing` | 202610112 | 520,159 | 61 | 552 | 131,074 bytes |
+| `artifacts` | 202610113 | 353,322 | 61 | 512 | 65,536 bytes |
+| `mcp` | 202610114 | 5,043 | 61 | 485 | 65,537 bytes |
+| `stream_headers` | 202610115 | 567,599 | 61 | 400 | 1,048,588 bytes |
+| `tpm_structures` | 202610116 | 7,310,820 | 61 | 523 | 65,536 bytes |
+| `openpgp_packets` | 202610117 | 47,110 | 61 | 458 | 1,048,577 bytes |
+
+Detailed logs and discovered corpora are retained locally in
+`/tmp/ipg-linux-fuzz-reports` and `/tmp/ipg-linux-corpus`; they are not part of
+the repository. These fresh-seed Linux runs complement, but do not replace, the
+Windows discovery-corpus campaigns, longer fuzz runs, platform CI or independent
+review. The maximum input limits were available from the start; each bounded run
+does not establish that every size or code path was exercised.

@@ -343,6 +343,13 @@ docker run --rm -v "$PWD:/src" -w /src rust:1-bookworm \
   bash -c "apt-get update && apt-get install -y softhsm2 && scripts/softhsm-test.sh"
 ```
 
+On 2026-10-02, the required full lifecycle test passed on Debian 13 under WSL
+with SoftHSMv2 2.6.1 and an isolated token store. It exercised key generation,
+possession checks, encryption/decryption, signing and verification, trust policy,
+MCP custody, binding, and wrong-PIN handling. SoftHSMv2 uses the software KDF
+fallback described below; this validates the PKCS#11 integration, not a physical
+HSM or FIPS-mode in-token decryption.
+
 A unit test in `src/pkcs11.rs` reports whether the token decrypts in-token. SoftHSMv2
 does not implement `CKD_SHA384_KDF`, so it exercises the software fallback. To accept a
 FIPS-mode HSM, run against a disposable partition with
@@ -377,3 +384,5 @@ python tests/interop/kms_reference.py --ipg target/release/ipg
 
 The P-384 protocol itself is also checked without a token, against PyCA, by
 [p384_reference.py](../tests/interop/p384_reference.py); see [VECTORS.md](VECTORS.md).
+
+The Linux TPM-feature test suite passed on Debian WSL using `swtpm`, including native TPM key lifecycle and identity-attestation tests. This validates the software-simulated TPM path; it does not validate a physical TPM or FIPS operation.

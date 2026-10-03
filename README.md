@@ -16,11 +16,22 @@ encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS K
 signatures, signed revocation and validity certificates, and pinned immutable trust
 snapshots.
 
-**Version 0.1 is experimental.** It is not an audited or drop-in GPG replacement.
+**IronPrivacyGuard 0.1.1 is an experimental pre-1.0 release.** It is not an
+audited or drop-in GPG replacement.
 Native IPG keys, envelopes and signatures are not OpenPGP. A separate, optional
 [OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
 signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
+
+Install the CLI from [crates.io](https://crates.io/crates/iron-privacy-guard):
+
+```sh
+cargo install iron-privacy-guard --version 0.1.1 --locked
+```
+
+This installs the core CLI. Hardware and interoperability integrations are
+optional Cargo features; see their sections below. Prebuilt release binaries and
+checksums are published on the [GitHub releases page](https://github.com/nervosys/IronPrivacyGuard/releases).
 
 ## Build
 
@@ -32,9 +43,10 @@ cargo test --locked --target-dir target
 cargo clippy --locked --all-targets --target-dir target -- -D warnings
 ```
 
-The executable is `target/release/ipg` (`ipg.exe` on Windows). To install it:
-`cargo install --path . --locked`. IronCrypto is pinned to commit
-`5dba9b6ac402ee294509d89f9f61326e6ad0fa9c`; Cargo.lock pins the remaining graph.
+The executable is `target/release/ipg` (`ipg.exe` on Windows). To install the
+current checkout instead, run `cargo install --path . --locked`. IronCrypto
+components are pinned to crates.io release `0.2.7`, and Cargo.lock pins the
+remaining dependency graph for this repository.
 All native cryptographic primitives use IronCrypto. There is no OpenSSL, C
 compilation, GPG subprocess, or external cryptographic executable. OS entropy and filesystem
 access use platform APIs through Rust crates.

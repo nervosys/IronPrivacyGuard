@@ -1,16 +1,16 @@
 [package]
 name = "ipg-cng"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
 license = "AGPL-3.0-or-later"
 description = "Minimal safe wrapper over Windows CNG and TPM Base Services (IronPrivacyGuard)"
-publish = false
+repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_System_TpmBaseServices"] }
 
 [dev-dependencies]
-ic-core = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
-ic-ec = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
-ic-hash = { git = "https://github.com/nervosys/IronCrypto", rev = "5dba9b6ac402ee294509d89f9f61326e6ad0fa9c" }
+ic-core = "=0.2.7"
+ic-ec = "=0.2.7"
+ic-hash = "=0.2.7"

@@ -57,16 +57,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipg-cng"
-version = "0.1.0"
-dependencies = [
- "ic-core",
- "ic-ec",
- "ic-hash",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "argon2"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -96,6 +86,12 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
+name = "base64"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "base64ct"
@@ -241,9 +237,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.5.1"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f360145194ee8e21db5ee7f3fcd4fe52210864c75c985dae33218202c8bbe040"
+checksum = "f74872d07caf508b30a21f6836e7d7016a2eaf7d9ff4f48deaa58cd8a0407630"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -329,9 +325,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
+checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
 dependencies = [
  "generic-array",
  "rand_core",
@@ -724,9 +720,9 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "generic-array"
-version = "0.14.9"
+version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bb6743198531e02858aeaea5398fcc883e71851fcbcb5a2f773e2fb6cb1edf2"
+checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
@@ -826,21 +822,24 @@ checksum = "f558a64ac9af88b5ba400d99b579451af0d39c6d360980045b91aac966d705e2"
 
 [[package]]
 name = "ic-cipher"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32ef644ab6557bbce504b435fe6baac3ab29c8a4da5927a9411567c45ea6d683"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-core"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "768c14b2ddc2f05e7ff7848d2279d90b0fa92d9c3a7a55b4b54bced0df94df7b"
 
 [[package]]
 name = "ic-drbg"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07b2e5c5dc5b47c7d3ea48aa5e4693791f0584090b7902609dcc9c84fe73df75"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -850,8 +849,9 @@ dependencies = [
 
 [[package]]
 name = "ic-ec"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b9eaf8c71b12da96f2508b0fcae37ba20f7181156d27c7d0a098cf1b6e1f1fd"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -860,16 +860,18 @@ dependencies = [
 
 [[package]]
 name = "ic-hash"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e67f2f6de92ce5cf94bbfcfd24bf7dab22271612120718e8abe8122802606eb"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-kdf"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4e26f2514f98fbd5a79c565e4b32a2e3a3cecdb5d578416800594d549320e39"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -878,8 +880,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mac"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9f571fb025ad803592c0c091db3cd7fabdfe2c68d5530be9964d17734a83869"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -888,8 +891,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mldsa"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6573d0cc04034a5b18806a33d87a72c714105e3785ce0dd3093e5c9511a1745f"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -897,8 +901,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mlkem"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "878eae4274b5ab9e8b931ef99c179038fb6fd0c7b1ad357afccc28b5bf32be85"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -906,24 +911,27 @@ dependencies = [
 
 [[package]]
 name = "ic-ontology"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26bac404cdc29694e426e490bacf1a4b6c0ddc02288f2b0035583425773bbd35"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-pkix"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3abf7c91c250ea952b17ef1f9c8ffce6ffcaaddfc10ee0bd34f897f8b2da2f21"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-rsa"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb1af80313b65ea55667f588c9b4800c988ee2f2c06c3be2974c29b0830fa237"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -931,8 +939,9 @@ dependencies = [
 
 [[package]]
 name = "ic-rustls"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4146ffbc3284cf2a21b3f299e94afacd54c9c143f8411ff9208d198fbfafc55"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -970,10 +979,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "iron-privacy-guard"
-version = "0.1.0"
+name = "ipg-cng"
+version = "0.1.1"
 dependencies = [
- "ipg-cng",
+ "ic-core",
+ "ic-ec",
+ "ic-hash",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "iron-privacy-guard"
+version = "0.1.1"
+dependencies = [
  "cryptoki",
  "getrandom 0.3.4",
  "hex",
@@ -989,6 +1007,7 @@ dependencies = [
  "ic-pkix",
  "ic-rsa",
  "ic-rustls",
+ "ipg-cng",
  "pgp",
  "rand_core",
  "rustls",
@@ -1035,18 +1054,18 @@ dependencies = [
 
 [[package]]
 name = "lazy_static"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 dependencies = [
  "spin",
 ]
 
 [[package]]
 name = "libc"
-version = "0.2.189"
+version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
+checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
 
 [[package]]
 name = "libloading"
@@ -1291,7 +1310,7 @@ dependencies = [
  "aes-gcm",
  "aes-kw",
  "argon2",
- "base64",
+ "base64 0.22.1",
  "bitfields",
  "block-padding",
  "blowfish",
@@ -1362,9 +1381,9 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-der"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d413165e4bf7f808b9a27cbaba657657a2921f0965db833f488c4d4be96dcd2e"
+checksum = "b4467118a2c640f4040aea27d01293620984b0b3f3ef0c53577c3bbf6bab4256"
 dependencies = [
  "picky-asn1",
  "serde",
@@ -1373,11 +1392,11 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.15.4"
+version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d4117bd1b1dc5646359ee7243c50c5000c0920ea2d1fb120335a2f4c684b8"
+checksum = "3f110226d163cea4380b0e5ef698a107061d198b279cc27d2b2c1e95c08cd9b0"
 dependencies = [
- "base64",
+ "base64 0.23.1",
  "oid",
  "picky-asn1",
  "picky-asn1-der",
@@ -2098,9 +2117,9 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasip2"
-version = "1.0.4+wasi-0.2.12"
+version = "1.0.1+wasi-0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487"
+checksum = "0562428422c63773dad2c345a1882263bbf4d65cf3f42e90921f787ef5ad58e7"
 dependencies = [
  "wit-bindgen",
 ]
@@ -2204,9 +2223,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "wit-bindgen"
-version = "0.57.1"
+version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 
 [[package]]
 name = "wyz"

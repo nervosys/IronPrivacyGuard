@@ -549,11 +549,8 @@ fn component(
             capability.name
         ));
     }
-    let valid = certificate_usable
-        && bound
-        && !revoked
-        && created <= at
-        && !expires.is_some_and(|e| at >= e);
+    let valid =
+        certificate_usable && bound && !revoked && created <= at && expires.is_none_or(|e| at < e);
     let flag_list = flags.map(flag_names).unwrap_or_default();
     let encrypt_flag = flags.is_some_and(|f| f.encrypt_comms() || f.encrypt_storage());
     let sign_flag = flags.is_some_and(KeyFlags::sign);

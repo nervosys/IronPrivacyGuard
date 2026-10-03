@@ -13,7 +13,7 @@
 use crate::error::{Error, Result};
 use ic_cipher::{Aes256Gcm, ChaCha20Poly1305};
 use ic_core::traits::{Aead, Digest, Kdf, KeyAgreement, SignatureScheme};
-use ic_ec::{EcdhP384, EcdsaP384Sha384, Ed25519, X25519, nist::point::AffinePoint, p384::P384};
+use ic_ec::{EcdhP384, EcdsaP384Sha384, Ed25519, X25519, p384::AffinePoint};
 use ic_hash::{Sha256, Sha384, Shake256};
 use ic_kdf::{Argon2Params, Hkdf, Variant, argon2};
 use ic_mac::HmacSha256;
@@ -367,10 +367,7 @@ pub fn hex_exact(s: &str, len: usize) -> Result<Vec<u8>> {
 /// Accept only an uncompressed SEC1 P-384 point that lies on the curve. P-384 has
 /// cofactor one, so every such point is in the prime-order group.
 pub fn p384_point(encoded: &[u8]) -> Result<()> {
-    if encoded.len() != 97
-        || encoded[0] != 0x04
-        || AffinePoint::<P384>::from_sec1(encoded).is_none()
-    {
+    if encoded.len() != 97 || encoded[0] != 0x04 || AffinePoint::from_sec1(encoded).is_none() {
         return Err(Error::new(
             "invalid_format",
             "Expected an uncompressed P-384 point on the curve",

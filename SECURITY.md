@@ -3,6 +3,8 @@
 IPG 0.1 and its native protocol have not received an independent security audit.
 Tests establish specific behaviors; they do not establish cryptographic security.
 Do not treat this initial release as a production-complete GPG successor.
+The proposed review scope and reproduction steps are in
+[the independent security review brief](docs/SECURITY_REVIEW.md).
 
 ## Boundary
 
