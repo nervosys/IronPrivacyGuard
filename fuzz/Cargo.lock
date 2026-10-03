@@ -48,15 +48,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipg-fuzz-support"
-version = "0.0.0"
-dependencies = [
- "iron-privacy-guard",
- "libfuzzer-sys",
- "serde_json",
-]
-
-[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -756,21 +747,24 @@ dependencies = [
 
 [[package]]
 name = "ic-cipher"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32ef644ab6557bbce504b435fe6baac3ab29c8a4da5927a9411567c45ea6d683"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-core"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "768c14b2ddc2f05e7ff7848d2279d90b0fa92d9c3a7a55b4b54bced0df94df7b"
 
 [[package]]
 name = "ic-drbg"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07b2e5c5dc5b47c7d3ea48aa5e4693791f0584090b7902609dcc9c84fe73df75"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -780,8 +774,9 @@ dependencies = [
 
 [[package]]
 name = "ic-ec"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b9eaf8c71b12da96f2508b0fcae37ba20f7181156d27c7d0a098cf1b6e1f1fd"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -790,16 +785,18 @@ dependencies = [
 
 [[package]]
 name = "ic-hash"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e67f2f6de92ce5cf94bbfcfd24bf7dab22271612120718e8abe8122802606eb"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-kdf"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4e26f2514f98fbd5a79c565e4b32a2e3a3cecdb5d578416800594d549320e39"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -808,8 +805,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mac"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9f571fb025ad803592c0c091db3cd7fabdfe2c68d5530be9964d17734a83869"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -818,8 +816,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mldsa"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6573d0cc04034a5b18806a33d87a72c714105e3785ce0dd3093e5c9511a1745f"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -827,8 +826,9 @@ dependencies = [
 
 [[package]]
 name = "ic-mlkem"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "878eae4274b5ab9e8b931ef99c179038fb6fd0c7b1ad357afccc28b5bf32be85"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -836,24 +836,27 @@ dependencies = [
 
 [[package]]
 name = "ic-ontology"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26bac404cdc29694e426e490bacf1a4b6c0ddc02288f2b0035583425773bbd35"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-pkix"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3abf7c91c250ea952b17ef1f9c8ffce6ffcaaddfc10ee0bd34f897f8b2da2f21"
 dependencies = [
  "ic-core",
 ]
 
 [[package]]
 name = "ic-rsa"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb1af80313b65ea55667f588c9b4800c988ee2f2c06c3be2974c29b0830fa237"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -861,8 +864,9 @@ dependencies = [
 
 [[package]]
 name = "ic-rustls"
-version = "0.1.3"
-source = "git+https://github.com/nervosys/IronCrypto?rev=5dba9b6ac402ee294509d89f9f61326e6ad0fa9c#5dba9b6ac402ee294509d89f9f61326e6ad0fa9c"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4146ffbc3284cf2a21b3f299e94afacd54c9c143f8411ff9208d198fbfafc55"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -900,8 +904,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "iron-privacy-guard"
-version = "0.1.0"
+name = "ipg"
+version = "0.1.1"
 dependencies = [
  "getrandom 0.3.4",
  "hex",
@@ -926,6 +930,15 @@ dependencies = [
  "serde_json",
  "tempfile",
  "zeroize",
+]
+
+[[package]]
+name = "ipg-fuzz-support"
+version = "0.0.0"
+dependencies = [
+ "ipg",
+ "libfuzzer-sys",
+ "serde_json",
 ]
 
 [[package]]

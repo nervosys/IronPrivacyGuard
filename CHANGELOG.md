@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updated the fuzz workspace to resolve the root package as `ipg`, preserving its
+  `iron_privacy_guard` library import name after the crates.io package rename.
+
 ## 0.1.1 — 2026-10-02
 
 Patch release following v0.1.0.
