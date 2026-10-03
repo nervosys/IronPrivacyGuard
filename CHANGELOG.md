@@ -4,6 +4,8 @@
 
 - Updated the fuzz workspace to resolve the root package as `ipg`, preserving its
   `iron_privacy_guard` library import name after the crates.io package rename.
+- Added a documented RustSec audit exception for rPGP's unfixed RSA timing advisory;
+  IPG restricts RSA to public operations and rejects RSA secret-key profiles.
 
 ## 0.1.1 — 2026-10-02
 
