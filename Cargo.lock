@@ -979,17 +979,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipg-cng"
-version = "0.1.1"
-dependencies = [
- "ic-core",
- "ic-ec",
- "ic-hash",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "iron-privacy-guard"
+name = "ipg"
 version = "0.1.1"
 dependencies = [
  "cryptoki",
@@ -1021,6 +1011,16 @@ dependencies = [
  "tss-esapi",
  "webpki-roots",
  "zeroize",
+]
+
+[[package]]
+name = "ipg-cng"
+version = "0.1.1"
+dependencies = [
+ "ic-core",
+ "ic-ec",
+ "ic-hash",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

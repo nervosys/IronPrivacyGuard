@@ -23,10 +23,10 @@ Native IPG keys, envelopes and signatures are not OpenPGP. A separate, optional
 signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
 
-Install the CLI from [crates.io](https://crates.io/crates/iron-privacy-guard):
+Install the CLI from [crates.io](https://crates.io/crates/ipg):
 
 ```sh
-cargo install iron-privacy-guard --version 0.1.1 --locked
+cargo install ipg --version 0.1.1 --locked
 ```
 
 This installs the core CLI. Hardware and interoperability integrations are
