@@ -12,7 +12,8 @@ implemented surface, not feature parity with decades of GPG development.
    external review remain outstanding.
    Fresh seven-target campaigns on Windows and Debian Linux, plus Linux all-target
    tests with fuzz-regression replay, are recorded in [FUZZING.md](FUZZING.md).
-   Longer campaigns and live hardware tests remain outstanding.
+   Longer campaigns remain outstanding. A real Windows TPM lifecycle test passed;
+   physical HSMs and broader device-vendor coverage remain outstanding.
    OpenPGP v4/v6 testing covers independent AEAD authentication, document signatures,
    primary-key strength, signing-subkey consent, authenticated metadata and
    revocation visibility at certificate work limits ([OPENPGP.md](OPENPGP.md)).
@@ -51,7 +52,8 @@ implemented surface, not feature parity with decades of GPG development.
    KMS identities; post-quantum PKCS#11 and TPM keys remain, and KMS has no ML-KEM for
    post-quantum encryption. P-384 identities are implemented on PKCS#11 tokens, Linux
    and Windows TPMs and AWS KMS
-   ([HARDWARE.md](HARDWARE.md)), with SHA-384 fingerprints and SHA-384
+   ([HARDWARE.md](HARDWARE.md)); a physical Windows TPM lifecycle now passes, with
+   Linux TPM evidence still based on `swtpm`. Identities use SHA-384 fingerprints and SHA-384
    (`ipg-trust-v3`) trust-snapshot digests, and TPM identities can be attested
    ([ATTESTATION.md](ATTESTATION.md)). Remaining work includes PKCS#11 and KMS
    attestation, ECC endorsement keys, EK certificate revocation checking, other cloud

@@ -8,6 +8,7 @@
   IPG restricts RSA to public operations and rejects RSA secret-key profiles.
 - Added an RSA-secret-import regression test and a cross-platform cargo-deny policy
   for advisories, licenses, dependency sources and duplicate versions.
+- Recorded a successful lifecycle test against a Windows host's physical TPM.
 
 ## 0.1.1 — 2026-10-02
 

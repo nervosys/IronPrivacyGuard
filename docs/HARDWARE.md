@@ -386,3 +386,10 @@ The P-384 protocol itself is also checked without a token, against PyCA, by
 [p384_reference.py](../tests/interop/p384_reference.py); see [VECTORS.md](VECTORS.md).
 
 The Linux TPM-feature test suite passed on Debian WSL using `swtpm`, including native TPM key lifecycle and identity-attestation tests. This validates the software-simulated TPM path; it does not validate a physical TPM or FIPS operation.
+
+On 2026-10-03, `tests/windows_tpm_live.rs` passed on a Windows host with
+`IPG_TEST_WINDOWS_TPM=1`. It exercised real TPM key generation, possession checks,
+encryption/decryption, signing/verification, revocation, and fail-closed handling
+of a relabeled key. The optional wrong-PIN case was not run, to avoid contributing
+to the TPM dictionary-attack lockout counter. This validates one Windows TPM and
+does not establish physical TPM coverage across vendors or FIPS operation.
