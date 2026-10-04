@@ -1,4 +1,4 @@
-# IronPrivacyGuard
+![IronPrivacyGuard](media/images/banner_01.jpg)
 
 IronPrivacyGuard (IPG) is an agent-first privacy tool written in Rust, built on
 [IronCrypto](https://github.com/nervosys/IronCrypto). Its command is `ipg`, its Rust
