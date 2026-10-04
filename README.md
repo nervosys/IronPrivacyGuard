@@ -16,17 +16,22 @@ encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS K
 signatures, signed revocation and validity certificates, and pinned immutable trust
 snapshots.
 
-**IronPrivacyGuard 0.1.1 is an experimental pre-1.0 release.** It is not an
+**IronPrivacyGuard 0.1.2 is an experimental pre-1.0 release.** It is not an
 audited or drop-in GPG replacement.
 Native IPG keys, envelopes and signatures are not OpenPGP. A separate, optional
 [OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
 signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
 
+The optional OpenPGP feature uses rPGP, whose transitive RSA crate has a known
+private-key timing advisory (RUSTSEC-2023-0071). IPG rejects RSA secret-key imports
+and uses RSA only for public-key operations; details are in the
+[OpenPGP security notes](docs/OPENPGP.md#what-provides-the-cryptography).
+
 Install the CLI from [crates.io](https://crates.io/crates/ipg):
 
 ```sh
-cargo install ipg --version 0.1.1 --locked
+cargo install ipg --version 0.1.2 --locked
 ```
 
 This installs the core CLI. Hardware and interoperability integrations are

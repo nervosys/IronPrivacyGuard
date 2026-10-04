@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-10-03
 
+- Published the CLI package as `ipg`; its executable is `ipg` and its Rust library
+  remains `iron_privacy_guard`.
 - Updated the fuzz workspace to resolve the root package as `ipg`, preserving its
   `iron_privacy_guard` library import name after the crates.io package rename.
 - Added a documented RustSec audit exception for rPGP's unfixed RSA timing advisory;
@@ -9,6 +11,7 @@
 - Added an RSA-secret-import regression test and a cross-platform cargo-deny policy
   for advisories, licenses, dependency sources and duplicate versions.
 - Recorded a successful lifecycle test against a Windows host's physical TPM.
+- Updated README installation, release version and OpenPGP security guidance.
 
 ## 0.1.1 — 2026-10-02
 

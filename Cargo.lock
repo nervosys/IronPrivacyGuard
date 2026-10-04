@@ -980,7 +980,7 @@ dependencies = [
 
 [[package]]
 name = "ipg"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cryptoki",
  "getrandom 0.3.4",
