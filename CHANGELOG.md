@@ -6,6 +6,8 @@
   `iron_privacy_guard` library import name after the crates.io package rename.
 - Added a documented RustSec audit exception for rPGP's unfixed RSA timing advisory;
   IPG restricts RSA to public operations and rejects RSA secret-key profiles.
+- Added an RSA-secret-import regression test and a cross-platform cargo-deny policy
+  for advisories, licenses, dependency sources and duplicate versions.
 
 ## 0.1.1 — 2026-10-02
 

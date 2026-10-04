@@ -2144,6 +2144,32 @@ mod tests {
     }
 
     #[test]
+    fn import_rejects_rsa_secret_keys_before_ipg_sealing() {
+        let mut subkey = SubkeyParamsBuilder::default();
+        subkey
+            .key_type(KeyType::ECDH(ECCCurve::Curve25519Legacy))
+            .can_encrypt(EncryptionCaps::All);
+        let mut params = SecretKeyParamsBuilder::default();
+        params
+            .key_type(KeyType::Rsa(2048))
+            .can_sign(true)
+            .can_certify(true)
+            .primary_user_id("RSA import refusal <rsa@example.test>".into())
+            .subkeys(vec![subkey.build().unwrap()]);
+        let secret = params.build().unwrap().generate(OsRng).unwrap();
+        let bytes = secret.to_bytes().unwrap();
+
+        let error = import_secret(
+            &bytes,
+            &"00".repeat(20),
+            b"",
+            b"new IPG import test passphrase",
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "invalid_format");
+    }
+
+    #[test]
     fn embedded_signatures_publish_only_verified_bytes() {
         let password = b"PUBLIC embedded-signature test password";
         let data = b"embedded binary\0\xff\r\npayload\n";
