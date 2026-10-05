@@ -15,6 +15,7 @@ use super::{
 };
 use crate::crypto;
 use crate::error::{Error, Result};
+use crate::secrets::Zeroizing;
 use ic_cipher::ChaCha20Poly1305;
 use ic_core::traits::Aead;
 use pgp::{
@@ -38,7 +39,6 @@ use pgp::{
 };
 use rand_core::OsRng;
 use std::io::{Cursor, Read};
-use zeroize::Zeroizing;
 
 /// Public-only packet fuzzing: mode 0 certificates, 1 detached signatures,
 /// 2 unencrypted embedded signatures, 3 framed certificate/document/signature
@@ -108,8 +108,8 @@ pub fn fuzz_packets(input: &[u8]) {
             )
             .unwrap();
             assert_eq!(
-                serde_json::to_value(&report).unwrap(),
-                serde_json::to_value(other).unwrap()
+                ipg_json::to_value(&report).unwrap(),
+                ipg_json::to_value(other).unwrap()
             );
             let mut changed = document.to_vec();
             changed.push(0);
@@ -141,8 +141,8 @@ pub fn fuzz_packets(input: &[u8]) {
             let reparsed = parse_certificate(&encoded).unwrap();
             let other = evaluate(&reparsed, AT).summary;
             assert_eq!(
-                serde_json::to_value(&summary).unwrap(),
-                serde_json::to_value(other).unwrap()
+                ipg_json::to_value(&summary).unwrap(),
+                ipg_json::to_value(other).unwrap()
             );
             assert_eq!(
                 summary.usable_for_signing,
@@ -173,23 +173,22 @@ pub fn fuzz_packets(input: &[u8]) {
     type Anchors = (Vec<(Vec<u8>, String)>, Vec<u8>);
     static ANCHORS: std::sync::OnceLock<Anchors> = std::sync::OnceLock::new();
     let (anchors, document) = ANCHORS.get_or_init(|| {
-        let fixture: serde_json::Value =
-            serde_json::from_str(include_str!("../../tests/vectors/openpgp-parser-v1.json"))
-                .unwrap();
+        let fixture: ipg_json::Value =
+            ipg_json::from_str(include_str!("../../tests/vectors/openpgp-parser-v1.json")).unwrap();
         let anchors = fixture["cases"]
             .as_array()
             .unwrap()
             .iter()
             .map(|case| {
                 (
-                    hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+                    crate::hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
                     case["fingerprint"].as_str().unwrap().to_owned(),
                 )
             })
             .collect();
         (
             anchors,
-            hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap(),
+            crate::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap(),
         )
     });
     for (certificate, fingerprint) in anchors {
@@ -205,8 +204,8 @@ pub fn fuzz_packets(input: &[u8]) {
                 let encoded = detached.to_bytes().unwrap();
                 let other = verify(certificate, fingerprint, &encoded, document).unwrap();
                 assert_eq!(
-                    serde_json::to_value(report).unwrap(),
-                    serde_json::to_value(other).unwrap()
+                    ipg_json::to_value(report).unwrap(),
+                    ipg_json::to_value(other).unwrap()
                 );
                 let mut changed = document.clone();
                 changed.push(0);
@@ -238,7 +237,7 @@ fn now() -> Result<u64> {
         .as_secs())
 }
 fn hex_fingerprint(key: &impl KeyDetails) -> String {
-    hex::encode(key.fingerprint().as_bytes())
+    crate::hex::encode(key.fingerprint().as_bytes())
 }
 
 fn hash_allowed(hash: Option<HashAlgorithm>) -> bool {
@@ -779,10 +778,10 @@ fn seal_secret(
         fingerprint: hex_fingerprint(&secret.primary_key),
         algorithm,
         user_id: user_id.into(),
-        certificate: hex::encode(&certificate),
+        certificate: crate::hex::encode(&certificate),
         kdf: KDF.into(),
-        salt: hex::encode(salt.as_ref()),
-        nonce: hex::encode(nonce.as_ref()),
+        salt: crate::hex::encode(salt.as_ref()),
+        nonce: crate::hex::encode(nonce.as_ref()),
         ciphertext: String::new(),
         tag: String::new(),
     };
@@ -794,8 +793,8 @@ fn seal_secret(
         &mut sealed[..],
         &mut tag,
     )?;
-    key.ciphertext = hex::encode(&sealed[..]);
-    key.tag = hex::encode(tag);
+    key.ciphertext = crate::hex::encode(&sealed[..]);
+    key.tag = crate::hex::encode(tag);
     key.validate()?;
     Ok(key)
 }
@@ -803,12 +802,12 @@ fn seal_secret(
 /// Unseal and parse a key file, requiring the secret key to match its certificate.
 fn unseal(key: &KeyFile, password: &[u8]) -> Result<SignedSecretKey> {
     key.validate()?;
-    let certificate = hex::decode(&key.certificate)
+    let certificate = crate::hex::decode(&key.certificate)
         .map_err(|_| Error::new("invalid_format", "Malformed OpenPGP certificate"))?;
     let salt = crypto::bytes::<16>(&key.salt)?;
     let nonce = crypto::bytes::<12>(&key.nonce)?;
     let mut secret = Zeroizing::new(
-        hex::decode(&key.ciphertext)
+        crate::hex::decode(&key.ciphertext)
             .map_err(|_| Error::new("invalid_format", "Malformed sealed OpenPGP key"))?,
     );
     let wrapping = crypto::password_key(password, &salt)?;
@@ -836,7 +835,7 @@ fn unseal(key: &KeyFile, password: &[u8]) -> Result<SignedSecretKey> {
 
 fn own_certificate(key: &KeyFile) -> Result<SignedPublicKey> {
     key.validate()?;
-    let bytes = hex::decode(&key.certificate)
+    let bytes = crate::hex::decode(&key.certificate)
         .map_err(|_| Error::new("invalid_format", "Malformed OpenPGP certificate"))?;
     let cert = parse_certificate(&bytes)?;
     if hex_fingerprint(&cert.primary_key) != key.fingerprint {
@@ -1930,7 +1929,7 @@ mod tests {
                 let mut exported = SignedSecretKey::from_string(&armored).unwrap().0;
                 assert_eq!(
                     exported.to_public_key().to_bytes().unwrap(),
-                    hex::decode(&key.certificate).unwrap()
+                    crate::hex::decode(&key.certificate).unwrap()
                 );
                 assert_eq!(exported.secret_subkeys.len(), 1);
                 check(exported.primary_key.secret_params(), version);
@@ -1956,14 +1955,14 @@ mod tests {
 
     #[test]
     fn signature_budget_counts_every_collection_and_the_certificate_total() {
-        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        let fixture: ipg_json::Value = ipg_json::from_str(include_str!(
             "../../tests/vectors/openpgp-revocation-limit-v1.json"
         ))
         .unwrap();
         let group = &fixture["groups"][0];
         let bytes: Vec<u8> = ["primary", "uid", "sign", "encrypt"]
             .into_iter()
-            .flat_map(|part| hex::decode(group["parts"][part].as_str().unwrap()).unwrap())
+            .flat_map(|part| crate::hex::decode(group["parts"][part].as_str().unwrap()).unwrap())
             .collect();
         let original = parse_certificate(&bytes).unwrap();
         let signature = original.details.users[0].signatures[0].clone();
@@ -2176,7 +2175,7 @@ mod tests {
         for algorithm in [Algorithm::Ed25519, Algorithm::P384] {
             let key = generate("Signer <signer@example.test>", algorithm, password).unwrap();
             let secret = unseal(&key, password).unwrap();
-            let certificate = hex::decode(&key.certificate).unwrap();
+            let certificate = crate::hex::decode(&key.certificate).unwrap();
             let hash = if algorithm == Algorithm::P384 {
                 HashAlgorithm::Sha384
             } else {
@@ -2215,11 +2214,11 @@ mod tests {
                 .unwrap();
                 assert_eq!(&*result.plaintext, data);
                 assert_eq!(result.verification.fingerprint, key.fingerprint);
-                let dir = tempfile::tempdir().unwrap();
+                let dir = crate::files::tempdir().unwrap();
                 let path = |name: &str| dir.path().join(name).display().to_string();
                 std::fs::write(path("message"), &message).unwrap();
                 std::fs::write(path("certificate"), &certificate).unwrap();
-                std::fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+                std::fs::write(path("key"), ipg_json::to_vec(&key).unwrap()).unwrap();
                 std::fs::write(path("password"), password).unwrap();
                 let request = |pin: String| crate::Request::OpenpgpMessageVerify {
                     input: path("message"),

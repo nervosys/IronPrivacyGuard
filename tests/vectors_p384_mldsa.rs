@@ -7,24 +7,24 @@
 use ic_core::traits::{KeyAgreement, SignatureScheme};
 use ic_ec::{EcdhP384, EcdsaP384Sha384};
 use ic_mldsa::sign as mldsa;
+use ipg_json::Value;
+use ipg_json::de::DeserializeOwned;
+use iron_privacy_guard::secrets::Zeroizing;
 use iron_privacy_guard::{
     artifact,
     crypto::{self, Custody, Envelope, IdentityKey, PublicKey, Signature},
     lifecycle::{self, Revocation, RevocationReason, Validity},
     trust::TrustStore,
 };
-use serde::de::DeserializeOwned;
-use serde_json::Value;
-use zeroize::Zeroizing;
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("vectors/native-p384-mldsa65-v1.json")).unwrap()
+    ipg_json::from_str(include_str!("vectors/native-p384-mldsa65-v1.json")).unwrap()
 }
 fn decode<T: DeserializeOwned>(value: &Value) -> T {
-    serde_json::from_value(value.clone()).unwrap()
+    ipg_json::from_value(value.clone()).unwrap()
 }
 fn bytes(value: &Value) -> Vec<u8> {
-    hex::decode(value.as_str().unwrap()).unwrap()
+    iron_privacy_guard::hex::decode(value.as_str().unwrap()).unwrap()
 }
 fn framed(domain: &str, fields: &[&[u8]]) -> Vec<u8> {
     let mut out = domain.as_bytes().to_vec();
@@ -101,7 +101,7 @@ fn independent_identity_and_mldsa_keygen_agree() {
     let derived = crypto::identity(crypto::Suite::P384MlDsa, &encryption, &signing).unwrap();
     assert_eq!(derived, service.public);
     assert_eq!(derived.format, crypto::P384_MLDSA_KEY_FORMAT);
-    let metadata = artifact::inspect(&serde_json::to_vec(&v["public"]).unwrap()).unwrap();
+    let metadata = artifact::inspect(&ipg_json::to_vec(&v["public"]).unwrap()).unwrap();
     assert_eq!(metadata.format, crypto::P384_MLDSA_KEY_FORMAT);
 }
 

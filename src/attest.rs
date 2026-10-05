@@ -34,8 +34,8 @@ use ic_core::traits::Digest;
 #[cfg(feature = "attestation")]
 use ic_hash::Sha256;
 use ic_hash::Sha384;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 
 pub const EVIDENCE_FORMAT: &str = "ipg-tpm-evidence-v1";
 pub const CHALLENGE_FORMAT: &str = "ipg-tpm-challenge-v1";
@@ -168,9 +168,9 @@ pub struct AttestationReport {
 
 #[cfg(feature = "attestation")]
 pub(crate) fn hex_field(value: &str, max: usize, what: &str) -> Result<Vec<u8>> {
-    let bytes = hex::decode(value)
+    let bytes = crate::hex::decode(value)
         .map_err(|_| Error::new("invalid_format", format!("{what} is not hex")))?;
-    if bytes.is_empty() || bytes.len() > max || hex::encode(&bytes) != value {
+    if bytes.is_empty() || bytes.len() > max || crate::hex::encode(&bytes) != value {
         return Err(Error::new(
             "invalid_format",
             format!("{what} must be 1..{max} bytes of lowercase hex"),
@@ -192,7 +192,7 @@ pub(crate) fn qualifying_data(fingerprint: &str, role: Role) -> Vec<u8> {
 
 impl Evidence {
     pub fn digest(&self) -> Result<String> {
-        Ok(hex::encode(Sha384::digest(&serde_json::to_vec(self)?)))
+        Ok(crate::hex::encode(Sha384::digest(&ipg_json::to_vec(self)?)))
     }
 }
 
@@ -372,8 +372,8 @@ pub(crate) fn check_evidence(
     Ok(Checked {
         report: AttestationReport {
             fingerprint: evidence.public.fingerprint.clone(),
-            ek_certificate_sha256: hex::encode(Sha256::digest(&certificates[0])),
-            ek_certificate_anchor: hex::encode(Sha256::digest(&anchor)),
+            ek_certificate_sha256: crate::hex::encode(Sha256::digest(&certificates[0])),
+            ek_certificate_anchor: crate::hex::encode(Sha256::digest(&anchor)),
             firmware_version: format!("{:016x}", firmware.unwrap_or(0)),
             key_attributes: vec![
                 "fixedTPM".into(),
@@ -453,14 +453,14 @@ pub fn challenge(
             format: CHALLENGE_FORMAT.into(),
             fingerprint: evidence.public.fingerprint.clone(),
             evidence_digest: digest.clone(),
-            id_object: hex::encode(id_object),
-            encrypted_secret: hex::encode(encrypted_secret),
+            id_object: crate::hex::encode(id_object),
+            encrypted_secret: crate::hex::encode(encrypted_secret),
         },
         ChallengeSecret {
             format: CHALLENGE_SECRET_FORMAT.into(),
             fingerprint: evidence.public.fingerprint.clone(),
             evidence_digest: digest,
-            credential: hex::encode(credential.as_ref()),
+            credential: crate::hex::encode(credential.as_ref()),
         },
         checked.report,
     ))

@@ -4,8 +4,8 @@ use crate::{
     crypto::{self, IdentityKey, PublicKey, SecretKey, Suite},
     error::{Error, Result},
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 
 pub const MAX_UNIX_TIME: u64 = 253_402_300_799;
 

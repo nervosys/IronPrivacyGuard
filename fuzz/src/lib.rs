@@ -1,8 +1,8 @@
 //! Shared oracles used by libFuzzer and stable Rust regression tests.
 //! Never execute attacker-selected file operations or password KDFs.
 #![forbid(unsafe_code)]
+use ipg_json::{Value, json};
 use iron_privacy_guard::{Call, MAX_REQUEST_BYTES, Request, crypto, lifecycle, mcp, trust};
-use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
     io::{BufReader, Cursor},
@@ -35,8 +35,8 @@ pub fn stream_headers(data: &[u8]) {
         match (&result, other) {
             (Ok((header, raw)), Ok((other, other_raw))) => {
                 assert_eq!(
-                    serde_json::to_value(header).unwrap(),
-                    serde_json::to_value(other).unwrap()
+                    ipg_json::to_value(header).unwrap(),
+                    ipg_json::to_value(other).unwrap()
                 );
                 assert_eq!(*raw, other_raw);
                 assert_eq!(fragmented.rest, &data[cursor.position() as usize..]);
@@ -49,7 +49,7 @@ pub fn stream_headers(data: &[u8]) {
         let length = u32::from_be_bytes(data[8..12].try_into().unwrap()) as usize;
         assert_eq!(cursor.position() as usize, 12 + length);
         assert_eq!(raw, data[12..12 + length]);
-        assert_eq!(serde_json::to_vec(&header).unwrap(), raw);
+        assert_eq!(ipg_json::to_vec(&header).unwrap(), raw);
         assert_eq!(header.format, stream::FORMAT);
         assert_eq!(header.chunk_size as usize, stream::CHUNK_SIZE);
         assert!((1..=stream::MAX_RECIPIENTS).contains(&header.recipients.len()));
@@ -73,7 +73,7 @@ pub fn openpgp_packets(data: &[u8]) {
 
 pub fn requests(data: &[u8]) {
     if data.len() <= MAX_REQUEST_BYTES as usize
-        && let Ok(candidate) = serde_json::from_slice::<Value>(data)
+        && let Ok(candidate) = ipg_json::from_slice::<Value>(data)
     {
         let report = iron_privacy_guard::validation::validate(candidate);
         assert!(!report.execution);
@@ -84,12 +84,12 @@ pub fn requests(data: &[u8]) {
     if let Ok(value) = iron_privacy_guard::control_json::parse(data) {
         // Default serde_json float parsing is not a bit-exact serialization
         // roundtrip. Require parity with the standard decoder on identical bytes.
-        assert_eq!(value, serde_json::from_slice::<Value>(data).unwrap());
-        let encoded = serde_json::to_vec(&value).unwrap();
+        assert_eq!(value, ipg_json::from_slice::<Value>(data).unwrap());
+        let encoded = ipg_json::to_vec(&value).unwrap();
         if encoded.len() <= MAX_REQUEST_BYTES as usize {
             assert_eq!(
                 iron_privacy_guard::control_json::parse(&encoded).unwrap(),
-                serde_json::from_slice::<Value>(&encoded).unwrap()
+                ipg_json::from_slice::<Value>(&encoded).unwrap()
             );
         }
     }
@@ -100,21 +100,21 @@ pub fn requests(data: &[u8]) {
     }
     if let Ok(call) = parsed {
         let operation = call.request.operation();
-        let encoded = serde_json::to_vec(&call).unwrap();
+        let encoded = ipg_json::to_vec(&call).unwrap();
         // Canonical re-encoding can expand escaped strings; the parser still
         // applies its own byte bound. Decode the typed roundtrip independently.
-        let roundtrip: Call = serde_json::from_slice(&encoded).unwrap();
+        let roundtrip: Call = ipg_json::from_slice(&encoded).unwrap();
         assert_eq!(roundtrip.request.operation(), operation);
         assert_eq!(
-            serde_json::to_value(&roundtrip).unwrap(),
-            serde_json::from_slice::<Value>(&encoded).unwrap()
+            ipg_json::to_value(&roundtrip).unwrap(),
+            ipg_json::from_slice::<Value>(&encoded).unwrap()
         );
         // Only plan is executed: its nested request is NEVER executed.
         let planned = iron_privacy_guard::execute(Request::Plan {
             request: Box::new(call.request),
         })
         .unwrap();
-        let value = serde_json::to_value(planned).unwrap();
+        let value = ipg_json::to_value(planned).unwrap();
         assert_eq!(value["document"]["execution"], false);
         assert_eq!(value["document"]["operation"], operation);
     }
@@ -151,16 +151,16 @@ fn public() -> &'static crypto::PublicKey {
     static PUBLIC: OnceLock<crypto::PublicKey> = OnceLock::new();
     PUBLIC.get_or_init(|| {
         let fixture: Value =
-            serde_json::from_str(include_str!("../../tests/vectors/native-v1.json")).unwrap();
-        serde_json::from_value(fixture["public"].clone()).unwrap()
+            ipg_json::from_str(include_str!("../../tests/vectors/native-v1.json")).unwrap();
+        ipg_json::from_value(fixture["public"].clone()).unwrap()
     })
 }
 fn p384_public() -> &'static crypto::PublicKey {
     static PUBLIC: OnceLock<crypto::PublicKey> = OnceLock::new();
     PUBLIC.get_or_init(|| {
         let fixture: Value =
-            serde_json::from_str(include_str!("../../tests/vectors/native-p384-v1.json")).unwrap();
-        serde_json::from_value(fixture["public"].clone()).unwrap()
+            ipg_json::from_str(include_str!("../../tests/vectors/native-p384-v1.json")).unwrap();
+        ipg_json::from_value(fixture["public"].clone()).unwrap()
     })
 }
 
@@ -168,11 +168,11 @@ pub fn artifacts(data: &[u8]) {
     if data.len() > MAX_REQUEST_BYTES as usize {
         return;
     }
-    if let Ok(pair) = serde_json::from_slice::<Value>(data)
+    if let Ok(pair) = ipg_json::from_slice::<Value>(data)
         && let (Some(base), Some(incoming)) = (pair.get("base"), pair.get("incoming"))
         && let (Ok(base), Ok(incoming)) = (
-            serde_json::from_value::<trust::TrustStore>(base.clone()),
-            serde_json::from_value::<trust::TrustStore>(incoming.clone()),
+            ipg_json::from_value::<trust::TrustStore>(base.clone()),
+            ipg_json::from_value::<trust::TrustStore>(incoming.clone()),
         )
         && let Ok(merged) = iron_privacy_guard::reconciliation::merge(&base, &incoming)
     {
@@ -193,7 +193,7 @@ pub fn artifacts(data: &[u8]) {
     }
     let _ = iron_privacy_guard::artifact::inspect(data);
     if let Ok(signature) =
-        serde_json::from_slice::<iron_privacy_guard::stream_signature::Signature>(data)
+        ipg_json::from_slice::<iron_privacy_guard::stream_signature::Signature>(data)
     {
         let _ = signature.validate();
         for signer in [public(), p384_public()] {
@@ -205,7 +205,7 @@ pub fn artifacts(data: &[u8]) {
             );
         }
     }
-    if let Ok(public) = serde_json::from_slice::<crypto::PublicKey>(data) {
+    if let Ok(public) = ipg_json::from_slice::<crypto::PublicKey>(data) {
         if public.validate().is_ok() {
             // A valid identity always names a known suite with exact key widths.
             let suite = public.suite().unwrap();
@@ -214,45 +214,45 @@ pub fn artifacts(data: &[u8]) {
         }
         let _ = public.pin(&public.fingerprint);
     }
-    if let Ok(reference) = serde_json::from_slice::<iron_privacy_guard::provider::HardwareKey>(data)
+    if let Ok(reference) = ipg_json::from_slice::<iron_privacy_guard::provider::HardwareKey>(data)
         && reference.validate().is_ok()
     {
         assert_eq!(reference.public.suite().unwrap(), crypto::Suite::P384);
         assert_ne!(reference.encryption_key_id, reference.signing_key_id);
         assert!(!reference.token.serial.is_empty());
     }
-    if let Ok(secret) = serde_json::from_slice::<crypto::SecretKey>(data) {
+    if let Ok(secret) = ipg_json::from_slice::<crypto::SecretKey>(data) {
         let _ = secret.validate(); // Deliberately no Argon2 or secret unlock.
     }
-    if let Ok(envelope) = serde_json::from_slice::<crypto::Envelope>(data) {
+    if let Ok(envelope) = ipg_json::from_slice::<crypto::Envelope>(data) {
         let _ = envelope.validate();
-        let encoded = serde_json::to_vec(&envelope).unwrap();
-        let _: crypto::Envelope = serde_json::from_slice(&encoded).unwrap();
+        let encoded = ipg_json::to_vec(&envelope).unwrap();
+        let _: crypto::Envelope = ipg_json::from_slice(&encoded).unwrap();
     }
     // Verify against both suites; a signature must never verify for the wrong suite.
     for signer in [public(), p384_public()] {
         let suite = signer.suite().unwrap();
-        if let Ok(signature) = serde_json::from_slice::<crypto::Signature>(data)
+        if let Ok(signature) = ipg_json::from_slice::<crypto::Signature>(data)
             && crypto::verify(signer, &signer.fingerprint, &signature, b"fuzz").is_ok()
         {
             assert_eq!(signature.algorithm, suite.signature_algorithm());
         }
-        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Revocation>(data)
+        if let Ok(certificate) = ipg_json::from_slice::<lifecycle::Revocation>(data)
             && lifecycle::verify_revocation(signer, &signer.fingerprint, &certificate).is_ok()
         {
             assert_eq!(certificate.algorithm, suite.signature_algorithm());
         }
-        if let Ok(certificate) = serde_json::from_slice::<lifecycle::Validity>(data)
+        if let Ok(certificate) = ipg_json::from_slice::<lifecycle::Validity>(data)
             && lifecycle::verify_validity(signer, &signer.fingerprint, &certificate).is_ok()
         {
             assert_eq!(certificate.algorithm, suite.signature_algorithm());
         }
     }
-    if let Ok(store) = serde_json::from_slice::<trust::TrustStore>(data)
+    if let Ok(store) = ipg_json::from_slice::<trust::TrustStore>(data)
         && let Ok(digest) = store.digest()
     {
         let roundtrip: trust::TrustStore =
-            serde_json::from_slice(&serde_json::to_vec(&store).unwrap()).unwrap();
+            ipg_json::from_slice(&ipg_json::to_vec(&store).unwrap()).unwrap();
         assert_eq!(roundtrip.digest().unwrap(), digest);
         let _ = store.evaluate(&public().fingerprint, 1800000000);
         let comparison = iron_privacy_guard::reconciliation::compare(&store, &roundtrip).unwrap();
@@ -307,8 +307,8 @@ pub fn mcp(data: &[u8]) {
                     response.get("result").is_some(),
                     response.get("error").is_some()
                 );
-                let encoded = serde_json::to_vec(&response).unwrap();
-                assert_eq!(serde_json::from_slice::<Value>(&encoded).unwrap(), response);
+                let encoded = ipg_json::to_vec(&response).unwrap();
+                assert_eq!(ipg_json::from_slice::<Value>(&encoded).unwrap(), response);
                 if let Some(result) = response
                     .get("result")
                     .and_then(|v| v.get("structuredContent"))
@@ -321,7 +321,7 @@ pub fn mcp(data: &[u8]) {
         }
         // Disabled filesystem operations must remain inaccessible after any sequence.
         let probe = json!({"jsonrpc":"2.0","id":"probe","method":"tools/call","params":{"name":"ipg_hash","arguments":{"input":"MUST-NOT-BE-READ"}}});
-        let response = server.handle(&serde_json::to_vec(&probe).unwrap()).unwrap();
+        let response = server.handle(&ipg_json::to_vec(&probe).unwrap()).unwrap();
         assert!(response.get("error").is_some());
     }
 }

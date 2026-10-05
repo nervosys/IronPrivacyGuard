@@ -1,14 +1,14 @@
 //! A minimal TPM 2.0 command layer: command execution with password, salted HMAC
 //! and policy sessions, parameter encryption, and the commands IPG needs.
 //!
-//! HMAC sessions are salted with an RSA storage or endorsement key, so their
+//! HMAC sessions are salted with an RSA or P-384 storage or endorsement key, so their
 //! session key never appears on the TPM interface; authorization values are never
 //! sent, and marked parameters travel AES-128-CFB encrypted.
-use super::crypto::{aes_cfb, hmac, kdfa, oaep_encrypt};
+use super::crypto::{aes_cfb, hmac, kdfa, session_salt};
 use super::marshal::{Reader, Writer};
 use super::structures::{ALG_AES, ALG_CFB, ALG_NULL, ALG_SHA256, Public, hash};
 use crate::error::{Error, Result};
-use zeroize::Zeroizing;
+use crate::secrets::Zeroizing;
 
 pub(crate) const RH_OWNER: u32 = 0x4000_0001;
 pub(crate) const RH_NULL: u32 = 0x4000_0007;
@@ -80,9 +80,10 @@ fn tpm_error(command: u32, code: u32) -> Error {
     )
 }
 
-/// A salted, unbound HMAC session using SHA-256 and AES-128-CFB.
+/// A salted, unbound HMAC session using SHA-256/SHA-384 and AES-128-CFB.
 pub(crate) struct HmacSession {
     handle: u32,
+    algorithm: u16,
     key: Zeroizing<Vec<u8>>,
     nonce_tpm: Vec<u8>,
 }
@@ -132,6 +133,19 @@ impl Tpm {
         parameters: &[u8],
         response_handles: usize,
     ) -> Result<Response> {
+        // This command layer uses at most one HMAC session. Multiple HMAC
+        // sessions need additional cross-session nonce binding in cpHash auth.
+        if auths
+            .iter()
+            .filter(|a| matches!(a, Auth::Hmac { .. }))
+            .count()
+            > 1
+        {
+            return Err(Error::new(
+                "invalid_request",
+                "Multiple HMAC sessions are unsupported",
+            ));
+        }
         let mut parameters = parameters.to_vec();
         // Per-session caller nonces and attributes for this command.
         let mut nonces: Vec<Vec<u8>> = Vec::new();
@@ -173,13 +187,13 @@ impl Tpm {
                 }
             }
         }
-        let cp_hash = {
+        let cp_data = {
             let mut data = code.to_be_bytes().to_vec();
             for (_, name) in handles {
                 data.extend_from_slice(name);
             }
             data.extend_from_slice(&parameters);
-            hash(ALG_SHA256, &data)?
+            data
         };
         let mut w = Writer::default();
         let tagged = !auths.is_empty();
@@ -208,9 +222,10 @@ impl Tpm {
                         auth_value,
                         ..
                     } => {
-                        let key = [&session.key[..], auth_value].concat();
+                        let cp_hash = hash(session.algorithm, &cp_data)?;
+                        let key = Zeroizing::new([&session.key[..], auth_value].concat());
                         let mac = hmac(
-                            ALG_SHA256,
+                            session.algorithm,
                             &key,
                             &[
                                 &cp_hash[..],
@@ -264,6 +279,18 @@ impl Tpm {
         if rc != 0 {
             return Err(tpm_error(code, rc));
         }
+        if tag
+            != if tagged {
+                TAG_SESSIONS
+            } else {
+                TAG_NO_SESSIONS
+            }
+        {
+            return Err(Error::new(
+                "provider_error",
+                "Unexpected TPM response authorization tag",
+            ));
+        }
         let mut out_handles = Vec::new();
         for _ in 0..response_handles {
             out_handles.push(r.u32()?);
@@ -275,15 +302,12 @@ impl Tpm {
             r.remaining().to_vec()
         };
         if tag == TAG_SESSIONS {
-            let rp_hash = hash(
-                ALG_SHA256,
-                &[
-                    &0u32.to_be_bytes()[..],
-                    &code.to_be_bytes(),
-                    &out_parameters,
-                ]
-                .concat(),
-            )?;
+            let rp_data = [
+                &0u32.to_be_bytes()[..],
+                &code.to_be_bytes(),
+                &out_parameters,
+            ]
+            .concat();
             for (index, auth) in auths.iter_mut().enumerate() {
                 let nonce_tpm = r.tpm2b()?.to_vec();
                 let flags = r.u8()?;
@@ -295,9 +319,17 @@ impl Tpm {
                     ..
                 } = auth
                 {
-                    let key = [&session.key[..], auth_value].concat();
+                    if nonce_tpm.len() < 16
+                        || nonce_tpm.len() > super::structures::digest_len(session.algorithm)?
+                        || flags & CONTINUE_SESSION == 0
+                        || flags & !(CONTINUE_SESSION | DECRYPT | ENCRYPT) != 0
+                    {
+                        return Err(Error::new("provider_error", "Invalid TPM session response"));
+                    }
+                    let rp_hash = hash(session.algorithm, &rp_data)?;
+                    let key = Zeroizing::new([&session.key[..], auth_value].concat());
                     let expected = hmac(
-                        ALG_SHA256,
+                        session.algorithm,
                         &key,
                         &[&rp_hash[..], &nonce_tpm, &nonces[index], &[flags]].concat(),
                     )?;
@@ -329,15 +361,14 @@ impl Tpm {
         })
     }
 
-    /// Start a salted, unbound HMAC session. The salt is RSA-OAEP encrypted to
-    /// `salt_key` (a loaded RSA decryption key such as the EK or SRK).
+    /// Start a salted, unbound HMAC session using the salt key's name hash.
     pub(crate) fn hmac_session(
         &mut self,
         salt_handle: u32,
         salt_key: &Public,
     ) -> Result<HmacSession> {
-        let salt = crate::crypto::random::<32>()?;
-        let encrypted = oaep_encrypt(salt_key, "SECRET", salt.as_ref())?;
+        let (salt, encrypted) = session_salt(salt_key)?;
+        let algorithm = salt_key.name_algorithm;
         let nonce_caller = crate::crypto::random::<32>()?.to_vec();
         let mut p = Writer::default();
         p.tpm2b(&nonce_caller)?;
@@ -346,7 +377,7 @@ impl Tpm {
             .u16(ALG_AES)
             .u16(128)
             .u16(ALG_CFB)
-            .u16(ALG_SHA256);
+            .u16(algorithm);
         let response = self.execute(
             CC_START_AUTH_SESSION,
             &[(salt_handle, &[]), (RH_NULL, &[])],
@@ -357,16 +388,21 @@ impl Tpm {
         let mut r = Reader::new(&response.parameters);
         let nonce_tpm = r.tpm2b()?.to_vec();
         r.end()?;
+        if nonce_tpm.len() < 16 || nonce_tpm.len() > super::structures::digest_len(algorithm)? {
+            self.flush(response.handles[0]);
+            return Err(Error::new("provider_error", "Invalid TPM session nonce"));
+        }
         let key = kdfa(
-            ALG_SHA256,
+            algorithm,
             salt.as_ref(),
             "ATH",
             &nonce_tpm,
             &nonce_caller,
-            256,
+            (super::structures::digest_len(algorithm)? * 8) as u32,
         )?;
         Ok(HmacSession {
             handle: response.handles[0],
+            algorithm,
             key,
             nonce_tpm,
         })
@@ -673,9 +709,38 @@ impl Tpm {
                 0,
             )?;
             let mut r = Reader::new(&response.parameters);
-            data.extend_from_slice(r.tpm2b()?);
+            let bytes = r.tpm2b()?;
+            if bytes.is_empty() || bytes.len() > chunk {
+                return Err(Error::new("provider_error", "Invalid TPM NV read length"));
+            }
+            data.extend_from_slice(bytes);
+            r.end()?;
         }
         Ok(data)
+    }
+
+    #[cfg(all(feature = "tpm", target_os = "linux"))]
+    pub(crate) fn ecc_curves(&mut self) -> Result<Vec<u16>> {
+        let mut p = Writer::default();
+        p.u32(8).u32(0).u32(128);
+        let response = self.execute(CC_GET_CAPABILITY, &[], &mut [], &p.finish(), 0)?;
+        let mut r = Reader::new(&response.parameters);
+        if r.u8()? != 0 || r.u32()? != 8 {
+            return Err(Error::new(
+                "provider_error",
+                "Incomplete ECC capability response",
+            ));
+        }
+        let count = r.u32()?;
+        if count > 128 {
+            return Err(Error::new(
+                "provider_error",
+                "Oversized ECC capability response",
+            ));
+        }
+        let curves = (0..count).map(|_| r.u16()).collect::<Result<Vec<_>>>()?;
+        r.end()?;
+        Ok(curves)
     }
 
     /// TPM properties (TPM_CAP_TPM_PROPERTIES) from `first`, as (tag, value) pairs.
@@ -689,7 +754,17 @@ impl Tpm {
             return Err(Error::new("provider_error", "Unexpected capability"));
         }
         let entries = r.u32()?;
-        (0..entries).map(|_| Ok((r.u32()?, r.u32()?))).collect()
+        if entries > count || entries > 1024 {
+            return Err(Error::new(
+                "provider_error",
+                "Oversized TPM property response",
+            ));
+        }
+        let properties = (0..entries)
+            .map(|_| Ok((r.u32()?, r.u32()?)))
+            .collect::<Result<Vec<_>>>()?;
+        r.end()?;
+        Ok(properties)
     }
 }
 
@@ -710,8 +785,54 @@ fn encrypt_first(
     let body = parameters
         .get_mut(2..2 + length)
         .ok_or_else(|| Error::new("provider_error", "Malformed protected parameter"))?;
-    let key = [&session.key[..], auth_value].concat();
-    let material = kdfa(ALG_SHA256, &key, "CFB", nonce_newer, nonce_older, 256)?;
+    let key = Zeroizing::new([&session.key[..], auth_value].concat());
+    let material = kdfa(
+        session.algorithm,
+        &key,
+        "CFB",
+        nonce_newer,
+        nonce_older,
+        256,
+    )?;
     let iv: [u8; 16] = material[16..32].try_into().expect("32 bytes");
     aes_cfb(&material[..16], &iv, body, encrypt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Reply(Vec<u8>);
+    impl Transport for Reply {
+        fn exchange(&mut self, _: &[u8]) -> Result<Vec<u8>> {
+            Ok(self.0.clone())
+        }
+    }
+
+    #[test]
+    fn authorized_commands_require_an_authorized_response() {
+        // A successful no-session frame cannot satisfy a command's HMAC session.
+        let mut response = Writer::default();
+        response.u16(TAG_NO_SESSIONS).u32(10).u32(0);
+        let mut tpm = Tpm::new(Box::new(Reply(response.finish())));
+        let mut session = HmacSession {
+            handle: 0x0200_0000,
+            algorithm: ALG_SHA256,
+            key: Zeroizing::new(vec![1; 32]),
+            nonce_tpm: vec![2; 32],
+        };
+        let result = tpm.execute(
+            CC_SIGN,
+            &[(0x8000_0000, b"name")],
+            &mut [Auth::Hmac {
+                session: &mut session,
+                auth_value: b"test authorization",
+                encrypt_command: false,
+                encrypt_response: false,
+            }],
+            &[],
+            0,
+        );
+        assert_eq!(result.err().unwrap().code, "provider_error");
+    }
 }

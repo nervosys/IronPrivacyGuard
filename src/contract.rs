@@ -1,5 +1,5 @@
 //! Shared machine-readable constraints; semantic authentication remains at runtime.
-use schemars::{Schema, SchemaGenerator, json_schema};
+use ipg_json::{Schema, SchemaGenerator, json_schema};
 
 macro_rules! fixed {
     ($name:ident, $value:expr) => {
@@ -39,7 +39,7 @@ pub fn aws_region(_: &mut SchemaGenerator) -> Schema {
 /// A KMS key ARN; aliases are refused because they can be repointed.
 pub fn optional_kms_key_arn(generator: &mut SchemaGenerator) -> Schema {
     let mut schema = kms_key_arn(generator);
-    schema.insert("type".into(), serde_json::json!(["string", "null"]));
+    schema.insert("type".into(), ipg_json::json!(["string", "null"]));
     schema
 }
 pub fn kms_key_arn(_: &mut SchemaGenerator) -> Schema {
@@ -155,7 +155,7 @@ pub fn seed_ciphertext(_: &mut SchemaGenerator) -> Schema {
 /// Software secret keys bind the Curve25519 or hybrid identity suites.
 pub fn software_public_key(_: &mut SchemaGenerator) -> Schema {
     let identity = |format: &str, encryption: &str, signing: &str, fingerprint: &str| {
-        serde_json::json!({"type":"object", "additionalProperties":false,
+        ipg_json::json!({"type":"object", "additionalProperties":false,
             "required":["format","encryption_key","signing_key","fingerprint"],
             "properties":{"format":{"type":"string","const":format},
                 "encryption_key":{"type":"string","pattern":encryption,"not":{"pattern":"[^0-9a-f]"}},
@@ -165,20 +165,20 @@ pub fn software_public_key(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"oneOf":[identity(KEY_FORMAT, CURVE25519_KEY, CURVE25519_KEY, FINGERPRINT_256),
         identity(HYBRID_KEY_FORMAT, HYBRID_KEY, HYBRID_SIGNING_KEY, FINGERPRINT_384)]})
 }
-fn pattern(value: &str) -> serde_json::Value {
-    serde_json::json!({"pattern":value})
+fn pattern(value: &str) -> ipg_json::Value {
+    ipg_json::json!({"pattern":value})
 }
-fn when(field: &str, value: &str, then: serde_json::Value) -> serde_json::Value {
-    serde_json::json!({"if":{"properties":{field:{"const":value}}}, "then":{"properties":then}})
+fn when(field: &str, value: &str, then: ipg_json::Value) -> ipg_json::Value {
+    ipg_json::json!({"if":{"properties":{field:{"const":value}}}, "then":{"properties":then}})
 }
 pub fn public_suite(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
-        serde_json::json!([
-            when("format", KEY_FORMAT, serde_json::json!({"encryption_key":pattern(CURVE25519_KEY),"signing_key":pattern(CURVE25519_KEY),"fingerprint":pattern(FINGERPRINT_256)})),
-            when("format", P384_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
-            when("format", HYBRID_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(HYBRID_KEY),"signing_key":pattern(HYBRID_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
-            when("format", P384_MLDSA_KEY_FORMAT, serde_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_MLDSA_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
+        ipg_json::json!([
+            when("format", KEY_FORMAT, ipg_json::json!({"encryption_key":pattern(CURVE25519_KEY),"signing_key":pattern(CURVE25519_KEY),"fingerprint":pattern(FINGERPRINT_256)})),
+            when("format", P384_KEY_FORMAT, ipg_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
+            when("format", HYBRID_KEY_FORMAT, ipg_json::json!({"encryption_key":pattern(HYBRID_KEY),"signing_key":pattern(HYBRID_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
+            when("format", P384_MLDSA_KEY_FORMAT, ipg_json::json!({"encryption_key":pattern(P384_KEY),"signing_key":pattern(P384_MLDSA_SIGNING_KEY),"fingerprint":pattern(FINGERPRINT_384)})),
         ]),
     );
 }
@@ -186,9 +186,9 @@ pub fn public_suite(schema: &mut Schema) {
 pub fn secret_suite(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
-        serde_json::json!([
-            when("format", SECRET_FORMAT, serde_json::json!({"public":{"properties":{"format":{"const":KEY_FORMAT}}},"ciphertext":pattern("^[0-9a-f]{128}$")})),
-            when("format", HYBRID_SECRET_FORMAT, serde_json::json!({"public":{"properties":{"format":{"const":HYBRID_KEY_FORMAT}}},"ciphertext":pattern("^[0-9a-f]{320}$")})),
+        ipg_json::json!([
+            when("format", SECRET_FORMAT, ipg_json::json!({"public":{"properties":{"format":{"const":KEY_FORMAT}}},"ciphertext":pattern("^[0-9a-f]{128}$")})),
+            when("format", HYBRID_SECRET_FORMAT, ipg_json::json!({"public":{"properties":{"format":{"const":HYBRID_KEY_FORMAT}}},"ciphertext":pattern("^[0-9a-f]{320}$")})),
         ]),
     );
 }
@@ -198,21 +198,21 @@ pub fn suite(_: &mut SchemaGenerator) -> Schema {
 pub fn envelope_suite(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
-        serde_json::json!([
+        ipg_json::json!([
             when(
                 "suite",
                 SUITE,
-                serde_json::json!({"ephemeral_key":pattern(CURVE25519_KEY)})
+                ipg_json::json!({"ephemeral_key":pattern(CURVE25519_KEY)})
             ),
             when(
                 "suite",
                 P384_SUITE,
-                serde_json::json!({"ephemeral_key":pattern(P384_KEY)})
+                ipg_json::json!({"ephemeral_key":pattern(P384_KEY)})
             ),
             when(
                 "suite",
                 HYBRID_SUITE,
-                serde_json::json!({"ephemeral_key":pattern(HYBRID_EPHEMERAL)})
+                ipg_json::json!({"ephemeral_key":pattern(HYBRID_EPHEMERAL)})
             ),
         ]),
     );
@@ -230,26 +230,26 @@ pub fn signature_bytes(_: &mut SchemaGenerator) -> Schema {
 pub fn signature_suite(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
-        serde_json::json!([
+        ipg_json::json!([
             when(
                 "algorithm",
                 ED25519,
-                serde_json::json!({"signature":pattern("^[0-9a-f]{128}$")})
+                ipg_json::json!({"signature":pattern("^[0-9a-f]{128}$")})
             ),
             when(
                 "algorithm",
                 ECDSA_P384,
-                serde_json::json!({"signature":pattern("^[0-9a-f]{192}$")})
+                ipg_json::json!({"signature":pattern("^[0-9a-f]{192}$")})
             ),
             when(
                 "algorithm",
                 COMPOSITE,
-                serde_json::json!({"signature":pattern(COMPOSITE_SIGNATURE)})
+                ipg_json::json!({"signature":pattern(COMPOSITE_SIGNATURE)})
             ),
             when(
                 "algorithm",
                 P384_MLDSA,
-                serde_json::json!({"signature":pattern(P384_MLDSA_SIGNATURE)})
+                ipg_json::json!({"signature":pattern(P384_MLDSA_SIGNATURE)})
             ),
         ]),
     );
@@ -308,7 +308,7 @@ pub fn entries(generator: &mut SchemaGenerator) -> Schema {
 pub fn trust_version(schema: &mut Schema) {
     schema.insert(
         "allOf".into(),
-        serde_json::json!([{
+        ipg_json::json!([{
             "if":{"properties":{"format":{"const":"ipg-trust-v1"}}},
             "then":{"properties":{"entries":{"items":{"properties":{"validity":{"type":"null"}}}}}}
         }]),

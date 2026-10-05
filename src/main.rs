@@ -1,11 +1,11 @@
 #![forbid(unsafe_code)]
+use ipg_json::{Map, Value};
 use iron_privacy_guard::{Request, error::Error};
-use serde_json::{Map, Value};
 use std::io::{self, Write};
 
 fn emit(value: &Value) -> io::Result<()> {
     let mut stdout = io::stdout().lock();
-    serde_json::to_writer(&mut stdout, value)?;
+    ipg_json::to_writer(&mut stdout, value)?;
     stdout.write_all(b"\n")?;
     stdout.flush()
 }
@@ -20,7 +20,7 @@ fn main() {
                 // Startup has no JSON-RPC request to answer. Keep stdout protocol-only.
                 eprintln!(
                     "{}",
-                    serde_json::to_string(&error).expect("serializable error")
+                    ipg_json::to_string(&error).expect("serializable error")
                 );
                 std::process::exit(error.exit_code());
             }
@@ -126,7 +126,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
     if !remainder.is_empty() {
         return Err(Error::new("invalid_request", "Missing flag value"));
     }
-    serde_json::from_value(Value::Object(map)).map_err(|_| {
+    ipg_json::from_value(Value::Object(map)).map_err(|_| {
         Error::new(
             "invalid_request",
             "Unknown operation, missing field, or unsupported field; use ipg schema",
@@ -137,7 +137,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use ipg_json::json;
 
     #[test]
     fn every_dotted_operation_accepts_subcommands_and_legacy_aliases() {
@@ -184,11 +184,7 @@ mod tests {
                     }
                 }
                 let parsed = parse(args).unwrap();
-                assert_eq!(
-                    serde_json::to_value(parsed).unwrap(),
-                    request,
-                    "{operation}"
-                );
+                assert_eq!(ipg_json::to_value(parsed).unwrap(), request, "{operation}");
             }
         }
     }
@@ -214,7 +210,7 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(
-            serde_json::to_value(parsed).unwrap()["input"],
+            ipg_json::to_value(parsed).unwrap()["input"],
             "file.with.dots and spaces"
         );
     }

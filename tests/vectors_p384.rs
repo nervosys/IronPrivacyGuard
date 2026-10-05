@@ -5,24 +5,24 @@
 //! token through the public provider interface, exactly as the hardware backend does.
 use ic_core::traits::{KeyAgreement, SignatureScheme};
 use ic_ec::{EcdhP384, EcdsaP384Sha384};
+use ipg_json::Value;
+use ipg_json::de::DeserializeOwned;
+use iron_privacy_guard::secrets::Zeroizing;
 use iron_privacy_guard::{
     artifact,
     crypto::{self, Custody, Envelope, IdentityKey, PublicKey, Signature},
     lifecycle::{self, Revocation, RevocationReason, Validity},
     trust::TrustStore,
 };
-use serde::de::DeserializeOwned;
-use serde_json::Value;
-use zeroize::Zeroizing;
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap()
+    ipg_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap()
 }
 fn decode<T: DeserializeOwned>(value: &Value) -> T {
-    serde_json::from_value(value.clone()).unwrap()
+    ipg_json::from_value(value.clone()).unwrap()
 }
 fn bytes(value: &Value) -> Vec<u8> {
-    hex::decode(value.as_str().unwrap()).unwrap()
+    iron_privacy_guard::hex::decode(value.as_str().unwrap()).unwrap()
 }
 
 struct FixtureToken {
@@ -76,7 +76,7 @@ fn independent_p384_identity_derives_the_same_fingerprint() {
     EcdsaP384Sha384::public_key(&token.signing, &mut signing).unwrap();
     let derived = crypto::identity(crypto::Suite::P384, &encryption, &signing).unwrap();
     assert_eq!(derived, token.public);
-    let metadata = artifact::inspect(&serde_json::to_vec(&v["public"]).unwrap()).unwrap();
+    let metadata = artifact::inspect(&ipg_json::to_vec(&v["public"]).unwrap()).unwrap();
     assert_eq!(metadata.format, crypto::P384_KEY_FORMAT);
     assert_eq!(metadata.fingerprint.unwrap(), token.public.fingerprint);
 }
@@ -119,7 +119,7 @@ fn independent_p384_envelopes_decrypt_with_matching_intermediates() {
             // Flip a coordinate bit, not the SEC1 prefix, so points stay well-formed text.
             let index = decoded.len() - 1;
             decoded[index] ^= 1;
-            tampered[field] = Value::String(hex::encode(decoded));
+            tampered[field] = Value::String(iron_privacy_guard::hex::encode(decoded));
             let tampered: Envelope = decode(&tampered);
             assert!(crypto::decrypt_with(&token, &tampered).is_err(), "{field}");
         }
@@ -167,7 +167,7 @@ fn independent_p384_certificates_and_snapshots_match() {
         let revocation: Revocation = decode(value);
         lifecycle::verify_revocation(&token.public, &fingerprint, &revocation).unwrap();
         let reproduced = lifecycle::revoke_with(&token, &fingerprint, reason).unwrap();
-        assert_eq!(serde_json::to_value(reproduced).unwrap(), *value);
+        assert_eq!(ipg_json::to_value(reproduced).unwrap(), *value);
     }
     let validity: Validity = decode(&v["validity"]);
     lifecycle::verify_validity(&token.public, &fingerprint, &validity).unwrap();
@@ -178,7 +178,7 @@ fn independent_p384_certificates_and_snapshots_match() {
         validity.not_after,
     )
     .unwrap();
-    assert_eq!(serde_json::to_value(reproduced).unwrap(), v["validity"]);
+    assert_eq!(ipg_json::to_value(reproduced).unwrap(), v["validity"]);
     for snapshot in v["snapshots"].as_array().unwrap() {
         let store: TrustStore = decode(&snapshot["snapshot"]);
         assert_eq!(
@@ -203,16 +203,16 @@ fn p384_artifacts_reject_suite_confusion() {
     public["format"] = crypto::KEY_FORMAT.into();
     assert!(decode::<PublicKey>(&public).validate().is_err());
     // A reference to this identity is public data and inspects without a token.
-    let reference = serde_json::json!({"format":"ipg-pkcs11-key-v1","public":v["public"],
+    let reference = ipg_json::json!({"format":"ipg-pkcs11-key-v1","public":v["public"],
         "token":{"serial":"0123456789abcdef","label":"ipg-test","manufacturer":"Test","model":"Oracle"},
         "encryption_key_id":"01".repeat(16),"signing_key_id":"02".repeat(16)});
-    let metadata = artifact::inspect(&serde_json::to_vec(&reference).unwrap()).unwrap();
+    let metadata = artifact::inspect(&ipg_json::to_vec(&reference).unwrap()).unwrap();
     assert_eq!(metadata.fingerprint.unwrap(), token.public.fingerprint);
     let mut same_ids = reference.clone();
     same_ids["signing_key_id"] = same_ids["encryption_key_id"].clone();
-    assert!(artifact::inspect(&serde_json::to_vec(&same_ids).unwrap()).is_err());
+    assert!(artifact::inspect(&ipg_json::to_vec(&same_ids).unwrap()).is_err());
     let mut software_identity = reference.clone();
-    software_identity["public"] = serde_json::json!({"format":"ipg-public-v1",
+    software_identity["public"] = ipg_json::json!({"format":"ipg-public-v1",
         "encryption_key":"00".repeat(32),"signing_key":"00".repeat(32),"fingerprint":"00".repeat(32)});
-    assert!(artifact::inspect(&serde_json::to_vec(&software_identity).unwrap()).is_err());
+    assert!(artifact::inspect(&ipg_json::to_vec(&software_identity).unwrap()).is_err());
 }

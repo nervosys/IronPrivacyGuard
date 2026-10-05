@@ -23,7 +23,12 @@ Native IPG keys, envelopes and signatures are not OpenPGP. A separate, optional
 signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
 
-The optional OpenPGP feature uses rPGP, whose transitive RSA crate has a known
+The current checkout enables the native OpenPGP curve profile by default, adding
+no dependencies beyond base IPG. Core software workflows require no external
+cryptographic programs or services. The default build depends only on IronCrypto
+and first-party IPG crates; optional integrations still contain other dependencies.
+See [dependency boundaries](docs/DEPENDENCIES.md).
+The broader `openpgp` feature uses rPGP, whose transitive RSA crate has a known
 private-key timing advisory (RUSTSEC-2023-0071). IPG rejects RSA secret-key imports
 and uses RSA only for public-key operations; details are in the
 [OpenPGP security notes](docs/OPENPGP.md#what-provides-the-cryptography).
@@ -34,7 +39,8 @@ Install the CLI from [crates.io](https://crates.io/crates/ipg):
 cargo install ipg --version 0.1.2 --locked
 ```
 
-This installs the core CLI. Hardware and interoperability integrations are
+This installs the published 0.1.2 core CLI; default native OpenPGP is a later,
+unreleased change in this checkout. Hardware and broader interoperability integrations are
 optional Cargo features; see their sections below. Prebuilt release binaries and
 checksums are published on the [GitHub releases page](https://github.com/nervosys/IronPrivacyGuard/releases).
 
@@ -52,7 +58,7 @@ The executable is `target/release/ipg` (`ipg.exe` on Windows). To install the
 current checkout instead, run `cargo install --path . --locked`. IronCrypto
 components are pinned to crates.io release `0.2.7`, and Cargo.lock pins the
 remaining dependency graph for this repository.
-All native cryptographic primitives use IronCrypto. There is no OpenSSL, C
+Native IPG identity and envelope cryptography uses IronCrypto. There is no OpenSSL, C
 compilation, GPG subprocess, or external cryptographic executable. OS entropy and filesystem
 access use platform APIs through Rust crates.
 
@@ -65,14 +71,16 @@ cargo build --release --locked --features pkcs11 --target-dir target
 ```
 
 AWS KMS identities need the `kms` feature (still no C compilation: TLS uses rustls
-with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: on Linux it links the system tpm2-tss
-libraries (`libtss2-dev`); on Windows it uses TPM Base Services through the small
+with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: Linux uses
+IPG's native TPM command layer; Windows uses TPM Base Services through the small
 `ipg-cng` crate, the only code in IPG with `unsafe`. See
 [hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
 verifier holding only the manufacturer's root certificates; the verifier needs the
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
-OpenPGP interoperability needs the `openpgp` feature. It uses the pure-Rust rPGP
+Native OpenPGP curve interchange is enabled by default; `--no-default-features`
+omits it. Explicit `--features openpgp-native` adds no
+dependencies to the base build. The broader `openpgp` feature uses the pure-Rust rPGP
 library, not IronCrypto, for OpenPGP packets and primitives; see
 [OpenPGP interoperability](docs/OPENPGP.md):
 
@@ -426,7 +434,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS; the only `unsafe` code |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
-| `src/openpgp/` | OpenPGP boundary (`openpgp` feature): key file, rPGP operations and IPG certificate policy |
+| `src/openpgp/` | OpenPGP boundary: native IronCrypto curve interchange (`openpgp-native`) or broader rPGP support (`openpgp`), with certificate policy |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
 | `src/reconciliation.rs` | Pinned snapshot comparison and conservative merging |

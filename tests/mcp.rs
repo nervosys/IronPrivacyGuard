@@ -1,10 +1,10 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason},
     mcp::{self, Config, Server},
     trust::{TrustPolicy, TrustStore},
 };
-use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
     fs,
@@ -13,7 +13,7 @@ use std::{
 };
 
 fn send(server: &mut Server, value: Value) -> Option<Value> {
-    server.handle(&serde_json::to_vec(&value).unwrap())
+    server.handle(&ipg_json::to_vec(&value).unwrap())
 }
 fn initialize(server: &mut Server, version: &str) -> Value {
     send(server,json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":version,"capabilities":{},"clientInfo":{"name":"test","version":"1"}}})).unwrap()
@@ -178,7 +178,7 @@ fn catalog_is_complete_with_resolvable_schemas_and_annotations() {
         tools.iter().find(|t| t["name"] == "ipg_hash").unwrap()["annotations"]["readOnlyHint"],
         true
     );
-    let exported: Value = serde_json::from_slice(
+    let exported: Value = ipg_json::from_slice(
         &fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("schemas/mcp-tools.json"))
             .unwrap(),
     )
@@ -220,7 +220,7 @@ fn plan_tool_recursion_targets_full_request_not_tool_arguments() {
 
 #[test]
 fn notifications_cannot_execute_tools_and_allowlist_is_enforced() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let target = dir.path().join("not-created");
     let mut server = ready(Config {
         allowed: Some(["discover".into()].into_iter().collect()),
@@ -244,12 +244,12 @@ fn notifications_cannot_execute_tools_and_allowlist_is_enforced() {
 
 #[test]
 fn host_policy_cannot_be_omitted_replaced_or_cleared() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
     let password = b"MCP policy test passphrase";
     let key = crypto::generate(password).unwrap();
-    fs::write(path("public"), serde_json::to_vec(&key.public).unwrap()).unwrap();
-    fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key.public).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(&key).unwrap()).unwrap();
     let mut store = TrustStore::default();
     store
         .add(key.public.clone(), &key.public.fingerprint)
@@ -267,7 +267,7 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
             &key.public.fingerprint,
         )
         .unwrap();
-    fs::write(path("store"), serde_json::to_vec(&store).unwrap()).unwrap();
+    fs::write(path("store"), ipg_json::to_vec(&store).unwrap()).unwrap();
     let pinned = TrustPolicy {
         store: path("store"),
         expected_digest: store.digest().unwrap(),
@@ -322,7 +322,7 @@ fn host_policy_cannot_be_omitted_replaced_or_cleared() {
         for policy in [
             None,
             Some(Value::Null),
-            Some(serde_json::to_value(&pinned).unwrap()),
+            Some(ipg_json::to_value(&pinned).unwrap()),
         ] {
             let mut args = args.clone();
             if let Some(policy) = policy {
@@ -381,7 +381,7 @@ fn real_stdio_session_has_only_correlated_jsonrpc_responses() {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let target = dir.path().join("snapshot");
     let frames = [
         json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}),
@@ -400,14 +400,14 @@ fn real_stdio_session_has_only_correlated_jsonrpc_responses() {
     let responses: Vec<Value> = String::from_utf8(output.stdout)
         .unwrap()
         .lines()
-        .map(|s| serde_json::from_str(s).unwrap())
+        .map(|s| ipg_json::from_str(s).unwrap())
         .collect();
     assert_eq!(responses.len(), 3);
     assert_eq!(responses[1]["id"], "list");
     let written = &responses[2]["result"];
     assert_eq!(written["isError"], false);
     assert_eq!(
-        serde_json::from_str::<Value>(written["content"][0]["text"].as_str().unwrap()).unwrap(),
+        ipg_json::from_str::<Value>(written["content"][0]["text"].as_str().unwrap()).unwrap(),
         written["structuredContent"]
     );
     assert!(target.exists());
@@ -460,13 +460,13 @@ fn startup_and_frame_errors_fail_closed() {
 
 #[test]
 fn host_policy_allows_a_trusted_workflow_and_reports_its_digest() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
     let password = b"MCP positive workflow passphrase";
     let key = crypto::generate(password).unwrap();
     for (name, bytes) in [
-        ("public", serde_json::to_vec(&key.public).unwrap()),
-        ("key", serde_json::to_vec(&key).unwrap()),
+        ("public", ipg_json::to_vec(&key.public).unwrap()),
+        ("key", ipg_json::to_vec(&key).unwrap()),
         ("pass", password.to_vec()),
         ("message", b"MCP workflow content".to_vec()),
     ] {
@@ -476,7 +476,7 @@ fn host_policy_allows_a_trusted_workflow_and_reports_its_digest() {
     store
         .add(key.public.clone(), &key.public.fingerprint)
         .unwrap();
-    fs::write(path("store"), serde_json::to_vec(&store).unwrap()).unwrap();
+    fs::write(path("store"), ipg_json::to_vec(&store).unwrap()).unwrap();
     let digest = store.digest().unwrap();
     let mut server = ready(Config {
         policy: Some(TrustPolicy {
@@ -538,7 +538,7 @@ fn oversized_mcp_subprocess_frame_emits_protocol_error_and_exits() {
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stderr.is_empty());
-    let response: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let response: Value = ipg_json::from_slice(&output.stdout).unwrap();
     assert_eq!(response["jsonrpc"], "2.0");
     assert_eq!(response["error"]["code"], -32600);
 }

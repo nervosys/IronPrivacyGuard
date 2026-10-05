@@ -9,9 +9,9 @@ use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, SecretKey, Suite},
     error::{Error, Result},
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
+use ipg_json::{Value, json};
 use std::path::PathBuf;
 
 pub const HARDWARE_KEY_FORMAT: &str = "ipg-pkcs11-key-v1";
@@ -391,8 +391,8 @@ impl TpmKeyFile {
     }
     pub fn to_json(&self) -> Result<Vec<u8>> {
         Ok(match self {
-            Self::Wrapped(key) => serde_json::to_vec_pretty(key)?,
-            Self::Cng(key) => serde_json::to_vec_pretty(key)?,
+            Self::Wrapped(key) => ipg_json::to_vec_pretty(key)?,
+            Self::Cng(key) => ipg_json::to_vec_pretty(key)?,
         })
     }
     /// What to do about TPM state if the key file cannot be written.
@@ -422,30 +422,30 @@ impl KeyFile {
         struct Header {
             format: String,
         }
-        let header: Header = serde_json::from_slice(data)?;
+        let header: Header = ipg_json::from_slice(data)?;
         match header.format.as_str() {
             crypto::SECRET_FORMAT | crypto::HYBRID_SECRET_FORMAT => {
-                let secret: SecretKey = serde_json::from_slice(data)?;
+                let secret: SecretKey = ipg_json::from_slice(data)?;
                 secret.validate()?;
                 Ok(Self::Software(secret))
             }
             HARDWARE_KEY_FORMAT => {
-                let reference: HardwareKey = serde_json::from_slice(data)?;
+                let reference: HardwareKey = ipg_json::from_slice(data)?;
                 reference.validate()?;
                 Ok(Self::Hardware(reference))
             }
             TPM_KEY_FORMAT => {
-                let key: TpmKey = serde_json::from_slice(data)?;
+                let key: TpmKey = ipg_json::from_slice(data)?;
                 key.validate()?;
                 Ok(Self::Tpm(key))
             }
             KMS_KEY_FORMAT => {
-                let key: KmsKey = serde_json::from_slice(data)?;
+                let key: KmsKey = ipg_json::from_slice(data)?;
                 key.validate()?;
                 Ok(Self::Kms(key))
             }
             CNG_KEY_FORMAT => {
-                let key: CngKey = serde_json::from_slice(data)?;
+                let key: CngKey = ipg_json::from_slice(data)?;
                 key.validate()?;
                 Ok(Self::Cng(key))
             }
@@ -719,7 +719,7 @@ pub struct TpmInfo {
     pub curves: Vec<String>,
     /// Identity formats this TPM can hold; empty when P-384 is unsupported.
     pub suites: Vec<String>,
-    /// "tss-esapi" (Linux) or "cng" (Windows Platform Crypto Provider).
+    /// "native-tpm2" (Linux) or "cng" (Windows Platform Crypto Provider).
     pub backend: String,
     /// Linux only: whether the owner hierarchy has empty authorization.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -730,7 +730,7 @@ pub struct TpmInfo {
 pub(crate) use crate::pkcs11 as backend;
 
 #[cfg(all(feature = "tpm", target_os = "linux"))]
-pub(crate) use crate::tpm as tpm_backend;
+pub(crate) use crate::tpm_native as tpm_backend;
 
 #[cfg(not(all(feature = "tpm", target_os = "linux")))]
 mod tpm_backend {
@@ -819,7 +819,7 @@ mod cng_backend {
     }
 }
 
-/// The host TPM: Platform Crypto Provider on Windows, tpm2-tss elsewhere.
+/// The host TPM: Platform Crypto Provider on Windows, native commands on Linux.
 pub fn tpm_info() -> Result<TpmInfo> {
     if cfg!(windows) {
         cng_backend::info()

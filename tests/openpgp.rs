@@ -1,22 +1,23 @@
 //! OpenPGP boundary: round trips, pins, tampering and policy that need no GnuPG.
 //! GnuPG interoperability and live independent certificate construction are
 //! covered by tests/interop; public PyCA policy fixtures are replayed here.
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     Request, execute_with,
     mcp::{Config, tool_catalog},
     provider::Host,
 };
-use serde_json::{Value, json};
 use std::fs;
 
 const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
-#[cfg(feature = "openpgp")]
+#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
 #[test]
 fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
     let f = Fixture::new();
     fs::write(f.path("limit-document"), &document).unwrap();
     for group in fixture["groups"].as_array().unwrap() {
@@ -26,13 +27,14 @@ fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
         ] {
             fs::write(
                 f.path(file),
-                hex::decode(group[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(group[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
         }
         for case in group["cases"].as_array().unwrap() {
             let name = format!("v{}-{}", group["version"], case["name"].as_str().unwrap());
-            let decode = |value: &Value| hex::decode(value.as_str().unwrap()).unwrap();
+            let decode =
+                |value: &Value| iron_privacy_guard::hex::decode(value.as_str().unwrap()).unwrap();
             let role = case["role"].as_str().unwrap();
             let mut certificate = Vec::new();
             for part in ["primary", "uid", "sign", "encrypt"] {
@@ -125,12 +127,13 @@ fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
     }
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
 #[test]
 fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-metadata-policy-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-metadata-policy-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
     let f = Fixture::new();
     fs::write(f.path("metadata-document"), &document).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -142,7 +145,7 @@ fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
         ] {
             fs::write(
                 f.path(file),
-                hex::decode(case[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
         }
@@ -221,12 +224,13 @@ fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
     }
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
 #[test]
 fn independent_back_signature_policy_respects_lifetimes_and_history() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-backsignature-policy-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-backsignature-policy-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
     let f = Fixture::new();
     fs::write(f.path("consent-document"), &document).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -240,7 +244,7 @@ fn independent_back_signature_policy_respects_lifetimes_and_history() {
         ] {
             fs::write(
                 f.path(file),
-                hex::decode(case[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
         }
@@ -306,8 +310,9 @@ fn independent_back_signature_policy_respects_lifetimes_and_history() {
 #[test]
 fn independent_primary_policy_fixtures_gate_strong_subkeys() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-primary-policy-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-primary-policy-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
     let f = Fixture::new();
     fs::write(f.path("primary-document"), &document).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -320,7 +325,7 @@ fn independent_primary_policy_fixtures_gate_strong_subkeys() {
         ] {
             fs::write(
                 f.path(file),
-                hex::decode(case[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
         }
@@ -398,8 +403,9 @@ fn independent_primary_policy_fixtures_gate_strong_subkeys() {
 #[test]
 fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-signature-policy-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-signature-policy-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
     let f = Fixture::new();
     fs::write(f.path("document"), &document).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -407,7 +413,7 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
         let fingerprint = case["fingerprint"].as_str().unwrap();
         fs::write(
             f.path("certificate"),
-            hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+            iron_privacy_guard::hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
         )
         .unwrap();
         let verify = || {
@@ -426,7 +432,7 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
         ] {
             fs::write(
                 f.path("signature"),
-                hex::decode(case[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
             let result = verify();
@@ -445,7 +451,11 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
             ("unhashed_creation_signature_hex", "invalid_format"),
         ] {
             if let Some(signature) = case[field].as_str() {
-                fs::write(f.path("signature"), hex::decode(signature).unwrap()).unwrap();
+                fs::write(
+                    f.path("signature"),
+                    iron_privacy_guard::hex::decode(signature).unwrap(),
+                )
+                .unwrap();
                 assert_eq!(verify().unwrap_err(), code, "{algorithm}/{field}");
             }
         }
@@ -455,7 +465,7 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
         ] {
             fs::write(
                 f.path("message"),
-                hex::decode(case[field].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
             )
             .unwrap();
             let name = format!("{algorithm}-{field}");
@@ -479,7 +489,7 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
             ] {
                 fs::write(
                     f.path("certificate"),
-                    hex::decode(case[field].as_str().unwrap()).unwrap(),
+                    iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap(),
                 )
                 .unwrap();
                 let inspected = call(
@@ -493,12 +503,13 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
             }
             fs::write(
                 f.path("certificate"),
-                hex::decode(short_certificate).unwrap(),
+                iron_privacy_guard::hex::decode(short_certificate).unwrap(),
             )
             .unwrap();
             fs::write(
                 f.path("signature"),
-                hex::decode(case["valid_signature_hex"].as_str().unwrap()).unwrap(),
+                iron_privacy_guard::hex::decode(case["valid_signature_hex"].as_str().unwrap())
+                    .unwrap(),
             )
             .unwrap();
             assert_eq!(
@@ -511,19 +522,19 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
 }
 
 fn call(value: Value) -> Result<Value, String> {
-    let request: Request = serde_json::from_value(value).unwrap();
+    let request: Request = ipg_json::from_value(value).unwrap();
     execute_with(request, &Host::default())
-        .map(|outcome| serde_json::to_value(outcome).unwrap())
+        .map(|outcome| ipg_json::to_value(outcome).unwrap())
         .map_err(|e| e.code.to_string())
 }
 
 struct Fixture {
-    dir: tempfile::TempDir,
+    dir: iron_privacy_guard::files::TempDir,
 }
 impl Fixture {
     fn new() -> Self {
         let fixture = Self {
-            dir: tempfile::tempdir().unwrap(),
+            dir: iron_privacy_guard::files::tempdir().unwrap(),
         };
         fs::write(fixture.path("pass"), PASSWORD).unwrap();
         fixture
@@ -532,7 +543,7 @@ impl Fixture {
         self.dir.path().join(name).display().to_string()
     }
     /// Generate a key and export its certificate; returns the fingerprint.
-    #[cfg(feature = "openpgp")]
+    #[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
     fn key(&self, name: &str, algorithm: &str) -> String {
         let generated = call(json!({"operation":"openpgp.key.generate","output":self.path(name),
             "passphrase_file":self.path("pass"),"user_id":format!("{name} <{name}@example.test>"),"algorithm":algorithm}))
@@ -548,7 +559,7 @@ impl Fixture {
     }
 }
 
-#[cfg(not(feature = "openpgp"))]
+#[cfg(not(any(feature = "openpgp", feature = "openpgp-native")))]
 #[test]
 fn openpgp_operations_fail_closed_without_the_feature() {
     let f = Fixture::new();
@@ -563,7 +574,7 @@ fn openpgp_operations_fail_closed_without_the_feature() {
     assert!(!std::path::Path::new(&f.path("k")).exists());
     fs::write(
         f.path("sealed-key"),
-        serde_json::to_vec(&json!({
+        ipg_json::to_vec(&json!({
             "format":"ipg-openpgp-key-v1", "fingerprint":"00".repeat(20), "algorithm":"ed25519",
             "user_id":"Test <test@example.test>", "certificate":"00", "ciphertext":"00",
             "kdf":"argon2id-m65536-t3-p4", "salt":"00".repeat(16), "nonce":"00".repeat(12),
@@ -613,10 +624,10 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
             .collect()
     };
     assert!(names(&Config::default()).contains(&"ipg_openpgp_encrypt".to_string()));
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let store = dir.path().join("store.json");
     let empty = iron_privacy_guard::trust::TrustStore::default();
-    fs::write(&store, serde_json::to_vec(&empty).unwrap()).unwrap();
+    fs::write(&store, ipg_json::to_vec(&empty).unwrap()).unwrap();
     let policy = iron_privacy_guard::trust::TrustPolicy {
         store: store.display().to_string(),
         expected_digest: empty.digest().unwrap(),
@@ -636,7 +647,7 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
     assert_eq!(names(&explicit), vec!["ipg_openpgp_verify".to_string()]);
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
 mod enabled {
     use super::*;
 
@@ -722,9 +733,9 @@ mod enabled {
         assert_eq!(call(changed).unwrap_err(), "already_exists");
         assert_eq!(fs::read(f.path("private.asc")).unwrap(), exported);
         // Authentication failure never leaves a secret-key output.
-        let mut key: Value = serde_json::from_slice(&original).unwrap();
+        let mut key: Value = ipg_json::from_slice(&original).unwrap();
         key["user_id"] = json!("Changed <changed@example.test>");
-        fs::write(f.path("export-key"), serde_json::to_vec(&key).unwrap()).unwrap();
+        fs::write(f.path("export-key"), ipg_json::to_vec(&key).unwrap()).unwrap();
         let mut changed = request;
         changed["output"] = json!(f.path("tampered.asc"));
         assert_eq!(call(changed).unwrap_err(), "authentication_failed");
@@ -904,9 +915,9 @@ mod enabled {
         assert!(decrypt("a", "pass", "data").is_err());
 
         // A tampered key file fails authentication before any use.
-        let mut key: Value = serde_json::from_slice(&fs::read(f.path("a")).unwrap()).unwrap();
+        let mut key: Value = ipg_json::from_slice(&fs::read(f.path("a")).unwrap()).unwrap();
         key["user_id"] = json!("Mallory <m@example.test>");
-        fs::write(f.path("forged"), serde_json::to_vec(&key).unwrap()).unwrap();
+        fs::write(f.path("forged"), ipg_json::to_vec(&key).unwrap()).unwrap();
         assert_eq!(
             decrypt("forged", "pass", "msg").unwrap_err(),
             "authentication_failed"
@@ -949,12 +960,12 @@ mod enabled {
             json!({"operation":"openpgp.sign","input":f.path("data"),"output":f.path("s"),"key":f.path("a"),"passphrase_file":f.path("pass")}),
             json!({"operation":"openpgp.decrypt","input":f.path("data"),"output":f.path("d"),"key":f.path("a"),"passphrase_file":f.path("pass")}),
         ] {
-            let result = execute_with(serde_json::from_value(request).unwrap(), &host);
+            let result = execute_with(ipg_json::from_value(request).unwrap(), &host);
             assert_eq!(result.err().unwrap().code, "policy_mismatch");
         }
         // Public-key operations remain available.
         let request = json!({"operation":"openpgp.cert.inspect","input":f.path("a.asc")});
-        assert!(execute_with(serde_json::from_value(request).unwrap(), &host).is_ok());
+        assert!(execute_with(ipg_json::from_value(request).unwrap(), &host).is_ok());
     }
 
     #[test]

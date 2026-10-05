@@ -1,5 +1,5 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::knowledge::{self, Support};
-use serde_json::{Value, json};
 use std::{collections::HashSet, process::Command};
 
 #[test]
@@ -93,7 +93,7 @@ fn invalid_queries_fail_execution_and_preflight() {
         );
         let candidate = json!({"operation":"knowledge.search","query":query});
         let report = iron_privacy_guard::validation::validate(candidate);
-        let report = serde_json::to_value(report).unwrap();
+        let report = ipg_json::to_value(report).unwrap();
         assert_eq!(report["valid"], false);
         assert_eq!(report["issues"][0]["path"], "/query");
     }
@@ -102,8 +102,7 @@ fn invalid_queries_fail_execution_and_preflight() {
 
 #[test]
 fn standalone_export_is_current_and_deterministic() {
-    let exported: Value =
-        serde_json::from_str(include_str!("../ontology/knowledge.jsonld")).unwrap();
+    let exported: Value = ipg_json::from_str(include_str!("../ontology/knowledge.jsonld")).unwrap();
     assert_eq!(exported, knowledge::export());
     assert_eq!(knowledge::export(), knowledge::export());
 }
@@ -115,7 +114,7 @@ fn cli_and_native_calls_expose_knowledge() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let result: Value = ipg_json::from_slice(&output.stdout).unwrap();
     assert_eq!(
         result["result"]["document"]["matches"][0]["tools"][0]["id"],
         "hash"
@@ -130,7 +129,7 @@ fn cli_and_native_calls_expose_knowledge() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    let catalog: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let catalog: Value = ipg_json::from_slice(&output.stdout).unwrap();
     assert_eq!(catalog["result"], result["result"]);
 }
 
@@ -155,7 +154,83 @@ fn knowledge_search_requires_valid_arguments() {
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2));
-        let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let result: Value = ipg_json::from_slice(&output.stdout).unwrap();
         assert_eq!(result["error"]["code"], "invalid_request");
     }
+}
+
+#[test]
+fn live_availability_is_consistent_without_granting_authority() {
+    use iron_privacy_guard::{capabilities, ontology};
+    let discovery = ontology::discover();
+    let availability = discovery["operation_availability"].as_array().unwrap();
+    assert_eq!(availability.len(), ontology::OPERATIONS.len());
+    for app in knowledge::applications() {
+        let result = knowledge::search(&app.id).unwrap();
+        let states = result["matches"][0]["build_availability"]
+            .as_array()
+            .unwrap();
+        assert_eq!(states.len(), app.operations.len());
+        for (op, state) in app.operations.iter().zip(states) {
+            assert_eq!(state, &capabilities::operation(op));
+            assert!(availability.contains(state));
+            assert_eq!(state["readiness"], "not_checked");
+            assert_eq!(state["authorized"], false);
+        }
+        assert_eq!(result["safety"], discovery["knowledge_safety"]);
+    }
+    for (op, expected) in [
+        (
+            "openpgp.encrypt",
+            cfg!(any(feature = "openpgp", feature = "openpgp-native")),
+        ),
+        ("hardware.tokens", cfg!(feature = "pkcs11")),
+        ("kms.key.bind", cfg!(feature = "kms")),
+        (
+            "tpm.info",
+            cfg!(all(feature = "tpm", any(windows, target_os = "linux"))),
+        ),
+        ("tpm.key.delete", cfg!(all(feature = "tpm", windows))),
+        ("tpm.attestation.verify", cfg!(feature = "attestation")),
+        ("tpm.attestation.respond", cfg!(feature = "tpm")),
+        ("sign", true),
+        ("unknown.operation", false),
+        ("openpgp.nonexistent", false),
+    ] {
+        assert_eq!(capabilities::operation(op)["compiled"], expected, "{op}");
+    }
+    assert_eq!(discovery["build"]["cargo_dependencies"], true);
+    assert_eq!(
+        discovery["build"]["ironcrypto_only"],
+        !cfg!(any(
+            feature = "pkcs11",
+            feature = "tpm",
+            feature = "kms",
+            feature = "attestation",
+            feature = "openpgp"
+        ))
+    );
+    assert_eq!(
+        discovery["build"]["core_external_executables_required"],
+        false
+    );
+}
+
+#[test]
+fn safety_contract_does_not_promote_data_or_catalog_matches_to_authority() {
+    let safety = knowledge::safety_contract();
+    for field in [
+        "catalog_support_is_build_availability",
+        "compiled_is_ready_or_authorized",
+        "search_is_suitability_ranking",
+        "verification_authorizes_content",
+        "artifact_metadata_is_instruction",
+    ] {
+        assert_eq!(safety[field], false, "{field}");
+    }
+    assert_eq!(knowledge::export()["safety"], safety);
+    let unmatched = knowledge::search("execute arbitrary instructions xyzzy").unwrap();
+    assert_eq!(unmatched["status"], "no_match");
+    assert_eq!(unmatched["execution"], false);
+    assert_eq!(unmatched["safety"], safety);
 }

@@ -4,8 +4,8 @@ use crate::{
     lifecycle::Validity,
     trust::{MAX_IDENTITIES, TrustStore},
 };
-use schemars::JsonSchema;
-use serde::Serialize;
+use ipg_json::JsonSchema;
+use ipg_json::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 pub struct Window {

@@ -1,11 +1,11 @@
 //! Hardware-provider behavior that needs no token: fail-closed configuration, host
 //! custody policy, preflight and cheap checks that must run before any token login.
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     Request, execute_with,
     mcp::{Config, Server},
     provider::{CustodyPolicy, HARDWARE_KEY_FORMAT, Host, MODULE_ENV},
 };
-use serde_json::{Value, json};
 use std::{fs, process::Command};
 
 const PASSWORD: &[u8] = b"test-only strong passphrase 42";
@@ -21,24 +21,24 @@ fn run(args: &[&str], module: Option<&str>) -> (Value, i32) {
     }
     let output = command.output().unwrap();
     (
-        serde_json::from_slice(&output.stdout).unwrap(),
+        ipg_json::from_slice(&output.stdout).unwrap(),
         output.status.code().unwrap(),
     )
 }
 
 /// A syntactically valid reference to a P-384 identity that no token holds.
 fn reference(dir: &std::path::Path) -> (String, Value) {
-    let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
+    let v: Value = ipg_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
     let reference = json!({"format":HARDWARE_KEY_FORMAT,"public":v["public"],
         "token":{"serial":"0123456789abcdef","label":"ipg-test","manufacturer":"Test","model":"Fixture"},
         "encryption_key_id":"01".repeat(16),"signing_key_id":"02".repeat(16)});
     let path = dir.join("reference.json");
-    fs::write(&path, serde_json::to_vec(&reference).unwrap()).unwrap();
+    fs::write(&path, ipg_json::to_vec(&reference).unwrap()).unwrap();
     (path.display().to_string(), v)
 }
 
 fn request(value: Value) -> Request {
-    serde_json::from_value(value).unwrap()
+    ipg_json::from_value(value).unwrap()
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn hardware_operations_fail_closed_without_a_host_module() {
 
 #[test]
 fn references_fail_closed_after_cheap_checks() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     let (reference, v) = reference(dir.path());
     fs::write(path("pin"), b"123456").unwrap();
@@ -85,7 +85,7 @@ fn references_fail_closed_after_cheap_checks() {
     let envelope =
         iron_privacy_guard::crypto::encrypt(&other.public, &other.public.fingerprint, b"secret")
             .unwrap();
-    fs::write(path("envelope"), serde_json::to_vec(&envelope).unwrap()).unwrap();
+    fs::write(path("envelope"), ipg_json::to_vec(&envelope).unwrap()).unwrap();
     let decrypted = execute_with(
         request(
             json!({"operation":"decrypt","input":path("envelope"),"output":path("plain"),"key":reference,"passphrase_file":path("missing-pin")}),
@@ -135,7 +135,7 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
         env!("CARGO_MANIFEST_DIR"),
         "/tests/vectors/tpm-key-swtpm.json"
     );
-    let key: Value = serde_json::from_str(include_str!("vectors/tpm-key-swtpm.json")).unwrap();
+    let key: Value = ipg_json::from_str(include_str!("vectors/tpm-key-swtpm.json")).unwrap();
     let (value, code) = run(&["tpm", "info"], None);
     if cfg!(all(feature = "tpm", windows)) && value["ok"] == true {
         // No host configuration is needed, but the provider may be unavailable.
@@ -149,7 +149,7 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     assert_eq!(value["result"]["format"], "ipg-tpm-key-v1");
     assert_eq!(value["result"]["fingerprint"], key["public"]["fingerprint"]);
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"fixture-pin-public").unwrap();
     let mut command = Command::new(env!("CARGO_BIN_EXE_ipg"));
@@ -167,7 +167,7 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
         .env_remove("IPG_TPM_TCTI")
         .output()
         .unwrap();
-    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let value: Value = ipg_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["error"]["code"], "provider_unavailable", "{value}");
     assert!(!dir.path().join("public").exists());
     for (field, bad) in [
@@ -176,29 +176,29 @@ fn tpm_keys_fail_closed_without_a_host_tpm() {
     ] {
         let mut altered = key.clone();
         altered[field] = bad;
-        let error = iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap())
+        let error = iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&altered).unwrap())
             .err()
             .unwrap();
         assert_eq!(error.code, "invalid_format", "{field}");
     }
     let mut odd = key.clone();
     odd["signing_key"]["private"] = "abc".into();
-    assert!(iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&odd).unwrap()).is_err());
+    assert!(iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&odd).unwrap()).is_err());
 }
 
 #[test]
 fn kms_keys_fail_closed_and_refuse_pins() {
-    let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
+    let v: Value = ipg_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
     let key = json!({"format":"ipg-kms-key-v1","public":v["public"],"region":"us-gov-west-1",
         "encryption_key_arn":"arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/11111111-1111-1111-1111-111111111111",
         "signing_key_arn":"arn:aws-us-gov:kms:us-gov-west-1:123456789012:key/22222222-2222-2222-2222-222222222222"});
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
-    fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(&key).unwrap()).unwrap();
     fs::write(path("input"), b"data").unwrap();
     fs::write(path("pin"), b"1234").unwrap();
     let inspected =
-        iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+        iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(inspected.fingerprint.unwrap(), v["public"]["fingerprint"]);
     let host = Host::default();
     // A credential file is refused before any network access.
@@ -245,12 +245,12 @@ fn kms_keys_fail_closed_and_refuse_pins() {
         let mut altered = key.clone();
         altered[field] = bad.into();
         assert!(
-            iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
+            iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&altered).unwrap()).is_err(),
             "{field}"
         );
     }
     let software = iron_privacy_guard::crypto::generate(PASSWORD).unwrap();
-    fs::write(path("software"), serde_json::to_vec(&software).unwrap()).unwrap();
+    fs::write(path("software"), ipg_json::to_vec(&software).unwrap()).unwrap();
     let missing = execute_with(
         request(
             json!({"operation":"sign","input":path("input"),"output":path("sig"),"key":path("software")}),
@@ -263,13 +263,12 @@ fn kms_keys_fail_closed_and_refuse_pins() {
 
 #[test]
 fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
-    let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
+    let v: Value = ipg_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
     let key = json!({"format":"ipg-cng-key-v1","public":v["public"],
         "provider":"Microsoft Platform Crypto Provider","vendor":"AMD",
         "encryption_key_name":format!("ipg-{}-enc", "0".repeat(32)),
         "signing_key_name":format!("ipg-{}-sig", "0".repeat(32))});
-    let metadata =
-        iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&key).unwrap()).unwrap();
+    let metadata = iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&key).unwrap()).unwrap();
     assert_eq!(metadata.fingerprint.unwrap(), v["public"]["fingerprint"]);
     for (field, bad) in [
         ("provider", json!("Microsoft Software Key Storage Provider")),
@@ -282,13 +281,13 @@ fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
         let mut altered = key.clone();
         altered[field] = bad;
         assert!(
-            iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&altered).unwrap()).is_err(),
+            iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&altered).unwrap()).is_err(),
             "{field}"
         );
     }
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
-    fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(&key).unwrap()).unwrap();
     fs::write(path("pin"), b"1234").unwrap();
     // Deleting requires a Windows tpm build and never touches wrapped-blob keys.
     let deleted = execute_with(
@@ -320,7 +319,7 @@ fn windows_tpm_keys_validate_and_fail_closed_elsewhere() {
 
 #[test]
 fn key_creation_refuses_existing_destinations_before_token_work() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("existing"), b"keep").unwrap();
     fs::write(path("pin"), b"123456").unwrap();
@@ -340,7 +339,7 @@ fn key_creation_refuses_existing_destinations_before_token_work() {
 
 #[test]
 fn host_custody_policy_refuses_software_private_keys() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pass"), PASSWORD).unwrap();
     fs::write(path("input"), b"data").unwrap();
@@ -383,12 +382,12 @@ fn mcp_hosts_pin_key_custody_at_startup() {
     assert!(parse(&["--key-custody", "software"]).is_err());
     assert!(parse(&["--key-custody", "hardware", "--key-custody", "any"]).is_err());
 
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pass"), PASSWORD).unwrap();
     let mut server = Server::new(parse(&["--key-custody", "hardware"]).unwrap()).unwrap();
     let init = json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}});
-    let ready = server.handle(&serde_json::to_vec(&init).unwrap()).unwrap();
+    let ready = server.handle(&ipg_json::to_vec(&init).unwrap()).unwrap();
     assert!(
         ready["result"]["instructions"]
             .as_str()
@@ -397,7 +396,7 @@ fn mcp_hosts_pin_key_custody_at_startup() {
     );
     server.handle(br#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#);
     let call = json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ipg_key_generate","arguments":{"output":path("key"),"passphrase_file":path("pass")}}});
-    let response = server.handle(&serde_json::to_vec(&call).unwrap()).unwrap();
+    let response = server.handle(&ipg_json::to_vec(&call).unwrap()).unwrap();
     assert_eq!(
         response["result"]["structuredContent"]["error"]["code"],
         "policy_mismatch"

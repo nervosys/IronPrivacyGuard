@@ -172,15 +172,14 @@ output paths are refused before any token work.
 
 ## TPM 2.0
 
-On Linux, IPG can create identities directly in the host TPM through the tpm2-tss
-ESAPI libraries. This path exists because the tpm2-pkcs11 module does not implement
+On Linux, IPG creates identities directly through its native TPM command layer.
+This path exists because the tpm2-pkcs11 module does not implement
 `CKM_ECDH1_DERIVE`, so a TPM exposed through PKCS#11 can sign but never decrypt;
 IPG's `hardware.tokens` reports such tokens with no usable suite.
 
 ```sh
-sudo apt-get install libtss2-dev pkg-config          # build and runtime libraries
 cargo build --release --locked --features tpm
-export IPG_TPM_TCTI=device:/dev/tpmrm0               # or tabrmd, or swtpm:port=2321
+export IPG_TPM_TCTI=device:/dev/tpmrm0               # or swtpm:port=2321 for testing
 ipg tpm info
 ipg tpm key generate --output alice.tpm.json --pin-file pin.bin
 ipg key public --key alice.tpm.json --output alice.public.json --passphrase-file pin.bin
@@ -189,6 +188,9 @@ ipg key public --key alice.tpm.json --output alice.public.json --passphrase-file
 `IPG_TPM_TCTI` is host configuration, like the PKCS#11 module path; requests can
 never name a TPM connection. Use the kernel resource manager (`/dev/tpmrm0`), not
 `/dev/tpm0`, when other software shares the TPM.
+The supported transports are Linux TPM devices, loopback swtpm TCP sockets and
+Windows TBS. ESAPI-specific transports such as tabrmd and mssim are unsupported;
+configurations using them must select a supported transport explicitly.
 
 How it works:
 
@@ -368,7 +370,7 @@ IPG_TEST_PKCS11_REQUIRE_IN_TOKEN=1 cargo test --locked --features pkcs11 --lib i
 `scripts/tpm-test.sh` starts a throwaway swtpm software TPM and runs it:
 
 ```sh
-sudo apt-get install swtpm swtpm-tools libtss2-dev pkg-config
+sudo apt-get install swtpm swtpm-tools
 scripts/tpm-test.sh
 ```
 

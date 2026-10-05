@@ -4,7 +4,7 @@
 //! Use a DISPOSABLE or simulated TPM: one deliberate wrong-PIN attempt increments
 //! the dictionary-attack counter. No persistent TPM objects are created.
 #![cfg(all(feature = "tpm", target_os = "linux"))]
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{fs, io::Write, process::Command};
 
 fn tcti() -> Option<String> {
@@ -29,11 +29,10 @@ fn run(tcti: &str, args: &[&str], input: &[u8]) -> Value {
         .spawn()
         .unwrap();
     child.stdin.take().unwrap().write_all(input).unwrap();
-    serde_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
+    ipg_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
 }
 fn call(tcti: &str, request: Value) -> Value {
-    let body =
-        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"tpm","request":request})).unwrap();
+    let body = ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"tpm","request":request})).unwrap();
     run(tcti, &["call"], &body)
 }
 fn ok(tcti: &str, request: Value) -> Value {
@@ -55,7 +54,7 @@ fn tpm_identity_lifecycle() {
     };
     eprintln!("live TPM via {tcti}");
     let tcti = tcti.as_str();
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"tpm-test-pin").unwrap();
     fs::write(path("wrong-pin"), b"tpm-test-pinx").unwrap();
@@ -79,7 +78,7 @@ fn tpm_identity_lifecycle() {
     assert_eq!(generated["protection"]["possession_verified"], true);
     assert!(generated.get("token_serial").is_none());
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
-    let key: Value = serde_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
+    let key: Value = ipg_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
     assert_eq!(key["tpm"], info["info"]["tpm"]);
     assert_eq!(
         ok(tcti, json!({"operation":"inspect","input":path("key")}))["fingerprint"],
@@ -146,7 +145,7 @@ fn tpm_identity_lifecycle() {
     );
     let mut relabeled = key.clone();
     relabeled["tpm"]["vendor"] = "other".into();
-    fs::write(path("relabeled"), serde_json::to_vec(&relabeled).unwrap()).unwrap();
+    fs::write(path("relabeled"), ipg_json::to_vec(&relabeled).unwrap()).unwrap();
     assert_eq!(
         fails(
             tcti,
@@ -157,7 +156,7 @@ fn tpm_identity_lifecycle() {
     let mut swapped = key.clone();
     swapped["encryption_key"] = key["signing_key"].clone();
     swapped["signing_key"] = key["encryption_key"].clone();
-    fs::write(path("swapped"), serde_json::to_vec(&swapped).unwrap()).unwrap();
+    fs::write(path("swapped"), ipg_json::to_vec(&swapped).unwrap()).unwrap();
     assert_eq!(
         fails(
             tcti,
@@ -174,7 +173,7 @@ fn tpm_identity_lifecycle() {
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
         json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ipg_sign","arguments":{"input":path("input"),"output":path("sig-mcp"),"key":path("key"),"passphrase_file":path("pin")}}}),
     ] {
-        input.extend(serde_json::to_vec(&message).unwrap());
+        input.extend(ipg_json::to_vec(&message).unwrap());
         input.push(b'\n');
     }
     let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
@@ -190,7 +189,7 @@ fn tpm_identity_lifecycle() {
         .stdout
         .split(|b| *b == b'\n')
         .filter(|line| !line.is_empty())
-        .map(|line| serde_json::from_slice(line).unwrap())
+        .map(|line| ipg_json::from_slice(line).unwrap())
         .collect();
     let signed = &responses[1]["result"]["structuredContent"];
     assert_eq!(signed["ok"], true, "{signed}");

@@ -1,6 +1,6 @@
-use serde::Serialize;
+use ipg_json::Serialize;
 
-#[derive(Debug, Serialize, schemars::JsonSchema)]
+#[derive(Debug, Serialize, ipg_json::JsonSchema)]
 pub struct Error {
     pub code: &'static str,
     pub message: String,
@@ -44,8 +44,8 @@ impl From<std::io::Error> for Error {
         )
     }
 }
-impl From<serde_json::Error> for Error {
-    fn from(_: serde_json::Error) -> Self {
+impl From<ipg_json::Error> for Error {
+    fn from(_: ipg_json::Error) -> Self {
         Self::new("invalid_format", "Invalid JSON or unsupported fields")
     }
 }

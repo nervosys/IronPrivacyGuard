@@ -219,7 +219,7 @@ impl Template {
 }
 
 /// IPG's Linux storage root: a restricted P-384 decryption key under the owner
-/// hierarchy (the same template tss-esapi builds in the Linux backend).
+/// hierarchy (identical to the previous ESAPI backend's template).
 pub(crate) fn owner_srk_template() -> Template {
     Template {
         kind: ALG_ECC,

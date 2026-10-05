@@ -1,17 +1,17 @@
+use ipg_json::Value;
 use iron_privacy_guard::{
     crypto::PublicKey,
     stream_signature::{self, Signature},
 };
-use serde_json::Value;
 use std::io::Cursor;
 
 #[test]
 fn independent_stream_signatures_verify_in_all_four_suites() {
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/stream-signatures-v1.json")).unwrap();
+        ipg_json::from_str(include_str!("vectors/stream-signatures-v1.json")).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
-        let public: PublicKey = serde_json::from_value(case["public"].clone()).unwrap();
-        let signature: Signature = serde_json::from_value(case["signature"].clone()).unwrap();
+        let public: PublicKey = ipg_json::from_value(case["public"].clone()).unwrap();
+        let signature: Signature = ipg_json::from_value(case["signature"].clone()).unwrap();
         let length = signature.bytes as usize;
         let data: Vec<u8> = b"\x00\xffstream\r\n"
             .iter()

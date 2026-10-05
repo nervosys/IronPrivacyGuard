@@ -6,7 +6,7 @@ use crate::{
     provider::{CustodyPolicy, Host},
     trust::{self, TrustPolicy},
 };
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{
     collections::BTreeSet,
     time::{Duration, Instant},
@@ -369,7 +369,7 @@ impl Server {
             );
         }
         map.insert("operation".into(), json!(operation));
-        let request = serde_json::from_value::<Request>(arguments)
+        let request = ipg_json::from_value::<Request>(arguments)
             .map_err(|_| Error::new("invalid_request", "Arguments do not match the tool schema"));
         let result = request.and_then(|mut request| {
             if let Some(required) = &self.config.policy {

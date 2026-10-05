@@ -683,7 +683,7 @@
       "description": "TPM properties relevant to IPG identities.",
       "properties": {
         "backend": {
-          "description": "\"tss-esapi\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
+          "description": "\"native-tpm2\" (Linux) or \"cng\" (Windows Platform Crypto Provider).",
           "type": "string"
         },
         "curves": {

@@ -1,9 +1,9 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     crypto, handle_call,
     lifecycle::{self, RevocationReason},
     trust::{self, TrustPolicy, TrustStore},
 };
-use serde_json::{Value, json};
 use std::{fs, sync::OnceLock};
 
 const PASSWORD: &[u8] = b"trust tests passphrase only";
@@ -13,7 +13,7 @@ fn key() -> &'static crypto::SecretKey {
 }
 fn call(request: Value) -> (Value, i32) {
     handle_call(
-        &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"trust","request":request})).unwrap(),
+        &ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"trust","request":request})).unwrap(),
     )
 }
 fn ok(request: Value) -> Value {
@@ -68,7 +68,7 @@ fn enrollment_and_revocation_are_monotonic() {
 
 #[test]
 fn tampering_removal_and_stale_digest_fail_closed() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let file = dir.path().join("snapshot");
     let mut store = enrolled();
     let active_digest = store.digest().unwrap();
@@ -89,7 +89,7 @@ fn tampering_removal_and_stale_digest_fail_closed() {
         expected_digest: store.digest().unwrap(),
     };
     assert!(trust::enforce(Some(&policy), &key().public).is_err());
-    fs::write(&file, serde_json::to_vec_pretty(&store).unwrap()).unwrap();
+    fs::write(&file, ipg_json::to_vec_pretty(&store).unwrap()).unwrap();
     assert_eq!(
         trust::enforce(Some(&policy), &key().public)
             .unwrap_err()
@@ -102,7 +102,7 @@ fn tampering_removal_and_stale_digest_fail_closed() {
     };
     assert_eq!(trust::load(&stale).err().unwrap().code, "policy_mismatch");
     store.entries[0].revocation = None;
-    fs::write(&file, serde_json::to_vec(&store).unwrap()).unwrap();
+    fs::write(&file, ipg_json::to_vec(&store).unwrap()).unwrap();
     assert_eq!(
         trust::enforce(Some(&policy), &key().public)
             .unwrap_err()
@@ -142,10 +142,10 @@ fn malformed_and_forged_stores_are_rejected() {
 
 #[test]
 fn policies_enforce_all_three_operations_and_preserve_decryption() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
-    fs::write(path("key"), serde_json::to_vec(key()).unwrap()).unwrap();
-    fs::write(path("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(key()).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     fs::write(path("pass"), PASSWORD).unwrap();
     fs::write(path("message"), b"governed content").unwrap();
     let pin = &key().public.fingerprint;
@@ -204,9 +204,9 @@ fn policies_enforce_all_three_operations_and_preserve_decryption() {
 
 #[test]
 fn unknown_keys_missing_policy_files_and_malformed_policy_are_not_bypassed() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
-    fs::write(path("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     let empty = ok(json!({"operation":"trust.init","output":path("empty")}));
     let request = json!({"operation":"encrypt","input":path("missing"),"output":path("out"),"recipient":path("public"),"expected_fingerprint":key().public.fingerprint,"policy":{"store":path("empty"),"expected_digest":empty["digest"]}});
     let (v, c) = call(request.clone());
@@ -228,9 +228,9 @@ fn unknown_keys_missing_policy_files_and_malformed_policy_are_not_bypassed() {
 
 #[test]
 fn cli_policy_parsing_and_snapshot_inspection() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
-    fs::write(path("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     let mut store = enrolled();
     store
         .revoke(
@@ -244,8 +244,8 @@ fn cli_policy_parsing_and_snapshot_inspection() {
             &key().public.fingerprint,
         )
         .unwrap();
-    fs::write(path("store"), serde_json::to_vec(&store).unwrap()).unwrap();
-    let policy = serde_json::to_string(
+    fs::write(path("store"), ipg_json::to_vec(&store).unwrap()).unwrap();
+    let policy = ipg_json::to_string(
         &json!({"store":path("store"),"expected_digest":store.digest().unwrap()}),
     )
     .unwrap();
@@ -266,7 +266,7 @@ fn cli_policy_parsing_and_snapshot_inspection() {
         .output()
         .unwrap();
     assert_eq!(result.status.code(), Some(3));
-    let value: Value = serde_json::from_slice(&result.stdout).unwrap();
+    let value: Value = ipg_json::from_slice(&result.stdout).unwrap();
     assert_eq!(value["error"]["code"], "key_revoked");
     let inspection = ok(json!({"operation":"inspect","input":path("store")}));
     assert_eq!(inspection["authenticated"], false);
@@ -275,12 +275,12 @@ fn cli_policy_parsing_and_snapshot_inspection() {
 
 #[test]
 fn concurrent_snapshot_publication_has_one_winner() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
     let source = enrolled();
     let digest = source.digest().unwrap();
-    fs::write(path("source"), serde_json::to_vec(&source).unwrap()).unwrap();
-    fs::write(path("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(path("source"), ipg_json::to_vec(&source).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     let request = json!({"operation":"trust.add","store":path("source"),"expected_digest":digest,
         "public":path("public"),"expected_fingerprint":key().public.fingerprint,"output":path("output")});
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
@@ -311,7 +311,7 @@ fn concurrent_snapshot_publication_has_one_winner() {
 
 #[test]
 fn snapshot_limits_are_enforced() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let file = dir.path().join("oversized");
     fs::write(&file, vec![b' '; trust::MAX_STORE_BYTES as usize + 1]).unwrap();
     let policy = TrustPolicy {
@@ -334,7 +334,7 @@ fn snapshot_limits_are_enforced() {
 
 #[test]
 fn v3_writes_sha384_pins_and_legacy_pins_still_load() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     let load = |name: &str, digest: &str| {
         trust::load(&TrustPolicy {
@@ -346,14 +346,14 @@ fn v3_writes_sha384_pins_and_legacy_pins_still_load() {
     assert_eq!(current.format, trust::FORMAT);
     let digest = current.digest().unwrap();
     assert_eq!(digest.len(), 96);
-    fs::write(path("v3"), serde_json::to_vec(&current).unwrap()).unwrap();
+    fs::write(path("v3"), ipg_json::to_vec(&current).unwrap()).unwrap();
     load("v3", &digest).unwrap();
 
     let mut legacy = current.clone();
     legacy.format = "ipg-trust-v2".into();
     let legacy_digest = legacy.digest().unwrap();
     assert_eq!(legacy_digest.len(), 64);
-    fs::write(path("v2"), serde_json::to_vec(&legacy).unwrap()).unwrap();
+    fs::write(path("v2"), ipg_json::to_vec(&legacy).unwrap()).unwrap();
     load("v2", &legacy_digest).unwrap();
 
     // A pin of the wrong algorithm never matches; malformed pins fail before reading.
@@ -371,7 +371,7 @@ fn v3_writes_sha384_pins_and_legacy_pins_still_load() {
     let fingerprint = &key().public.fingerprint;
     let revocation =
         lifecycle::revoke(key(), fingerprint, PASSWORD, RevocationReason::Retired).unwrap();
-    fs::write(path("revocation"), serde_json::to_vec(&revocation).unwrap()).unwrap();
+    fs::write(path("revocation"), ipg_json::to_vec(&revocation).unwrap()).unwrap();
     let updated = ok(
         json!({"operation":"trust.revoke","store":path("v2"),"expected_digest":legacy_digest,"input":path("revocation"),"expected_fingerprint":fingerprint,"output":path("updated")}),
     );

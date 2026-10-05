@@ -1,8 +1,8 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     crypto, handle_call,
     lifecycle::{self, Revocation, RevocationReason},
 };
-use serde_json::{Value, json};
 use std::{fs, process::Command, sync::OnceLock};
 
 const OLD: &[u8] = b"old passphrase for tests only";
@@ -32,8 +32,8 @@ fn rewrap_preserves_identity_and_old_ciphertext_access() {
     .unwrap();
     let wrapped = lifecycle::rewrap(original, &original.public.fingerprint, OLD, NEW).unwrap();
     assert_eq!(
-        serde_json::to_value(&original.public).unwrap(),
-        serde_json::to_value(&wrapped.public).unwrap()
+        ipg_json::to_value(&original.public).unwrap(),
+        ipg_json::to_value(&wrapped.public).unwrap()
     );
     assert_ne!(original.salt, wrapped.salt);
     assert_ne!(original.nonce, wrapped.nonce);
@@ -91,21 +91,21 @@ fn all_revocation_fields_are_bound_or_rejected() {
         ("reason", "retired".into()),
         ("signature", "0".repeat(128)),
     ] {
-        let mut value = serde_json::to_value(&r).unwrap();
+        let mut value = ipg_json::to_value(&r).unwrap();
         value[field] = json!(replacement);
-        let changed: Revocation = serde_json::from_value(value).unwrap();
+        let changed: Revocation = ipg_json::from_value(value).unwrap();
         assert!(
             lifecycle::verify_revocation(&key().public, &key().public.fingerprint, &changed)
                 .is_err(),
             "{field}"
         );
     }
-    let mut value = serde_json::to_value(&r).unwrap();
+    let mut value = ipg_json::to_value(&r).unwrap();
     value["reason"] = json!("unknown");
-    assert!(serde_json::from_value::<Revocation>(value).is_err());
-    let mut value = serde_json::to_value(&r).unwrap();
+    assert!(ipg_json::from_value::<Revocation>(value).is_err());
+    let mut value = ipg_json::to_value(&r).unwrap();
     value["extra"] = json!(true);
-    assert!(serde_json::from_value::<Revocation>(value).is_err());
+    assert!(ipg_json::from_value::<Revocation>(value).is_err());
 }
 
 #[test]
@@ -139,11 +139,11 @@ fn certificates_cannot_be_substituted_for_content_signatures() {
 
 #[test]
 fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
-    let original = serde_json::to_vec(key()).unwrap();
+    let original = ipg_json::to_vec(key()).unwrap();
     fs::write(path("key"), &original).unwrap();
-    fs::write(path("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     fs::write(path("old"), OLD).unwrap();
     fs::write(path("new"), NEW).unwrap();
     let pin = &key().public.fingerprint;
@@ -152,7 +152,7 @@ fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
             .args(args)
             .output()
             .unwrap();
-        let response: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let response: Value = ipg_json::from_slice(&output.stdout).unwrap();
         assert!(output.status.success(), "{response}");
         response
     };
@@ -199,7 +199,7 @@ fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
     let request = json!({"protocol":"ipg/1","id":"no-clobber","request":{
         "operation":"key.rewrap","key":path("key"),"output":path("key"),
         "expected_fingerprint":pin,"passphrase_file":path("old"),"new_passphrase_file":path("new")}});
-    let (response, code) = handle_call(&serde_json::to_vec(&request).unwrap());
+    let (response, code) = handle_call(&ipg_json::to_vec(&request).unwrap());
     assert_eq!(code, 4);
     assert_eq!(response["error"]["code"], "already_exists");
     assert_eq!(fs::read(path("key")).unwrap(), original);
@@ -207,9 +207,9 @@ fn lifecycle_cli_workflow_keeps_sources_and_reports_policy_boundary() {
 
 #[test]
 fn failures_and_plans_never_publish_lifecycle_artifacts() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |s: &str| dir.path().join(s).display().to_string();
-    fs::write(path("key"), serde_json::to_vec(key()).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(key()).unwrap()).unwrap();
     fs::write(path("wrong"), NEW).unwrap();
     for operation in ["key.rewrap", "key.revoke"] {
         let mut request = json!({"operation":operation,"key":path("key"),"output":path("output"),
@@ -220,12 +220,12 @@ fn failures_and_plans_never_publish_lifecycle_artifacts() {
             request["reason"] = json!("compromised");
         }
         let (response, code) = handle_call(
-            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"bad","request":request})).unwrap(),
+            &ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"bad","request":request})).unwrap(),
         );
         assert_eq!(code, 3, "{response}");
         assert!(!dir.path().join("output").exists());
         request["key"] = json!(path("nonexistent"));
-        let (_, code) = handle_call(&serde_json::to_vec(&json!({"protocol":"ipg/1","id":"plan","request":{"operation":"plan","request":request}})).unwrap());
+        let (_, code) = handle_call(&ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"plan","request":{"operation":"plan","request":request}})).unwrap());
         assert_eq!(code, 0);
         assert!(!dir.path().join("output").exists());
     }

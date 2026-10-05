@@ -4,13 +4,13 @@
 //! through the provider interface. All keys are PUBLIC TEST DATA.
 use ic_core::traits::KeyAgreement;
 use ic_ec::EcdhP384;
+use ipg_json::Value;
+use iron_privacy_guard::secrets::Zeroizing;
 use iron_privacy_guard::{
     crypto::{self, Custody, IdentityKey, PublicKey, SecretKey},
     stream,
 };
-use serde_json::Value;
 use std::io::Cursor;
-use zeroize::Zeroizing;
 
 fn load(name: &str) -> Value {
     let text = match name {
@@ -19,12 +19,12 @@ fn load(name: &str) -> Value {
         "hybrid" => include_str!("vectors/native-hybrid-v1.json"),
         _ => include_str!("vectors/native-p384-v1.json"),
     };
-    serde_json::from_str(text).unwrap()
+    ipg_json::from_str(text).unwrap()
 }
 fn software(name: &str) -> crypto::SoftwareIdentity {
     let v = load(name);
-    let secret: SecretKey = serde_json::from_value(v["secret"].clone()).unwrap();
-    let password = hex::decode(v["password_hex"].as_str().unwrap()).unwrap();
+    let secret: SecretKey = ipg_json::from_value(v["secret"].clone()).unwrap();
+    let password = iron_privacy_guard::hex::decode(v["password_hex"].as_str().unwrap()).unwrap();
     crypto::unlock_identity(&secret, &password).unwrap()
 }
 struct P384Token {
@@ -50,8 +50,9 @@ impl IdentityKey for P384Token {
 fn p384() -> P384Token {
     let v = load("p384");
     P384Token {
-        public: serde_json::from_value(v["public"].clone()).unwrap(),
-        scalar: hex::decode(v["encryption_scalar_hex"].as_str().unwrap()).unwrap(),
+        public: ipg_json::from_value(v["public"].clone()).unwrap(),
+        scalar: iron_privacy_guard::hex::decode(v["encryption_scalar_hex"].as_str().unwrap())
+            .unwrap(),
     }
 }
 fn plaintext(length: usize) -> Vec<u8> {
@@ -75,7 +76,7 @@ fn oracle_streams_decrypt_for_every_recipient() {
         );
     }
     for case in fixture["cases"].as_array().unwrap() {
-        let bytes = hex::decode(case["stream_hex"].as_str().unwrap()).unwrap();
+        let bytes = iron_privacy_guard::hex::decode(case["stream_hex"].as_str().unwrap()).unwrap();
         let expected = plaintext(case["plaintext_length"].as_u64().unwrap() as usize);
         let listed: Vec<&str> = case["recipients"]
             .as_array()
@@ -102,7 +103,7 @@ fn oracle_streams_decrypt_for_every_recipient() {
 fn oracle_stream_tampering_is_rejected() {
     let fixture = load("stream");
     let case = &fixture["cases"][2];
-    let bytes = hex::decode(case["stream_hex"].as_str().unwrap()).unwrap();
+    let bytes = iron_privacy_guard::hex::decode(case["stream_hex"].as_str().unwrap()).unwrap();
     let key = software("v1");
     for index in [bytes.len() - 1, bytes.len() / 2, 20] {
         let mut altered = bytes.clone();

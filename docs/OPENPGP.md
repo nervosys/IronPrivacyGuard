@@ -5,15 +5,77 @@ IPG exchanges encrypted files and detached signatures with GnuPG and other OpenP
 compatibility boundary: native IPG keys, envelopes and signatures are never read as
 OpenPGP data, and OpenPGP data is never read as native IPG artifacts.
 
-The operations need a build with the `openpgp` feature:
+The operations support two build profiles. The current checkout enables
+`openpgp-native` by default:
 
 ```sh
+# Native curve interchange: no additional dependencies beyond base IPG.
+cargo build --release --no-default-features --features openpgp-native
+
+# Broader rPGP compatibility backend.
 cargo build --release --features openpgp
 ```
 
-Without it, every `openpgp.*` operation fails with `provider_unavailable`.
+Without either feature, every `openpgp.*` operation fails with
+`provider_unavailable`. If both features are enabled, `openpgp` selects rPGP.
+`discover` reports the selected implementation.
+
+## Native interchange profile
+
+`openpgp-native` implements packet framing, certificate policy, ASCII armor,
+OpenPGP CFB/OCB adapters and bounded ZIP/ZLIB decoding in IPG. It reuses existing
+IronCrypto elliptic-curve, AES, key-wrap, SHA-2/SHA-3, HKDF, Argon2id and
+ChaCha20-Poly1305 primitives. The feature adds **zero Cargo dependencies**;
+the application itself still has its existing dependencies. It does not invoke
+GnuPG, OpenSSL, a system compression library or another process at runtime.
+
+All ten operations below are supported for this explicit profile:
+
+| Area | Native profile |
+| --- | --- |
+| Keys | V4 legacy Ed25519/Curve25519, v6 Ed25519/X25519, and v4/v6 P-384 ECDSA/ECDH |
+| Signatures | Ed25519 with SHA-256/384/512 or SHA3-256/512; P-384 with SHA-384; generation uses SHA-512 and SHA-384 respectively |
+| Certificates | Direct-key and User ID certification, encryption/signing subkeys, authenticated flags and validity, primary/subkey/User ID revocation, signing-subkey back signatures |
+| Messages | AES-256 SEIPDv1 for v4; AES-256/OCB SEIPDv2 for v6; bounded ZIP/ZLIB or uncompressed data; detached and embedded signature verification |
+| Secret interchange | Existing `ipg-openpgp-key-v1` storage; v4 AES-CFB with iterated SHA-1/SHA-2 S2K and SHA-1 integrity; v6 AES-256/OCB with bounded Argon2id |
+
+The native backend refuses RSA, DSA, ElGamal, P-256/P-521, Ed448/X448,
+User Attributes, unsupported packets and P-384 signatures using hashes other
+than SHA-384. Use the broader backend for correspondents requiring those
+supported rPGP profiles. Native decryption currently accepts AES-256 session
+keys; configure correspondents accordingly. There is no automatic fallback to
+another backend or algorithm. Secret import retains the two-key profile and
+requires both derived public keys to match their private material.
+Native messages are limited to 1,024 session-key packets across all recipients;
+packet parsing is also bounded by input bytes and an 8,192-packet ceiling.
+
+For a GnuPG correspondent using native P-384, use `--digest-algo SHA384` for
+signatures; use `--cipher-algo AES256` for encryption. Generated certificates
+advertise the native signature hash and uncompressed output preference.
+
+Native SHA-1 is confined to v4 fingerprints, legacy secret-key protection and
+SEIPDv1 integrity. SHA-1 document/certificate signatures are rejected. Plaintext
+is published only after complete integrity/authentication checks. The native
+implementation is experimental and has not received independent security review.
+
+Run the native tests and independent PyCA/GnuPG interchange checks with:
+
+```sh
+cargo test --locked --features openpgp-native
+cargo build --release --locked --no-default-features --features openpgp-native
+python tests/interop/openpgp_native_reference.py --ipg target/release/ipg
+```
+
+The reference suite covers both v6 curve suites, independent key wrapping and
+chunk authentication, protected-secret export/import, signatures, compressed
+embedded messages, binding/expiry/revocation policy, and both directions of v4
+GnuPG curve interchange. Frozen public PyCA OCB and Python zlib vectors run in
+Rust without external tools. The broader backend's additional algorithms and
+test coverage are described below.
 
 ## What provides the cryptography
+
+The following details describe the broader `openpgp` backend.
 
 OpenPGP packet processing and the OpenPGP primitives (Ed25519, ECDSA, ECDH, RSA,
 AES) come from [rPGP](https://github.com/rpgp/rpgp) 0.20, which is pure Rust and

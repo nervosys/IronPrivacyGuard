@@ -2,6 +2,8 @@
 //! way a stream can be altered.
 use ic_core::traits::KeyAgreement;
 use ic_ec::EcdhP384;
+use ipg_json::{Value, json};
+use iron_privacy_guard::secrets::Zeroizing;
 use iron_privacy_guard::{
     Request, crypto,
     crypto::{Custody, IdentityKey, PublicKey},
@@ -9,9 +11,7 @@ use iron_privacy_guard::{
     provider::Host,
     stream::{self, CHUNK_SIZE, Cipher},
 };
-use serde_json::{Value, json};
 use std::{fs, io::Cursor};
-use zeroize::Zeroizing;
 
 const PASSWORD: &[u8] = b"stream test-only passphrase";
 
@@ -27,10 +27,13 @@ struct FixtureToken {
 }
 impl FixtureToken {
     fn new() -> Self {
-        let v: Value = serde_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
+        let v: Value = ipg_json::from_str(include_str!("vectors/native-p384-v1.json")).unwrap();
         Self {
-            public: serde_json::from_value(v["public"].clone()).unwrap(),
-            encryption: hex::decode(v["encryption_scalar_hex"].as_str().unwrap()).unwrap(),
+            public: ipg_json::from_value(v["public"].clone()).unwrap(),
+            encryption: iron_privacy_guard::hex::decode(
+                v["encryption_scalar_hex"].as_str().unwrap(),
+            )
+            .unwrap(),
         }
     }
 }
@@ -155,11 +158,11 @@ fn alterations_truncation_and_reordering_are_detected() {
 
     // Removing a recipient changes the committed header, so the rest cannot decrypt.
     let (header, _) = stream::read_header(&mut Cursor::new(&sealed)).unwrap();
-    let mut value = serde_json::to_value(&header).unwrap();
+    let mut value = ipg_json::to_value(&header).unwrap();
     value["recipients"].as_array_mut().unwrap().remove(1);
     // Re-encode canonically (declared field order), as a forger would.
-    let canonical: stream::Header = serde_json::from_value(value.clone()).unwrap();
-    let bytes = serde_json::to_vec(&canonical).unwrap();
+    let canonical: stream::Header = ipg_json::from_value(value.clone()).unwrap();
+    let bytes = ipg_json::to_vec(&canonical).unwrap();
     let stripped = [
         &stream::MAGIC[..],
         &(bytes.len() as u32).to_be_bytes(),
@@ -176,7 +179,7 @@ fn alterations_truncation_and_reordering_are_detected() {
     let mut duplicated = value.clone();
     let first = duplicated["recipients"][0].clone();
     duplicated["recipients"].as_array_mut().unwrap().push(first);
-    let bytes = serde_json::to_vec(&duplicated).unwrap();
+    let bytes = ipg_json::to_vec(&duplicated).unwrap();
     let doubled = [
         &stream::MAGIC[..],
         &(bytes.len() as u32).to_be_bytes(),
@@ -192,15 +195,15 @@ fn alterations_truncation_and_reordering_are_detected() {
 }
 
 fn call(request: Value) -> Result<Value, String> {
-    let request: Request = serde_json::from_value(request).unwrap();
+    let request: Request = ipg_json::from_value(request).unwrap();
     execute_with(request, &Host::default())
-        .map(|outcome| serde_json::to_value(outcome).unwrap())
+        .map(|outcome| ipg_json::to_value(outcome).unwrap())
         .map_err(|e| e.code.to_string())
 }
 
 #[test]
 fn operations_publish_only_authenticated_plaintext() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pass"), PASSWORD).unwrap();
     let mut recipients = Vec::new();

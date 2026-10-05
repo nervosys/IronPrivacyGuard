@@ -2,6 +2,7 @@
 //! used on the token as sensitive, non-extractable objects. IPG never requests
 //! private key values; only ECDH shared secrets for single envelopes and public
 //! points cross the module boundary.
+use crate::secrets::Zeroizing;
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
@@ -21,7 +22,6 @@ use cryptoki::{
     slot::Slot,
     types::{RawAuthPin, Ulong},
 };
-use zeroize::Zeroizing;
 
 /// DER OBJECT IDENTIFIER 1.3.132.0.34 (secp384r1), the CKA_EC_PARAMS value.
 const P384_PARAMS: [u8; 7] = [0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22];
@@ -533,8 +533,8 @@ pub fn generate(serial: &str, label: &str, pin: &[u8]) -> Result<(HardwareKey, P
         format: provider::HARDWARE_KEY_FORMAT.into(),
         public: identity.public.clone(),
         token,
-        encryption_key_id: hex::encode(&encryption_id),
-        signing_key_id: hex::encode(&signing_id),
+        encryption_key_id: crate::hex::encode(&encryption_id),
+        signing_key_id: crate::hex::encode(&signing_id),
     };
     reference.validate()?;
     Ok((reference, protection))
@@ -652,8 +652,11 @@ mod tests {
             shared_info: &crypto::p384_shared_info(&aad),
             nonce: &crypto::bytes::<12>(&envelope.nonce).unwrap(),
             aad: &aad,
-            ciphertext_and_tag: &[hex::decode(&envelope.ciphertext).unwrap(), tag.to_vec()]
-                .concat(),
+            ciphertext_and_tag: &[
+                crate::hex::decode(&envelope.ciphertext).unwrap(),
+                tag.to_vec(),
+            ]
+            .concat(),
         };
         match identity.open_in_device(&sealed).unwrap() {
             Some(plaintext) => {

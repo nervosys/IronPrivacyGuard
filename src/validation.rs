@@ -1,8 +1,8 @@
 //! In-memory preflight of IPG requests. Never executes a candidate or reads files.
 use crate::{Request, crypto, lifecycle::MAX_UNIX_TIME};
-use schemars::JsonSchema;
-use serde::Serialize;
-use serde_json::Value;
+use ipg_json::JsonSchema;
+use ipg_json::Serialize;
+use ipg_json::Value;
 
 pub const MAX_DEPTH: usize = 64;
 pub const MAX_ISSUES: usize = 32;
@@ -62,7 +62,7 @@ pub fn validate(candidate: Value) -> Validation {
             _ => {}
         }
     }
-    if serde_json::to_vec(&candidate)
+    if ipg_json::to_vec(&candidate)
         .expect("serializable JSON")
         .len()
         > crate::MAX_REQUEST_BYTES as usize
@@ -74,7 +74,7 @@ pub fn validate(candidate: Value) -> Validation {
         );
         return report;
     }
-    let request = match serde_json::from_value::<Request>(candidate) {
+    let request = match ipg_json::from_value::<Request>(candidate) {
         Ok(request) => request,
         Err(_) => {
             // Avoid reflecting untrusted field names, paths or alleged secret values.
@@ -84,7 +84,7 @@ pub fn validate(candidate: Value) -> Validation {
     };
     report.operation = Some(request.operation().into());
     check(
-        &serde_json::to_value(request).expect("serializable request"),
+        &ipg_json::to_value(request).expect("serializable request"),
         "",
         &mut report,
     );

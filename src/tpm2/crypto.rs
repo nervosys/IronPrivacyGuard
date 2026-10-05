@@ -4,11 +4,54 @@
 //! sessions.
 use super::structures::{ALG_AES, ALG_CFB, ALG_SHA256, ALG_SHA384, Key, Public};
 use crate::error::{Error, Result};
+use crate::secrets::Zeroizing;
 use ic_cipher::{Aes128, Aes256};
 use ic_core::traits::{BlockCipher, Digest, Mac};
 use ic_hash::Sha256;
 use ic_mac::{HmacSha256, HmacSha384};
-use zeroize::Zeroizing;
+
+/// TPM secret sharing for a salted session. ECC salts use the recipient's
+/// name hash, ECDH x-coordinate, and KDFe (TPM Part 1, C.6.1).
+pub(crate) fn session_salt(public: &Public) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+    match &public.key {
+        Key::Rsa { .. } if public.name_algorithm == ALG_SHA256 => {
+            let salt = Zeroizing::new(crate::crypto::random::<32>()?.to_vec());
+            let encrypted = oaep_encrypt(public, "SECRET", &salt)?;
+            Ok((salt, encrypted))
+        }
+        Key::Ecc {
+            curve: super::structures::CURVE_P384,
+            x,
+            ..
+        } => {
+            use ic_core::traits::KeyAgreement;
+            let peer = public.p384_point()?;
+            let (secret, ephemeral) = crate::crypto::ephemeral(crate::crypto::Suite::P384)?;
+            let mut shared = Zeroizing::new(vec![0; 48]);
+            ic_ec::EcdhP384::agree(&secret, &peer, &mut shared)?;
+            // One digest is required. KDFe has no output-length field.
+            let input = Zeroizing::new(
+                [
+                    &1u32.to_be_bytes()[..],
+                    &shared,
+                    b"SECRET\0",
+                    &ephemeral[1..49],
+                    x,
+                ]
+                .concat(),
+            );
+            let salt = Zeroizing::new(super::structures::hash(public.name_algorithm, &input)?);
+            let mut point = super::marshal::Writer::default();
+            point.tpm2b(&ephemeral[1..49])?;
+            point.tpm2b(&ephemeral[49..])?;
+            Ok((salt, point.finish()))
+        }
+        _ => Err(Error::new(
+            "mechanism_unsupported",
+            "Unsupported TPM session salt key",
+        )),
+    }
+}
 
 pub(crate) fn hmac(algorithm: u16, key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
     match algorithm {

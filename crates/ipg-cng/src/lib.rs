@@ -9,22 +9,8 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use core::ptr::{null, null_mut};
-use windows_sys::Win32::Security::Cryptography::{
-    BCRYPT_ECDH_PUBLIC_P384_MAGIC, BCRYPT_ECDSA_PUBLIC_P384_MAGIC, BCryptBuffer, BCryptBufferDesc,
-    CertCloseStore, CertEnumCertificatesInStore, HCERTSTORE, NCRYPT_CLAIM_AUTHORITY_AND_SUBJECT,
-    NCRYPT_FLAGS, NCRYPT_PCP_IDENTITY_KEY, NCRYPT_SECRET_AGREEMENT_OPERATION,
-    NCRYPT_SIGNATURE_OPERATION, NCRYPT_SILENT_FLAG, NCRYPTBUFFER_CLAIM_KEYATTESTATION_NONCE,
-    NCryptAlgorithmName, NCryptCreateClaim, NCryptCreatePersistedKey, NCryptDeleteKey,
-    NCryptDeriveKey, NCryptEnumAlgorithms, NCryptExportKey, NCryptFinalizeKey, NCryptFreeBuffer,
-    NCryptFreeObject, NCryptGetProperty, NCryptImportKey, NCryptOpenKey, NCryptOpenStorageProvider,
-    NCryptSecretAgreement, NCryptSetProperty, NCryptSignHash,
-};
-
-use windows_sys::Win32::System::TpmBaseServices::{
-    TBS_COMMAND_LOCALITY_ZERO, TBS_COMMAND_PRIORITY_NORMAL, TBS_CONTEXT_PARAMS,
-    TBS_CONTEXT_PARAMS2, TBS_CONTEXT_PARAMS2_0, TBS_CONTEXT_VERSION_TWO, Tbsi_Context_Create,
-    Tbsip_Context_Close, Tbsip_Submit_Command,
-};
+mod ffi;
+use ffi::*;
 
 pub const PROVIDER: &str = "Microsoft Platform Crypto Provider";
 const ECC_PUBLIC_BLOB: &str = "ECCPUBLICBLOB";

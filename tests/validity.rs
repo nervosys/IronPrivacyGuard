@@ -1,9 +1,9 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason, Validity},
     trust::{self, Eligibility, TrustPolicy, TrustStore},
 };
-use serde_json::{Value, json};
 use std::{fs, process::Command, sync::OnceLock};
 const PASSWORD: &[u8] = b"validity testing passphrase";
 fn key() -> &'static crypto::SecretKey {
@@ -33,9 +33,9 @@ fn signed_fields_and_domain_are_authenticated() {
         ("not_before", json!(101)),
         ("not_after", json!(201)),
     ] {
-        let mut changed = serde_json::to_value(&cert).unwrap();
+        let mut changed = ipg_json::to_value(&cert).unwrap();
         changed[field] = value;
-        let changed: Validity = serde_json::from_value(changed).unwrap();
+        let changed: Validity = ipg_json::from_value(changed).unwrap();
         assert!(
             lifecycle::verify_validity(&key().public, &key().public.fingerprint, &changed).is_err(),
             "{field}"
@@ -96,32 +96,38 @@ fn legacy_snapshot_commitment_is_unchanged() {
     // v3 has the v2 canonical bytes but commits with SHA-384.
     let current = format!(
         "{{\"format\":\"ipg-trust-v3\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
-        serde_json::to_string(&key().public).unwrap()
+        ipg_json::to_string(&key().public).unwrap()
     );
-    assert_eq!(serde_json::to_string(&s).unwrap(), current);
+    assert_eq!(ipg_json::to_string(&s).unwrap(), current);
     let mut frame = b"IPG trust snapshot v3".to_vec();
     frame.extend_from_slice(&(current.len() as u64).to_be_bytes());
     frame.extend_from_slice(current.as_bytes());
-    assert_eq!(s.digest().unwrap(), hex::encode(Sha384::digest(&frame)));
+    assert_eq!(
+        s.digest().unwrap(),
+        iron_privacy_guard::hex::encode(Sha384::digest(&frame))
+    );
 
     s.format = "ipg-trust-v1".into();
     let legacy = format!(
         "{{\"format\":\"ipg-trust-v1\",\"entries\":[{{\"public\":{},\"revocation\":null}}]}}",
-        serde_json::to_string(&key().public).unwrap()
+        ipg_json::to_string(&key().public).unwrap()
     );
-    assert_eq!(serde_json::to_string(&s).unwrap(), legacy);
+    assert_eq!(ipg_json::to_string(&s).unwrap(), legacy);
     // Independent construction of the previously specified length framing.
     let mut frame = b"IPG trust snapshot v1".to_vec();
     frame.extend_from_slice(&(legacy.len() as u64).to_be_bytes());
     frame.extend_from_slice(legacy.as_bytes());
-    assert_eq!(s.digest().unwrap(), hex::encode(Sha256::digest(&frame)));
+    assert_eq!(
+        s.digest().unwrap(),
+        iron_privacy_guard::hex::encode(Sha256::digest(&frame))
+    );
 }
 #[test]
 fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let p = |name: &str| dir.path().join(name).display().to_string();
-    fs::write(p("key"), serde_json::to_vec(key()).unwrap()).unwrap();
-    fs::write(p("public"), serde_json::to_vec(&key().public).unwrap()).unwrap();
+    fs::write(p("key"), ipg_json::to_vec(key()).unwrap()).unwrap();
+    fs::write(p("public"), ipg_json::to_vec(&key().public).unwrap()).unwrap();
     fs::write(p("pass"), PASSWORD).unwrap();
     let fp = &key().public.fingerprint;
     let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
@@ -149,7 +155,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
     );
     let run = |request: Value| {
         iron_privacy_guard::handle_call(
-            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"expiry","request":request}))
+            &ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"expiry","request":request}))
                 .unwrap(),
         )
         .0
@@ -159,7 +165,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
     );
     assert_eq!(verified["result"]["policy_applied"], false);
     let s = store();
-    fs::write(p("v1"), serde_json::to_vec(&s).unwrap()).unwrap();
+    fs::write(p("v1"), ipg_json::to_vec(&s).unwrap()).unwrap();
     let imported = run(
         json!({"operation":"trust.validity","store":p("v1"),"expected_digest":s.digest().unwrap(),"input":p("certificate"),"expected_fingerprint":fp,"output":p("v2")}),
     );
@@ -184,7 +190,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
         fp,
     )
     .unwrap();
-    fs::write(p("future"), serde_json::to_vec(&s).unwrap()).unwrap();
+    fs::write(p("future"), ipg_json::to_vec(&s).unwrap()).unwrap();
     assert_eq!(
         trust::enforce(
             Some(&TrustPolicy {
@@ -198,7 +204,7 @@ fn cli_workflow_and_host_clock_denial_precede_payload_reads() {
         "key_not_yet_valid"
     );
     let active = store();
-    fs::write(p("active"), serde_json::to_vec(&active).unwrap()).unwrap();
+    fs::write(p("active"), ipg_json::to_vec(&active).unwrap()).unwrap();
     let evidence = trust::enforce(
         Some(&TrustPolicy {
             store: p("active"),

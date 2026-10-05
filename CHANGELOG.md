@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+- Replaced Linux tss-esapi access with native TPM device/swtpm commands, retaining
+  the existing P-384 key templates and SHA-384 salted authorization sessions.
+  ESAPI-only transports must migrate to a supported transport. The attestation
+  feature still depends on external certificate-verification crates.
+- Replaced direct serde, serde_json and schemars dependencies with first-party
+  native JSON and derive crates. Default/core builds now depend only on IPG and
+  IronCrypto crates; optional provider migrations remain in progress. Existing
+  wire order and generated schemas are preserved, with strict duplicate-key,
+  integer, Unicode and nesting checks.
+- Replaced direct getrandom, hex, zeroize and tempfile dependencies with
+  IronCrypto-backed randomness/codecs/erasure and native exclusive temporary
+  files. Atomic publication now requires hard-link support from the filesystem.
+- Replaced the Windows helper's windows-sys dependency with minimal native
+  CNG/TBS ABI declarations; existing handle ownership and buffer checks remain.
+- Enabled native OpenPGP by default without adding packages to the core dependency
+  graph. Hardware, cloud services and the broader rPGP backend remain opt-in.
+- Added live per-operation build availability to discovery and knowledge searches,
+  explicit dependency boundaries, and shared knowledge safety guidance. Build
+  availability never implies readiness, authorization or reviewed security.
+- Added `openpgp-native`: native v4/v6 Ed25519/X25519 and P-384 interchange using
+  the existing IronCrypto dependencies, with no additional Cargo packages.
+- Added bounded packet/armor parsing, certificate policy, AES-CFB/OCB message and
+  secret-key protection, and ZIP/ZLIB decoding for the native profile.
+- Added independent PyCA/GnuPG interchange coverage and frozen OCB/compression
+  vectors. The existing `openpgp` backend remains available for broader profiles.
+
 ## 0.1.2 — 2026-10-03
 
 - Published the CLI package as `ipg`; its executable is `ipg` and its Rust library

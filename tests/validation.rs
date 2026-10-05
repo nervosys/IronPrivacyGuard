@@ -1,8 +1,8 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{handle_call, validation};
-use serde_json::{Value, json};
 use std::{fs, process::Command};
 fn report(value: Value) -> Value {
-    serde_json::to_value(validation::validate(value)).unwrap()
+    ipg_json::to_value(validation::validate(value)).unwrap()
 }
 #[test]
 fn shape_failures_do_not_reflect_untrusted_content() {
@@ -82,7 +82,7 @@ fn bounded_validation_and_validation_of_validation() {
 }
 #[test]
 fn cli_and_protocol_preflight_never_execute_candidates() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let out = dir.path().join("key");
     let candidate = json!({"operation":"key.generate","passphrase_file":dir.path().join("missing"),"output":out});
     let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
@@ -90,14 +90,14 @@ fn cli_and_protocol_preflight_never_execute_candidates() {
         .output()
         .unwrap();
     assert!(cli.status.success());
-    let result: Value = serde_json::from_slice(&cli.stdout).unwrap();
+    let result: Value = ipg_json::from_slice(&cli.stdout).unwrap();
     assert_eq!(result["result"]["validation"]["valid"], true);
     assert!(!out.exists());
     fs::write(&out, b"sentinel").unwrap();
-    let bytes=serde_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":candidate}})).unwrap();
+    let bytes=ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":candidate}})).unwrap();
     assert_eq!(handle_call(&bytes).1, 0);
     assert_eq!(fs::read(&out).unwrap(), b"sentinel");
-    let invalid=serde_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":{"operation":"not-real"}}})).unwrap();
+    let invalid=ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"preflight","request":{"operation":"request.validate","request":{"operation":"not-real"}}})).unwrap();
     let (response, status) = handle_call(&invalid);
     assert_eq!(status, 0);
     assert_eq!(response["ok"], true);

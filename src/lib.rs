@@ -1,17 +1,22 @@
 #![forbid(unsafe_code)]
+/// Native JSON value, serialization traits, derives, and schema API used by IPG.
+pub use ipg_json as json;
 pub mod artifact;
 pub mod attest;
 #[cfg(any(feature = "kms", feature = "attestation"))]
 mod base64;
+pub mod capabilities;
 #[cfg(all(feature = "tpm", windows))]
 mod cng;
 mod contract;
 pub mod control_json;
 pub mod crypto;
 pub mod error;
+pub mod files;
 #[cfg(feature = "fuzzing")]
 #[doc(hidden)]
 pub mod fuzz_support;
+pub mod hex;
 #[cfg(feature = "kms")]
 mod kms;
 pub mod knowledge;
@@ -23,10 +28,9 @@ pub mod openpgp;
 mod pkcs11;
 pub mod provider;
 pub mod reconciliation;
+pub mod secrets;
 pub mod stream;
 pub mod stream_signature;
-#[cfg(all(feature = "tpm", target_os = "linux"))]
-mod tpm;
 #[cfg(feature = "attestation")]
 mod tpm2;
 #[cfg(feature = "tpm")]
@@ -39,18 +43,18 @@ use crate::crypto::{Custody, Envelope, PublicKey, SecretKey, Signature};
 use crate::error::{Error, Result};
 use crate::lifecycle::{Revocation, RevocationReason, Validity};
 use crate::provider::{Host, KeyFile};
+use crate::secrets::Zeroizing;
 use crate::trust::{TrustPolicy, TrustStore};
 use ic_core::traits::Digest;
 use ic_hash::Sha256;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use serde_json::{Value, json};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize, de::DeserializeOwned};
+use ipg_json::{Value, json};
 use std::{
     fs::File,
     io::{Read, Write},
     path::Path,
 };
-use zeroize::Zeroizing;
 
 pub const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024;
 pub const MAX_REQUEST_BYTES: u64 = 64 * 1024;
@@ -781,7 +785,7 @@ fn read(path: &str) -> Result<Zeroizing<Vec<u8>>> {
     read_limited(File::open(path)?, MAX_FILE_BYTES)
 }
 fn load<T: DeserializeOwned>(path: &str) -> Result<T> {
-    Ok(serde_json::from_slice(&read(path)?)?)
+    Ok(ipg_json::from_slice(&read(path)?)?)
 }
 fn password(path: &str) -> Result<Zeroizing<Vec<u8>>> {
     read_limited(File::open(path)?, 4096)
@@ -813,11 +817,10 @@ pub fn write_new(path: &str, data: &[u8]) -> Result<()> {
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
-    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
+    let mut temp = crate::files::NamedTempFile::new_in(parent)?;
     temp.write_all(data)?;
     temp.as_file().sync_all()?;
-    temp.persist_noclobber(target)
-        .map_err(|e| Error::from(e.error))?;
+    temp.persist_noclobber(target)?;
     Ok(())
 }
 fn save<T: Serialize>(
@@ -826,7 +829,7 @@ fn save<T: Serialize>(
     kind: &str,
     fingerprint: Option<String>,
 ) -> Result<Outcome> {
-    write_new(&path, &serde_json::to_vec_pretty(value)?)?;
+    write_new(&path, &ipg_json::to_vec_pretty(value)?)?;
     Ok(Outcome::Artifact {
         path,
         artifact_type: kind.into(),
@@ -848,7 +851,7 @@ fn save_reference(
     reference: &provider::HardwareKey,
     protection: provider::Protection,
 ) -> Result<Outcome> {
-    write_new(&output, &serde_json::to_vec_pretty(reference)?).map_err(|error| {
+    write_new(&output, &ipg_json::to_vec_pretty(reference)?).map_err(|error| {
         Error::new(
             error.code,
             format!(
@@ -884,7 +887,7 @@ fn document(value: Value) -> Result<Outcome> {
 
 fn save_store(output: String, store: &TrustStore) -> Result<Outcome> {
     let digest = store.digest()?;
-    write_new(&output, &serde_json::to_vec_pretty(store)?)?;
+    write_new(&output, &ipg_json::to_vec_pretty(store)?)?;
     Ok(Outcome::TrustSnapshot {
         path: output,
         digest,
@@ -906,7 +909,7 @@ fn with_policy(mut outcome: Outcome, evidence: Option<trust::PolicyEvidence>) ->
 
 pub fn schemas() -> Value {
     let mut outcome =
-        serde_json::to_value(schemars::schema_for!(Outcome)).expect("schema is serializable");
+        ipg_json::to_value(ipg_json::schema_for!(Outcome)).expect("schema is serializable");
     let definitions = outcome.as_object_mut().and_then(|m| m.remove("$defs"));
     let mut response = json!({
         "$schema":"https://json-schema.org/draft/2020-12/schema",
@@ -914,19 +917,19 @@ pub fn schemas() -> Value {
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","result"],
              "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":true},"result":outcome}},
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","error"],
-             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":false},"error":schemars::schema_for!(Error)}}
+             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":false},"error":ipg_json::schema_for!(Error)}}
         ]
     });
     if let Some(definitions) = definitions {
         response["$defs"] = definitions;
     }
-    json!({"call":schemars::schema_for!(Call), "request":schemars::schema_for!(Request),
-        "outcome":schemars::schema_for!(Outcome), "response":response,
-        "formats":{"public_key":schemars::schema_for!(PublicKey),"secret_key":schemars::schema_for!(SecretKey),
-        "envelope":schemars::schema_for!(Envelope),"signature":schemars::schema_for!(Signature),
-        "validity":schemars::schema_for!(Validity),"revocation":schemars::schema_for!(Revocation),"trust_store":schemars::schema_for!(TrustStore),
-        "hardware_key":schemars::schema_for!(provider::HardwareKey),"tpm_key":schemars::schema_for!(provider::TpmKey),"kms_key":schemars::schema_for!(provider::KmsKey),"cng_key":schemars::schema_for!(provider::CngKey),"openpgp_key":schemars::schema_for!(openpgp::KeyFile),"tpm_evidence":schemars::schema_for!(attest::Evidence),"tpm_challenge":schemars::schema_for!(attest::Challenge),"tpm_challenge_secret":schemars::schema_for!(attest::ChallengeSecret),"tpm_response":schemars::schema_for!(attest::AttestationResponse),"stream_header":schemars::schema_for!(stream::Header),"stream_signature":schemars::schema_for!(stream_signature::Signature),
-        "knowledge_application":schemars::schema_for!(knowledge::Application)}})
+    json!({"call":ipg_json::schema_for!(Call), "request":ipg_json::schema_for!(Request),
+        "outcome":ipg_json::schema_for!(Outcome), "response":response,
+        "formats":{"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
+        "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
+        "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),
+        "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
 pub fn execute(request: Request) -> Result<Outcome> {
@@ -1075,7 +1078,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         Request::Discover {} => document(ontology::discover()),
         Request::Schema {} => document(schemas()),
         Request::Ontology {} => document(ontology::export()),
-        Request::Algorithms {} => document(serde_json::from_str(&ic_ontology::export::to_json())?),
+        Request::Algorithms {} => document(ipg_json::from_str(&ic_ontology::export::to_json())?),
         Request::Knowledge {} => document(knowledge::export()),
         Request::KnowledgeSearch { query } => document(knowledge::search(&query)?),
         Request::Plan { request } => document(
@@ -1329,7 +1332,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         }
         Request::Hash { input } => Ok(Outcome::Digest {
             algorithm: "sha2-256".into(),
-            digest: hex::encode(Sha256::digest(&read(&input)?)),
+            digest: crate::hex::encode(Sha256::digest(&read(&input)?)),
         }),
         Request::Inspect { input } => {
             // Streams can exceed the artifact limit; only their header is read.
@@ -1397,7 +1400,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &signing_key_arn,
                 mldsa_signing_key_arn.as_deref(),
             )?;
-            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&key)?)?;
             Ok(Outcome::HardwareKey {
                 path: output,
                 fingerprint: key.public.fingerprint,
@@ -1485,7 +1488,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             };
             host.permit(Custody::Hardware)?;
             let evidence = provider::tpm_attest(&key, &password(&passphrase_file)?)?;
-            write_new(&output, &serde_json::to_vec_pretty(&evidence)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&evidence)?)?;
             Ok(Outcome::TpmEvidence {
                 path: output,
                 fingerprint: evidence.public.fingerprint,
@@ -1510,8 +1513,8 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             };
             let (challenge, secret, report) =
                 attest::challenge(&evidence, &expected_fingerprint, &anchors, &intermediates)?;
-            write_new(&secret_output, &serde_json::to_vec_pretty(&secret)?)?;
-            write_new(&output, &serde_json::to_vec_pretty(&challenge)?)?;
+            write_new(&secret_output, &ipg_json::to_vec_pretty(&secret)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&challenge)?)?;
             Ok(Outcome::TpmChallenge {
                 path: output,
                 secret_path: secret_output,
@@ -1527,7 +1530,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let evidence: attest::Evidence = load(&input)?;
             let challenge: attest::Challenge = load(&challenge)?;
             let response = provider::tpm_respond(&evidence, &challenge)?;
-            write_new(&output, &serde_json::to_vec_pretty(&response)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&response)?)?;
             Ok(Outcome::TpmResponse { path: output })
         }
         Request::TpmAttestationVerify {
@@ -1574,7 +1577,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 key_version,
                 &password(&passphrase_file)?,
             )?;
-            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&key)?)?;
             Ok(Outcome::OpenpgpKey {
                 path: output,
                 fingerprint: key.fingerprint,
@@ -1598,7 +1601,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &password(&passphrase_file)?,
                 &password(&new_passphrase_file)?,
             )?;
-            write_new(&output, &serde_json::to_vec_pretty(&key)?)?;
+            write_new(&output, &ipg_json::to_vec_pretty(&key)?)?;
             Ok(Outcome::OpenpgpKey {
                 path: output,
                 fingerprint: key.fingerprint,
@@ -1828,7 +1831,7 @@ pub fn parse_call(data: &[u8]) -> Result<Call> {
     if data.len() > MAX_REQUEST_BYTES as usize {
         return Err(Error::new("limit_exceeded", "Request exceeds frame limit"));
     }
-    Ok(serde_json::from_value(control_json::parse(data)?)?)
+    Ok(ipg_json::from_value(control_json::parse(data)?)?)
 }
 
 pub fn handle_call(data: &[u8]) -> (Value, i32) {

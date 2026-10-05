@@ -1,15 +1,15 @@
 //! Versioned detached signatures over a bounded-memory SHA-384 file commitment.
 //! This is IPG's hash-then-sign protocol, not Ed25519ph, HashML-DSA or OpenPGP.
+use crate::secrets::Zeroizing;
 use crate::{
     crypto::{self, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
 };
 use ic_core::traits::Digest;
 use ic_hash::Sha384;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 use std::io::Read;
-use zeroize::Zeroizing;
 
 pub const FORMAT: &str = "ipg-stream-signature-v1";
 
@@ -80,7 +80,7 @@ fn commitment(input: &mut impl Read) -> Result<(u64, String)> {
             .ok_or_else(|| Error::new("limit_exceeded", "Stream signature byte count overflow"))?;
         hash.update(&buffer[..count]);
     }
-    Ok((bytes, hex::encode(hash.finalize())))
+    Ok((bytes, crate::hex::encode(hash.finalize())))
 }
 
 pub fn sign(key: &dyn IdentityKey, input: &mut impl Read) -> Result<Signature> {

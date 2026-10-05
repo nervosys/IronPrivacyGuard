@@ -1,19 +1,38 @@
 //! OpenPGP compatibility boundary: v4 and v6 keys, certificates, messages and detached
 //! signatures (RFC 9580) for exchanging data with GnuPG and other OpenPGP tools.
 //!
-//! Packet processing and the OpenPGP primitives come from rPGP (`openpgp` feature),
-//! not IronCrypto. IPG adds certificate-validity policy on top: binding and back
-//! signatures, revocation, expiry, key flags and minimum algorithm strength. Native
-//! IPG artifacts are never read as OpenPGP data, or the reverse.
+//! `openpgp-native` implements a bounded curve profile with existing IronCrypto
+//! primitives and no additional dependencies. `openpgp` selects the broader rPGP
+//! backend and takes precedence if both are enabled. Both enforce certificate
+//! bindings, revocation, expiry and key flags. Native IPG artifacts are never read
+//! as OpenPGP data, or the reverse.
 use crate::error::{Error, Result};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 
 #[cfg(feature = "openpgp")]
 mod engine;
+#[cfg(all(feature = "openpgp-native", not(feature = "openpgp")))]
+mod inflate;
+#[cfg(all(feature = "openpgp-native", not(feature = "openpgp")))]
+mod native;
+#[cfg(all(feature = "openpgp-native", not(feature = "openpgp")))]
+mod primitives;
+#[cfg(all(feature = "openpgp-native", not(feature = "openpgp")))]
+mod wire;
 
 pub const KEY_FORMAT: &str = "ipg-openpgp-key-v1";
 pub const KDF: &str = "argon2id-m65536-t3-p4";
+/// Selected OpenPGP backend, also reported by agent discovery.
+pub const IMPLEMENTATION: &str = if cfg!(feature = "openpgp") {
+    "rPGP 0.20 (not IronCrypto)"
+} else if cfg!(feature = "openpgp-native") {
+    "native RFC 9580 curve profile on IronCrypto (no additional dependencies)"
+} else {
+    "unavailable"
+};
+/// Whether this build can execute OpenPGP operations.
+pub const AVAILABLE: bool = cfg!(any(feature = "openpgp", feature = "openpgp-native"));
 /// Certificates read from files; a separate 1024-signature limit bounds
 /// evaluation work, including third-party certifications.
 pub const MAX_CERTIFICATE_BYTES: u64 = 1024 * 1024;
@@ -187,7 +206,7 @@ pub struct Verification {
 }
 
 pub struct Decrypted {
-    pub plaintext: zeroize::Zeroizing<Vec<u8>>,
+    pub plaintext: crate::secrets::Zeroizing<Vec<u8>>,
     /// The message carried OpenPGP signatures; they are not verified.
     pub signed: bool,
 }
@@ -199,7 +218,7 @@ pub struct Signed {
 }
 
 pub struct VerifiedMessage {
-    pub plaintext: zeroize::Zeroizing<Vec<u8>>,
+    pub plaintext: crate::secrets::Zeroizing<Vec<u8>>,
     pub verification: Verification,
 }
 
@@ -247,13 +266,13 @@ pub(crate) use engine::{
 #[doc(hidden)]
 pub use engine::fuzz_packets;
 
-#[cfg(not(feature = "openpgp"))]
+#[cfg(not(any(feature = "openpgp", feature = "openpgp-native")))]
 mod unavailable {
     use super::*;
     fn unavailable<T>() -> Result<T> {
         Err(Error::new(
             "provider_unavailable",
-            "This ipg build has no OpenPGP support; rebuild with --features openpgp",
+            "This ipg build has no OpenPGP support; rebuild with --features openpgp-native or --features openpgp",
         ))
     }
     pub(crate) fn generate_version(_: &str, _: Algorithm, _: Version, _: &[u8]) -> Result<KeyFile> {
@@ -270,7 +289,7 @@ mod unavailable {
         _: &str,
         _: &[u8],
         _: &[u8],
-    ) -> Result<zeroize::Zeroizing<String>> {
+    ) -> Result<crate::secrets::Zeroizing<String>> {
         unavailable()
     }
     pub(crate) fn inspect(_: &[u8]) -> Result<Certificate> {
@@ -278,7 +297,7 @@ mod unavailable {
     }
     pub(crate) fn encrypt(
         _: &[u8],
-        _: &[(zeroize::Zeroizing<Vec<u8>>, String)],
+        _: &[(crate::secrets::Zeroizing<Vec<u8>>, String)],
     ) -> Result<(String, Vec<RecipientKeys>)> {
         unavailable()
     }
@@ -300,7 +319,12 @@ mod unavailable {
         unavailable()
     }
 }
-#[cfg(not(feature = "openpgp"))]
+#[cfg(all(feature = "openpgp-native", not(feature = "openpgp")))]
+pub(crate) use native::{
+    decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
+    verify, verify_message,
+};
+#[cfg(not(any(feature = "openpgp", feature = "openpgp-native")))]
 pub(crate) use unavailable::{
     decrypt, encrypt, export, export_secret, generate_version, import_secret, inspect, sign,
     verify, verify_message,

@@ -1,23 +1,23 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     crypto,
     lifecycle::{self, RevocationReason},
     reconciliation::{self, Change, WindowRelation},
     trust::{Eligibility, TrustPolicy, TrustStore},
 };
-use serde_json::{Value, json};
 use std::{fs, process::Command, sync::OnceLock};
 fn fixture() -> &'static Value {
     static V: OnceLock<Value> = OnceLock::new();
-    V.get_or_init(|| serde_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
+    V.get_or_init(|| ipg_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
 }
 fn key() -> crypto::SecretKey {
-    serde_json::from_value(fixture()["secret"].clone()).unwrap()
+    ipg_json::from_value(fixture()["secret"].clone()).unwrap()
 }
 fn password() -> Vec<u8> {
-    hex::decode(fixture()["password_hex"].as_str().unwrap()).unwrap()
+    iron_privacy_guard::hex::decode(fixture()["password_hex"].as_str().unwrap()).unwrap()
 }
 fn store() -> TrustStore {
-    serde_json::from_value(fixture()["snapshots"][0]["snapshot"].clone()).unwrap()
+    ipg_json::from_value(fixture()["snapshots"][0]["snapshot"].clone()).unwrap()
 }
 fn bounded(start: u64, end: u64) -> TrustStore {
     let mut s = store();
@@ -53,9 +53,9 @@ fn distinct_public(index: u64) -> crypto::PublicKey {
     }
     crypto::PublicKey {
         format: "ipg-public-v1".into(),
-        encryption_key: hex::encode(enc),
-        signing_key: hex::encode(sig),
-        fingerprint: hex::encode(ic_hash::Sha256::digest(&frame)),
+        encryption_key: iron_privacy_guard::hex::encode(enc),
+        signing_key: iron_privacy_guard::hex::encode(sig),
+        fingerprint: iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&frame)),
     }
 }
 #[test]
@@ -226,10 +226,10 @@ fn union_order_capacity_and_invalid_inputs_are_checked() {
 }
 #[test]
 fn cli_pins_no_clobber_and_conflict_publication() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let put = |name: &str, s: TrustStore| {
         let p = dir.path().join(name);
-        fs::write(&p, serde_json::to_vec(&s).unwrap()).unwrap();
+        fs::write(&p, ipg_json::to_vec(&s).unwrap()).unwrap();
         TrustPolicy {
             store: p.display().to_string(),
             expected_digest: s.digest().unwrap(),
@@ -242,9 +242,9 @@ fn cli_pins_no_clobber_and_conflict_publication() {
         .args([
             "trust.merge",
             "--base",
-            &serde_json::to_string(&base).unwrap(),
+            &ipg_json::to_string(&base).unwrap(),
             "--incoming",
-            &serde_json::to_string(&incoming).unwrap(),
+            &ipg_json::to_string(&incoming).unwrap(),
             "--output",
             output.to_str().unwrap(),
         ])
@@ -255,14 +255,14 @@ fn cli_pins_no_clobber_and_conflict_publication() {
         "{}",
         String::from_utf8_lossy(&result.stdout)
     );
-    let response: Value = serde_json::from_slice(&result.stdout).unwrap();
+    let response: Value = ipg_json::from_slice(&result.stdout).unwrap();
     let candidate = TrustPolicy {
         store: output.display().to_string(),
         expected_digest: response["result"]["digest"].as_str().unwrap().into(),
     };
     let call = |r: Value| {
         iron_privacy_guard::handle_call(
-            &serde_json::to_vec(&json!({"protocol":"ipg/1","id":"merge","request":r})).unwrap(),
+            &ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"merge","request":r})).unwrap(),
         )
     };
     let report = call(json!({"operation":"trust.compare","base":base,"candidate":candidate}));

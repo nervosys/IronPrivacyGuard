@@ -6,7 +6,7 @@ use crate::{
     provider::HardwareKey,
     trust::{MAX_STORE_BYTES, TrustStore},
 };
-use serde::Deserialize;
+use ipg_json::Deserialize;
 
 pub struct Metadata {
     pub format: String,
@@ -26,91 +26,91 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
     struct Header {
         format: String,
     }
-    let header: Header = serde_json::from_slice(data)?;
+    let header: Header = ipg_json::from_slice(data)?;
     let fingerprint = match header.format.as_str() {
         "ipg-public-v1"
         | "ipg-public-p384-v1"
         | "ipg-public-hybrid-v1"
         | "ipg-public-p384-mldsa65-v1" => {
-            let value: PublicKey = serde_json::from_slice(data)?;
+            let value: PublicKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.fingerprint)
         }
         "ipg-cng-key-v1" => {
-            let value: crate::provider::CngKey = serde_json::from_slice(data)?;
+            let value: crate::provider::CngKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-tpm-evidence-v1" => {
             // Structure only; tpm.attestation.challenge and verify authenticate it.
-            let value: crate::attest::Evidence = serde_json::from_slice(data)?;
+            let value: crate::attest::Evidence = ipg_json::from_slice(data)?;
             value.public.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-tpm-challenge-v1" => {
-            let value: crate::attest::Challenge = serde_json::from_slice(data)?;
+            let value: crate::attest::Challenge = ipg_json::from_slice(data)?;
             crate::crypto::check_fingerprint(&value.fingerprint)?;
             Some(value.fingerprint)
         }
         "ipg-tpm-challenge-secret-v1" => {
-            let value: crate::attest::ChallengeSecret = serde_json::from_slice(data)?;
+            let value: crate::attest::ChallengeSecret = ipg_json::from_slice(data)?;
             crate::crypto::check_fingerprint(&value.fingerprint)?;
             Some(value.fingerprint)
         }
         "ipg-tpm-response-v1" => {
-            let _: crate::attest::AttestationResponse = serde_json::from_slice(data)?;
+            let _: crate::attest::AttestationResponse = ipg_json::from_slice(data)?;
             None
         }
         "ipg-openpgp-key-v1" => {
             // Structure only: the sealed key is authenticated when opened.
-            let value: crate::openpgp::KeyFile = serde_json::from_slice(data)?;
+            let value: crate::openpgp::KeyFile = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.fingerprint)
         }
         "ipg-kms-key-v1" => {
-            let value: crate::provider::KmsKey = serde_json::from_slice(data)?;
+            let value: crate::provider::KmsKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-tpm-key-v1" => {
             // Wrapped blobs are opaque here; only the originating TPM can load them.
-            let value: crate::provider::TpmKey = serde_json::from_slice(data)?;
+            let value: crate::provider::TpmKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-pkcs11-key-v1" => {
             // A reference proves nothing about the token until it is opened with a PIN.
-            let value: HardwareKey = serde_json::from_slice(data)?;
+            let value: HardwareKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-secret-v1" | "ipg-secret-hybrid-v1" => {
-            let value: SecretKey = serde_json::from_slice(data)?;
+            let value: SecretKey = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.public.fingerprint)
         }
         "ipg-envelope-v1" => {
-            let value: Envelope = serde_json::from_slice(data)?;
+            let value: Envelope = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.recipient)
         }
         "ipg-signature-v1" => {
-            let value: Signature = serde_json::from_slice(data)?;
+            let value: Signature = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.signer)
         }
         "ipg-stream-signature-v1" => {
-            let value: crate::stream_signature::Signature = serde_json::from_slice(data)?;
+            let value: crate::stream_signature::Signature = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.signer)
         }
         "ipg-revocation-v1" => {
-            let value: Revocation = serde_json::from_slice(data)?;
+            let value: Revocation = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.fingerprint)
         }
         "ipg-validity-v1" => {
-            let value: Validity = serde_json::from_slice(data)?;
+            let value: Validity = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.fingerprint)
         }
@@ -121,7 +121,7 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
                     "Trust snapshot exceeds byte limit",
                 ));
             }
-            let value: TrustStore = serde_json::from_slice(data)?;
+            let value: TrustStore = ipg_json::from_slice(data)?;
             // Internal certificate consistency still cannot establish an external digest pin.
             value.validate()?;
             None

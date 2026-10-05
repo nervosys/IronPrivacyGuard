@@ -4,7 +4,7 @@
 //! Use a DISPOSABLE token such as a SoftHSMv2 slot: each run creates persistent key
 //! objects, and one deliberate wrong-PIN attempt consumes a retry counter.
 #![cfg(feature = "pkcs11")]
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{fs, path::Path, process::Command};
 
 struct Token {
@@ -23,7 +23,7 @@ fn token() -> Option<Token> {
 
 fn call(token: &Token, request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"live","request":request})).unwrap();
+        ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"live","request":request})).unwrap();
     let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("call")
         .env("IPG_PKCS11_MODULE", &token.module)
@@ -34,7 +34,7 @@ fn call(token: &Token, request: Value) -> Value {
     use std::io::Write;
     child.stdin.take().unwrap().write_all(&body).unwrap();
     let output = child.wait_with_output().unwrap();
-    serde_json::from_slice(&output.stdout).unwrap()
+    ipg_json::from_slice(&output.stdout).unwrap()
 }
 fn ok(token: &Token, request: Value) -> Value {
     let response = call(token, request);
@@ -62,7 +62,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
         return;
     };
     eprintln!("live PKCS#11 token {} via {}", token.serial, token.module);
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), &token.pin).unwrap();
     fs::write(path("wrong-pin"), format!("{}x", token.pin)).unwrap();
@@ -89,7 +89,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
     assert_eq!(generated["protection"]["generated_on_token"], true);
     assert_eq!(generated["protection"]["possession_verified"], true);
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
-    let reference: Value = serde_json::from_slice(&fs::read(path("ref")).unwrap()).unwrap();
+    let reference: Value = ipg_json::from_slice(&fs::read(path("ref")).unwrap()).unwrap();
     assert_eq!(reference["token"], listed["token"]);
     let inspected = ok(&token, json!({"operation":"inspect","input":path("ref")}));
     assert_eq!(inspected["format"], "ipg-pkcs11-key-v1");
@@ -178,7 +178,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
     // A reference edited to claim different token information is refused.
     let mut relabeled = reference.clone();
     relabeled["token"]["label"] = "other".into();
-    fs::write(path("relabeled"), serde_json::to_vec(&relabeled).unwrap()).unwrap();
+    fs::write(path("relabeled"), ipg_json::to_vec(&relabeled).unwrap()).unwrap();
     assert_eq!(
         fails(
             &token,
@@ -214,7 +214,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
     ];
     let mut input = Vec::new();
     for message in messages {
-        input.extend(serde_json::to_vec(&message).unwrap());
+        input.extend(ipg_json::to_vec(&message).unwrap());
         input.push(b'\n');
     }
     let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
@@ -231,7 +231,7 @@ fn hardware_identity_lifecycle_on_a_real_token() {
         .stdout
         .split(|b| *b == b'\n')
         .filter(|line| !line.is_empty())
-        .map(|line| serde_json::from_slice(line).unwrap())
+        .map(|line| ipg_json::from_slice(line).unwrap())
         .collect();
     let signed = &responses[1]["result"]["structuredContent"];
     assert_eq!(signed["ok"], true, "{signed}");

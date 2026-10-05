@@ -6,12 +6,12 @@
 //! and optional IPG_TEST_EK_INTERMEDIATES. Keys are wrapped blobs in a temporary
 //! file: nothing persists in the TPM.
 #![cfg(feature = "tpm")]
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{fs, process::Command};
 
 fn call(request: Value) -> Value {
     let body =
-        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"attest","request":request})).unwrap();
+        ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"attest","request":request})).unwrap();
     let mut command = Command::new(env!("CARGO_BIN_EXE_ipg"));
     command.arg("call");
     if let Ok(tcti) = std::env::var("IPG_TEST_TPM_TCTI") {
@@ -24,7 +24,7 @@ fn call(request: Value) -> Value {
         .unwrap();
     use std::io::Write;
     child.stdin.take().unwrap().write_all(&body).unwrap();
-    serde_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
+    ipg_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
 }
 fn ok(request: Value) -> Value {
     let request_text = request["operation"].to_string();
@@ -46,7 +46,7 @@ fn tpm_identity_attestation_round_trip() {
     }
     let anchors = std::env::var("IPG_TEST_EK_ANCHORS").expect("IPG_TEST_EK_ANCHORS");
     let intermediates = std::env::var("IPG_TEST_EK_INTERMEDIATES").ok();
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"tpm-attestation-test-pin").unwrap();
     fs::write(path("data"), b"attested \0\xff content").unwrap();
@@ -54,7 +54,7 @@ fn tpm_identity_attestation_round_trip() {
     let generated =
         ok(json!({"operation":"tpm.key.generate","output":path("key"),"pin_file":path("pin")}));
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
-    let key: Value = serde_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
+    let key: Value = ipg_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
     assert_eq!(key["format"], "ipg-tpm-key-v1");
     eprintln!("parent {}", key["parent"]);
 
@@ -135,9 +135,9 @@ fn tpm_identity_attestation_round_trip() {
     assert_eq!(verdict["report"]["fingerprint"], fingerprint);
 
     // A response that is not the TPM's credential is refused.
-    let mut forged: Value = serde_json::from_slice(&fs::read(path("response")).unwrap()).unwrap();
+    let mut forged: Value = ipg_json::from_slice(&fs::read(path("response")).unwrap()).unwrap();
     forged["credential"] = json!("00".repeat(32));
-    fs::write(path("forged"), serde_json::to_vec(&forged).unwrap()).unwrap();
+    fs::write(path("forged"), ipg_json::to_vec(&forged).unwrap()).unwrap();
     let mut forged_verify = verify.clone();
     forged_verify["response"] = json!(path("forged"));
     assert_eq!(fails(forged_verify), "authentication_failed");

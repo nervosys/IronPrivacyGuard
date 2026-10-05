@@ -2,7 +2,7 @@
 # Run the TPM test suite against a fresh swtpm software TPM 2.0. The TPM state lives
 # in a temporary directory removed on exit.
 #
-# Requires (Debian/Ubuntu): swtpm swtpm-tools libtss2-dev pkg-config.
+# Requires (Debian/Ubuntu): swtpm swtpm-tools.
 # Tests run on one thread: they share one TPM.
 # All PINs in the tests are PUBLIC TEST DATA.
 set -euo pipefail

@@ -7,18 +7,18 @@ use ic_mlkem::{
     MlKem768,
     kem::{CIPHERTEXT_LEN, DECAPS_KEY_LEN, ENCAPS_KEY_LEN},
 };
+use ipg_json::Value;
+use ipg_json::de::DeserializeOwned;
 use iron_privacy_guard::crypto::{self, Envelope, PublicKey, SecretKey, Signature};
-use serde::de::DeserializeOwned;
-use serde_json::Value;
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("vectors/native-hybrid-v1.json")).unwrap()
+    ipg_json::from_str(include_str!("vectors/native-hybrid-v1.json")).unwrap()
 }
 fn decode<T: DeserializeOwned>(value: &Value) -> T {
-    serde_json::from_value(value.clone()).unwrap()
+    ipg_json::from_value(value.clone()).unwrap()
 }
 fn bytes(value: &Value) -> Vec<u8> {
-    hex::decode(value.as_str().unwrap()).unwrap()
+    iron_privacy_guard::hex::decode(value.as_str().unwrap()).unwrap()
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn every_hybrid_component_is_authenticated() {
         let mut ephemeral = bytes(&item["envelope"]["ephemeral_key"]);
         ephemeral[offset] ^= 1;
         let mut tampered = item["envelope"].clone();
-        tampered["ephemeral_key"] = Value::String(hex::encode(ephemeral));
+        tampered["ephemeral_key"] = Value::String(iron_privacy_guard::hex::encode(ephemeral));
         let tampered: Envelope = decode(&tampered);
         assert!(
             crypto::decrypt(&secret, &password, &tampered).is_err(),
@@ -136,7 +136,7 @@ fn every_hybrid_component_is_authenticated() {
         let mut tampered = item["envelope"].clone();
         let mut decoded = bytes(&tampered[field]);
         decoded[0] ^= 1;
-        tampered[field] = Value::String(hex::encode(decoded));
+        tampered[field] = Value::String(iron_privacy_guard::hex::encode(decoded));
         assert!(crypto::decrypt(&secret, &password, &decode(&tampered)).is_err());
     }
     let mut downgraded = item["envelope"].clone();
@@ -207,7 +207,7 @@ fn independent_composite_signatures_verify() {
     store
         .revoke(revocation, &secret.public.fingerprint)
         .unwrap();
-    let size = serde_json::to_vec_pretty(&store).unwrap().len() as u64;
+    let size = ipg_json::to_vec_pretty(&store).unwrap().len() as u64;
     assert!(
         size * iron_privacy_guard::trust::MAX_IDENTITIES as u64
             <= iron_privacy_guard::trust::MAX_STORE_BYTES,
@@ -220,13 +220,11 @@ fn hybrid_artifacts_inspect_without_secrets() {
     let v = fixture();
     for name in ["public", "secret"] {
         let metadata =
-            iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&v[name]).unwrap()).unwrap();
+            iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&v[name]).unwrap()).unwrap();
         assert_eq!(metadata.fingerprint.unwrap(), v["public"]["fingerprint"]);
     }
     let mut truncated = v["secret"].clone();
     truncated["ciphertext"] =
         Value::String(v["secret"]["ciphertext"].as_str().unwrap()[..128].into());
-    assert!(
-        iron_privacy_guard::artifact::inspect(&serde_json::to_vec(&truncated).unwrap()).is_err()
-    );
+    assert!(iron_privacy_guard::artifact::inspect(&ipg_json::to_vec(&truncated).unwrap()).is_err());
 }

@@ -1,7 +1,7 @@
 use ic_core::traits::Digest;
 use ic_hash::Sha384;
+use ipg_json::json;
 use iron_privacy_guard::{Request, crypto, execute, stream_signature};
-use serde_json::json;
 use std::{
     fs,
     io::{self, Cursor, Read},
@@ -11,20 +11,20 @@ const PASSWORD: &[u8] = b"PUBLIC stream signature test password";
 
 #[test]
 fn large_files_round_trip_without_in_memory_limit_and_never_clobber() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     let key = crypto::generate(PASSWORD).unwrap();
-    fs::write(path("key"), serde_json::to_vec(&key).unwrap()).unwrap();
-    fs::write(path("public"), serde_json::to_vec(&key.public).unwrap()).unwrap();
+    fs::write(path("key"), ipg_json::to_vec(&key).unwrap()).unwrap();
+    fs::write(path("public"), ipg_json::to_vec(&key.public).unwrap()).unwrap();
     fs::write(path("pass"), PASSWORD).unwrap();
     let input = fs::File::create(path("input")).unwrap();
     input
         .set_len(iron_privacy_guard::MAX_FILE_BYTES + 17)
         .unwrap();
     let sign = json!({"operation":"stream.sign","input":path("input"),"output":path("sig"),"key":path("key"),"passphrase_file":path("pass")});
-    let outcome = execute(serde_json::from_value(sign.clone()).unwrap()).unwrap();
+    let outcome = execute(ipg_json::from_value(sign.clone()).unwrap()).unwrap();
     assert_eq!(
-        serde_json::to_value(outcome).unwrap()["artifact_type"],
+        ipg_json::to_value(outcome).unwrap()["artifact_type"],
         "stream_signature"
     );
     let verify = || Request::StreamVerify {
@@ -36,7 +36,7 @@ fn large_files_round_trip_without_in_memory_limit_and_never_clobber() {
     };
     execute(verify()).unwrap();
     assert_eq!(
-        execute(serde_json::from_value(sign).unwrap())
+        execute(ipg_json::from_value(sign).unwrap())
             .err()
             .unwrap()
             .code,
@@ -79,7 +79,10 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
             }
             let sig = stream_signature::sign(&key, &mut Fragmented(&data)).unwrap();
             assert_eq!(sig.bytes, data.len() as u64);
-            assert_eq!(sig.digest, hex::encode(Sha384::digest(&data)));
+            assert_eq!(
+                sig.digest,
+                iron_privacy_guard::hex::encode(Sha384::digest(&data))
+            );
             stream_signature::verify(
                 &secret.public,
                 &secret.public.fingerprint,
@@ -96,7 +99,7 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
                 "signer",
                 "digest_algorithm",
             ] {
-                let mut changed = serde_json::to_value(&sig).unwrap();
+                let mut changed = ipg_json::to_value(&sig).unwrap();
                 match field {
                     "bytes" => changed[field] = json!(sig.bytes + 1),
                     "digest" => changed[field] = json!("00".repeat(48)),
@@ -106,7 +109,7 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
                     "format" => changed[field] = json!("ipg-signature-v1"),
                     _ => changed[field] = json!("sha2-256"),
                 }
-                let bad = serde_json::from_value(changed).unwrap();
+                let bad = ipg_json::from_value(changed).unwrap();
                 assert!(
                     stream_signature::verify(
                         &secret.public,

@@ -1,12 +1,12 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{artifact, crypto, handle_call, trust};
-use serde_json::{Value, json};
 use std::{fs, sync::OnceLock};
 fn fixture() -> &'static Value {
     static V: OnceLock<Value> = OnceLock::new();
-    V.get_or_init(|| serde_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
+    V.get_or_init(|| ipg_json::from_str(include_str!("vectors/native-v1.json")).unwrap())
 }
 fn inspect(value: &Value) -> iron_privacy_guard::error::Result<artifact::Metadata> {
-    artifact::inspect(&serde_json::to_vec(value).unwrap())
+    artifact::inspect(&ipg_json::to_vec(value).unwrap())
 }
 fn artifacts() -> Vec<Value> {
     let v = fixture();
@@ -23,12 +23,12 @@ fn artifacts() -> Vec<Value> {
 }
 #[test]
 fn all_formats_inspect_without_secret_access() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     for (index, value) in artifacts().iter().enumerate() {
         let path = dir.path().join(index.to_string());
-        fs::write(&path, serde_json::to_vec(value).unwrap()).unwrap();
+        fs::write(&path, ipg_json::to_vec(value).unwrap()).unwrap();
         let call = json!({"protocol":"ipg/1","id":"inspect","request":{"operation":"inspect","input":path}});
-        let (response, code) = handle_call(&serde_json::to_vec(&call).unwrap());
+        let (response, code) = handle_call(&ipg_json::to_vec(&call).unwrap());
         assert_eq!(code, 0, "{response}");
         assert_eq!(response["result"]["structurally_valid"], true);
         assert_eq!(response["result"]["authenticated"], false);
@@ -58,11 +58,11 @@ fn malformed_metadata_rejected_for_every_encoding() {
 #[test]
 fn duplicate_members_are_not_discarded_by_inspection() {
     for value in artifacts() {
-        let encoded = serde_json::to_string(&value).unwrap();
+        let encoded = ipg_json::to_string(&value).unwrap();
         for (name, field) in value.as_object().unwrap() {
             let duplicate = format!(
                 "{{{}:{},{}",
-                serde_json::to_string(name).unwrap(),
+                ipg_json::to_string(name).unwrap(),
                 field,
                 &encoded[1..]
             );
@@ -73,7 +73,7 @@ fn duplicate_members_are_not_discarded_by_inspection() {
             );
         }
     }
-    let secret = serde_json::to_string(&fixture()["secret"]).unwrap();
+    let secret = ipg_json::to_string(&fixture()["secret"]).unwrap();
     let duplicate_nested =
         secret.replace("\"public\":{", "\"public\":{\"format\":\"ipg-public-v1\",");
     assert!(artifact::inspect(duplicate_nested.as_bytes()).is_err());
@@ -81,9 +81,9 @@ fn duplicate_members_are_not_discarded_by_inspection() {
 #[test]
 fn structural_success_never_claims_cryptographic_authentication() {
     let v = fixture();
-    let public: crypto::PublicKey = serde_json::from_value(v["public"].clone()).unwrap();
-    let secret: crypto::SecretKey = serde_json::from_value(v["secret"].clone()).unwrap();
-    let password = hex::decode(v["password_hex"].as_str().unwrap()).unwrap();
+    let public: crypto::PublicKey = ipg_json::from_value(v["public"].clone()).unwrap();
+    let secret: crypto::SecretKey = ipg_json::from_value(v["secret"].clone()).unwrap();
+    let password = iron_privacy_guard::hex::decode(v["password_hex"].as_str().unwrap()).unwrap();
     let mut sig = v["messages"][8]["signature"].clone();
     sig["signature"] = json!("00".repeat(64));
     assert!(inspect(&sig).is_ok());
@@ -91,7 +91,7 @@ fn structural_success_never_claims_cryptographic_authentication() {
         crypto::verify(
             &public,
             &public.fingerprint,
-            &serde_json::from_value(sig).unwrap(),
+            &ipg_json::from_value(sig).unwrap(),
             b"anything"
         )
         .is_err()
@@ -99,18 +99,11 @@ fn structural_success_never_claims_cryptographic_authentication() {
     let mut envelope = v["messages"][8]["envelope"].clone();
     envelope["tag"] = json!("00".repeat(16));
     assert!(inspect(&envelope).is_ok());
-    assert!(
-        crypto::decrypt(
-            &secret,
-            &password,
-            &serde_json::from_value(envelope).unwrap()
-        )
-        .is_err()
-    );
+    assert!(crypto::decrypt(&secret, &password, &ipg_json::from_value(envelope).unwrap()).is_err());
     let mut protected = v["secret"].clone();
     protected["tag"] = json!("00".repeat(16));
     assert!(inspect(&protected).is_ok());
-    assert!(crypto::unlock(&serde_json::from_value(protected).unwrap(), &password).is_err());
+    assert!(crypto::unlock(&ipg_json::from_value(protected).unwrap(), &password).is_err());
     let mut revocation = v["revocations"][0].clone();
     revocation["signature"] = json!("00".repeat(64));
     assert!(inspect(&revocation).is_ok());
@@ -120,7 +113,7 @@ fn structural_success_never_claims_cryptographic_authentication() {
 }
 #[test]
 fn byte_bounds_and_ciphertext_case_match_supported_formats() {
-    let mut snapshot = serde_json::to_vec(&fixture()["snapshots"][0]["snapshot"]).unwrap();
+    let mut snapshot = ipg_json::to_vec(&fixture()["snapshots"][0]["snapshot"]).unwrap();
     snapshot.resize(trust::MAX_STORE_BYTES as usize, b' ');
     assert!(artifact::inspect(&snapshot).is_ok());
     snapshot.push(b' ');
@@ -145,10 +138,10 @@ fn byte_bounds_and_ciphertext_case_match_supported_formats() {
         assert!(inspect(&envelope).is_err());
     }
     let mut malformed: crypto::Envelope =
-        serde_json::from_value(fixture()["messages"][0]["envelope"].clone()).unwrap();
+        ipg_json::from_value(fixture()["messages"][0]["envelope"].clone()).unwrap();
     malformed.tag = "bad".into();
     // Public encoding rejection occurs before the intentionally invalid passphrase.
-    let secret: crypto::SecretKey = serde_json::from_value(fixture()["secret"].clone()).unwrap();
+    let secret: crypto::SecretKey = ipg_json::from_value(fixture()["secret"].clone()).unwrap();
     assert_eq!(
         crypto::decrypt(&secret, b"short", &malformed)
             .err()

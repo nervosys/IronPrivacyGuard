@@ -5,12 +5,11 @@
 //! Wrong-PIN attempts count toward the TPM dictionary-attack lockout, so that check
 //! runs only with IPG_TEST_WINDOWS_TPM_WRONG_PIN=1.
 #![cfg(all(feature = "tpm", windows))]
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{fs, process::Command};
 
 fn call(request: Value) -> Value {
-    let body =
-        serde_json::to_vec(&json!({"protocol":"ipg/1","id":"tbs","request":request})).unwrap();
+    let body = ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"tbs","request":request})).unwrap();
     let mut child = Command::new(env!("CARGO_BIN_EXE_ipg"))
         .arg("call")
         .env_remove("IPG_TPM_TCTI")
@@ -20,7 +19,7 @@ fn call(request: Value) -> Value {
         .unwrap();
     use std::io::Write;
     child.stdin.take().unwrap().write_all(&body).unwrap();
-    serde_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
+    ipg_json::from_slice(&child.wait_with_output().unwrap().stdout).unwrap()
 }
 fn ok(request: Value) -> Value {
     let response = call(request);
@@ -39,7 +38,7 @@ fn windows_tpm_identity_lifecycle() {
         eprintln!("skipping: set IPG_TEST_WINDOWS_TPM=1 to use this machine's TPM");
         return;
     }
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     fs::write(path("pin"), b"windows-tpm-test-pin").unwrap();
     fs::write(path("input"), b"windows tpm\0\xffcontent").unwrap();
@@ -48,7 +47,7 @@ fn windows_tpm_identity_lifecycle() {
         ok(json!({"operation":"tpm.key.generate","output":path("key"),"pin_file":path("pin")}));
     assert_eq!(generated["provider"], "tpm");
     assert_eq!(generated["protection"]["possession_verified"], true);
-    let key: Value = serde_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
+    let key: Value = ipg_json::from_slice(&fs::read(path("key")).unwrap()).unwrap();
     assert_eq!(key["format"], "ipg-tpm-key-v1");
     assert_eq!(key["parent"], "windows-srk-81000001");
     let fingerprint = generated["fingerprint"].as_str().unwrap().to_owned();
@@ -90,7 +89,7 @@ fn windows_tpm_identity_lifecycle() {
     // A key file relabeled for another TPM is refused before any key use.
     let mut relabeled = key.clone();
     relabeled["tpm"]["vendor"] = "OTHER".into();
-    fs::write(path("relabeled"), serde_json::to_vec(&relabeled).unwrap()).unwrap();
+    fs::write(path("relabeled"), ipg_json::to_vec(&relabeled).unwrap()).unwrap();
     assert_eq!(
         fails(
             json!({"operation":"key.public","key":path("relabeled"),"output":path("never"),"passphrase_file":path("pin")})

@@ -1,8 +1,8 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{
     control_json, handle_call,
     mcp::{Config, Server},
 };
-use serde_json::{Value, json};
 use std::{fs, process::Command};
 
 #[test]
@@ -40,7 +40,7 @@ fn ordinary_json_numbers_strings_and_limits_remain_compatible() {
     ] {
         assert_eq!(
             control_json::parse(data.as_bytes()).unwrap(),
-            serde_json::from_str::<Value>(data).unwrap(),
+            ipg_json::from_str::<Value>(data).unwrap(),
             "{data}"
         );
     }
@@ -106,7 +106,7 @@ fn mcp_duplicate_requests_do_not_initialize_or_execute() {
 }
 #[test]
 fn cli_json_flags_reject_duplicates_without_publishing() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let output = dir.path().join("output");
     fs::write(&output, b"sentinel").unwrap();
     let request = format!(
@@ -118,7 +118,7 @@ fn cli_json_flags_reject_duplicates_without_publishing() {
         .output()
         .unwrap();
     assert_eq!(cli.status.code(), Some(2));
-    let response: Value = serde_json::from_slice(&cli.stdout).unwrap();
+    let response: Value = ipg_json::from_slice(&cli.stdout).unwrap();
     assert_eq!(response["error"]["code"], "invalid_format");
     assert_eq!(fs::read(&output).unwrap(), b"sentinel");
     let cli = Command::new(env!("CARGO_BIN_EXE_ipg"))
@@ -138,7 +138,7 @@ fn cli_json_flags_reject_duplicates_without_publishing() {
         .output()
         .unwrap();
     assert_eq!(cli.status.code(), Some(2));
-    let response: Value = serde_json::from_slice(&cli.stdout).unwrap();
+    let response: Value = ipg_json::from_slice(&cli.stdout).unwrap();
     assert_eq!(response["error"]["code"], "invalid_format");
 }
 
@@ -150,11 +150,11 @@ fn large_float_serialization_keeps_standard_decoder_semantics() {
         b"2.9999999999999997e23",
     ] {
         let value = control_json::parse(data).unwrap();
-        assert_eq!(value, serde_json::from_slice::<Value>(data).unwrap());
-        let encoded = serde_json::to_vec(&value).unwrap();
+        assert_eq!(value, ipg_json::from_slice::<Value>(data).unwrap());
+        let encoded = ipg_json::to_vec(&value).unwrap();
         assert_eq!(
             control_json::parse(&encoded).unwrap(),
-            serde_json::from_slice::<Value>(&encoded).unwrap()
+            ipg_json::from_slice::<Value>(&encoded).unwrap()
         );
     }
 }

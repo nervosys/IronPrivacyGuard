@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn swtpm_seeds_are_accepted_and_all_truncations_rejected() {
-        let evidence: serde_json::Value = serde_json::from_str(include_str!(
+        let evidence: ipg_json::Value = ipg_json::from_str(include_str!(
             "../tests/vectors/tpm-attestation-swtpm/evidence.json"
         ))
         .unwrap();
@@ -76,7 +76,7 @@ mod tests {
             }
         }
         for (kind, value) in inputs {
-            let data = hex::decode(value.as_str().unwrap()).unwrap();
+            let data = crate::hex::decode(value.as_str().unwrap()).unwrap();
             let accepts = |bytes: &[u8]| match kind {
                 "public" => Public::parse(bytes).is_ok(),
                 "attest" => Certification::parse(bytes).is_ok(),

@@ -1,5 +1,5 @@
-//! TPM operations over IPG's in-house TPM 2.0 layer: the Windows key backend (TPM
-//! Base Services) and key attestation on every platform.
+//! TPM operations over IPG's in-house TPM 2.0 layer: Linux and Windows key
+//! backends and key attestation.
 //!
 //! Windows keys are created under the Windows storage root key (persistent handle
 //! 0x81000001) and kept as TPM-wrapped blobs in an ipg-tpm-key-v1 file, exactly as
@@ -10,6 +10,7 @@ use crate::attest::{self, AttestationResponse, Challenge, Evidence, KeyCertifica
 use crate::crypto::{self, Custody, IdentityKey, PublicKey, Suite};
 use crate::error::{Error, Result};
 use crate::provider::{self, Protection, TpmBinding, TpmBlob, TpmKey};
+use crate::secrets::Zeroizing;
 use crate::tpm2::{
     structures::{self, Public},
     tpm::{HmacSession, RH_ENDORSEMENT, RH_OWNER, Tpm},
@@ -18,7 +19,6 @@ use crate::tpm2::{
 use ic_core::traits::Digest;
 use ic_hash::Sha384;
 use std::cell::RefCell;
-use zeroize::Zeroizing;
 
 /// The Windows storage root key, which Windows provisions and keeps persistent.
 const WINDOWS_SRK: u32 = 0x8100_0001;
@@ -77,6 +77,44 @@ fn binding(tpm: &mut Tpm) -> Result<TpmBinding> {
     })
 }
 
+#[cfg(target_os = "linux")]
+pub fn info() -> Result<provider::TpmInfo> {
+    let mut tpm = connection()?;
+    let identification = binding(&mut tpm)?;
+    let firmware = tpm.properties(0x10b, 2)?;
+    let value = |tag| firmware.iter().find(|p| p.0 == tag).map_or(0, |p| p.1);
+    let curves = tpm.ecc_curves()?;
+    let owner_auth_empty = tpm
+        .create_primary(RH_OWNER, &structures::owner_srk_template().marshal()?)
+        .map(|(handle, _)| tpm.flush(handle))
+        .is_ok();
+    Ok(provider::TpmInfo {
+        tpm: identification,
+        firmware_version: format!("{:08x}.{:08x}", value(0x10b), value(0x10c)),
+        suites: if curves.contains(&structures::CURVE_P384) && owner_auth_empty {
+            vec![crypto::P384_KEY_FORMAT.into()]
+        } else {
+            Vec::new()
+        },
+        curves: curves
+            .into_iter()
+            .map(|curve| match curve {
+                1 => "NistP192".into(),
+                2 => "NistP224".into(),
+                3 => "NistP256".into(),
+                4 => "NistP384".into(),
+                5 => "NistP521".into(),
+                0x10 => "BnP256".into(),
+                0x11 => "BnP638".into(),
+                0x20 => "Sm2P256".into(),
+                other => format!("0x{other:04x}"),
+            })
+            .collect(),
+        backend: "native-tpm2".into(),
+        owner_auth_empty: Some(owner_auth_empty),
+    })
+}
+
 /// A key's parent: handle, name and public area; transient parents are flushed.
 struct Parent {
     handle: u32,
@@ -127,7 +165,7 @@ pub struct NativeIdentity {
     encryption: (u32, Vec<u8>),
     signing: (u32, Vec<u8>),
     parent: Option<u32>,
-    /// Salt key for key-operation sessions: the parent (RSA storage roots only).
+    /// Salt key for key-operation sessions: the RSA or P-384 storage parent.
     salt: (u32, Public),
     auth: Zeroizing<Vec<u8>>,
 }
@@ -232,7 +270,7 @@ fn load_identity(mut tpm: Tpm, key: &TpmKey, pin: &[u8]) -> Result<NativeIdentit
     Ok(identity)
 }
 
-/// Open a key file whose keys live under the Windows storage root key.
+/// Open a key file under its pinned storage-root template.
 pub fn open(key: &TpmKey, pin: &[u8]) -> Result<Box<dyn IdentityKey>> {
     let mut tpm = connection()?;
     if binding(&mut tpm)? != key.tpm {
@@ -244,13 +282,26 @@ pub fn open(key: &TpmKey, pin: &[u8]) -> Result<Box<dyn IdentityKey>> {
     Ok(Box::new(load_identity(tpm, key, pin)?))
 }
 
-/// Create an identity under the Windows storage root key.
+/// Create an identity under the platform's storage-root template.
 pub fn generate(pin: &[u8]) -> Result<(TpmKey, Protection)> {
+    let template = if cfg!(windows) {
+        provider::WINDOWS_TPM_PARENT
+    } else {
+        provider::TPM_PARENT
+    };
+    generate_under(pin, template)
+}
+
+fn generate_under(pin: &[u8], template: &str) -> Result<(TpmKey, Protection)> {
     let mut tpm = connection()?;
     let tpm_binding = binding(&mut tpm)?;
-    let srk = parent(&mut tpm, provider::WINDOWS_TPM_PARENT)?;
+    let srk = parent(&mut tpm, template)?;
     let auth = authorization(pin);
-    let mut session = tpm.hmac_session(srk.handle, &srk.public)?;
+    let mut session = tpm.hmac_session(srk.handle, &srk.public).inspect_err(|_| {
+        if srk.transient {
+            tpm.flush(srk.handle);
+        }
+    })?;
     let created = (|| {
         let encryption = tpm.create(
             (srk.handle, &srk.name),
@@ -267,10 +318,13 @@ pub fn generate(pin: &[u8]) -> Result<(TpmKey, Protection)> {
         Ok::<_, Error>((encryption, signing))
     })();
     tpm.flush(session.handle());
+    if srk.transient {
+        tpm.flush(srk.handle);
+    }
     let ((encryption_private, encryption_public), (signing_private, signing_public)) = created?;
     let blob = |private: &[u8], public: &Public| TpmBlob {
-        public: hex::encode(&public.raw),
-        private: hex::encode(private),
+        public: crate::hex::encode(&public.raw),
+        private: crate::hex::encode(private),
     };
     let key = TpmKey {
         format: provider::TPM_KEY_FORMAT.into(),
@@ -280,7 +334,7 @@ pub fn generate(pin: &[u8]) -> Result<(TpmKey, Protection)> {
             &signing_public.p384_point()?,
         )?,
         tpm: tpm_binding,
-        parent: provider::WINDOWS_TPM_PARENT.into(),
+        parent: template.into(),
         encryption_key: blob(&encryption_private, &encryption_public),
         signing_key: blob(&signing_private, &signing_public),
     };
@@ -392,9 +446,9 @@ pub fn evidence(key: &TpmKey, pin: &[u8]) -> Result<Evidence> {
                 points.push(public.p384_point()?);
                 certifications.push(KeyCertification {
                     role,
-                    public: hex::encode(&public.raw),
-                    attest: hex::encode(&attest),
-                    signature: hex::encode(&signature),
+                    public: crate::hex::encode(&public.raw),
+                    attest: crate::hex::encode(&attest),
+                    signature: crate::hex::encode(&signature),
                 });
             }
             if crypto::identity(Suite::P384, &points[0], &points[1])? != key.public {
@@ -409,13 +463,13 @@ pub fn evidence(key: &TpmKey, pin: &[u8]) -> Result<Evidence> {
         Ok(Evidence {
             format: attest::EVIDENCE_FORMAT.into(),
             public: key.public.clone(),
-            ek_public: hex::encode(&ek_public.raw),
+            ek_public: crate::hex::encode(&ek_public.raw),
             ek_certificates: certificates
                 .iter()
                 .take(attest::MAX_EK_CERTIFICATES)
-                .map(hex::encode)
+                .map(crate::hex::encode)
                 .collect(),
-            ak_public: hex::encode(&ak_public.raw),
+            ak_public: crate::hex::encode(&ak_public.raw),
             certifications: certified?,
         })
     })();
@@ -436,7 +490,7 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
     let mut tpm = connection()?;
     let (ek, ek_public, ek_transient) = endorsement(&mut tpm)?;
     let result = (|| {
-        if hex::encode(&ek_public.raw) != evidence.ek_public {
+        if crate::hex::encode(&ek_public.raw) != evidence.ek_public {
             return Err(Error::new(
                 "identity_mismatch",
                 "The evidence names a different endorsement key",
@@ -445,7 +499,7 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
         let (ak, ak_public) =
             tpm.create_primary(RH_ENDORSEMENT, &structures::ak_template().marshal()?)?;
         let activated = (|| {
-            if hex::encode(&ak_public.raw) != evidence.ak_public {
+            if crate::hex::encode(&ak_public.raw) != evidence.ak_public {
                 return Err(Error::new(
                     "identity_mismatch",
                     "The evidence names a different attestation key",
@@ -463,7 +517,7 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
         Ok(AttestationResponse {
             format: attest::RESPONSE_FORMAT.into(),
             evidence_digest: challenge.evidence_digest.clone(),
-            credential: hex::encode(&credential[..]),
+            credential: crate::hex::encode(&credential[..]),
         })
     })();
     if ek_transient {
@@ -500,7 +554,7 @@ mod tests {
         drop(tpm);
 
         let pin = b"native-backend-test-pin";
-        let (key, protection) = generate(pin).unwrap();
+        let (key, protection) = generate_under(pin, provider::WINDOWS_TPM_PARENT).unwrap();
         assert!(protection.possession_verified);
         assert_eq!(key.parent, provider::WINDOWS_TPM_PARENT);
         let identity = open(&key, pin).unwrap();

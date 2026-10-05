@@ -7,9 +7,6 @@ license = "AGPL-3.0-or-later"
 description = "Minimal safe wrapper over Windows CNG and TPM Base Services (IronPrivacyGuard)"
 repository = "https://github.com/nervosys/IronPrivacyGuard"
 
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_System_TpmBaseServices"] }
-
 [dev-dependencies]
 ic-core = "=0.2.7"
 ic-ec = "=0.2.7"

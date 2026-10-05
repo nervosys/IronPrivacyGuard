@@ -10,7 +10,7 @@ use iron_privacy_guard::attest::{
 
 fn fixture() -> (Evidence, Vec<Vec<u8>>, Vec<Vec<u8>>) {
     let evidence: Evidence =
-        serde_json::from_str(include_str!("vectors/tpm-attestation-swtpm/evidence.json")).unwrap();
+        ipg_json::from_str(include_str!("vectors/tpm-attestation-swtpm/evidence.json")).unwrap();
     let anchors =
         parse_certificates(include_bytes!("vectors/tpm-attestation-swtpm/anchors.pem")).unwrap();
     let intermediates = parse_certificates(include_bytes!(
@@ -118,7 +118,7 @@ fn trust_anchors_and_chains_are_enforced() {
     assert_eq!(
         challenge_code(
             &evidence,
-            &[hex::decode(&evidence.ek_certificates[0]).unwrap()],
+            &[iron_privacy_guard::hex::decode(&evidence.ek_certificates[0]).unwrap()],
             &intermediates
         ),
         "key_not_trusted"
@@ -129,7 +129,7 @@ fn trust_anchors_and_chains_are_enforced() {
     );
     // The EK certificate must be the certificate of this EK.
     let mut swapped = evidence.clone();
-    swapped.ek_certificates = vec![hex::encode(&intermediates[0])];
+    swapped.ek_certificates = vec![iron_privacy_guard::hex::encode(&intermediates[0])];
     assert_ne!(challenge_code(&swapped, &anchors, &intermediates), "ok");
 }
 

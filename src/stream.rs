@@ -16,13 +16,13 @@
 //! it only after the final chunk authenticates, with memory bounded to one chunk.
 use crate::crypto::{self, Envelope, IdentityKey, PublicKey, Suite};
 use crate::error::{Error, Result};
+use crate::secrets::Zeroizing;
 use ic_cipher::{Aes256Gcm, ChaCha20Poly1305};
 use ic_core::traits::{Aead, Digest};
 use ic_hash::Sha384;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 use std::io::{BufReader, BufWriter, Read, Write};
-use zeroize::Zeroizing;
 
 pub const FORMAT: &str = "ipg-stream-v1";
 pub const MAGIC: &[u8; 8] = b"IPGSTRM1";
@@ -196,11 +196,11 @@ pub fn encrypt(
         format: FORMAT.into(),
         content_cipher: cipher,
         chunk_size: CHUNK_SIZE as u32,
-        stream_id: hex::encode(stream_id.as_ref()),
-        nonce_prefix: hex::encode(prefix.as_ref()),
+        stream_id: crate::hex::encode(stream_id.as_ref()),
+        nonce_prefix: crate::hex::encode(prefix.as_ref()),
         recipients: envelopes,
     };
-    let header_bytes = serde_json::to_vec(&header)?;
+    let header_bytes = ipg_json::to_vec(&header)?;
     let aad = Header::associated_data(&header_bytes);
     output.write_all(MAGIC)?;
     output.write_all(&(header_bytes.len() as u32).to_be_bytes())?;
@@ -260,10 +260,10 @@ pub fn read_header(input: &mut impl Read) -> Result<(Header, Vec<u8>)> {
         return Err(Error::new("invalid_format", "Truncated stream header"));
     }
     // Duplicate member names are refused before typed decoding.
-    let header: Header = serde_json::from_value(crate::control_json::parse_unbounded(&bytes)?)?;
+    let header: Header = ipg_json::from_value(crate::control_json::parse_unbounded(&bytes)?)?;
     header.validate()?;
     // Only canonical header bytes are accepted, so the commitment is unambiguous.
-    if serde_json::to_vec(&header)? != bytes {
+    if ipg_json::to_vec(&header)? != bytes {
         return Err(Error::new(
             "invalid_format",
             "Stream header is not canonical",
@@ -387,7 +387,7 @@ fn publish<T>(
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(std::path::Path::new("."));
-    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
+    let mut temp = crate::files::NamedTempFile::new_in(parent)?;
     let value = {
         let mut writer = BufWriter::new(temp.as_file_mut());
         let value = write(&mut writer)?;
@@ -395,7 +395,6 @@ fn publish<T>(
         value
     };
     temp.as_file().sync_all()?;
-    temp.persist_noclobber(target)
-        .map_err(|e| Error::from(e.error))?;
+    temp.persist_noclobber(target)?;
     Ok(value)
 }

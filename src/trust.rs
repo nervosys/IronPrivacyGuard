@@ -6,8 +6,8 @@ use crate::{
 };
 use ic_core::traits::Digest;
 use ic_hash::{Sha256, Sha384};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 use std::{collections::HashSet, fs::File};
 
 pub const MAX_IDENTITIES: usize = 256;
@@ -104,17 +104,17 @@ impl TrustStore {
     }
     pub fn digest(&self) -> Result<String> {
         self.validate()?;
-        let body = serde_json::to_vec(self)?;
+        let body = ipg_json::to_vec(self)?;
         Ok(match version(&self.format)? {
-            1 => hex::encode(Sha256::digest(&crypto::frame(
+            1 => crate::hex::encode(Sha256::digest(&crypto::frame(
                 "IPG trust snapshot v1",
                 &[&body],
             ))),
-            2 => hex::encode(Sha256::digest(&crypto::frame(
+            2 => crate::hex::encode(Sha256::digest(&crypto::frame(
                 "IPG trust snapshot v2",
                 &[&body],
             ))),
-            _ => hex::encode(Sha384::digest(&crypto::frame(
+            _ => crate::hex::encode(Sha384::digest(&crypto::frame(
                 "IPG trust snapshot v3",
                 &[&body],
             ))),
@@ -236,7 +236,7 @@ impl TrustStore {
 pub fn load(policy: &TrustPolicy) -> Result<TrustStore> {
     check_digest(&policy.expected_digest)?;
     let bytes = crate::read_limited(File::open(&policy.store)?, MAX_STORE_BYTES)?;
-    let store: TrustStore = serde_json::from_slice(&bytes)?;
+    let store: TrustStore = ipg_json::from_slice(&bytes)?;
     if store.digest()? != policy.expected_digest {
         return Err(Error::new(
             "policy_mismatch",

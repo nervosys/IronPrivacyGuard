@@ -1,0 +1,10 @@
+[package]
+name = "ipg-derive"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "AGPL-3.0-or-later"
+description = "Dependency-free typed JSON contract derives for IronPrivacyGuard"
+
+[lib]
+proc-macro = true

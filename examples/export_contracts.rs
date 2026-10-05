@@ -7,17 +7,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(root.join("schemas"))?;
     fs::write(
         root.join("schemas/mcp-tools.json"),
-        serde_json::to_vec_pretty(&iron_privacy_guard::mcp::tool_catalog(
+        ipg_json::to_vec_pretty(&iron_privacy_guard::mcp::tool_catalog(
             &iron_privacy_guard::mcp::Config::default(),
         ))?,
     )?;
     fs::write(
         root.join("ontology/knowledge.jsonld"),
-        serde_json::to_vec_pretty(&iron_privacy_guard::knowledge::export())?,
+        ipg_json::to_vec_pretty(&iron_privacy_guard::knowledge::export())?,
     )?;
     fs::write(
         root.join("ontology/ipg.jsonld"),
-        serde_json::to_vec_pretty(&iron_privacy_guard::ontology::export())?,
+        ipg_json::to_vec_pretty(&iron_privacy_guard::ontology::export())?,
     )?;
     for (name, schema) in iron_privacy_guard::schemas()
         .as_object()
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         fs::write(
             root.join(format!("schemas/{name}.json")),
-            serde_json::to_vec_pretty(schema)?,
+            ipg_json::to_vec_pretty(schema)?,
         )?;
     }
     Ok(())

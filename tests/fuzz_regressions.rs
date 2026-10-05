@@ -28,10 +28,10 @@ fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
 #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
 #[test]
 fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
-    use serde_json::Value;
+    use ipg_json::Value;
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
-    let decode = |value: &Value| hex::decode(value.as_str().unwrap()).unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-revocation-limit-v1.json")).unwrap();
+    let decode = |value: &Value| iron_privacy_guard::hex::decode(value.as_str().unwrap()).unwrap();
     let document = decode(&fixture["document_hex"]);
     let mut replayed = 0;
     let mut large = 0;
@@ -83,14 +83,15 @@ fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
 #[cfg(feature = "openpgp")]
 #[test]
 fn one_pass_metadata_mismatches_never_publish_plaintext() {
+    use ipg_json::{Value, json};
     use iron_privacy_guard::{Request, execute};
-    use serde_json::{Value, json};
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
-    let directory = tempfile::tempdir().unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
+    let directory = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name| directory.path().join(name).display().to_string();
     for case in fixture["cases"].as_array().unwrap() {
-        let message = hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
+        let message =
+            iron_privacy_guard::hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
         // The independent fixture builder uses a six-byte definite packet header.
         assert_eq!(&message[..2], &[0xc4, 0xff]);
         let mut mutations = vec![(7, 1), (9, if message[9] == 19 { 22 } else { 19 })];
@@ -101,14 +102,14 @@ fn one_pass_metadata_mismatches_never_publish_plaintext() {
         }
         fs::write(
             path("certificate"),
-            hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+            iron_privacy_guard::hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
         )
         .unwrap();
         for (offset, replacement) in mutations {
             let mut changed = message.clone();
             changed[offset] = replacement;
             fs::write(path("message"), changed).unwrap();
-            let request: Request = serde_json::from_value(json!({
+            let request: Request = ipg_json::from_value(json!({
                 "operation":"openpgp.message.verify", "input":path("message"),
                 "output":path("denied"), "certificate":path("certificate"),
                 "expected_openpgp_fingerprint":case["fingerprint"],
@@ -128,23 +129,27 @@ fn one_pass_metadata_mismatches_never_publish_plaintext() {
 #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
 #[test]
 fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {
+    use ipg_json::{Value, json};
     use iron_privacy_guard::{Request, execute};
-    use serde_json::{Value, json};
     let fixture: Value =
-        serde_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
-    let document = hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
-    let directory = tempfile::tempdir().unwrap();
+        ipg_json::from_str(include_str!("vectors/openpgp-parser-v1.json")).unwrap();
+    let document =
+        iron_privacy_guard::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap();
+    let directory = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name| directory.path().join(name).display().to_string();
     fs::write(path("document"), &document).unwrap();
-    let call = |candidate: Value| execute(serde_json::from_value::<Request>(candidate).unwrap());
+    let call = |candidate: Value| execute(ipg_json::from_value::<Request>(candidate).unwrap());
     for case in fixture["cases"].as_array().unwrap() {
         let fingerprint = case["fingerprint"].as_str().unwrap();
-        let certificate = hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap();
-        let signature = hex::decode(case["signature_hex"].as_str().unwrap()).unwrap();
-        let message = hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
+        let certificate =
+            iron_privacy_guard::hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap();
+        let signature =
+            iron_privacy_guard::hex::decode(case["signature_hex"].as_str().unwrap()).unwrap();
+        let message =
+            iron_privacy_guard::hex::decode(case["embedded_hex"].as_str().unwrap()).unwrap();
         fs::write(path("certificate"), &certificate).unwrap();
         fs::write(path("signature"), &signature).unwrap();
-        let inspected = serde_json::to_value(
+        let inspected = ipg_json::to_value(
             call(json!({"operation":"openpgp.cert.inspect","input":path("certificate")})).unwrap(),
         )
         .unwrap();
@@ -176,7 +181,8 @@ fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {
         assert!(verify_message().is_err());
         assert!(!Path::new(&path("verified")).exists());
         for field in ["embedded_zlib_hex", "embedded_zip_hex"] {
-            let compressed = hex::decode(case[field].as_str().unwrap()).unwrap();
+            let compressed =
+                iron_privacy_guard::hex::decode(case[field].as_str().unwrap()).unwrap();
             fs::write(path("message"), &compressed).unwrap();
             verify_message().unwrap();
             assert_eq!(fs::read(path("verified")).unwrap(), document);
@@ -268,7 +274,7 @@ fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
     use iron_privacy_guard::stream;
     use std::io::Cursor;
     let framed = fs::read("fuzz/seeds/stream_headers/three-recipients").unwrap();
-    let mut header: stream::Header = serde_json::from_slice(&framed[12..]).unwrap();
+    let mut header: stream::Header = ipg_json::from_slice(&framed[12..]).unwrap();
     let envelope = header
         .recipients
         .iter()
@@ -276,13 +282,13 @@ fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
         .unwrap();
     header.recipients = (0..64)
         .map(|i| {
-            let mut value = serde_json::to_value(envelope).unwrap();
-            value["recipient"] = serde_json::json!(format!("{i:096x}"));
-            serde_json::from_value(value).unwrap()
+            let mut value = ipg_json::to_value(envelope).unwrap();
+            value["recipient"] = ipg_json::json!(format!("{i:096x}"));
+            ipg_json::from_value(value).unwrap()
         })
         .collect();
     let frame = |header: &stream::Header| {
-        let body = serde_json::to_vec(header).unwrap();
+        let body = ipg_json::to_vec(header).unwrap();
         let mut data = stream::MAGIC.to_vec();
         data.extend_from_slice(&(body.len() as u32).to_be_bytes());
         data.extend_from_slice(&body);
@@ -305,9 +311,9 @@ fn large_stream_headers_exercise_full_bodies_and_recipient_limit() {
     stream::read_header(&mut Cursor::new(&near)).unwrap();
     assert!(stream::read_header(&mut Cursor::new(&near[..near.len() - 1])).is_err());
     header.recipients[0].ciphertext.clear();
-    header.recipients.push(
-        serde_json::from_value(serde_json::to_value(&header.recipients[1]).unwrap()).unwrap(),
-    );
+    header
+        .recipients
+        .push(ipg_json::from_value(ipg_json::to_value(&header.recipients[1]).unwrap()).unwrap());
     assert!(stream::read_header(&mut Cursor::new(frame(&header))).is_err());
 }
 

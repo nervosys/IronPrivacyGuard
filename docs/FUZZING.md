@@ -168,11 +168,13 @@ exhaustive coverage, or a substitute for an independent audit. Long-running
 campaigns, coverage measurement and further cryptographic targets remain future
 work.
 
-Strict control decoding is differentially checked against serde_json on the same
-accepted bytes. The default floating-point decoder does not guarantee bit-exact
-parse/serialize roundtrips for arbitrary decimal values; numeric regression seeds
-cover that distinction so the oracle does not misclassify expected rounding as a
-parser failure. Request fields that require integers still use typed decoding.
+Control decoding now uses IPG's native parser. Exact signed/unsigned integer
+boundaries, escaped duplicate names, malformed Unicode and nesting limits have
+regression tests. `tests/interop/json_reference.py` independently checks integer
+and Unicode preservation through MCP against Python's JSON implementation, and
+checks recovery after invalid requests. Existing cryptographic vectors protect
+typed serialization order; generated schemas match the pre-migration exports.
+Floating-point values remain approximate; fields requiring integers reject them.
 
 ## Local parser campaign, 2026-09-29
 

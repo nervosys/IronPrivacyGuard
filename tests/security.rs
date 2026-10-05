@@ -1,5 +1,5 @@
+use ipg_json::{Value, json};
 use iron_privacy_guard::{crypto::*, *};
-use serde_json::{Value, json};
 use std::{
     fs,
     io::Write,
@@ -13,10 +13,10 @@ const PASSWORD: &[u8] = b"test-only strong passphrase 42";
 fn standalone_contracts_match_runtime_exports() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let ontology_file: Value =
-        serde_json::from_slice(&std::fs::read(root.join("ontology/ipg.jsonld")).unwrap()).unwrap();
+        ipg_json::from_slice(&std::fs::read(root.join("ontology/ipg.jsonld")).unwrap()).unwrap();
     assert_eq!(ontology_file, ontology::export());
     for (name, schema) in schemas().as_object().unwrap() {
-        let exported: Value = serde_json::from_slice(
+        let exported: Value = ipg_json::from_slice(
             &std::fs::read(root.join(format!("schemas/{name}.json"))).unwrap(),
         )
         .unwrap();
@@ -58,14 +58,13 @@ fn every_generated_schema_reference_resolves() {
 
 #[test]
 fn complete_file_workflow() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let path = |name: &str| dir.path().join(name).display().to_string();
     std::fs::write(path("pass"), PASSWORD).unwrap();
     std::fs::write(path("input"), b"binary\0\xffmessage").unwrap();
     let invoke = |request: Value| {
-        let data =
-            serde_json::to_vec(&json!({"protocol":"ipg/1","id":"workflow","request":request}))
-                .unwrap();
+        let data = ipg_json::to_vec(&json!({"protocol":"ipg/1","id":"workflow","request":request}))
+            .unwrap();
         let (value, code) = handle_call(&data);
         assert_eq!(code, 0, "{value}");
         value
@@ -109,8 +108,8 @@ fn key() -> &'static SecretKey {
 fn changed(hex: &mut String) {
     hex.replace_range(..1, if hex.starts_with('0') { "1" } else { "0" });
 }
-fn clone_json<T: serde::Serialize + serde::de::DeserializeOwned>(v: &T) -> T {
-    serde_json::from_value(serde_json::to_value(v).unwrap()).unwrap()
+fn clone_json<T: ipg_json::Serialize + ipg_json::de::DeserializeOwned>(v: &T) -> T {
+    ipg_json::from_value(ipg_json::to_value(v).unwrap()).unwrap()
 }
 
 #[test]
@@ -137,11 +136,11 @@ fn every_envelope_field_is_bound_or_rejected() {
         "ciphertext",
         "tag",
     ] {
-        let mut v = serde_json::to_value(&e).unwrap();
+        let mut v = ipg_json::to_value(&e).unwrap();
         let mut s = v[field].as_str().unwrap().to_string();
         changed(&mut s);
         v[field] = json!(s);
-        let tampered: Envelope = serde_json::from_value(v).unwrap();
+        let tampered: Envelope = ipg_json::from_value(v).unwrap();
         assert!(decrypt(key, PASSWORD, &tampered).is_err(), "{field}");
     }
 }
@@ -151,12 +150,12 @@ fn secret_authentication_and_password_rejection() {
     let key = key();
     assert!(unlock(key, b"wrong password long enough").is_err());
     for field in ["format", "kdf", "salt", "nonce", "ciphertext", "tag"] {
-        let mut v = serde_json::to_value(key).unwrap();
+        let mut v = ipg_json::to_value(key).unwrap();
         let mut s = v[field].as_str().unwrap().to_string();
         changed(&mut s);
         v[field] = json!(s);
         assert!(
-            unlock(&serde_json::from_value(v).unwrap(), PASSWORD).is_err(),
+            unlock(&ipg_json::from_value(v).unwrap(), PASSWORD).is_err(),
             "{field}"
         );
     }
@@ -182,13 +181,13 @@ fn low_order_public_key_and_malformed_hex_fail_closed() {
     let mut p = key().public.clone();
     p.encryption_key = "00".repeat(32);
     let enc = [0; 32];
-    let sig = hex::decode(&p.signing_key).unwrap();
+    let sig = iron_privacy_guard::hex::decode(&p.signing_key).unwrap();
     let mut framed = b"IPG identity v1".to_vec();
     for f in [&enc[..], &sig] {
         framed.extend_from_slice(&(f.len() as u64).to_be_bytes());
         framed.extend_from_slice(f);
     }
-    p.fingerprint = hex::encode(ic_hash::Sha256::digest(&framed));
+    p.fingerprint = iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&framed));
     assert!(encrypt(&p, &p.fingerprint, b"secret").is_err());
     assert!(bytes::<32>(&"AA".repeat(32)).is_err());
     assert!(bytes::<32>("00").is_err());
@@ -196,7 +195,7 @@ fn low_order_public_key_and_malformed_hex_fail_closed() {
 
 #[test]
 fn writes_never_clobber_and_auth_failure_never_creates_plaintext() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = iron_privacy_guard::files::tempdir().unwrap();
     let output = dir.path().join("out");
     let out = output.to_str().unwrap();
     write_new(out, b"original").unwrap();
@@ -209,11 +208,11 @@ fn writes_never_clobber_and_auth_failure_never_creates_plaintext() {
     let passfile = dir.path().join("pass");
     let envelope = dir.path().join("envelope");
     let dest = dir.path().join("plaintext");
-    fs::write(&keyfile, serde_json::to_vec(key()).unwrap()).unwrap();
+    fs::write(&keyfile, ipg_json::to_vec(key()).unwrap()).unwrap();
     fs::write(&passfile, PASSWORD).unwrap();
     let mut e = encrypt(&key().public, &key().public.fingerprint, b"private").unwrap();
     changed(&mut e.tag);
-    fs::write(&envelope, serde_json::to_vec(&e).unwrap()).unwrap();
+    fs::write(&envelope, ipg_json::to_vec(&e).unwrap()).unwrap();
     assert!(
         execute(Request::Decrypt {
             input: envelope.display().to_string(),
@@ -228,7 +227,7 @@ fn writes_never_clobber_and_auth_failure_never_creates_plaintext() {
 
 #[test]
 fn schemas_registry_and_graph_cover_all_operations() {
-    let schema = serde_json::to_value(schemars::schema_for!(Request)).unwrap();
+    let schema = ipg_json::to_value(ipg_json::schema_for!(Request)).unwrap();
     let variants = schema["oneOf"].as_array().unwrap();
     let mut actual: Vec<_> = variants
         .iter()
@@ -266,7 +265,7 @@ fn strict_requests_plans_limits_and_correlation() {
         json!({"operation":"discover","extra":true}),
         json!({"operation":"execute-shell"}),
     ] {
-        assert!(serde_json::from_value::<Request>(bad).is_err());
+        assert!(ipg_json::from_value::<Request>(bad).is_err());
     }
     let (v, code) = handle_call(br#"{"protocol":"ipg/1","id":"q1","request":{"operation":"plan","request":{"operation":"decrypt","input":"missing","output":"also-missing","key":"missing","passphrase_file":"missing"}}}"#);
     assert_eq!(code, 0);
@@ -284,7 +283,7 @@ fn cli_and_ndjson_are_machine_readable() {
     let out = Command::new(exe).arg("discover").output().unwrap();
     assert!(out.status.success());
     assert!(out.stderr.is_empty());
-    let value: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let value: Value = ipg_json::from_slice(&out.stdout).unwrap();
     assert_eq!(value["ok"], true);
     let out = Command::new(exe)
         .args(["hash", "--input", "missing", "--input", "other"])
@@ -305,7 +304,7 @@ fn cli_and_ndjson_are_machine_readable() {
     let results: Vec<Value> = String::from_utf8(out.stdout)
         .unwrap()
         .lines()
-        .map(|s| serde_json::from_str(s).unwrap())
+        .map(|s| ipg_json::from_str(s).unwrap())
         .collect();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0]["ok"], false);
@@ -318,7 +317,9 @@ fn ironcrypto_known_answer_tests() {
     ic_ec::X25519::self_test().unwrap();
     ic_ec::Ed25519::self_test().unwrap();
     assert_eq!(
-        hex::encode(<ic_hash::Sha256 as ic_core::traits::Digest>::digest(b"abc")),
+        iron_privacy_guard::hex::encode(<ic_hash::Sha256 as ic_core::traits::Digest>::digest(
+            b"abc"
+        )),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }

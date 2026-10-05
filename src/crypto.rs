@@ -11,6 +11,7 @@
 //! composite post-quantum signatures, for providers such as AWS KMS that hold
 //! ML-DSA but not ML-KEM keys; its encryption is P-384 only.
 use crate::error::{Error, Result};
+use crate::secrets::Zeroizing;
 use ic_cipher::{Aes256Gcm, ChaCha20Poly1305};
 use ic_core::traits::{Aead, Digest, Kdf, KeyAgreement, SignatureScheme};
 use ic_ec::{EcdhP384, EcdsaP384Sha384, Ed25519, X25519, p384::AffinePoint};
@@ -22,9 +23,8 @@ use ic_mlkem::{
     MlKem768,
     kem::{CIPHERTEXT_LEN, DECAPS_KEY_LEN, ENCAPS_KEY_LEN, SHARED_SECRET_LEN},
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use zeroize::Zeroizing;
+use ipg_json::JsonSchema;
+use ipg_json::{Deserialize, Serialize};
 
 pub const SUITE: &str = "x25519-hkdf-sha256-chacha20poly1305";
 pub const P384_SUITE: &str = "p384-x963kdf-sha384-aes256gcm";
@@ -362,7 +362,7 @@ pub fn hex_exact(s: &str, len: usize) -> Result<Vec<u8>> {
             "Expected fixed-length lowercase hexadecimal",
         ));
     }
-    hex::decode(s).map_err(|_| Error::new("invalid_format", "Invalid hexadecimal"))
+    crate::hex::decode(s).map_err(|_| Error::new("invalid_format", "Invalid hexadecimal"))
 }
 /// Accept only an uncompressed SEC1 P-384 point that lies on the curve. P-384 has
 /// cofactor one, so every such point is in the prime-order group.
@@ -377,13 +377,17 @@ pub fn p384_point(encoded: &[u8]) -> Result<()> {
 }
 pub(crate) fn random<const N: usize>() -> Result<Zeroizing<[u8; N]>> {
     let mut out = Zeroizing::new([0; N]);
-    getrandom::fill(out.as_mut()).map_err(|_| {
+    fill_random(out.as_mut()).map_err(|_| {
         Error::new(
             "entropy_unavailable",
             "Operating system randomness unavailable",
         )
     })?;
     Ok(out)
+}
+pub(crate) fn fill_random(out: &mut [u8]) -> ic_core::Result<()> {
+    // Fresh OS seeding per request avoids inherited generator state after fork.
+    ic_drbg::Rng::from_os()?.fill(out)
 }
 pub(crate) fn frame(domain: &str, fields: &[&[u8]]) -> Vec<u8> {
     let mut out = domain.as_bytes().to_vec();
@@ -396,8 +400,10 @@ pub(crate) fn frame(domain: &str, fields: &[&[u8]]) -> Vec<u8> {
 fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> String {
     let framed = frame(suite.identity_domain(), &[encryption, signing]);
     match suite {
-        Suite::Curve25519 => hex::encode(Sha256::digest(&framed)),
-        Suite::P384 | Suite::Hybrid | Suite::P384MlDsa => hex::encode(Sha384::digest(&framed)),
+        Suite::Curve25519 => crate::hex::encode(Sha256::digest(&framed)),
+        Suite::P384 | Suite::Hybrid | Suite::P384MlDsa => {
+            crate::hex::encode(Sha384::digest(&framed))
+        }
     }
 }
 /// Check a fingerprint field: 32-byte (ipg-public-v1) or 48-byte (P-384 and hybrid)
@@ -410,8 +416,8 @@ pub fn check_fingerprint(fingerprint: &str) -> Result<()> {
 pub fn identity(suite: Suite, encryption: &[u8], signing: &[u8]) -> Result<PublicKey> {
     let public = PublicKey {
         format: suite.key_format().into(),
-        encryption_key: hex::encode(encryption),
-        signing_key: hex::encode(signing),
+        encryption_key: crate::hex::encode(encryption),
+        signing_key: crate::hex::encode(signing),
         fingerprint: fingerprint(suite, encryption, signing),
     };
     public.validate()?;
@@ -470,8 +476,8 @@ fn public_from_seeds(suite: Suite, seeds: &[u8]) -> Result<PublicKey> {
     enc.extend_from_slice(&x25519);
     Ok(PublicKey {
         format: suite.key_format().into(),
-        encryption_key: hex::encode(&enc),
-        signing_key: hex::encode(&sig),
+        encryption_key: crate::hex::encode(&enc),
+        signing_key: crate::hex::encode(&sig),
         fingerprint: fingerprint(suite, &enc, &sig),
     })
 }
@@ -751,7 +757,7 @@ pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<Stri
         EcdsaP384Sha384::normalize_s(&mut signature[..P384_SIGNATURE_LEN])
             .map_err(|_| failure())?;
     }
-    let signature = hex::encode(signature);
+    let signature = crate::hex::encode(signature);
     verify_message(public, suite.signature_algorithm(), message, &signature)
         .map_err(|_| failure())?;
     Ok(signature)
@@ -781,7 +787,7 @@ fn secret_aad(p: &PublicKey, salt: &[u8], nonce: &[u8]) -> Result<Vec<u8>> {
     } else {
         "IPG secret v1 argon2id-m65536-t3-p4"
     };
-    Ok(frame(domain, &[&serde_json::to_vec(p)?, salt, nonce]))
+    Ok(frame(domain, &[&ipg_json::to_vec(p)?, salt, nonce]))
 }
 pub fn generate(password: &[u8]) -> Result<SecretKey> {
     generate_identity(Suite::Curve25519, password)
@@ -852,10 +858,10 @@ pub(crate) fn protect(
         format: format.into(),
         public,
         kdf: "argon2id-m65536-t3-p4".into(),
-        salt: hex::encode(salt.as_ref()),
-        nonce: hex::encode(nonce.as_ref()),
-        ciphertext: hex::encode(&seeds[..]),
-        tag: hex::encode(tag),
+        salt: crate::hex::encode(salt.as_ref()),
+        nonce: crate::hex::encode(nonce.as_ref()),
+        ciphertext: crate::hex::encode(&seeds[..]),
+        tag: crate::hex::encode(tag),
     })
 }
 /// Unlock an `ipg-secret-v1` identity's 64 seed bytes. Hybrid secrets hold 128 seed
@@ -1033,8 +1039,8 @@ pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> 
         format: "ipg-envelope-v1".into(),
         suite: suite.envelope_suite().into(),
         recipient: p.fingerprint.clone(),
-        ephemeral_key: hex::encode(epk),
-        nonce: hex::encode(nonce.as_ref()),
+        ephemeral_key: crate::hex::encode(epk),
+        nonce: crate::hex::encode(nonce.as_ref()),
         ciphertext: String::new(),
         tag: String::new(),
     };
@@ -1047,8 +1053,8 @@ pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> 
         &envelope_aad(&e),
         &mut data,
     )?;
-    e.ciphertext = hex::encode(&*data);
-    e.tag = hex::encode(tag);
+    e.ciphertext = crate::hex::encode(&*data);
+    e.tag = crate::hex::encode(tag);
     Ok(e)
 }
 /// Check everything that needs no private key, so bad input fails before any
@@ -1076,7 +1082,7 @@ pub fn decrypt_with(key: &dyn IdentityKey, e: &Envelope) -> Result<Zeroizing<Vec
     if suite == Suite::P384 {
         let aad = envelope_aad(e);
         let ciphertext_and_tag = [
-            hex::decode(&e.ciphertext)
+            crate::hex::decode(&e.ciphertext)
                 .map_err(|_| Error::new("invalid_format", "Invalid ciphertext"))?,
             bytes::<16>(&e.tag)?.to_vec(),
         ]
@@ -1095,7 +1101,7 @@ pub fn decrypt_with(key: &dyn IdentityKey, e: &Envelope) -> Result<Zeroizing<Vec
     let shared = key.agree(&peer)?;
     let content_key = envelope_key(suite, &shared, e)?;
     let mut data = Zeroizing::new(
-        hex::decode(&e.ciphertext)
+        crate::hex::decode(&e.ciphertext)
             .map_err(|_| Error::new("invalid_format", "Invalid ciphertext"))?,
     );
     open(
@@ -1222,7 +1228,7 @@ mod tests {
         let mut signature = sign_with(&key, b"content").unwrap();
         // n - s is an equally valid ECDSA signature; IPG accepts only the low-s form.
         let mut raw = hex_exact(&signature.signature, 96).unwrap();
-        let n = hex::decode("ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973").unwrap();
+        let n = crate::hex::decode("ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973").unwrap();
         let mut borrow = 0i16;
         for i in (0..48).rev() {
             let v = n[i] as i16 - raw[48 + i] as i16 - borrow;
@@ -1235,7 +1241,7 @@ mod tests {
             &raw,
         )
         .unwrap();
-        signature.signature = hex::encode(&raw);
+        signature.signature = crate::hex::encode(&raw);
         let error = verify(&public, &public.fingerprint, &signature, b"content").unwrap_err();
         assert_eq!(error.code, "authentication_failed");
 
@@ -1265,9 +1271,9 @@ mod tests {
             ("ephemeral_key", ephemeral),
             ("ciphertext", "00".repeat(7)),
         ] {
-            let mut tampered = serde_json::to_value(&envelope).unwrap();
+            let mut tampered = ipg_json::to_value(&envelope).unwrap();
             tampered[field] = value.into();
-            let tampered: Envelope = serde_json::from_value(tampered).unwrap();
+            let tampered: Envelope = ipg_json::from_value(tampered).unwrap();
             assert!(decrypt_with(&key, &tampered).is_err(), "{field}");
         }
         assert_eq!(
@@ -1298,9 +1304,9 @@ mod tests {
         assert!(wrong_suite.validate().is_err());
         // A P-384 identity can never carry a software secret-key envelope.
         let software = generate(b"test-only strong passphrase 42").unwrap();
-        let mut forged = serde_json::to_value(&software).unwrap();
-        forged["public"] = serde_json::to_value(&public).unwrap();
-        let forged: SecretKey = serde_json::from_value(forged).unwrap();
+        let mut forged = ipg_json::to_value(&software).unwrap();
+        forged["public"] = ipg_json::to_value(&public).unwrap();
+        let forged: SecretKey = ipg_json::from_value(forged).unwrap();
         assert!(forged.validate().is_err());
     }
 
@@ -1321,11 +1327,11 @@ mod tests {
         );
         // Altering either component's ciphertext breaks authentication.
         for index in [10, 2 * CIPHERTEXT_LEN + 10] {
-            let mut tampered = serde_json::to_value(&envelope).unwrap();
+            let mut tampered = ipg_json::to_value(&envelope).unwrap();
             let mut ephemeral = envelope.ephemeral_key.clone().into_bytes();
             ephemeral[index] = if ephemeral[index] == b'0' { b'1' } else { b'0' };
             tampered["ephemeral_key"] = String::from_utf8(ephemeral).unwrap().into();
-            let tampered: Envelope = serde_json::from_value(tampered).unwrap();
+            let tampered: Envelope = ipg_json::from_value(tampered).unwrap();
             assert!(decrypt(&secret, PASSWORD, &tampered).is_err(), "{index}");
         }
         let signature = sign(&secret, PASSWORD, b"content").unwrap();
@@ -1333,21 +1339,21 @@ mod tests {
         verify(&public, &public.fingerprint, &signature, b"content").unwrap();
         // Either half alone is insufficient: corrupt each and the composite fails.
         for index in [10, 2 * 64 + 10, 2 * (64 + mldsa::SIGNATURE_LEN) - 2] {
-            let mut altered = serde_json::to_value(&signature).unwrap();
+            let mut altered = ipg_json::to_value(&signature).unwrap();
             let mut text = signature.signature.clone().into_bytes();
             text[index] = if text[index] == b'0' { b'1' } else { b'0' };
             altered["signature"] = String::from_utf8(text).unwrap().into();
-            let altered: Signature = serde_json::from_value(altered).unwrap();
+            let altered: Signature = ipg_json::from_value(altered).unwrap();
             assert!(
                 verify(&public, &public.fingerprint, &altered, b"content").is_err(),
                 "{index}"
             );
         }
         // Relabeling the composite as plain Ed25519 is refused.
-        let mut stripped = serde_json::to_value(&signature).unwrap();
+        let mut stripped = ipg_json::to_value(&signature).unwrap();
         stripped["algorithm"] = ED25519.into();
         stripped["signature"] = signature.signature[..128].into();
-        let stripped: Signature = serde_json::from_value(stripped).unwrap();
+        let stripped: Signature = ipg_json::from_value(stripped).unwrap();
         assert!(verify(&public, &public.fingerprint, &stripped, b"content").is_err());
         assert!(unlock(&secret, PASSWORD).is_err());
     }
@@ -1357,14 +1363,14 @@ mod tests {
         let secret = generate_identity(Suite::Hybrid, PASSWORD).unwrap();
         let public = secret.public.clone();
         let envelope = encrypt(&public, &public.fingerprint, b"x").unwrap();
-        let mut downgraded = serde_json::to_value(&envelope).unwrap();
+        let mut downgraded = ipg_json::to_value(&envelope).unwrap();
         downgraded["suite"] = SUITE.into();
-        let downgraded: Envelope = serde_json::from_value(downgraded).unwrap();
+        let downgraded: Envelope = ipg_json::from_value(downgraded).unwrap();
         assert!(decrypt(&secret, PASSWORD, &downgraded).is_err());
         // Relabeling a hybrid secret as v1 fails before any passphrase work.
-        let mut relabeled = serde_json::to_value(&secret).unwrap();
+        let mut relabeled = ipg_json::to_value(&secret).unwrap();
         relabeled["format"] = SECRET_FORMAT.into();
-        let relabeled: SecretKey = serde_json::from_value(relabeled).unwrap();
+        let relabeled: SecretKey = ipg_json::from_value(relabeled).unwrap();
         assert_eq!(relabeled.validate().unwrap_err().code, "invalid_format");
         // A non-canonical ML-KEM key (coefficient >= q) is rejected.
         let mut noncanonical = public.clone();

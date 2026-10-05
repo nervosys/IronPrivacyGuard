@@ -4,6 +4,7 @@
 //!
 //! Only binding of existing keys is offered: KMS keys are billable account resources,
 //! created by infrastructure tooling rather than agent-callable requests.
+use crate::secrets::Zeroizing;
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, Suite},
     error::{Error, Result},
@@ -12,14 +13,13 @@ use crate::{
 use ic_core::traits::{Digest as _, Mac};
 use ic_hash::Sha256;
 use ic_mac::HmacSha256;
-use serde_json::{Value, json};
+use ipg_json::{Value, json};
 use std::{
     io::{Read, Write},
     net::TcpStream,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use zeroize::Zeroizing;
 
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 /// DER SubjectPublicKeyInfo prefix for an uncompressed named-curve P-384 point.
@@ -236,7 +236,7 @@ fn sso_credentials() -> Result<Option<Credentials>> {
         let Ok(data) = crate::read_limited(file, 65536) else {
             continue;
         };
-        let Ok(value) = serde_json::from_slice::<Value>(&data) else {
+        let Ok(value) = ipg_json::from_slice::<Value>(&data) else {
             continue;
         };
         let (Some(url), Some(access), Some(expires)) = (
@@ -318,7 +318,7 @@ fn sso_credentials() -> Result<Option<Credentials>> {
             format!("AWS SSO portal returned HTTP {status}"),
         ));
     }
-    let value: Value = serde_json::from_slice(&body)
+    let value: Value = ipg_json::from_slice(&body)
         .map_err(|_| Error::new("provider_unavailable", "Malformed AWS SSO response"))?;
     let role = &value["roleCredentials"];
     let field = |name: &str| {
@@ -338,7 +338,7 @@ fn sso_credentials() -> Result<Option<Credentials>> {
 /// Temporary credentials JSON as returned by IMDS and container endpoints.
 fn temporary(body: &[u8]) -> Result<Credentials> {
     let invalid = || Error::new("provider_unavailable", "Malformed AWS credential response");
-    let value: Value = serde_json::from_slice(body).map_err(|_| invalid())?;
+    let value: Value = ipg_json::from_slice(body).map_err(|_| invalid())?;
     let field = |name: &str| {
         value[name]
             .as_str()
@@ -516,7 +516,7 @@ fn unavailable() -> Error {
 }
 
 fn hex_sha256(data: &[u8]) -> String {
-    hex::encode(Sha256::digest(data))
+    crate::hex::encode(Sha256::digest(data))
 }
 fn hmac(key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
     Ok(HmacSha256::mac(key, data)?.as_ref().to_vec())
@@ -557,7 +557,7 @@ pub(crate) fn sigv4_authorization(
     for part in [region, service, "aws4_request"] {
         signing = Zeroizing::new(hmac(&signing, part.as_bytes())?);
     }
-    let signature = hex::encode(hmac(&signing, string_to_sign.as_bytes())?);
+    let signature = crate::hex::encode(hmac(&signing, string_to_sign.as_bytes())?);
     Ok(format!(
         "AWS4-HMAC-SHA256 Credential={access_key}/{scope}, SignedHeaders={signed_headers}, Signature={signature}"
     ))
@@ -838,7 +838,7 @@ pub(crate) fn unbase64(text: &str) -> Result<Vec<u8>> {
 }
 
 fn kms_error(status: u16, body: &[u8]) -> Error {
-    let parsed: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+    let parsed: Value = ipg_json::from_slice(body).unwrap_or(Value::Null);
     let kind = parsed["__type"]
         .as_str()
         .unwrap_or("")
@@ -890,7 +890,7 @@ impl Client {
     fn call(&self, action: &str, request: Value) -> Result<Value> {
         let credentials = credentials(&self.region, &self.partition)?;
         let endpoint = endpoint("kms", &self.region, &self.partition)?;
-        let body = serde_json::to_vec(&request)?;
+        let body = ipg_json::to_vec(&request)?;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| Error::new("clock_unavailable", "Host clock precedes Unix epoch"))?
@@ -937,7 +937,7 @@ impl Client {
         if status != 200 {
             return Err(kms_error(status, &response));
         }
-        Ok(serde_json::from_slice(&response)?)
+        Ok(ipg_json::from_slice(&response)?)
     }
 
     /// Fetch a key's public point and require the expected spec and usage.
