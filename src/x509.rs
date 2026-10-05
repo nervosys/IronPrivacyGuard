@@ -15,9 +15,14 @@ use crate::error::{Error, Result};
 pub(crate) mod identity;
 mod path;
 mod signature;
+#[cfg(all(test, feature = "kms"))]
+pub(crate) use path::check_server_anchor;
 #[cfg(feature = "attestation")]
 pub(crate) use path::verify;
-pub use path::{verify as verify_endorsement_certificate, verify_tls_server};
+pub use path::{
+    TrustAnchor, verify as verify_endorsement_certificate, verify_tls_server,
+    verify_tls_server_anchors,
+};
 #[cfg(feature = "tls-native")]
 pub(crate) use signature::verify_tls13_signature;
 

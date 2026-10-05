@@ -1,7 +1,3 @@
 [advisories]
-ignore = [
-    # rPGP uses rsa for public-key operations. IPG only imports Ed25519/P-384
-    # secret profiles and never calls RSA private-key operations. Reassess before
-    # adding support for RSA secret keys or any private RSA operation.
-    "RUSTSEC-2023-0071",
-]
+# No exceptions: the rPGP backend and its RSA advisory (RUSTSEC-2023-0071) are gone.
+ignore = []

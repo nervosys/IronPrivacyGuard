@@ -56,7 +56,8 @@ deterministic; ordinary verification still reads the host clock at its existing
 validation point. The target never generates keys, opens
 secret keys, derives passwords or decrypts encrypted messages. Embedded-message
 decompression remains bounded at the product's 16 MiB plaintext limit.
-The original parser fixtures are IPG/rPGP-generated test data. Additional policy
+The original parser fixtures are IPG test data generated with the former rPGP
+backend. Additional policy
 seeds come from the independent PyCA fixtures, and the RFC certificate supplies
 a separate published reference.
 
@@ -102,7 +103,7 @@ regressions separately assert the expected revocation and refusal decisions.
 ```powershell
 cargo test --locked --target-dir target --test fuzz_regressions
 cargo test --locked --target-dir target --features fuzzing --test fuzz_regressions --lib
-cargo test --locked --target-dir target --features fuzzing,openpgp --test fuzz_regressions
+cargo test --locked --target-dir target --features fuzzing --test fuzz_regressions
 ```
 
 These tests replay the curated seeds plus deterministic truncations and byte
@@ -385,7 +386,7 @@ enabled, and the feature-gated OpenPGP fuzz regression suite passed separately:
 
 ```sh
 cargo test --locked --all-targets --features pkcs11,kms,openpgp
-cargo test --locked --features fuzzing,openpgp --test fuzz_regressions
+cargo test --locked --features fuzzing --test fuzz_regressions
 python3 tests/interop/schema_contracts.py
 ```
 
@@ -430,3 +431,17 @@ the repository. These fresh-seed Linux runs complement, but do not replace, the
 Windows discovery-corpus campaigns, longer fuzz runs, platform CI or independent
 review. The maximum input limits were available from the start; each bounded run
 does not establish that every size or code path was exercised.
+
+## Native OpenPGP oracle campaign, 2026-10-05
+
+After the rPGP backend was replaced, `openpgp_packets` runs the native oracle
+(`openpgp::fuzz_packets`) with the same four modes and invariants: certificate
+re-encoding and evaluation stability, usable-key consistency, detached and
+embedded verification against the parser fixtures, re-encoded signature
+equivalence, document tampering and pin mismatch. It now also reaches RSA, DSA,
+P-256/P-521, Ed448 and X448 key parsing, prehash ECDSA and DSA verification,
+User Attributes and legacy-version signatures. A Windows MSVC AddressSanitizer
+run with `-max_total_time=300 -max_len=1048577 -timeout=10 -rss_limit_mb=2048
+-print_final_stats=1` (PRNG seed 756914129) executed 139,932 inputs in 301
+seconds with 746 MiB peak RSS, without crashes, oracle failures or sanitizer
+findings. The fuzz harness feature is now `openpgp-native`.

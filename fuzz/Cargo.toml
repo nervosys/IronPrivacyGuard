@@ -9,9 +9,9 @@ edition = "2024"
 cargo-fuzz = true
 
 [features]
-default = ["fuzzing", "openpgp"]
+default = ["fuzzing", "openpgp-native"]
 fuzzing = []
-openpgp = ["iron-privacy-guard/openpgp"]
+openpgp-native = ["iron-privacy-guard/openpgp-native"]
 
 [dependencies]
 iron-privacy-guard = { package = "ipg", path = "..", features = ["fuzzing"] }
@@ -24,7 +24,7 @@ members = ["."]
 [[bin]]
 name = "openpgp_packets"
 path = "fuzz_targets/openpgp_packets.rs"
-required-features = ["openpgp", "fuzzing"]
+required-features = ["openpgp-native", "fuzzing"]
 test = false
 doc = false
 bench = false

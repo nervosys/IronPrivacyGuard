@@ -501,7 +501,7 @@
       ],
       "label": "Exchange OpenPGP messages or GPG keys",
       "limitations": [
-        "openpgp-native adds no dependencies and uses existing IronCrypto primitives for Ed25519/X25519 and P-384; P-384 signatures require SHA-384 and messages require AES-256. openpgp selects broader rPGP compatibility. Neither backend has had independent review",
+        "The native implementation uses only IronCrypto and first-party code; correspondents may use RSA 2048-4096, NIST P-256/P-384/P-521, Ed25519, Ed448, Curve25519, X25519 or X448 keys, and send AES-128/192/256 messages with SEIPDv1 or SEIPDv2 EAX/OCB/GCM. It has not had independent review",
         "v4 and v6 keys; IPG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters",
         "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
         "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and IPG trust snapshots do not apply",
@@ -509,13 +509,12 @@
         "IPG native envelopes, signatures and keys are never OpenPGP packets"
       ],
       "prerequisites": [
-        "An ipg build with openpgp-native (native curve profile) or openpgp (broader rPGP compatibility)",
+        "An ipg build with the default openpgp-native feature (openpgp is an alias)",
         "Each correspondent's OpenPGP certificate and its independently trusted fingerprint (v4 40 hex or v6 64 hex)",
         "An MCP host that pins a trust policy must name the openpgp operations in --allow"
       ],
       "sources": [
-        "https://www.rfc-editor.org/rfc/rfc9580",
-        "https://github.com/rpgp/rpgp"
+        "https://www.rfc-editor.org/rfc/rfc9580"
       ],
       "support": "implemented",
       "tools": [
@@ -550,9 +549,9 @@
       "label": "Secure a live client-server connection",
       "limitations": [
         "No general TLS CLI or MCP operation exists; IPG file encryption is not a transport protocol",
-        "The optional tls-native Rust client supports a bounded TLS 1.3/X25519 request-response profile only; independent review is outstanding",
+        "The optional tls-native Rust client supports a bounded TLS 1.3 request-response profile with X25519, P-256 or P-384 key exchange only; independent review is outstanding",
         "No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, implicit roots or revocation fetching",
-        "KMS continues to use rustls with IronCrypto"
+        "The kms feature uses this client with bundled public roots; it is not a general-purpose TLS transport"
       ],
       "prerequisites": [
         "A separately evaluated TLS stack and peer authentication policy",
@@ -828,7 +827,7 @@
         "SSO profiles need a current `aws sso login`; IPG never refreshes SSO tokens",
         "Every private-key operation is a billable network call to AWS",
         "Decryption releases one per-envelope shared secret into process memory",
-        "TLS still uses rustls with IronCrypto; bundled public roots require a reviewed rebuild to update and do not follow OS trust or revocation policy",
+        "TLS uses IPG's native TLS 1.3 client on IronCrypto and refuses TLS 1.2-only endpoints; bundled public roots require a reviewed rebuild to update and do not follow OS trust or revocation policy",
         "Certificate and TLS validation failures are non-retryable"
       ],
       "prerequisites": [

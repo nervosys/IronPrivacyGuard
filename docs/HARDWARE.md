@@ -250,9 +250,11 @@ See [TPM key attestation](ATTESTATION.md).
 ## AWS KMS
 
 With the `kms` feature, an identity's private keys can be two AWS KMS keys. The
-client speaks the KMS JSON API directly: SigV4 signing over IronCrypto's HMAC and TLS
-from rustls with IronCrypto's provider (`ic-rustls`) and the Mozilla root store. No
-AWS SDK and no C code are involved.
+client speaks the KMS JSON API directly: SigV4 signing over IronCrypto's HMAC, and
+IPG's [native TLS 1.3 client](TLS.md) over IronCrypto with the bundled Mozilla root
+store. No AWS SDK, TLS library or C code is involved. KMS endpoints must offer
+TLS 1.3 with X25519, P-256 or P-384 key exchange; AWS regional, FIPS and GovCloud
+KMS endpoints do.
 
 Create the keys with your infrastructure tooling, not with IPG:
 

@@ -2,7 +2,7 @@
 mod harness;
 use std::{fs, path::Path};
 
-#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
 #[test]
 fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
     for (certificate, document) in [
@@ -25,7 +25,7 @@ fn paired_openpgp_frames_bound_hostile_lengths_before_packet_parsing() {
     }
 }
 
-#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
 #[test]
 fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
     use ipg_json::Value;
@@ -80,7 +80,7 @@ fn large_public_revocation_recipes_reach_certificate_and_paired_oracles() {
     assert_eq!((replayed, large), (74, 70));
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn one_pass_metadata_mismatches_never_publish_plaintext() {
     use ipg_json::{Value, json};
@@ -126,7 +126,7 @@ fn one_pass_metadata_mismatches_never_publish_plaintext() {
     }
 }
 
-#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
 #[test]
 fn public_openpgp_fixtures_verify_and_truncation_never_publishes() {
     use ipg_json::{Value, json};
@@ -211,7 +211,7 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
         ("stream_headers", harness::stream_headers as Oracle),
         #[cfg(feature = "fuzzing")]
         ("tpm_structures", harness::tpm_structures as Oracle),
-        #[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+        #[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
         ("openpgp_packets", harness::openpgp_packets as Oracle),
     ] {
         oracle(b"");

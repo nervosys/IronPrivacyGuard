@@ -66,7 +66,7 @@ pub fn tpm_structures(data: &[u8]) {
     iron_privacy_guard::fuzz_support::tpm_structures(data);
 }
 
-#[cfg(all(feature = "fuzzing", feature = "openpgp"))]
+#[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
 pub fn openpgp_packets(data: &[u8]) {
     iron_privacy_guard::openpgp::fuzz_packets(data);
 }

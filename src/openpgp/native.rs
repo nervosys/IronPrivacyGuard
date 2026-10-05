@@ -1,19 +1,23 @@
 //! Native RFC 9580 curve interchange using the existing IronCrypto primitives.
-use super::primitives::{Sha1, cfb, ocb};
+use super::primitives::{Sha1, aead, aead_nonce_len, cfb, ocb};
 use super::wire::{self, Packet, Reader, armor, invalid, mpi, packet, unarmor};
 use super::*;
+use super::{curve448, public};
 use crate::crypto;
 use crate::secrets::Zeroizing;
 use ic_cipher::{Aes128Kw, Aes192Kw, Aes256Kw, ChaCha20Poly1305};
 use ic_core::traits::{Aead, Digest, Kdf, KeyAgreement, SignatureScheme};
-use ic_ec::{EcdhP384, EcdsaP384Sha384, Ed25519, X25519};
+use ic_ec::p521::{EcdhP521, EcdsaP521Sha512};
+use ic_ec::{EcdhP256, EcdhP384, EcdsaP256Sha256, EcdsaP384Sha384, Ed25519, X25519};
 use ic_hash::{Sha3_256, Sha3_512, Sha256, Sha384, Sha512};
 use ic_kdf::Hkdf;
-use ic_mac::HmacSha256;
+use ic_mac::{HmacSha256, HmacSha512};
 
 const ED_OID: &[u8] = &[0x2b, 6, 1, 4, 1, 0xda, 0x47, 0xf, 1];
 const X_OID: &[u8] = &[0x2b, 6, 1, 4, 1, 0x97, 0x55, 1, 5, 1];
+const P256_OID: &[u8] = &[0x2a, 0x86, 0x48, 0xce, 0x3d, 3, 1, 7];
 const P384_OID: &[u8] = &[0x2b, 0x81, 4, 0, 0x22];
+const P521_OID: &[u8] = &[0x2b, 0x81, 4, 0, 0x23];
 const MESSAGE_LIMIT: usize = 24 * 1024 * 1024;
 fn auth() -> Error {
     Error::new("authentication_failed", "OpenPGP authentication failed")
@@ -40,6 +44,16 @@ fn digest(id: u8, data: &[u8]) -> Result<Vec<u8>> {
         _ => return Err(auth()),
     })
 }
+fn rsa_hash(id: u8) -> Option<public::Hash> {
+    Some(match id {
+        8 => public::Hash::Sha256,
+        9 => public::Hash::Sha384,
+        10 => public::Hash::Sha512,
+        12 => public::Hash::Sha3_256,
+        14 => public::Hash::Sha3_512,
+        _ => return None,
+    })
+}
 fn hash_name(id: u8) -> String {
     match id {
         8 => "sha256",
@@ -58,12 +72,23 @@ struct Key {
     version: u8,
     created: u64,
     alg: u8,
+    /// Native point or key bytes; empty for integer-based algorithms.
     public: Vec<u8>,
     oid: Vec<u8>,
     kdf: Vec<u8>,
+    /// RSA (n, e), DSA (p, q, g, y) or ElGamal (p, g, y) integers.
+    integers: Vec<Vec<u8>>,
     fingerprint: Vec<u8>,
 }
+/// What IPG policy permits a component key to do, independent of its flags.
+struct Capability {
+    name: String,
+    sign: bool,
+    encrypt: bool,
+}
 impl Key {
+    /// Parse any v4 or v6 public key. Unknown or disallowed algorithms remain
+    /// parseable for fingerprints and reporting; [`Key::capability`] decides use.
     fn parse(data: &[u8]) -> Result<Self> {
         let mut r = Reader::new(data);
         let version = r.byte()?;
@@ -80,10 +105,22 @@ impl Key {
         };
         let mut oid = Vec::new();
         let mut kdf = Vec::new();
+        let mut integers = Vec::new();
+        let mut take_integers = |count: usize, material: &mut Reader| -> Result<()> {
+            for _ in 0..count {
+                integers.push(material.mpi()?.to_vec());
+            }
+            Ok(())
+        };
         let public = match alg {
-            25 | 27 if version == 6 => material.take(32)?.to_vec(),
+            25 | 27 => material.take(32)?.to_vec(),
+            26 => material.take(56)?.to_vec(),
+            28 => material.take(57)?.to_vec(),
             18 | 19 | 22 => {
                 let len = material.byte()? as usize;
+                if len == 0 || len == 255 {
+                    return Err(invalid("Reserved OpenPGP curve OID length"));
+                }
                 oid = material.take(len)?.to_vec();
                 let public = material.mpi()?.to_vec();
                 if alg == 18 {
@@ -92,28 +129,27 @@ impl Key {
                 }
                 public
             }
-            _ => return Err(unsupported()),
+            1..=3 => {
+                take_integers(2, &mut material)?;
+                Vec::new()
+            }
+            17 => {
+                take_integers(4, &mut material)?;
+                Vec::new()
+            }
+            16 | 20 => {
+                take_integers(3, &mut material)?;
+                Vec::new()
+            }
+            // Unknown algorithms are fingerprinted over their opaque material.
+            _ => {
+                material.take(material.data.len())?;
+                Vec::new()
+            }
         };
         material.finish()?;
         if version == 6 {
             r.finish()?;
-        }
-        let valid = match alg {
-            25 | 27 => true,
-            22 => version == 4 && oid == ED_OID && public.len() == 33 && public[0] == 64,
-            19 => oid == P384_OID && public.len() == 97 && public[0] == 4,
-            18 => {
-                (oid == P384_OID && public.len() == 97 && public[0] == 4
-                    || version == 4 && oid == X_OID && public.len() == 33 && public[0] == 64)
-                    && kdf.len() == 3
-                    && kdf[0] == 1
-                    && matches!(kdf[1], 8..=10)
-                    && matches!(kdf[2], 7..=9)
-            }
-            _ => false,
-        };
-        if !valid {
-            return Err(unsupported());
         }
         let mut key = Self {
             raw: data.to_vec(),
@@ -123,6 +159,7 @@ impl Key {
             public,
             oid,
             kdf,
+            integers,
             fingerprint: Vec::new(),
         };
         key.fingerprint = if version == 4 {
@@ -149,17 +186,95 @@ impl Key {
             &self.fingerprint[..8]
         }
     }
-    fn name(&self) -> &str {
-        match self.alg {
-            22 | 27 => "ed25519",
-            25 => "x25519",
-            19 => "ecdsa-p384",
-            18 if self.oid == X_OID => "ecdh-cv25519",
-            _ => "ecdh-p384",
+    /// The NIST curve of a well-formed ECDSA or ECDH key.
+    fn nist(&self) -> Option<public::Curve> {
+        let (curve, size) = match self.oid.as_slice() {
+            P256_OID => (public::Curve::P256, 65),
+            P384_OID => (public::Curve::P384, 97),
+            P521_OID => (public::Curve::P521, 133),
+            _ => return None,
+        };
+        (self.public.len() == size && public::ecdsa_public_valid(curve, &self.public))
+            .then_some(curve)
+    }
+    /// Legacy Curve25519 ECDH key with a native-point prefix (v4 only).
+    fn cv25519(&self) -> bool {
+        self.alg == 18
+            && self.version == 4
+            && self.oid == X_OID
+            && self.public.len() == 33
+            && self.public[0] == 64
+    }
+    fn ecdh_kdf(&self) -> bool {
+        self.kdf.len() == 3
+            && self.kdf[0] == 1
+            && matches!(self.kdf[1], 8..=10)
+            && matches!(self.kdf[2], 7..=9)
+    }
+    /// RSA modulus bit length, or zero for other algorithms.
+    fn rsa_bits(&self) -> usize {
+        match (self.alg, self.integers.first()) {
+            (1..=3, Some(n)) => n
+                .first()
+                .map_or(0, |b| n.len() * 8 - b.leading_zeros() as usize),
+            _ => 0,
+        }
+    }
+    fn capability(&self) -> Capability {
+        let curve = |prefix: &str| match self.nist() {
+            Some(public::Curve::P256) => format!("{prefix}-p256"),
+            Some(public::Curve::P384) => format!("{prefix}-p384"),
+            Some(public::Curve::P521) => format!("{prefix}-p521"),
+            None => "unsupported".into(),
+        };
+        let (name, sign, encrypt) = match self.alg {
+            1..=3 => {
+                let bits = self.rsa_bits();
+                // Public operations use IronCrypto's arithmetic up to 4096 bits.
+                let usable = (2048..=4096).contains(&bits)
+                    && self.integers[1].len() <= 8
+                    && self.integers[1].last().is_some_and(|e| e & 1 == 1)
+                    && self.integers[1] != [1];
+                (format!("rsa-{bits}"), usable, usable)
+            }
+            19 => (curve("ecdsa"), self.nist().is_some(), false),
+            22 => {
+                let ok = self.version == 4
+                    && self.oid == ED_OID
+                    && self.public.len() == 33
+                    && self.public[0] == 64;
+                (if ok { "ed25519" } else { "unsupported" }.into(), ok, false)
+            }
+            27 => ("ed25519".into(), true, false),
+            28 => ("ed448".into(), true, false),
+            18 if self.cv25519() => ("ecdh-cv25519".into(), false, self.ecdh_kdf()),
+            18 => (
+                curve("ecdh"),
+                false,
+                self.nist().is_some() && self.ecdh_kdf(),
+            ),
+            25 => ("x25519".into(), false, true),
+            26 => ("x448".into(), false, true),
+            17 => ("dsa".into(), false, false),
+            16 | 20 => ("elgamal".into(), false, false),
+            _ => ("unsupported".into(), false, false),
+        };
+        Capability {
+            name,
+            sign,
+            encrypt,
         }
     }
     fn signing(&self) -> bool {
-        matches!(self.alg, 19 | 22 | 27)
+        self.capability().sign
+    }
+    /// RFC 9580 section 5.2.3 curve-sized digests, above IPG's 32-byte floor.
+    fn minimum_digest(&self) -> usize {
+        match (self.alg, self.nist()) {
+            (19, Some(public::Curve::P384)) => 48,
+            (19, Some(public::Curve::P521)) | (28, _) => 64,
+            _ => 32,
+        }
     }
 }
 
@@ -277,6 +392,11 @@ impl Sig {
                         _ => {}
                     }
                 }
+                // GnuPG stores the subkey's back signature unhashed. It grants
+                // nothing by position: it must verify under the subkey itself.
+                if !trusted && typ == 32 && s.back.is_none() {
+                    s.back = Some(p.data.to_vec());
+                }
                 // Unhashed issuer IDs are routing hints only, never permissions.
                 if typ == 16 && p.data.len() == 8 && s.issuer_id.is_none() {
                     s.issuer_id = Some(p.data.to_vec());
@@ -317,45 +437,71 @@ impl Sig {
         let Ok(d) = digest(self.hash, &transcript) else {
             return false;
         };
-        if d[..2] != self.check || self.version == 6 && self.salt.len() != d.len() / 2 {
+        if d[..2] != self.check
+            || d.len() < key.minimum_digest()
+            || self.version == 6 && self.salt.len() != d.len() / 2
+        {
             return false;
         }
+        // Integer signature components, left-padded to `width` when nonzero.
+        let integers = |count: usize| -> Option<Vec<&[u8]>> {
+            let mut r = Reader::new(&self.value);
+            let values = (0..count)
+                .map(|_| r.mpi().ok())
+                .collect::<Option<Vec<_>>>()?;
+            r.finish().ok()?;
+            Some(values)
+        };
+        let fixed = |values: &[&[u8]], width: usize| -> Option<Vec<u8>> {
+            let mut sig = vec![0; width * values.len()];
+            for (i, v) in values.iter().enumerate() {
+                if v.len() > width {
+                    return None;
+                }
+                sig[(i + 1) * width - v.len()..(i + 1) * width].copy_from_slice(v);
+            }
+            Some(sig)
+        };
         match self.alg {
             27 => Ed25519::verify(&key.public, &d, &self.value).is_ok(),
-            22 => {
-                let mut r = Reader::new(&self.value);
-                let parsed = (|| -> Result<Vec<u8>> {
-                    let a = r.mpi()?;
-                    let b = r.mpi()?;
-                    r.finish()?;
-                    if a.len() > 32 || b.len() > 32 {
-                        return Err(auth());
-                    }
-                    let mut sig = vec![0; 64];
-                    sig[32 - a.len()..32].copy_from_slice(a);
-                    sig[64 - b.len()..].copy_from_slice(b);
-                    Ok(sig)
-                })();
-                parsed.is_ok_and(|sig| Ed25519::verify(&key.public[1..], &d, &sig).is_ok())
+            28 => curve448::ed448_verify(&key.public, &d, &self.value),
+            22 if key.signing() => integers(2)
+                .and_then(|v| fixed(&v, 32))
+                .is_some_and(|sig| Ed25519::verify(&key.public[1..], &d, &sig).is_ok()),
+            19 => {
+                let Some(curve) = key.nist() else {
+                    return false;
+                };
+                let Some(v) = integers(2) else {
+                    return false;
+                };
+                // IronCrypto's ECDSA hashes internally; use it for each curve's
+                // own hash and the prehash verifier for other permitted digests.
+                match (curve, self.hash) {
+                    (public::Curve::P256, 8) => fixed(&v, 32).is_some_and(|sig| {
+                        EcdsaP256Sha256::verify(&key.public, &transcript, &sig).is_ok()
+                    }),
+                    (public::Curve::P384, 9) => fixed(&v, 48).is_some_and(|sig| {
+                        EcdsaP384Sha384::verify(&key.public, &transcript, &sig).is_ok()
+                    }),
+                    (public::Curve::P521, 10) => fixed(&v, 66).is_some_and(|sig| {
+                        EcdsaP521Sha512::verify(&key.public, &transcript, &sig).is_ok()
+                    }),
+                    _ => public::ecdsa_verify(curve, &key.public, &d, v[0], v[1]),
+                }
             }
-            19 if self.hash == 9 => {
-                let mut r = Reader::new(&self.value);
-                let parsed = (|| -> Result<Vec<u8>> {
-                    let a = r.mpi()?;
-                    let b = r.mpi()?;
-                    r.finish()?;
-                    if a.len() > 48 || b.len() > 48 {
-                        return Err(auth());
-                    }
-                    let mut sig = vec![0; 96];
-                    sig[48 - a.len()..48].copy_from_slice(a);
-                    sig[96 - b.len()..].copy_from_slice(b);
-                    Ok(sig)
-                })();
-                parsed.is_ok_and(|sig| {
-                    EcdsaP384Sha384::verify(&key.public, &transcript, &sig).is_ok()
+            1 | 3 => integers(1).is_some_and(|v| {
+                rsa_hash(self.hash).is_some_and(|hash| {
+                    public::rsa_verify(&key.integers[0], &key.integers[1], hash, &d, v[0])
                 })
-            }
+            }),
+            // DSA is never usable, but bindings are verified for honest reporting.
+            17 => integers(2).is_some_and(|v| {
+                let [p, q, g, y] = &key.integers[..] else {
+                    return false;
+                };
+                public::dsa_verify(p, q, g, y, &d, v[0], v[1])
+            }),
             _ => false,
         }
     }
@@ -468,7 +614,13 @@ impl Cert {
             signatures: vec![],
             users: vec![],
         };
-        let mut user = None;
+        // Signatures attach to the preceding key, User ID or User Attribute.
+        enum Target {
+            Key,
+            User(usize),
+            Attribute,
+        }
+        let mut target = Target::Key;
         let mut count = 0;
         for p in &c.packets {
             match p.tag {
@@ -478,14 +630,19 @@ impl Cert {
                     }
                     c.keys.push(Key::parse(&p.body)?);
                     c.signatures.push(vec![]);
-                    user = None;
+                    target = Target::Key;
                 }
-                13 => {
+                13 | 17 => {
                     if c.keys.len() != 1 {
                         return Err(invalid("User ID after subkey"));
                     }
-                    c.users.push((p.body.clone(), vec![]));
-                    user = Some(c.users.len() - 1);
+                    target = if p.tag == 13 {
+                        c.users.push((p.body.clone(), vec![]));
+                        Target::User(c.users.len() - 1)
+                    } else {
+                        // User Attributes (photos) are counted, never evaluated.
+                        Target::Attribute
+                    };
                 }
                 2 => {
                     count += 1;
@@ -495,16 +652,24 @@ impl Cert {
                             "Too many certificate signatures",
                         ));
                     }
+                    // Legacy v3 and LibrePGP v5 signatures cannot authenticate
+                    // any component under this policy; count and skip them.
+                    if !matches!(p.body.first(), Some(4 | 6)) {
+                        continue;
+                    }
                     let s = Sig::parse(&p.body)?;
-                    if let Some(i) = user {
-                        c.users[i].1.push(s);
-                    } else {
-                        c.signatures
+                    match target {
+                        Target::User(i) => c.users[i].1.push(s),
+                        Target::Attribute => {}
+                        Target::Key => c
+                            .signatures
                             .last_mut()
                             .ok_or_else(|| invalid("Signature before primary key"))?
-                            .push(s);
+                            .push(s),
                     }
                 }
+                // Keyring trust packets are local, unauthenticated metadata.
+                12 => {}
                 _ => return Err(unsupported()),
             }
         }
@@ -624,10 +789,25 @@ impl Cert {
             if key.created > at {
                 issues.push("created after evaluation time".into());
             }
+            let capability = key.capability();
+            if !capability.sign && !capability.encrypt {
+                issues.push(format!(
+                    "algorithm {} is not accepted by IPG policy",
+                    capability.name
+                ));
+            }
+            // The primary authenticates every component, so a disallowed
+            // primary algorithm leaves strong subkeys unusable.
+            if i != 0 && !primary.signing() {
+                issues.push("primary key algorithm is not accepted by IPG policy".into());
+            }
+            if i == 0 && primary.version == 4 && users.is_empty() {
+                issues.push("no valid self-certified User ID".into());
+            }
             keys.push(ComponentKey {
                 fingerprint: crate::hex::encode(&key.fingerprint),
                 primary: i == 0,
-                algorithm: key.name().into(),
+                algorithm: capability.name,
                 created: key.created,
                 expires,
                 revoked,
@@ -642,8 +822,8 @@ impl Cert {
                 .filter(|(f, _)| flags & f != 0)
                 .map(|(_, s)| s.to_string())
                 .collect(),
-                usable_for_encryption: valid && flags & 12 != 0 && !key.signing(),
-                usable_for_signing: valid && flags & 2 != 0 && key.signing(),
+                usable_for_encryption: valid && flags & 12 != 0 && capability.encrypt,
+                usable_for_signing: valid && flags & 2 != 0 && capability.sign,
                 issues,
             });
         }
@@ -683,20 +863,31 @@ pub(crate) fn verify(
     signature: &[u8],
     data: &[u8],
 ) -> Result<Verification> {
-    let cert = Cert::parse(certificate)?;
-    cert.pin(expected)?;
+    verify_at(certificate, expected, signature, data, now()?)
+}
+fn detached(signature: &[u8]) -> Result<Packet> {
     let bytes = unarmor(signature, "SIGNATURE", MAX_CERTIFICATE_BYTES as usize)?;
-    let packets = wire::packets(&bytes, MAX_CERTIFICATE_BYTES as usize)?;
+    let mut packets = wire::packets(&bytes, MAX_CERTIFICATE_BYTES as usize)?;
     if packets.len() != 1 || packets[0].tag != 2 {
         return Err(invalid("Expected exactly one detached signature"));
     }
-    verify_signature(&cert, &Sig::parse(&packets[0].body)?, data)
+    Ok(packets.remove(0))
 }
-fn verify_signature(cert: &Cert, sig: &Sig, data: &[u8]) -> Result<Verification> {
+fn verify_at(
+    certificate: &[u8],
+    expected: &str,
+    signature: &[u8],
+    data: &[u8],
+    at: u64,
+) -> Result<Verification> {
+    let cert = Cert::parse(certificate)?;
+    cert.pin(expected)?;
+    verify_signature(&cert, &Sig::parse(&detached(signature)?.body)?, data, at)
+}
+fn verify_signature(cert: &Cert, sig: &Sig, data: &[u8], at: u64) -> Result<Verification> {
     if !matches!(sig.kind, 0 | 1) {
         return Err(invalid("Expected a document signature"));
     }
-    let at = now()?;
     let created = sig
         .created
         .ok_or_else(|| invalid("Signature has no authenticated creation time"))?;
@@ -715,7 +906,9 @@ fn verify_signature(cert: &Cert, sig: &Sig, data: &[u8]) -> Result<Verification>
     };
     let data = if sig.kind == 1 { &normalized } else { data };
     let mut refusal = None;
-    for (i, key) in cert.keys.iter().enumerate().filter(|(_, k)| sig.issued(k)) {
+    // Only keys of the signature's algorithm can have made it.
+    let candidates = cert.keys.iter().enumerate();
+    for (i, key) in candidates.filter(|(_, k)| k.alg == sig.alg && sig.issued(k)) {
         let entry = &then.keys[i];
         if current.keys[i].revoked {
             refusal = Some(Error::new("key_revoked", "Signing key is revoked"));
@@ -835,7 +1028,22 @@ fn public_end(body: &[u8]) -> Result<usize> {
     }
     Ok(body.len() - r.data.len())
 }
+/// IPG holds only Ed25519/Curve25519 and P-384 secret keys.
+fn own_algorithm(key: &Key) -> bool {
+    let capability = key.capability();
+    (capability.sign || capability.encrypt)
+        && match key.alg {
+            25 | 27 => key.version == 6,
+            22 => true,
+            18 => key.cv25519() || key.nist() == Some(public::Curve::P384),
+            19 => key.nist() == Some(public::Curve::P384),
+            _ => false,
+        }
+}
 fn private_material(key: &Key, material: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    if !own_algorithm(key) {
+        return Err(unsupported());
+    }
     let mut out = Zeroizing::new(match key.alg {
         25 | 27 if material.len() == 32 => material.to_vec(),
         18 | 19 | 22 => {
@@ -1149,49 +1357,150 @@ pub(crate) fn sign(key: &KeyFile, password: &[u8], data: &[u8]) -> Result<Signed
     })
 }
 
+/// Key agreement behind an ECDH, X25519 or X448 encryption key.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Agreement {
+    X25519,
+    X448,
+    P256,
+    P384,
+    P521,
+}
+impl Agreement {
+    fn of(key: &Key) -> Option<Self> {
+        match key.alg {
+            25 => Some(Self::X25519),
+            26 => Some(Self::X448),
+            18 if key.cv25519() => Some(Self::X25519),
+            18 => Some(match key.nist()? {
+                public::Curve::P256 => Self::P256,
+                public::Curve::P384 => Self::P384,
+                public::Curve::P521 => Self::P521,
+            }),
+            _ => None,
+        }
+    }
+    /// Scalar, public value and shared-secret lengths.
+    fn sizes(self) -> (usize, usize, usize) {
+        match self {
+            Self::X25519 => (32, 32, 32),
+            Self::X448 => (56, 56, 56),
+            Self::P256 => (32, 65, 32),
+            Self::P384 => (48, 97, 48),
+            Self::P521 => (66, 133, 66),
+        }
+    }
+    fn public(self, scalar: &[u8], out: &mut [u8]) -> Result<()> {
+        match self {
+            Self::X25519 => X25519::public_key(scalar, out)?,
+            Self::X448 => {
+                let scalar = <&[u8; 56]>::try_from(scalar).map_err(|_| auth())?;
+                out.copy_from_slice(&curve448::x448_public(scalar));
+            }
+            Self::P256 => EcdhP256::public_key(scalar, out)?,
+            Self::P384 => EcdhP384::public_key(scalar, out)?,
+            Self::P521 => EcdhP521::public_key(scalar, out)?,
+        }
+        Ok(())
+    }
+    fn agree(self, scalar: &[u8], peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        let mut shared = Zeroizing::new(vec![0; self.sizes().2]);
+        match self {
+            Self::X25519 => X25519::agree(scalar, peer, &mut shared)?,
+            Self::X448 => {
+                let scalar = <&[u8; 56]>::try_from(scalar).map_err(|_| auth())?;
+                let peer = <&[u8; 56]>::try_from(peer).map_err(|_| auth())?;
+                shared.copy_from_slice(&curve448::x448(scalar, peer));
+                // RFC 7748 section 6.2: refuse low-order peer values.
+                if shared.iter().all(|b| *b == 0) {
+                    return Err(auth());
+                }
+            }
+            Self::P256 => EcdhP256::agree(scalar, peer, &mut shared)?,
+            Self::P384 => EcdhP384::agree(scalar, peer, &mut shared)?,
+            Self::P521 => EcdhP521::agree(scalar, peer, &mut shared)?,
+        }
+        Ok(shared)
+    }
+    /// A fresh ephemeral scalar and public value.
+    fn ephemeral(self) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+        let (scalar_len, public_len, _) = self.sizes();
+        let mut scalar = Zeroizing::new(vec![0; scalar_len]);
+        let mut public = vec![0; public_len];
+        // NIST scalars outside 1..n are redrawn.
+        for _ in 0..16 {
+            crate::crypto::fill_random(&mut scalar).map_err(|_| {
+                Error::new(
+                    "entropy_unavailable",
+                    "OpenPGP ephemeral key generation failed",
+                )
+            })?;
+            if self == Self::P521 {
+                scalar[0] &= 1;
+            }
+            if self.public(&scalar, &mut public).is_ok() {
+                return Ok((scalar, public));
+            }
+        }
+        Err(Error::new(
+            "entropy_unavailable",
+            "OpenPGP ephemeral key generation failed",
+        ))
+    }
+}
+/// The recipient's key-agreement public value, without a native-point prefix.
+fn agreement_public(key: &Key) -> &[u8] {
+    if key.cv25519() {
+        &key.public[1..]
+    } else {
+        &key.public
+    }
+}
 fn wrapping_key(
     key: &Key,
+    agreement: Agreement,
     scalar: &[u8],
     ephemeral: &[u8],
     encrypting: bool,
 ) -> Result<Zeroizing<Vec<u8>>> {
-    let own = if key.alg == 18 && key.oid == X_OID {
-        &key.public[1..]
-    } else {
-        &key.public
-    };
-    let peer = if encrypting { own } else { ephemeral };
-    let mut shared = Zeroizing::new(vec![0; if key.oid == P384_OID { 48 } else { 32 }]);
-    if key.oid == P384_OID {
-        EcdhP384::agree(scalar, peer, &mut shared)?;
-    } else {
-        X25519::agree(scalar, peer, &mut shared)?;
+    let own = agreement_public(key);
+    let shared = agreement.agree(scalar, if encrypting { own } else { ephemeral })?;
+    match key.alg {
+        25 | 26 => {
+            let mut ikm = Zeroizing::new(ephemeral.to_vec());
+            ikm.extend(own);
+            ikm.extend_from_slice(&shared);
+            let mut wrapping = Zeroizing::new(vec![0; if key.alg == 25 { 16 } else { 32 }]);
+            if key.alg == 25 {
+                Hkdf::<HmacSha256>::derive(&ikm, &[], b"OpenPGP X25519", &mut wrapping)?;
+            } else {
+                Hkdf::<HmacSha512>::derive(&ikm, &[], b"OpenPGP X448", &mut wrapping)?;
+            }
+            Ok(wrapping)
+        }
+        _ => {
+            // RFC 9580 section 11.5 one-step KDF with the recipient's parameters.
+            let mut data = Zeroizing::new(vec![0, 0, 0, 1]);
+            data.extend_from_slice(&shared);
+            data.push(key.oid.len() as u8);
+            data.extend(&key.oid);
+            data.extend([18, 3]);
+            data.extend(&key.kdf);
+            data.extend(b"Anonymous Sender    ");
+            data.extend(&key.fingerprint);
+            let mut hash = Zeroizing::new(digest(key.kdf[1], &data)?);
+            hash.truncate(aes_key_len(key.kdf[2]).ok_or_else(unsupported)?);
+            Ok(hash)
+        }
     }
-    if key.alg == 25 {
-        let mut ikm = Zeroizing::new(ephemeral.to_vec());
-        ikm.extend(own);
-        ikm.extend_from_slice(&shared);
-        let mut wrapping = Zeroizing::new(vec![0; 16]);
-        Hkdf::<HmacSha256>::derive(&ikm, &[], b"OpenPGP X25519", &mut wrapping)?;
-        Ok(wrapping)
-    } else {
-        let mut data = Zeroizing::new(vec![0, 0, 0, 1]);
-        data.extend_from_slice(&shared);
-        data.push(key.oid.len() as u8);
-        data.extend(&key.oid);
-        data.extend([18, 3]);
-        data.extend(&key.kdf);
-        data.extend(b"Anonymous Sender    ");
-        data.extend(&key.fingerprint);
-        let mut hash = Zeroizing::new(digest(key.kdf[1], &data)?);
-        let size = match key.kdf[2] {
-            7 => 16,
-            8 => 24,
-            9 => 32,
-            _ => return Err(unsupported()),
-        };
-        hash.truncate(size);
-        Ok(hash)
+}
+/// AES-128, AES-192 and AES-256 are the only symmetric algorithms accepted.
+fn aes_key_len(cipher: u8) -> Option<usize> {
+    match cipher {
+        7 => Some(16),
+        8 => Some(24),
+        9 => Some(32),
+        _ => None,
     }
 }
 fn key_wrap(key: &[u8], data: &[u8], decrypt: bool) -> Result<Zeroizing<Vec<u8>>> {
@@ -1217,38 +1526,8 @@ fn key_wrap(key: &[u8], data: &[u8], decrypt: bool) -> Result<Zeroizing<Vec<u8>>
     }
     Ok(out)
 }
+/// A PKESK packet body carrying an AES-256 session key to one recipient key.
 fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
-    let mut scalar = Zeroizing::new(vec![0; if key.oid == P384_OID { 48 } else { 32 }]);
-    let mut ephemeral = vec![0; if key.oid == P384_OID { 97 } else { 32 }];
-    loop {
-        crate::crypto::fill_random(&mut scalar).map_err(|_| {
-            Error::new(
-                "entropy_unavailable",
-                "OpenPGP ephemeral key generation failed",
-            )
-        })?;
-        if (if key.oid == P384_OID {
-            EcdhP384::public_key(&scalar, &mut ephemeral)
-        } else {
-            X25519::public_key(&scalar, &mut ephemeral)
-        })
-        .is_ok()
-        {
-            break;
-        }
-    }
-    let kek = wrapping_key(key, &scalar, &ephemeral, true)?;
-    let mut raw = Zeroizing::new(Vec::new());
-    if key.version == 4 {
-        raw.push(9);
-    }
-    raw.extend_from_slice(session);
-    if key.alg != 25 {
-        raw.extend_from_slice(&checksum(session).to_be_bytes());
-        let n = 8 - raw.len() % 8;
-        raw.extend(std::iter::repeat_n(n as u8, n));
-    }
-    let wrapped = key_wrap(&kek, &raw, false)?;
     let mut body = if key.version == 4 {
         let mut v = vec![3];
         v.extend(key.id());
@@ -1259,21 +1538,56 @@ fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
         v
     };
     body.push(key.alg);
-    if key.alg == 25 {
-        body.extend(ephemeral);
-    } else {
+    // v3 packets name the symmetric algorithm; RSA and ECDH add a checksum.
+    let mut raw = Zeroizing::new(Vec::new());
+    if key.version == 4 && !matches!(key.alg, 25 | 26) {
+        raw.push(9);
+    }
+    raw.extend_from_slice(session);
+    if !matches!(key.alg, 25 | 26) {
+        raw.extend_from_slice(&checksum(session).to_be_bytes());
+    }
+    if matches!(key.alg, 1 | 2) {
+        let mut rng = ic_drbg::Rng::from_os()?;
+        let encrypted = public::rsa_encrypt(&key.integers[0], &key.integers[1], &raw, &mut rng)
+            .map_err(|_| unsupported())?;
+        body.extend(mpi(&encrypted));
+        return Ok(body);
+    }
+    let agreement = Agreement::of(key).ok_or_else(unsupported)?;
+    let (scalar, ephemeral) = agreement.ephemeral()?;
+    let kek = wrapping_key(key, agreement, &scalar, &ephemeral, true)?;
+    if key.alg == 18 {
+        let n = 8 - raw.len() % 8;
+        raw.extend(std::iter::repeat_n(n as u8, n));
+    }
+    let wrapped = key_wrap(&kek, &raw, false)?;
+    if key.alg == 18 {
         let mut point = Vec::new();
-        if key.oid == X_OID {
+        if key.cv25519() {
             point.push(64);
         }
         point.extend(ephemeral);
         body.extend(mpi(&point));
+        body.push(wrapped.len() as u8);
+    } else {
+        body.extend(ephemeral);
+        if key.version == 4 {
+            body.push(wrapped.len() as u8 + 1);
+            body.push(9);
+        } else {
+            body.push(wrapped.len() as u8);
+        }
     }
-    body.push(wrapped.len() as u8);
     body.extend_from_slice(&wrapped);
     Ok(body)
 }
-fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Zeroizing<Vec<u8>>>> {
+/// A recovered session key and, for v3 packets, its symmetric algorithm.
+struct Session {
+    cipher: Option<u8>,
+    key: Zeroizing<Vec<u8>>,
+}
+fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Session>> {
     let mut r = Reader::new(body);
     let v = r.byte()?;
     if v == 3 && key.version == 4 {
@@ -1297,11 +1611,10 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Zeroiz
     if r.byte()? != key.alg {
         return Ok(None);
     }
-    let ephemeral = if key.alg == 25 {
-        r.take(32)?
-    } else {
+    let agreement = Agreement::of(key).ok_or_else(unsupported)?;
+    let ephemeral = if key.alg == 18 {
         let p = r.mpi()?;
-        if key.oid == X_OID {
+        if key.cv25519() {
             if p.len() != 33 || p[0] != 64 {
                 return Err(auth());
             }
@@ -1309,13 +1622,19 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Zeroiz
         } else {
             p
         }
+    } else {
+        r.take(agreement.sizes().1)?
     };
     let len = r.byte()? as usize;
-    let wrapped = r.take(len)?;
+    let mut field = Reader::new(r.take(len)?);
     r.finish()?;
-    let kek = wrapping_key(key, scalar, ephemeral, false)?;
-    let mut raw = key_wrap(&kek, wrapped, true)?;
-    if key.alg != 25 {
+    let mut cipher = None;
+    if v == 3 && key.alg != 18 {
+        cipher = Some(field.byte()?);
+    }
+    let kek = wrapping_key(key, agreement, scalar, ephemeral, false)?;
+    let mut raw = key_wrap(&kek, field.data, true)?;
+    if key.alg == 18 {
         let padding = *raw.last().ok_or_else(auth)? as usize;
         if padding == 0
             || padding > 8
@@ -1337,27 +1656,41 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Zeroiz
             return Err(auth());
         }
         raw.truncate(n);
-    }
-    if v == 3 {
-        if raw.first() != Some(&9) {
-            return Err(unsupported());
+        if v == 3 {
+            cipher = Some(raw.remove(0));
         }
-        raw.remove(0);
     }
-    if raw.len() != 32 {
+    let expected = match cipher {
+        Some(cipher) => aes_key_len(cipher).ok_or_else(unsupported)?,
+        None => raw.len(),
+    };
+    if raw.len() != expected || !matches!(raw.len(), 16 | 24 | 32) {
         return Err(auth());
     }
-    Ok(Some(raw))
+    Ok(Some(Session { cipher, key: raw }))
 }
-fn aead_context(session: &[u8], header: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-    if header.len() != 36 || header[..3] != [2, 9, 2] || header[3] > 16 {
+/// SEIPDv2 message key and IV from the session key and packet header.
+fn aead_context(session: &[u8], header: &[u8]) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+    if header.len() != 36 || header[0] != 2 || header[3] > 16 {
         return Err(unsupported());
     }
-    let mut out = Zeroizing::new(vec![0; 39]);
+    let key_len = aes_key_len(header[1]).ok_or_else(unsupported)?;
+    let nonce_len = aead_nonce_len(header[2]).ok_or_else(unsupported)?;
+    if session.len() != key_len {
+        return Err(auth());
+    }
+    let mut out = Zeroizing::new(vec![0; key_len + nonce_len - 8]);
     let mut info = vec![0xd2];
     info.extend_from_slice(&header[..4]);
     Hkdf::<HmacSha256>::derive(session, &header[4..], &info, &mut out)?;
-    Ok(out)
+    let iv = out[key_len..].to_vec();
+    out.truncate(key_len);
+    Ok((out, iv))
+}
+fn chunk_nonce(iv: &[u8], index: u64) -> Vec<u8> {
+    let mut nonce = iv.to_vec();
+    nonce.extend_from_slice(&index.to_be_bytes());
+    nonce
 }
 fn seal_message(session: &[u8], version: u8, plain: &[u8]) -> Result<Vec<u8>> {
     if version == 4 {
@@ -1373,29 +1706,30 @@ fn seal_message(session: &[u8], version: u8, plain: &[u8]) -> Result<Vec<u8>> {
         body.extend_from_slice(&encrypted);
         Ok(body)
     } else {
+        // AES-256/OCB with 2^12-byte chunks.
         let mut header = vec![2, 9, 2, 6];
         header.extend_from_slice(&crypto::random::<32>()?[..]);
-        let derived = aead_context(session, &header)?;
+        let (key, iv) = aead_context(session, &header)?;
         let mut info = vec![0xd2];
         info.extend_from_slice(&header[..4]);
         let mut body = header;
         let mut index = 0u64;
         for chunk in plain.chunks(4096) {
-            let mut nonce = derived[32..].to_vec();
-            nonce.extend_from_slice(&index.to_be_bytes());
-            body.extend_from_slice(&ocb(&derived[..32], &nonce, &info, chunk, false)?);
+            body.extend_from_slice(&ocb(&key, &chunk_nonce(&iv, index), &info, chunk, false)?);
             index += 1;
         }
-        let mut nonce = derived[32..].to_vec();
-        nonce.extend_from_slice(&index.to_be_bytes());
         info.extend_from_slice(&(plain.len() as u64).to_be_bytes());
-        body.extend_from_slice(&ocb(&derived[..32], &nonce, &info, &[], false)?);
+        body.extend_from_slice(&ocb(&key, &chunk_nonce(&iv, index), &info, &[], false)?);
         Ok(body)
     }
 }
-fn open_message(session: &[u8], version: u8, body: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+fn open_message(session: &Session, version: u8, body: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     if body.first() == Some(&1) && version == 4 {
-        let data = cfb(session, &[0; 16], &body[1..], true)?;
+        // v3 PKESKs name the cipher; its key length must match the session key.
+        if session.cipher.and_then(aes_key_len) != Some(session.key.len()) {
+            return Err(unsupported());
+        }
+        let data = cfb(&session.key, &[0; 16], &body[1..], true)?;
         if data.len() < 40 {
             return Err(auth());
         }
@@ -1412,8 +1746,8 @@ fn open_message(session: &[u8], version: u8, body: &[u8]) -> Result<Zeroizing<Ve
             return Err(auth());
         }
         let header = &body[..36];
-        let derived = aead_context(session, header)?;
-        let size = 1usize << (header[3] + 6);
+        let (key, iv) = aead_context(&session.key, header)?;
+        let (mode, size) = (header[2], 1usize << (header[3] + 6));
         let mut info = vec![0xd2];
         info.extend_from_slice(&header[..4]);
         let mut out = Zeroizing::new(Vec::new());
@@ -1422,9 +1756,7 @@ fn open_message(session: &[u8], version: u8, body: &[u8]) -> Result<Zeroizing<Ve
             if chunk.len() <= 16 {
                 return Err(auth());
             }
-            let mut nonce = derived[32..].to_vec();
-            nonce.extend_from_slice(&index.to_be_bytes());
-            let plain = ocb(&derived[..32], &nonce, &info, chunk, true)?;
+            let plain = aead(mode, &key, &chunk_nonce(&iv, index), &info, chunk, true)?;
             if out.len() + plain.len() > MESSAGE_LIMIT {
                 return Err(Error::new(
                     "limit_exceeded",
@@ -1434,12 +1766,11 @@ fn open_message(session: &[u8], version: u8, body: &[u8]) -> Result<Zeroizing<Ve
             out.extend_from_slice(&plain);
             index += 1;
         }
-        let mut nonce = derived[32..].to_vec();
-        nonce.extend_from_slice(&index.to_be_bytes());
         info.extend_from_slice(&(out.len() as u64).to_be_bytes());
-        ocb(
-            &derived[..32],
-            &nonce,
+        aead(
+            mode,
+            &key,
+            &chunk_nonce(&iv, index),
             &info,
             &body[body.len() - 16..],
             true,
@@ -1590,8 +1921,15 @@ fn literal(body: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     }
     Ok(Zeroizing::new(r.data.to_vec()))
 }
+/// Packets of a message, without RFC 9580 Padding packets, which carry no
+/// meaning, and Marker packets, which legacy implementations must ignore.
+fn message_packets(data: &[u8]) -> Result<Vec<Packet>> {
+    let mut packets = wire::packets(data, MESSAGE_LIMIT)?;
+    packets.retain(|p| !matches!(p.tag, 10 | 21));
+    Ok(packets)
+}
 fn content_packets(data: &[u8]) -> Result<Vec<Packet>> {
-    let packets = wire::packets(data, MESSAGE_LIMIT)?;
+    let packets = message_packets(data)?;
     if packets.len() == 1 && packets[0].tag == 8 {
         let body = &packets[0].body;
         let (&algorithm, data) = body
@@ -1599,7 +1937,7 @@ fn content_packets(data: &[u8]) -> Result<Vec<Packet>> {
             .ok_or_else(|| invalid("Missing compression algorithm"))?;
         let plain =
             super::inflate::decompress(algorithm, data, MAX_PLAINTEXT_BYTES as usize + 65536)?;
-        let packets = wire::packets(&plain, MESSAGE_LIMIT)?;
+        let packets = message_packets(&plain)?;
         if packets.iter().any(|p| p.tag == 8) {
             return Err(invalid("Nested compression is not supported"));
         }
@@ -1619,7 +1957,7 @@ fn message_content(packets: &[Packet]) -> Result<(Zeroizing<Vec<u8>>, bool)> {
 }
 pub(crate) fn decrypt(key: &KeyFile, password: &[u8], message: &[u8]) -> Result<Decrypted> {
     let data = unarmor(message, "MESSAGE", MESSAGE_LIMIT)?;
-    let packets = wire::packets(&data, MESSAGE_LIMIT)?;
+    let packets = message_packets(&data)?;
     let plain = decrypt_packets(key, password, &packets)?;
     let packets = content_packets(&plain)?;
     let (plaintext, signed) = message_content(&packets)?;
@@ -1634,7 +1972,7 @@ pub(crate) fn verify_message(
     let cert = Cert::parse(certificate)?;
     cert.pin(expected)?;
     let data = unarmor(message, "MESSAGE", MESSAGE_LIMIT)?;
-    let packets = wire::packets(&data, MESSAGE_LIMIT)?;
+    let packets = message_packets(&data)?;
     let packets = if packets.first().is_some_and(|p| p.tag == 1) {
         let (key, password) = recipient.ok_or_else(|| {
             Error::new(
@@ -1703,11 +2041,168 @@ pub(crate) fn verify_message(
         }
         one.finish()?;
     }
-    let verification = verify_signature(&cert, &sig, &plaintext)?;
+    let verification = verify_signature(&cert, &sig, &plaintext, now()?)?;
     Ok(VerifiedMessage {
         plaintext,
         verification,
     })
+}
+
+/// In-memory public-packet oracle for fuzzing. Mode byte: 0 certificate
+/// evaluation, 1 detached and 2 embedded signatures against fixture
+/// certificates, 3 a length-prefixed certificate, document and signature.
+#[cfg(feature = "fuzzing")]
+pub fn fuzz_packets(input: &[u8]) {
+    let Some((&mode, data)) = input.split_first() else {
+        return;
+    };
+    // Certificate modes reach the full public-certificate byte limit.
+    let limit = if matches!(mode % 4, 0 | 3) {
+        MAX_CERTIFICATE_BYTES as usize + 1
+    } else {
+        65_537
+    };
+    if input.len() > limit {
+        return;
+    }
+    // A fixed time makes certificate round-trip comparisons deterministic.
+    const AT: u64 = 2_000_000_000;
+    let other_pin = |pin: &str| {
+        let mut wrong = pin.as_bytes().to_vec();
+        wrong[0] = if wrong[0] == b'0' { b'1' } else { b'0' };
+        String::from_utf8(wrong).unwrap()
+    };
+    if mode % 4 == 3 {
+        let Some(header) = data.get(..8) else {
+            return;
+        };
+        let cert_len = u32::from_be_bytes(header[..4].try_into().unwrap()) as usize;
+        let document_len = u32::from_be_bytes(header[4..].try_into().unwrap()) as usize;
+        let Some(cert_end) = 8usize.checked_add(cert_len) else {
+            return;
+        };
+        let Some(document_end) = cert_end.checked_add(document_len) else {
+            return;
+        };
+        let (Some(certificate), Some(document), Some(signature)) = (
+            data.get(8..cert_end),
+            data.get(cert_end..document_end),
+            data.get(document_end..),
+        ) else {
+            return;
+        };
+        let Ok(cert) = Cert::parse(certificate) else {
+            return;
+        };
+        let fingerprint = crate::hex::encode(&cert.keys[0].fingerprint);
+        if let Ok(report) = verify_at(certificate, &fingerprint, signature, document, AT) {
+            let summary = cert.evaluate(report.created);
+            assert!(
+                summary
+                    .keys
+                    .iter()
+                    .any(|key| key.fingerprint == report.signing_key && key.usable_for_signing)
+            );
+            let encoded = packet(2, &detached(signature).unwrap().body);
+            let other = verify_at(&cert.bytes(), &fingerprint, &encoded, document, AT).unwrap();
+            assert_eq!(
+                ipg_json::to_value(&report).unwrap(),
+                ipg_json::to_value(other).unwrap()
+            );
+            let mut changed = document.to_vec();
+            changed.push(0);
+            assert!(verify_at(certificate, &fingerprint, signature, &changed, AT).is_err());
+            assert_eq!(
+                verify_at(
+                    certificate,
+                    &other_pin(&fingerprint),
+                    signature,
+                    document,
+                    AT
+                )
+                .unwrap_err()
+                .code,
+                "identity_mismatch"
+            );
+        }
+        return;
+    }
+    if mode % 4 == 0 {
+        if let Ok(cert) = Cert::parse(data) {
+            let summary = cert.evaluate(AT);
+            let other = Cert::parse(&cert.bytes()).unwrap().evaluate(AT);
+            assert_eq!(
+                ipg_json::to_value(&summary).unwrap(),
+                ipg_json::to_value(other).unwrap()
+            );
+            assert_eq!(
+                summary.usable_for_signing,
+                summary.keys.iter().any(|key| key.usable_for_signing)
+            );
+            assert_eq!(
+                summary.usable_for_encryption,
+                summary.keys.iter().any(|key| key.usable_for_encryption)
+            );
+            for key in &summary.keys {
+                assert!(matches!(key.fingerprint.len(), 40 | 64));
+                if key.usable_for_signing || key.usable_for_encryption {
+                    assert!(key.bound && !key.revoked && !summary.revoked && !summary.expired);
+                    assert!(key.expires.is_none_or(|expiry| AT < expiry));
+                }
+            }
+            assert_eq!(
+                cert.pin(&other_pin(&summary.fingerprint)).unwrap_err().code,
+                "identity_mismatch"
+            );
+        }
+        return;
+    }
+    type Anchors = (Vec<(Vec<u8>, String)>, Vec<u8>);
+    static ANCHORS: std::sync::OnceLock<Anchors> = std::sync::OnceLock::new();
+    let (anchors, document) = ANCHORS.get_or_init(|| {
+        let fixture: ipg_json::Value =
+            ipg_json::from_str(include_str!("../../tests/vectors/openpgp-parser-v1.json")).unwrap();
+        let anchors = fixture["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|case| {
+                (
+                    crate::hex::decode(case["certificate_hex"].as_str().unwrap()).unwrap(),
+                    case["fingerprint"].as_str().unwrap().to_owned(),
+                )
+            })
+            .collect();
+        (
+            anchors,
+            crate::hex::decode(fixture["document_hex"].as_str().unwrap()).unwrap(),
+        )
+    });
+    for (certificate, fingerprint) in anchors {
+        if mode % 4 == 1 {
+            if let Ok(report) = verify(certificate, fingerprint, data, document) {
+                assert_eq!(&report.fingerprint, fingerprint);
+                let encoded = packet(2, &detached(data).unwrap().body);
+                let other = verify(certificate, fingerprint, &encoded, document).unwrap();
+                assert_eq!(
+                    ipg_json::to_value(report).unwrap(),
+                    ipg_json::to_value(other).unwrap()
+                );
+                let mut changed = document.clone();
+                changed.push(0);
+                assert!(verify(certificate, fingerprint, data, &changed).is_err());
+            }
+        } else if let Ok(message) = verify_message(certificate, fingerprint, data, None) {
+            assert_eq!(&message.verification.fingerprint, fingerprint);
+            assert!(message.plaintext.len() as u64 <= MAX_PLAINTEXT_BYTES);
+            let summary = Cert::parse(certificate)
+                .unwrap()
+                .evaluate(message.verification.created);
+            assert!(summary.keys.iter().any(|key| {
+                key.fingerprint == message.verification.signing_key && key.usable_for_signing
+            }));
+        }
+    }
 }
 
 fn iterated_s2k(
@@ -2067,6 +2562,44 @@ pub(crate) fn export_secret(
 mod tests {
     use super::*;
     const PASSWORD: &[u8] = b"native OpenPGP test passphrase";
+
+    /// RFC 9580 appendices A.9-A.11: complete v2 SEIPD packets under AES-128
+    /// with EAX, OCB and GCM, each holding "Hello, world!" and a Padding packet.
+    #[test]
+    fn rfc9580_seipd_v2_samples_decrypt_for_every_aead_mode() {
+        const PACKETS: [&str; 3] = [
+            "d269020701069ff90e3b321964f3a42913c8dcc6619325015227efb7eaeaa49f04c2e674175d4a3d226ed6afcb9ca9ac122c1470e11c63d4c0ab241c6a938ad48bf99a5a99b90bba8325de61047540258ab7959a95ad051dda96eb15431dfef5f5e2255ca78261546e339a",
+            "d2690207020620a661f731fc9a3032b5623326027e3a5d8db5748ebeff0b0c5910d09ecdd641ff9fd38562758035bc49754ce1bf3fffa7dad0a3b8104f5133cf42a4100a83eef4ca1b4801a8846bf42bcda7c8ce9d65e212f301cbcd98fdcade694a877ad4247323f6e857",
+            "d26902070306fcb94490bcb98bbdc9d106c6090266940f72e89edc21b5596b1576b101ed0f9ffc6fc6d65bbfd24dcd0790966e6d1e85a30053784cb1d8b6a0699ef12155a7b2ad6258531b57651fd7777912fa95e35d9b40216f69a4c248db28ff4331f1632907399e6ff9",
+        ];
+        for (packet, (_, _, _, _, session)) in PACKETS
+            .iter()
+            .zip(super::super::primitives::tests::RFC9580_SESSION_KEYS)
+        {
+            let packet = crate::hex::decode(packet).unwrap();
+            let session = Session {
+                cipher: None,
+                key: Zeroizing::new(crate::hex::decode(session).unwrap()),
+            };
+            let body = &packet[2..];
+            let plain = open_message(&session, 6, body).unwrap();
+            let (text, signed) = message_content(&content_packets(&plain).unwrap()).unwrap();
+            assert_eq!((&text[..], signed), (&b"Hello, world!"[..], false));
+            for i in [3, 40, body.len() - 1] {
+                let mut altered = body.to_vec();
+                altered[i] ^= 1;
+                assert!(open_message(&session, 6, &altered).is_err());
+            }
+            // A v3-style session must name a cipher matching its key length.
+            assert!(open_message(&session, 4, body).is_err());
+            let short = Session {
+                cipher: None,
+                key: Zeroizing::new(session.key[..15].to_vec()),
+            };
+            assert!(open_message(&short, 6, body).is_err());
+        }
+    }
+
     #[test]
     fn unauthenticated_issuer_hint_cannot_hide_a_certificate_revocation() {
         let key = generate_version(
@@ -2225,9 +2758,38 @@ mod tests {
         let key =
             generate_version("Policy test", Algorithm::Ed25519, Version::V6, PASSWORD).unwrap();
         let cert = own_certificate(&key).unwrap();
-        let mut unsupported_key = cert.keys[0].raw.clone();
-        unsupported_key[5] = 28;
-        assert!(Key::parse(&unsupported_key).is_err());
+        // Malformed material for a known algorithm is refused outright.
+        let mut malformed = cert.keys[0].raw.clone();
+        malformed[5] = 28;
+        assert!(Key::parse(&malformed).is_err());
+        // Unknown algorithms parse for fingerprints but are never usable.
+        let mut unknown = cert.keys[0].raw.clone();
+        unknown[5] = 99;
+        let parsed = Key::parse(&unknown).unwrap();
+        let capability = parsed.capability();
+        assert_eq!(capability.name, "unsupported");
+        assert!(!capability.sign && !capability.encrypt);
+        assert_ne!(parsed.fingerprint, cert.keys[0].fingerprint);
+        // Malformed legacy EdDSA keys are reportable and must never be used.
+        let v4 = generate_version("Legacy", Algorithm::Ed25519, Version::V4, PASSWORD).unwrap();
+        let legacy = own_certificate(&v4).unwrap();
+        let mut empty_point = legacy.keys[0].raw[..6].to_vec();
+        empty_point.push(ED_OID.len() as u8);
+        empty_point.extend_from_slice(ED_OID);
+        empty_point.extend_from_slice(&[0, 0]);
+        let empty_point = Key::parse(&empty_point).unwrap();
+        assert!(!empty_point.signing());
+        let signature = sign_packet(
+            &legacy.keys[0],
+            &unseal(&v4, PASSWORD).unwrap().scalars[0],
+            0,
+            b"test",
+            None,
+        )
+        .unwrap();
+        let signature = Sig::parse(&signature).unwrap();
+        assert!(signature.verify(&legacy.keys[0], b"test"));
+        assert!(!signature.verify(&empty_point, b"test"));
         let mut signature = sign_packet(
             &cert.keys[0],
             &unseal(&key, PASSWORD).unwrap().scalars[0],

@@ -18,20 +18,16 @@ snapshots.
 
 **IronPrivacyGuard 0.1.2 is an experimental pre-1.0 release.** It is not an
 audited or drop-in GPG replacement.
-Native IPG keys, envelopes and signatures are not OpenPGP. A separate, optional
+Native IPG keys, envelopes and signatures are not OpenPGP. A separate
 [OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
 signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
 
-The current checkout enables the native OpenPGP curve profile by default, adding
-no dependencies beyond base IPG. Core software workflows require no external
-cryptographic programs or services. The default build depends only on IronCrypto
-and first-party IPG crates; optional integrations still contain other dependencies.
+**IronCrypto is the only dependency.** Every build, including all optional
+integrations, depends only on IronCrypto and first-party IPG crates: OpenPGP,
+PKCS#11, TPM, attestation and AWS KMS (over IPG's own TLS 1.3 client) included.
+Core software workflows require no external cryptographic programs or services.
 See [dependency boundaries](docs/DEPENDENCIES.md).
-The broader `openpgp` feature uses rPGP, whose transitive RSA crate has a known
-private-key timing advisory (RUSTSEC-2023-0071). IPG rejects RSA secret-key imports
-and uses RSA only for public-key operations; details are in the
-[OpenPGP security notes](docs/OPENPGP.md#what-provides-the-cryptography).
 
 Install the CLI from [crates.io](https://crates.io/crates/ipg):
 
@@ -39,8 +35,8 @@ Install the CLI from [crates.io](https://crates.io/crates/ipg):
 cargo install ipg --version 0.1.2 --locked
 ```
 
-This installs the published 0.1.2 core CLI; default native OpenPGP is a later,
-unreleased change in this checkout. Hardware and broader interoperability integrations are
+This installs the published 0.1.2 core CLI. The IronCrypto-only OpenPGP, KMS and
+TLS work described here is a later, unreleased change in this checkout. Hardware and broader interoperability integrations are
 optional Cargo features; see their sections below. Prebuilt release binaries and
 checksums are published on the [GitHub releases page](https://github.com/nervosys/IronPrivacyGuard/releases).
 
@@ -59,8 +55,9 @@ current checkout instead, run `cargo install --path . --locked`. IronCrypto
 components are pinned to crates.io release `0.2.7`, and Cargo.lock pins the
 remaining dependency graph for this repository.
 Native IPG identity and envelope cryptography uses IronCrypto. There is no OpenSSL, C
-compilation, GPG subprocess, or external cryptographic executable. OS entropy and filesystem
-access use platform APIs through Rust crates.
+compilation, TLS library, GPG subprocess, or external cryptographic executable. OS
+entropy and filesystem access use platform APIs through IronCrypto and the Rust
+standard library.
 
 Hardware-backed identities need the optional `pkcs11` feature, which loads a
 host-selected PKCS#11 module at runtime (still no C compilation). Contracts,
@@ -70,8 +67,8 @@ schemas and formats are identical with or without it:
 cargo build --release --locked --features pkcs11 --target-dir target
 ```
 
-AWS KMS identities need the `kms` feature (still no C compilation: TLS uses rustls
-with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: Linux uses
+AWS KMS identities need the `kms` feature (still no C compilation: TLS uses IPG's
+native TLS 1.3 client on IronCrypto). TPM 2.0 identities need the `tpm` feature: Linux uses
 IPG's native TPM command layer; Windows uses TPM Base Services through the small
 `ipg-cng` crate. Native FFI is isolated in `ipg-cng` and `ipg-pkcs11`. See
 [hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
@@ -79,21 +76,14 @@ verifier holding only the manufacturer's root certificates; the verifier needs t
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
 The standalone `x509-native` feature provides [offline certificate checks](docs/X509.md)
-for Rust callers using only IronCrypto and first-party crates. KMS still uses
-rustls for its TLS transport, with [bundled public trust-anchor data](data/README.md).
-The opt-in `tls-native` feature adds an [experimental TLS 1.3 Rust client](docs/TLS.md)
-using only IronCrypto and first-party crates. It has a bounded profile and does
-not yet replace the KMS transport.
+for Rust callers using only IronCrypto and first-party crates. The `tls-native`
+feature adds an [experimental TLS 1.3 Rust client](docs/TLS.md) with a bounded
+profile; the `kms` feature uses it with [bundled public trust-anchor data](data/README.md).
 
-Native OpenPGP curve interchange is enabled by default; `--no-default-features`
-omits it. Explicit `--features openpgp-native` adds no
-dependencies to the base build. The broader `openpgp` feature uses the pure-Rust rPGP
-library, not IronCrypto, for OpenPGP packets and primitives; see
-[OpenPGP interoperability](docs/OPENPGP.md):
-
-```sh
-cargo build --release --locked --features openpgp --target-dir target
-```
+Native OpenPGP is enabled by default; `--no-default-features` omits it, and
+`openpgp` remains as an alias. It implements RFC 9580 packets and policy over
+IronCrypto, including RSA, NIST-curve, Ed448 and X448 correspondents; see
+[OpenPGP interoperability](docs/OPENPGP.md).
 
 External MCP integration tests use the official Python and TypeScript SDKs to
 exercise the release binary. Python and Node.js are test tooling only. See
@@ -183,7 +173,7 @@ ipg knowledge search --query "openpgp"
 | Prove keys are resident in a genuine TPM | `tpm.attest`, `tpm.attestation.challenge`, `tpm.attestation.respond`, `tpm.attestation.verify` |
 | Managed key custody (AWS KMS), optionally with composite ML-DSA-65 signatures | `kms.key.bind`, then any key operation with the key file |
 | Post-quantum confidentiality and signatures (hybrid ML-KEM-768 + X25519, Ed25519 + ML-DSA-65) | `key.generate --identity ipg-public-hybrid-v1`, then `encrypt`, `decrypt`, `sign`, `verify` |
-| Exchange with GnuPG and other OpenPGP tools (`openpgp` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify`, `openpgp.message.verify` |
+| Exchange with GnuPG and other OpenPGP tools (default `openpgp-native` feature) | `openpgp.key.generate`, `openpgp.cert.export`, `openpgp.cert.inspect`, `openpgp.encrypt`, `openpgp.decrypt`, `openpgp.sign`, `openpgp.verify`, `openpgp.message.verify` |
 | TLS, password-verifier storage, FIPS validation | `external_required`; no executable IPG tools |
 
 Search returns matches under `result.document.matches`. Each match contains an
@@ -390,9 +380,12 @@ attributes are self-reported, not attested. See [hardware identities](docs/HARDW
 
 ## OpenPGP interoperability
 
-With the `openpgp` feature, IPG generates v4 (default) or v6 OpenPGP keys (Ed25519, or P-384 for
+IPG generates v4 (default) or v6 OpenPGP keys (Ed25519, or P-384 for
 CNSA-aligned use), exports their certificates, encrypts to up to 32 pinned
-certificates, decrypts, and creates and verifies detached signatures. Output
+certificates, decrypts, and creates and verifies detached signatures.
+Correspondents may use RSA 2048-4096, P-256/P-384/P-521, Ed25519, Ed448,
+Curve25519, X25519 or X448 keys, and send AES-128/192/256 messages using SEIPDv1
+or SEIPDv2 with EAX, OCB or GCM. Output
 from the default v4 path interoperates with GnuPG 2.2 and later. Select v6 with
 `--key-version v6` for correspondents supporting RFC 9580 and SEIPDv2/OCB.
 
@@ -442,8 +435,9 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |
 | `crates/ipg-pkcs11` | Native PKCS#11 FFI, bounded buffers, and session ownership |
-| `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
-| `src/openpgp/` | OpenPGP boundary: native IronCrypto curve interchange (`openpgp-native`) or broader rPGP support (`openpgp`), with certificate policy |
+| `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over native TLS 1.3, Sign and DeriveSharedSecret |
+| `src/tls/` | Experimental bounded TLS 1.3 client (`tls-native`): X25519/P-256/P-384, record protection, key schedule |
+| `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA/prehash-ECDSA (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
 | `src/reconciliation.rs` | Pinned snapshot comparison and conservative merging |
@@ -471,6 +465,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/stream_signatures.rs`, `tests/vectors_stream_signatures.rs` | Any-size signature round trips, tampering, policy and independent all-suite vectors |
 | `tests/openpgp.rs` | OpenPGP round trips, pins, tampering, custody, MCP exposure and independent certificate-policy/work-limit regressions |
 | `tests/interop/gnupg_reference.py` | Two-way GnuPG interoperability and certificate-policy refusals |
+| `tests/interop/openpgp_recipient_reference.py` | PyCA checks of RSA/NIST/X25519/X448 recipients and AES-128/192/256 EAX/OCB/GCM messages |
 | `tests/vectors_hybrid.rs` | PyCA/OpenSSL-generated hybrid post-quantum vectors |
 | `tests/vectors_p384.rs` | PyCA-generated P-384 suite vectors |
 

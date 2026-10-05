@@ -1,6 +1,7 @@
 //! AWS KMS backend. Private keys stay in KMS; IPG sends digests to sign and peer
 //! public keys to agree with. Requests use SigV4 with the host's AWS credentials over
-//! TLS from rustls with IronCrypto's provider, so no C code is compiled.
+//! IPG's native TLS 1.3 client over IronCrypto, authenticated against the bundled
+//! public root store; no C code is compiled and no TLS library is linked.
 //!
 //! Only binding of existing keys is offered: KMS keys are billable account resources,
 //! created by infrastructure tooling rather than agent-callable requests.
@@ -17,7 +18,6 @@ use ipg_json::{Value, json};
 use std::{
     io::{Read, Write},
     net::TcpStream,
-    sync::{Arc, OnceLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -728,53 +728,11 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
     }))
 }
 
-fn tls_config() -> Result<Arc<rustls::ClientConfig>> {
-    // Bundled roots and protocol policy are immutable for this binary. Decode
-    // them once instead of reparsing public root data for each KMS request.
-    static CONFIG: OnceLock<Arc<rustls::ClientConfig>> = OnceLock::new();
-    if let Some(config) = CONFIG.get() {
-        return Ok(Arc::clone(config));
-    }
-    let roots = rustls::RootCertStore {
-        roots: crate::tls_roots::load()?
-            .into_iter()
-            .map(|root| rustls::pki_types::TrustAnchor {
-                subject: root.subject.into(),
-                subject_public_key_info: root.spki.into(),
-                name_constraints: root.name_constraints.map(Into::into),
-            })
-            .collect(),
-    };
-    let config = Arc::new(
-        rustls::ClientConfig::builder_with_provider(ic_rustls::arc_provider())
-            .with_safe_default_protocol_versions()
-            .map_err(|e| Error::new("provider_error", format!("TLS configuration: {e}")))?
-            .with_root_certificates(roots)
-            .with_no_client_auth(),
-    );
-    let _ = CONFIG.set(Arc::clone(&config));
-    Ok(config)
-}
-
 fn transport(endpoint: &Endpoint, request: &[u8]) -> Result<Vec<u8>> {
     exchange(endpoint, request, Duration::from_secs(30))
 }
 
 fn network_error(error: std::io::Error) -> Error {
-    // rustls wraps record/handshake failures as io::Error with the typed TLS
-    // error as its payload. Authentication rejection is not a transient outage.
-    if let Some(tls) = error
-        .get_ref()
-        .and_then(|cause| cause.downcast_ref::<rustls::Error>())
-    {
-        let code = match tls {
-            rustls::Error::InvalidCertificate(_) | rustls::Error::NoCertificatesPresented => {
-                "key_not_trusted"
-            }
-            _ => "authentication_failed",
-        };
-        return Error::new(code, format!("AWS TLS validation failed: {tls}"));
-    }
     Error {
         code: "provider_error",
         message: format!("AWS network error: {error}"),
@@ -782,10 +740,32 @@ fn network_error(error: std::io::Error) -> Error {
     }
 }
 
+/// Map a native TLS failure. Authentication rejection is not a transient outage
+/// and never suggests retrying; only transport failures remain retryable.
+fn tls_error(error: Error) -> Error {
+    match error.code {
+        "io_error" => Error {
+            code: "provider_error",
+            message: format!("AWS network error: {}", error.message),
+            retryable: true,
+        },
+        "limit_exceeded" => Error::new("provider_error", "KMS response exceeds size limit"),
+        "key_not_trusted" => Error::new(
+            "key_not_trusted",
+            format!("AWS TLS validation failed: {}", error.message),
+        ),
+        _ => Error::new(
+            "authentication_failed",
+            format!("AWS TLS validation failed: {}", error.message),
+        ),
+    }
+}
+
 fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Vec<u8>> {
     use std::net::ToSocketAddrs;
     let network = network_error;
-    let address = (endpoint.host.trim_matches(['[', ']']), endpoint.port)
+    let host = endpoint.host.trim_matches(['[', ']']);
+    let address = (host, endpoint.port)
         .to_socket_addrs()
         .map_err(network)?
         .next()
@@ -793,26 +773,27 @@ fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Ve
     let socket = TcpStream::connect_timeout(&address, timeout).map_err(network)?;
     socket.set_read_timeout(Some(timeout)).map_err(network)?;
     socket.set_write_timeout(Some(timeout)).map_err(network)?;
-    let mut response = Vec::new();
-    if endpoint.tls {
-        let name = rustls::pki_types::ServerName::try_from(endpoint.host.clone())
-            .map_err(|_| Error::new("provider_unavailable", "Invalid KMS host name"))?;
-        let connection = rustls::ClientConnection::new(tls_config()?, name)
-            .map_err(|e| Error::new("provider_error", format!("TLS: {e}")))?;
-        let mut stream = rustls::StreamOwned::new(connection, socket);
-        stream.write_all(request).map_err(network)?;
-        (&mut stream)
-            .take(MAX_RESPONSE_BYTES + 1)
-            .read_to_end(&mut response)
-            .map_err(network)?;
+    let response = if endpoint.tls {
+        let anchors = crate::tls_roots::anchors()?;
+        let mut client =
+            crate::tls::Client::connect_with_anchors(socket, host, anchors).map_err(tls_error)?;
+        client.write_all(request).map_err(tls_error)?;
+        // The client wipes its buffer on any failure and requires an
+        // authenticated close_notify, so truncated responses are never parsed.
+        let body = client
+            .read_to_end(MAX_RESPONSE_BYTES as usize)
+            .map_err(tls_error)?;
+        body.to_vec()
     } else {
+        let mut response = Vec::new();
         let mut stream = socket;
         stream.write_all(request).map_err(network)?;
         (&mut stream)
             .take(MAX_RESPONSE_BYTES + 1)
             .read_to_end(&mut response)
             .map_err(network)?;
-    }
+        response
+    };
     if response.len() as u64 > MAX_RESPONSE_BYTES {
         return Err(Error::new(
             "provider_error",
@@ -1210,26 +1191,33 @@ mod tests {
 
     #[test]
     fn tls_configuration_accepts_bundled_roots() {
-        // Construction uses the real bundled data and normal verifying builder;
-        // no test verifier, custom roots or authentication bypass is installed.
-        assert!(tls_config().is_ok());
+        // The real bundled data; no test verifier or custom roots are installed.
+        assert_eq!(crate::tls_roots::anchors().unwrap().len(), 121);
     }
 
     #[test]
     fn tls_validation_failures_never_suggest_network_retries() {
-        for tls in [
-            rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer),
-            rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature),
-            rustls::Error::NoCertificatesPresented,
-            rustls::Error::DecryptError,
+        for error in [
+            Error::new("key_not_trusted", "No verified certificate path"),
+            Error::new("authentication_failed", "TLS Finished verification failed"),
+            Error::new(
+                "invalid_format",
+                "Malformed or unsupported X.509 certificate",
+            ),
         ] {
-            let error = network_error(std::io::Error::new(std::io::ErrorKind::InvalidData, tls));
+            let error = tls_error(error);
             assert!(!error.retryable);
             assert!(matches!(
                 error.code,
                 "key_not_trusted" | "authentication_failed"
             ));
         }
+        let oversize = tls_error(Error::new("limit_exceeded", "TLS response exceeds limit"));
+        assert_eq!(oversize.code, "provider_error");
+        assert!(!oversize.retryable);
+        let closed = tls_error(Error::new("io_error", "TLS transport failed"));
+        assert_eq!(closed.code, "provider_error");
+        assert!(closed.retryable);
         let timeout = network_error(std::io::ErrorKind::TimedOut.into());
         assert_eq!(timeout.code, "provider_error");
         assert!(timeout.retryable);

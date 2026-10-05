@@ -40,6 +40,8 @@ jobs:
       - run: python scripts/check-ironcrypto-only.py --features tpm,pkcs11
       - run: python scripts/check-ironcrypto-only.py --no-default-features --features x509-native
       - run: python scripts/check-ironcrypto-only.py --no-default-features --features tls-native
+      - run: python scripts/check-ironcrypto-only.py --features kms
+      - run: python scripts/check-ironcrypto-only.py --all-features
       - run: cargo build --locked --no-default-features --features tls-native --example native_tls_probe
       - run: python scripts/test-native-tls.py target/debug/examples/native_tls_probe${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python scripts/test-native-tls-handshake.py target/debug/examples/native_tls_probe${{ runner.os == 'Windows' && '.exe' || '' }}
@@ -68,6 +70,7 @@ jobs:
       - if: runner.os != 'macOS'
         run: python tests/interop/gnupg_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/openpgp_v6_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/openpgp_recipient_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - if: runner.os != 'macOS'
         run: cargo build --release --locked --no-default-features --features openpgp-native --target-dir target/native
       - if: runner.os != 'macOS'

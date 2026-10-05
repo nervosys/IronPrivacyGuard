@@ -1,7 +1,9 @@
 """Ensure KMS rejects an untrusted local TLS server before sending test credentials.
 
 Uses Python/OpenSSL as the server, with disposable PyCA keys. No real AWS service
-or credential is used. Covers both supported TLS protocol versions.
+or credential is used. A TLS 1.3 server with an untrusted certificate must be
+refused as untrusted; a TLS 1.2-only server is outside the native profile and
+must be refused without downgrade. Neither may receive application bytes.
 """
 import argparse
 from datetime import datetime, timezone
@@ -73,9 +75,10 @@ def exercise(executable, directory, version):
         assert not worker.is_alive(), "Local TLS server did not finish"
     response = json.loads(result.stdout)
     assert result.returncode != 0 and response["ok"] is False, response
-    assert response["error"]["code"] == "key_not_trusted", response
+    expected = "key_not_trusted" if version == ssl.TLSVersion.TLSv1_3 else "authentication_failed"
+    assert response["error"]["code"] == expected, response
     assert response["error"]["retryable"] is False, response
-    assert "UnknownIssuer" in response["error"]["message"], response
+    assert response["error"]["message"].startswith("AWS TLS validation failed"), response
     assert observed["connected"] and observed["application_bytes"] == b"", observed
     assert not output.exists(), "Rejected TLS connection created a key file"
 
@@ -87,7 +90,8 @@ def main():
     for version in [ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3]:
         with tempfile.TemporaryDirectory(prefix="ipg-tls-rejection-") as directory:
             exercise(args.ipg.resolve(), Path(directory), version)
-    print(json.dumps({"ok": True, "protocols": ["TLS1.2", "TLS1.3"], "application_bytes_received": 0}))
+    print(json.dumps({"ok": True, "refused": ["TLS1.2 downgrade", "TLS1.3 untrusted issuer"],
+                      "application_bytes_received": 0}))
 
 
 if __name__ == "__main__":

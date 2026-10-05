@@ -99,7 +99,10 @@ with tempfile.TemporaryDirectory(prefix="ipg-tls-handshake-") as folder:
     leaf_der = leaf.public_bytes(serialization.Encoding.DER)
     modes = ["valid", "fragmented", "server-key-update", "bad-key-update", "unaligned-key-update", "bad-ticket",
              "bad-signature", "wrong-context", "bad-finished", "early-application",
-             "duplicate-extension", "missing-version", "bad-session", "low-order-share", "oversize-record"]
+             "duplicate-extension", "missing-version", "bad-session", "low-order-share", "oversize-record",
+             "p256-share", "p384-share", "compressed-p256-share", "off-curve-p384-share", "unoffered-group"]
+    nist = {"p256-share": (23, ec.SECP256R1()), "compressed-p256-share": (23, ec.SECP256R1()),
+            "p384-share": (24, ec.SECP384R1()), "off-curve-p384-share": (24, ec.SECP384R1())}
     for mode in modes:
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
@@ -121,19 +124,45 @@ with tempfile.TemporaryDirectory(prefix="ipg-tls-handshake-") as folder:
                     pos += 2 + int.from_bytes(client[pos:pos+2], "big")
                     pos += 1 + client[pos]
                     pos += 2
-                    peer = None
+                    shares, groups = {}, None
                     while pos < len(client):
                         kind = int.from_bytes(client[pos:pos+2], "big")
                         n = int.from_bytes(client[pos+2:pos+4], "big")
                         value = client[pos+4:pos+4+n]
+                        if kind == 10:
+                            groups = value
                         if kind == 51:
-                            assert value[:6] == b"\x00\x24\x00\x1d\x00\x20"
-                            peer = value[6:]
+                            entries, cursor = value[2:], 0
+                            assert int.from_bytes(value[:2], "big") == len(entries)
+                            while cursor < len(entries):
+                                group = int.from_bytes(entries[cursor:cursor+2], "big")
+                                size = int.from_bytes(entries[cursor+2:cursor+4], "big")
+                                shares[group] = entries[cursor+4:cursor+4+size]
+                                cursor += 4 + size
                         pos += 4 + n
-                    private = x25519.X25519PrivateKey.generate()
-                    public = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-                    share = b"\0" * 32 if mode == "low-order-share" else public
-                    exts = extension(51, b"\x00\x1d" + vector(share))
+                    # Every offered group carries a share, so retry is never needed.
+                    assert groups == b"\x00\x06\x00\x1d\x00\x17\x00\x18", groups
+                    assert [(g, len(k)) for g, k in shares.items()] == [(29, 32), (23, 65), (24, 97)]
+                    assert shares[23][0] == 4 and shares[24][0] == 4
+                    if mode in nist:
+                        group, curve = nist[mode]
+                        private = ec.generate_private_key(curve)
+                        share = point = private.public_key().public_bytes(
+                            serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+                        if mode == "compressed-p256-share":
+                            share = private.public_key().public_bytes(
+                                serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint)
+                        if mode == "off-curve-p384-share":
+                            share = point[:-1] + bytes([point[-1] ^ 1])
+                        peer_key = ec.EllipticCurvePublicKey.from_encoded_point(curve, shares[group])
+                        derive = lambda: private.exchange(ec.ECDH(), peer_key)
+                    else:
+                        group = 30 if mode == "unoffered-group" else 29
+                        private = x25519.X25519PrivateKey.generate()
+                        public = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+                        share = b"\0" * 32 if mode == "low-order-share" else public
+                        derive = lambda: private.exchange(x25519.X25519PublicKey.from_public_bytes(shares[29]))
+                    exts = extension(51, group.to_bytes(2, "big") + vector(share))
                     if mode != "missing-version":
                         exts += extension(43, b"\x03\x04")
                     if mode == "duplicate-extension":
@@ -145,7 +174,7 @@ with tempfile.TemporaryDirectory(prefix="ipg-tls-handshake-") as folder:
                         return
                     sock.sendall(b"\x16\x03\x03" + vector(server))
                     transcript = client + server
-                    shared = private.exchange(x25519.X25519PublicKey.from_public_bytes(peer))
+                    shared = derive()
                     empty_hash = hashlib.sha256(b"").digest()
                     early = extract(bytes(32), bytes(32))
                     handshake_secret = extract(expand(early, b"derived", empty_hash), shared)
@@ -213,7 +242,7 @@ with tempfile.TemporaryDirectory(prefix="ipg-tls-handshake-") as folder:
         worker.join(10)
         assert not worker.is_alive()
         assert not observed["unexpected"], (mode, observed)
-        success = mode in ("valid", "fragmented", "server-key-update")
+        success = mode in ("valid", "fragmented", "server-key-update", "p256-share", "p384-share")
         assert (result.returncode == 0) == success, (mode, result.stderr, observed)
         if success:
             assert result.stdout.strip() == "OK" and observed["error"] is None, (mode, observed)

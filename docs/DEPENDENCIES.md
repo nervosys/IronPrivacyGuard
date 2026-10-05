@@ -5,14 +5,15 @@ profile. It does not invoke GPG, OpenSSL, Python, Node.js or another cryptograph
 executable. It uses OS entropy, filesystem access and the host clock. Build and
 test tools are not required to run the resulting binary.
 
-**Default, minimal, and `pkcs11` builds have no third-party Cargo dependencies outside IronCrypto.**
+**Every build, including `--all-features`, has no third-party Cargo dependencies outside IronCrypto.**
 Cargo.toml and Cargo.lock are the authoritative dependency declarations. IronCrypto
-provides primitives, OS-seeded DRBG output, hexadecimal conversion and volatile
-memory erasure. First-party IPG code provides JSON parsing, typed serialization,
-schema derives, secret-buffer wrappers, temporary-file handling and PKCS#11 FFI.
-KMS TLS and broad OpenPGP still contain additional third-party crates, so the migration is
-not complete across every feature combination.
-The Rust standard library and platform runtime also remain requirements.
+provides primitives, big-integer arithmetic, OS-seeded DRBG output, hexadecimal
+conversion and volatile memory erasure. First-party IPG code provides JSON parsing,
+typed serialization, schema derives, secret-buffer wrappers, temporary-file
+handling, PKCS#11 and Windows CNG/TBS FFI, TPM commands, X.509 path validation,
+TLS 1.3, OpenPGP and Ed448/X448. The Rust standard library and platform runtime
+also remain requirements; development tooling such as the fuzz harness's
+`libfuzzer-sys` is not part of the product graph.
 
 Rust callers now use `iron_privacy_guard::json` for values, serialization and
 schema traits; these are first-party types, not serde-compatible aliases. The
@@ -20,26 +21,25 @@ CLI's JSON wire format and field order remain stable. Unsupported derive
 annotations fail compilation instead of silently weakening a contract.
 
 `python scripts/check-ironcrypto-only.py` audits the complete reachable Cargo
-graph and fails while any third-party package remains. Run it with
+graph and fails if any third-party package is reachable. Run it with
 `--all-features` to audit optional integrations too. It follows transitive
-dependencies, including those introduced by IronCrypto adapters. The default
-and `tpm,pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
-blocker. CI checks default, minimal, `pkcs11` and `tpm,pkcs11` builds on each supported OS.
+dependencies, including those introduced by IronCrypto adapters. Every feature
+combination passes; CI checks default, minimal, `pkcs11`, `tpm,pkcs11`, `kms`,
+`x509-native`, `tls-native` and `--all-features` builds on each supported OS.
+`cargo deny check` allows only the AGPL-licensed first-party and IronCrypto
+crates, denies duplicate versions and has no advisory exceptions.
 
-The experimental `tls-native` Rust client now passes the IronCrypto-only gate.
-It supports a [bounded TLS 1.3 profile](TLS.md), with independent record vectors
-and local OpenSSL/PyCA handshake checks. Production review, KMS integration,
-TLS compatibility coverage and additional native OpenPGP profiles remain.
-Attestation now uses IPG's bounded X.509 parser and path validator over
-IronCrypto primitives; see [the supported profile](ATTESTATION.md#native-certificate-profile).
-`ic-rustls` supplies primitives to rustls, not a standalone TLS engine, and
-therefore does not satisfy the transitive dependency gate. Its replacement must
-retain TLS peer-name, certificate-path and handshake authentication.
-The `webpki-roots` crate has been replaced by bundled public trust-anchor data;
-all 121 roots and their constraints match the previously pinned store. See
-[root provenance and maintenance](../data/README.md). The `x509-native` feature
-provides [offline TLS server certificate checks](X509.md) without additional
-third-party crates; it is not yet the KMS TLS transport.
+KMS HTTPS uses IPG's [native TLS 1.3 client](TLS.md) with the bundled public
+trust anchors ([provenance and maintenance](../data/README.md)); rustls,
+`ic-rustls` and `webpki-roots` have been removed. All 121 roots and their name
+constraints match the previously pinned store and are applied as key-form trust
+anchors with peer-name, certificate-path and handshake authentication retained.
+Attestation uses IPG's bounded X.509 parser and path validator over IronCrypto
+primitives; see [the supported profile](ATTESTATION.md#native-certificate-profile).
+The `x509-native` feature provides [offline TLS server certificate checks](X509.md).
+OpenPGP is native as well: the former rPGP backend and its `rsa` dependency have
+been removed, and correspondent RSA, NIST-curve, Ed448 and X448 public-key
+operations use first-party code over IronCrypto; see [OpenPGP](OPENPGP.md).
 Removing certificate checks or silently disabling existing integrations is not
 a completed migration. Independent certificate-policy fixtures in
 `tests/vectors/attestation-certificate-policy.json`, `x509-signatures.json` and
@@ -54,10 +54,10 @@ Windows. Output directories must be access-controlled by the host.
 
 | Optional feature | Additional runtime requirements |
 | --- | --- |
-| `openpgp` | Broader rPGP implementation and its Cargo dependencies; no GPG subprocess |
+| `openpgp-native` (default; `openpgp` is an alias) | Correspondent certificates and pinned fingerprints; no GPG subprocess |
 | `pkcs11` | A host-configured vendor library and token/HSM |
 | `tpm` | TPM and configured native transport; Windows uses OS TPM services; native attestation uses IronCrypto only |
-| `kms` | Network, AWS services, credentials and provisioned keys |
+| `kms` | Network, AWS services, credentials and provisioned keys; TLS 1.3 endpoints with X25519, P-256 or P-384 key exchange |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
 | `x509-native` | Caller-selected roots, certificate chain, trusted time and (for TLS) expected host; offline Rust API only |
 | `tls-native` | Connected TCP socket, independently selected host, explicit full-DER roots and host clock; experimental Rust API only |
@@ -70,10 +70,9 @@ paths), so closing one IPG context cannot finalize a module used by another
 context or embedding application. Changing a loaded module requires restarting
 the process. Token login state follows PKCS#11's process-wide rules.
 
-`cargo build --release --locked` builds the default native profile. To omit
-OpenPGP, use `--no-default-features`. Enabling `openpgp` selects rPGP, including
-when `openpgp-native` is also enabled. CI checks that default/native OpenPGP adds
-no dependency packages or dependency features to the core graph.
+`cargo build --release --locked` builds the default profile with native OpenPGP.
+To omit OpenPGP, use `--no-default-features`. CI checks that native OpenPGP adds
+only IronCrypto's `ic-rsa` package and no dependency features to the core graph.
 
 `ipg discover` reports build dependencies and `operation_availability`.
 `ipg knowledge search --query openpgp` includes `build_availability` for each

@@ -50,9 +50,10 @@ Prioritize these properties and the code paths that enforce them:
 5. **Optional providers and formats:** PKCS#11 object selection and usage checks,
    TPM key binding and attestation verification, KMS key identity and composite
    signatures, and OpenPGP parsing, authentication, policy limits and secret-key
-   import/export. Treat external modules, cloud credentials, host OS, and rPGP as
-   dependencies at the documented trust boundaries; still review IPG's use of
-   those interfaces.
+   import/export, including first-party RSA, DSA, prehash ECDSA, Ed448/X448,
+   EAX and native TLS 1.3 code over IronCrypto. Treat external modules, cloud
+   credentials and host OS as dependencies at the documented trust boundaries;
+   still review IPG's use of those interfaces.
 6. **Dependency and build surface:** pinned cryptographic dependencies, enabled
    features, unsafe code, panic or resource-exhaustion paths reachable from
    untrusted input, and whether release artifacts correspond to the reviewed

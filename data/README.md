@@ -27,5 +27,5 @@ data and license. Rebuild and redeploy IPG after an update.
 
 This static set does not follow OS root-store changes, enterprise roots or
 platform revocation policy, and it does not refresh itself. Those limitations
-also applied to the former pinned root-store crate. KMS still uses rustls with
-IronCrypto while the native TLS transport is being implemented.
+also applied to the former pinned root-store crate. KMS uses these roots as
+key-form trust anchors in IPG's native TLS 1.3 client.

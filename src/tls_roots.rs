@@ -1,6 +1,7 @@
 //! Bundled public trust-anchor data; no runtime root-store crate or fetching.
 //! Source provenance and update procedure live in data/README.md.
 use crate::error::{Error, Result};
+use crate::x509::TrustAnchor;
 use ipg_json::Deserialize;
 
 #[derive(Deserialize)]
@@ -28,6 +29,42 @@ pub(crate) struct Anchor {
     pub subject: Vec<u8>,
     pub spki: Vec<u8>,
     pub name_constraints: Option<Vec<u8>>,
+}
+
+/// Wrap sequence contents as a complete DER SEQUENCE.
+fn sequence(contents: &[u8]) -> Vec<u8> {
+    let length = contents.len().to_be_bytes();
+    let length = &length[length
+        .iter()
+        .position(|b| *b != 0)
+        .unwrap_or(length.len() - 1)..];
+    let mut out = vec![0x30];
+    if contents.len() < 0x80 {
+        out.push(contents.len() as u8);
+    } else {
+        out.push(0x80 | length.len() as u8);
+        out.extend_from_slice(length);
+    }
+    out.extend_from_slice(contents);
+    out
+}
+
+/// The bundled roots as key-form trust anchors for native path validation,
+/// decoded once per process. Names and constraints are preserved exactly.
+pub(crate) fn anchors() -> Result<&'static [TrustAnchor]> {
+    static ANCHORS: std::sync::OnceLock<Vec<TrustAnchor>> = std::sync::OnceLock::new();
+    if let Some(anchors) = ANCHORS.get() {
+        return Ok(anchors);
+    }
+    let anchors = load()?
+        .into_iter()
+        .map(|root| TrustAnchor::Key {
+            subject: sequence(&root.subject),
+            spki: sequence(&root.spki),
+            name_constraints: root.name_constraints.as_deref().map(sequence),
+        })
+        .collect();
+    Ok(ANCHORS.get_or_init(|| anchors))
 }
 
 pub(crate) fn load() -> Result<Vec<Anchor>> {
@@ -98,5 +135,27 @@ mod tests {
             crate::hex::encode(ic_hash::Sha256::digest(&canonical)),
             "a8de3f65ac091245cdd1a2a5a25e34621948c82867decfb34fd8dd1fb049cd8b"
         );
+    }
+
+    #[test]
+    fn every_bundled_root_is_a_well_formed_native_anchor() {
+        let anchors = anchors().unwrap();
+        assert_eq!(anchors.len(), 121);
+        for (anchor, root) in anchors.iter().zip(load().unwrap()) {
+            let TrustAnchor::Key {
+                subject,
+                spki,
+                name_constraints,
+            } = anchor
+            else {
+                panic!("bundled roots are key-form anchors");
+            };
+            assert!(subject.ends_with(&root.subject) && spki.ends_with(&root.spki));
+            assert_eq!(name_constraints.is_some(), root.name_constraints.is_some());
+            crate::x509::check_server_anchor(anchor).unwrap();
+        }
+        assert_eq!(sequence(&[]), [0x30, 0]);
+        assert_eq!(sequence(&[7; 0x80])[..3], [0x30, 0x81, 0x80]);
+        assert_eq!(sequence(&[7; 0x100])[..4], [0x30, 0x82, 1, 0]);
     }
 }

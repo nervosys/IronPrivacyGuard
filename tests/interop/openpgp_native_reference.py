@@ -1,7 +1,7 @@
 """Native curve-profile interchange with PyCA and GnuPG in disposable keyrings.
 
-Build with --features openpgp-native (without openpgp). No Python dependencies
-are used by the product; PyCA and GnuPG are independent test oracles only.
+Build with the default features, or --no-default-features --features
+openpgp-native. No Python dependencies are used by the product; PyCA and GnuPG are independent test oracles only.
 """
 import argparse
 import json

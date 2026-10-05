@@ -11,7 +11,7 @@ use std::fs;
 
 const PASSWORD: &[u8] = b"openpgp test-only passphrase";
 
-#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
     let fixture: Value =
@@ -127,7 +127,7 @@ fn independent_revocations_cannot_be_hidden_by_signature_work_limits() {
     }
 }
 
-#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
     let fixture: Value =
@@ -224,7 +224,7 @@ fn independent_metadata_policy_ignores_unhashed_permissions_and_expiry() {
     }
 }
 
-#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn independent_back_signature_policy_respects_lifetimes_and_history() {
     let fixture: Value =
@@ -306,7 +306,7 @@ fn independent_back_signature_policy_respects_lifetimes_and_history() {
     }
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn independent_primary_policy_fixtures_gate_strong_subkeys() {
     let fixture: Value =
@@ -399,7 +399,7 @@ fn independent_primary_policy_fixtures_gate_strong_subkeys() {
     }
 }
 
-#[cfg(feature = "openpgp")]
+#[cfg(feature = "openpgp-native")]
 #[test]
 fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
     let fixture: Value =
@@ -543,7 +543,7 @@ impl Fixture {
         self.dir.path().join(name).display().to_string()
     }
     /// Generate a key and export its certificate; returns the fingerprint.
-    #[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
+    #[cfg(feature = "openpgp-native")]
     fn key(&self, name: &str, algorithm: &str) -> String {
         let generated = call(json!({"operation":"openpgp.key.generate","output":self.path(name),
             "passphrase_file":self.path("pass"),"user_id":format!("{name} <{name}@example.test>"),"algorithm":algorithm}))
@@ -559,7 +559,7 @@ impl Fixture {
     }
 }
 
-#[cfg(not(any(feature = "openpgp", feature = "openpgp-native")))]
+#[cfg(not(feature = "openpgp-native"))]
 #[test]
 fn openpgp_operations_fail_closed_without_the_feature() {
     let f = Fixture::new();
@@ -647,7 +647,7 @@ fn host_policy_hides_openpgp_tools_unless_allowed() {
     assert_eq!(names(&explicit), vec!["ipg_openpgp_verify".to_string()]);
 }
 
-#[cfg(any(feature = "openpgp", feature = "openpgp-native"))]
+#[cfg(feature = "openpgp-native")]
 mod enabled {
     use super::*;
 

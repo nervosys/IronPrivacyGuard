@@ -180,10 +180,7 @@ fn live_availability_is_consistent_without_granting_authority() {
         assert_eq!(result["safety"], discovery["knowledge_safety"]);
     }
     for (op, expected) in [
-        (
-            "openpgp.encrypt",
-            cfg!(any(feature = "openpgp", feature = "openpgp-native")),
-        ),
+        ("openpgp.encrypt", cfg!(feature = "openpgp-native")),
         ("hardware.tokens", cfg!(feature = "pkcs11")),
         ("kms.key.bind", cfg!(feature = "kms")),
         (
@@ -204,7 +201,10 @@ fn live_availability_is_consistent_without_granting_authority() {
         discovery["build"]["native_tls"]["compiled"],
         cfg!(feature = "tls-native")
     );
-    assert_eq!(discovery["build"]["native_tls"]["kms_backend"], false);
+    assert_eq!(
+        discovery["build"]["native_tls"]["kms_backend"],
+        cfg!(feature = "kms")
+    );
     assert_eq!(discovery["build"]["native_tls"]["authorized"], false);
     assert_eq!(
         discovery["build"]["native_tls"]["independently_reviewed"],
@@ -217,15 +217,12 @@ fn live_availability_is_consistent_without_granting_authority() {
     assert_eq!(
         discovery["build"]["kms_tls_backend"],
         if cfg!(feature = "kms") {
-            "rustls with IronCrypto"
+            "native TLS 1.3 on IronCrypto"
         } else {
             "not_compiled"
         }
     );
-    assert_eq!(
-        discovery["build"]["ironcrypto_only"],
-        !cfg!(any(feature = "kms", feature = "openpgp"))
-    );
+    assert_eq!(discovery["build"]["ironcrypto_only"], true);
     assert_eq!(
         discovery["build"]["core_external_executables_required"],
         false

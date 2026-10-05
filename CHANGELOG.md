@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- **Every feature combination now depends only on IronCrypto and first-party
+  crates.** `cargo deny` allows only the AGPL first-party/IronCrypto graph, denies
+  duplicate versions and has no advisory exceptions; CI gates `--all-features`.
+- Replaced the rPGP OpenPGP backend with the native implementation. `openpgp` is
+  now an alias of the default `openpgp-native` feature. Native OpenPGP adds
+  correspondent RSA 2048-4096 (PKCS#1 v1.5 verification and encryption),
+  ECDSA/ECDH P-256 and P-521, prehash ECDSA for non-native digests such as P-384
+  with SHA-512, Ed448 verification, X448 and v4 X25519 encryption, AES-128/192
+  session keys, SEIPDv2 EAX and GCM, User Attributes, and Padding/Marker packets.
+  DSA signatures are verified only to report binding status. IPG-held secret keys
+  remain Ed25519/Curve25519 and P-384. RUSTSEC-2023-0071 no longer applies.
+- Unsupported OpenPGP algorithms are now parsed and reported per key instead of
+  failing the whole certificate; refused secret-key imports report
+  `policy_mismatch`. GnuPG's unhashed embedded back signatures are accepted,
+  because they must verify under the signing subkey itself.
+- Moved AWS KMS onto the native TLS 1.3 client and removed rustls and ic-rustls.
+  The bundled roots are applied as key-form trust anchors with their name
+  constraints. The client now offers X25519, P-256 and P-384 key shares, which
+  AWS FIPS and GovCloud endpoints require. TLS 1.2-only endpoints are refused
+  without downgrade; response size limits report `provider_error`.
+- Added `x509::TrustAnchor` and `verify_tls_server_anchors` for up to 256
+  certificate or key-form anchors, and `tls::Client::connect_with_anchors`.
+- Added the independent `openpgp_recipient_reference.py` PyCA suite, RFC 9580
+  appendix A.9-A.11 EAX/OCB/GCM vectors, PyCA RSA/DSA/ECDSA vectors, RFC 8032 and
+  RFC 7748 Ed448/X448 vectors, and P-256/P-521/RSA-4096 and AES-128/192 GnuPG
+  interoperability checks.
 - Tightened TPM endorsement-certificate binding to compare both RSA modulus and
   exponent. Added independent public X.509 fixtures covering complete key binding,
   validity, EK usage, CA leaf rejection, and unknown critical extensions.
@@ -10,8 +36,7 @@
   runtime requirements; sessions close on drop and modules stay loaded until exit.
 - Replaced Linux tss-esapi access with native TPM device/swtpm commands, retaining
   the existing P-384 key templates and SHA-384 salted authorization sessions.
-  ESAPI-only transports must migrate to a supported transport. The attestation
-  feature still depends on external certificate-verification crates.
+  ESAPI-only transports must migrate to a supported transport.
 - Replaced direct serde, serde_json and schemars dependencies with first-party
   native JSON and derive crates. Default/core builds now depend only on IPG and
   IronCrypto crates; optional provider migrations remain in progress. Existing

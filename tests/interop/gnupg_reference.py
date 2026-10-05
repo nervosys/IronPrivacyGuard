@@ -8,7 +8,7 @@ DSA keys, SHA-1 data signatures and tampered messages.
 
 Everything runs in a throwaway GNUPGHOME; the user's keyring is never touched.
 All keys and passphrases here are PUBLIC TEST DATA. Needs `gpg` 2.2 or later and an
-ipg build with --features openpgp.
+ipg build with OpenPGP support (the default native backend).
 """
 import argparse
 import json
@@ -110,6 +110,13 @@ def exercise(executable, gpg, directory):
         out = str(directory / f"from-gpg-{algorithm}")
         assert call("openpgp.decrypt", input=message, output=out, key=key, passphrase_file=password)["signed"] is False
         assert Path(out).read_bytes() == data
+        # Senders may choose smaller AES keys despite IPG's AES-256 preference.
+        for cipher in ["AES128", "AES192"]:
+            forced = str(directory / f"to-{algorithm}-{cipher}.asc")
+            run_gpg("--armor", "--cipher-algo", cipher, "--recipient", generated["fingerprint"],
+                    "--output", forced, "--encrypt", source)
+            call("openpgp.decrypt", input=forced, output=f"{out}-{cipher}", key=key, passphrase_file=password)
+            assert Path(f"{out}-{cipher}").read_bytes() == data
         signed_message = str(directory / f"signed-to-{algorithm}.asc")
         run_gpg("--armor", "--local-user", peer_fp, "--recipient", generated["fingerprint"], "--output",
                 signed_message, "--sign", "--encrypt", source)
@@ -171,20 +178,21 @@ def exercise(executable, gpg, directory):
              key=imported, passphrase_file=password)
         assert Path(imported_plain).read_bytes() == data
 
-    # GnuPG peers sign; IPG verifies. P-384 and RSA peers are also encryption targets.
-    run_gpg("--quick-gen-key", "P384 <p384@example.test>", "nistp384", "default", "never")
-    run_gpg("--quick-gen-key", "RSA <rsa@example.test>", "rsa3072", "default", "never")
-    # With an explicit algorithm, GnuPG creates only a primary key; add encryption subkeys.
-    run_gpg("--quick-add-key", fingerprint("p384@example.test"), "nistp384", "encr", "never")
-    run_gpg("--quick-add-key", fingerprint("rsa@example.test"), "rsa3072", "encr", "never")
-    for uid in ["peer@example.test", "p384@example.test", "rsa@example.test"]:
+    # GnuPG peers sign; IPG verifies. NIST-curve and RSA peers are also encryption targets.
+    peers = {"p256": "nistp256", "p384": "nistp384", "p521": "nistp521", "rsa": "rsa3072",
+             "rsa4096": "rsa4096"}
+    for name, algorithm in peers.items():
+        run_gpg("--quick-gen-key", f"{name} <{name}@example.test>", algorithm, "default", "never")
+        # With an explicit algorithm, GnuPG creates only a primary key; add an encryption subkey.
+        run_gpg("--quick-add-key", fingerprint(f"{name}@example.test"), algorithm, "encr", "never")
+    for uid in ["peer@example.test"] + [f"{name}@example.test" for name in peers]:
         fp = fingerprint(uid)
         cert = export(uid, f"{uid}.asc")
         external_secret = put(f"{uid}.secret", run_gpg("--export-secret-keys", fp).stdout)
         empty_password = put("empty-password", b"")
         imported = str(directory / f"{uid}.imported")
         if uid not in ("peer@example.test", "p384@example.test"):
-            call("openpgp.key.import", "invalid_format", input=external_secret, output=imported,
+            call("openpgp.key.import", "policy_mismatch", input=external_secret, output=imported,
                  expected_openpgp_fingerprint=fp, passphrase_file=empty_password, new_passphrase_file=password)
             assert not Path(imported).exists()
         else:
@@ -309,7 +317,7 @@ def exercise(executable, gpg, directory):
         external_secret = put(f"{uid}.secret", run_gpg("--export-secret-keys", fp).stdout)
         empty_password = put("empty-password", b"")
         imported = str(directory / f"{uid}.imported")
-        call("openpgp.key.import", "invalid_format", input=external_secret, output=imported,
+        call("openpgp.key.import", "policy_mismatch", input=external_secret, output=imported,
              expected_openpgp_fingerprint=fp, passphrase_file=empty_password, new_passphrase_file=password)
         assert not Path(imported).exists()
         report = call("openpgp.cert.inspect", input=cert)["certificate"]
@@ -334,7 +342,7 @@ def exercise(executable, gpg, directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ipg", type=Path, required=True, help="ipg built with --features openpgp")
+    parser.add_argument("--ipg", type=Path, required=True, help="ipg built with OpenPGP support")
     parser.add_argument("--gpg", default=shutil.which("gpg") or "gpg")
     args = parser.parse_args()
     version = subprocess.run([args.gpg, "--version"], capture_output=True, check=True).stdout.decode().splitlines()[0]

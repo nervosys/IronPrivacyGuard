@@ -1,7 +1,7 @@
 """Freeze public OpenPGP parser fixtures and seeds from disposable IPG test keys.
 
 Stdlib-only; no secret keys or passphrases are copied out of the temporary folder.
-Run explicitly with --ipg after building with the openpgp feature.
+Run explicitly with --ipg after building with OpenPGP support (the default).
 """
 import argparse
 import base64

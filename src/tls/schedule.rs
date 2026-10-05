@@ -79,7 +79,7 @@ pub(super) struct Schedule {
 }
 impl Schedule {
     pub fn new(suite: Suite, shared: &[u8], hello_hash: &[u8]) -> Result<Self> {
-        if shared.len() != 32 || hello_hash.len() != suite.hash_len() {
+        if !matches!(shared.len(), 32 | 48) || hello_hash.len() != suite.hash_len() {
             return Err(fail("Invalid TLS handshake secret input"));
         }
         let n = suite.hash_len();

@@ -38,9 +38,11 @@ implemented surface, not feature parity with decades of GPG development.
    remain unsupported. Filesystem authorization remains the host's responsibility.
 5. Extend the OpenPGP compatibility boundary ([OPENPGP.md](OPENPGP.md)). v4 key
    generation, certificate export and inspection, multi-recipient encryption,
-   decryption and detached signatures interoperate with GnuPG through rPGP. V6 key
+   decryption and detached signatures interoperate with GnuPG through the native
+   IronCrypto implementation, including RSA, P-256/P-521 and Ed448/X448
+   correspondents and AES-128/192/256 EAX, OCB and GCM messages. V6 key
    generation and SEIPDv2/OCB encryption are implemented, with independent PyCA
-   checks of v6 key wrapping and chunk authentication in both directions.
+   checks of key wrapping and chunk authentication in both directions.
    Protected secret-key export and bounded import of supported two-key profiles
    are implemented. OpenPGP keys on hardware remain. `openpgp.message.verify` verifies embedded
    document signatures, optionally decrypting, before publishing literal bytes.

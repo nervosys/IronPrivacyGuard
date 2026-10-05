@@ -1,7 +1,7 @@
 //! Bounded, offline path building with separate EK and TLS server purposes.
 //! No fetching, revocation service, or authorization decisions occur here.
 use super::{
-    Certificate, boolean, der,
+    Certificate, algorithm, boolean, der,
     identity::{Reference, valid_domain},
     malformed, name, oid, signature,
 };
@@ -10,6 +10,7 @@ use ic_pkix::der::Reader;
 
 const MAX_PATH: usize = 8;
 const MAX_CANDIDATES: usize = 64;
+const MAX_ANCHORS: usize = 256;
 const MAX_SIGNATURE_CHECKS: usize = 256;
 const EK_USAGE: &[u8] = &[0x67, 0x81, 0x05, 8, 1];
 const SERVER_USAGE: &[u8] = &[0x2b, 6, 1, 5, 5, 7, 3, 1];
@@ -77,6 +78,25 @@ fn subtrees<'a>(reader: &mut Reader<'a>, tag: u8) -> Result<Vec<GeneralName<'a>>
         return Err(malformed());
     }
     Ok(names)
+}
+
+/// NameConstraints: at least one of permittedSubtrees and excludedSubtrees.
+type Subtrees<'a> = (Vec<GeneralName<'a>>, Vec<GeneralName<'a>>);
+fn name_constraints<'a>(outer: &mut Reader<'a>) -> Result<Subtrees<'a>> {
+    let mut value = der(outer.sequence())?;
+    let mut permitted = Vec::new();
+    let mut excluded = Vec::new();
+    if value.peek_tag() == Some(0xa0) {
+        permitted = subtrees(&mut value, 0xa0)?;
+    }
+    if value.peek_tag() == Some(0xa1) {
+        excluded = subtrees(&mut value, 0xa1)?;
+    }
+    if permitted.is_empty() && excluded.is_empty() {
+        return Err(malformed());
+    }
+    der(value.finish())?;
+    Ok((permitted, excluded))
 }
 
 impl<'a> Policy<'a> {
@@ -162,17 +182,7 @@ impl<'a> Policy<'a> {
                     critical_san = extension.critical;
                 }
                 [0x55, 0x1d, 30] => {
-                    let mut value = der(outer.sequence())?;
-                    if value.peek_tag() == Some(0xa0) {
-                        policy.permitted = subtrees(&mut value, 0xa0)?;
-                    }
-                    if value.peek_tag() == Some(0xa1) {
-                        policy.excluded = subtrees(&mut value, 0xa1)?;
-                    }
-                    if policy.permitted.is_empty() && policy.excluded.is_empty() {
-                        return Err(malformed());
-                    }
-                    der(value.finish())?;
+                    (policy.permitted, policy.excluded) = name_constraints(&mut outer)?;
                 }
                 // Non-critical hints do not authorize a path. Unsupported
                 // critical semantics are rejected, including policy processing.
@@ -291,8 +301,90 @@ impl<'a> Node<'a> {
     }
 }
 
+/// A trust anchor: either a complete DER certificate, or the subject name,
+/// SubjectPublicKeyInfo and optional NameConstraints of an accepted root, each a
+/// complete DER SEQUENCE. Anchor validity periods and usages are not checked,
+/// matching RFC 5280 trust-anchor semantics; name constraints still apply.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TrustAnchor {
+    Certificate(Vec<u8>),
+    Key {
+        subject: Vec<u8>,
+        spki: Vec<u8>,
+        name_constraints: Option<Vec<u8>>,
+    },
+}
+
+struct Anchor<'a> {
+    subject: &'a [u8],
+    spki: &'a [u8],
+    policy: Policy<'a>,
+}
+
+impl<'a> Anchor<'a> {
+    fn parse(anchor: &'a TrustAnchor, usage: &[u8]) -> Result<Self> {
+        match anchor {
+            TrustAnchor::Certificate(bytes) => Self::certificate(bytes, usage),
+            TrustAnchor::Key {
+                subject,
+                spki,
+                name_constraints,
+            } => Self::key(subject, spki, name_constraints.as_deref()),
+        }
+    }
+
+    fn key(subject: &'a [u8], spki: &'a [u8], constraints: Option<&'a [u8]>) -> Result<Self> {
+        let mut reader = Reader::new(subject);
+        name(&mut reader)?;
+        der(reader.finish())?;
+        if subject == [0x30, 0] {
+            return Err(malformed());
+        }
+        let mut reader = Reader::new(spki);
+        let mut body = der(reader.sequence())?;
+        der(reader.finish())?;
+        algorithm(&mut body)?;
+        if der(body.bit_string())?.is_empty() {
+            return Err(malformed());
+        }
+        der(body.finish())?;
+        let (permitted, excluded) = match constraints {
+            Some(value) => {
+                let mut reader = Reader::new(value);
+                let parsed = name_constraints(&mut reader)?;
+                der(reader.finish())?;
+                parsed
+            }
+            None => (Vec::new(), Vec::new()),
+        };
+        Ok(Self {
+            subject,
+            spki,
+            policy: Policy {
+                ca: true,
+                path_length: None,
+                usage: true,
+                can_sign: true,
+                digital_signature: true,
+                names: Vec::new(),
+                permitted,
+                excluded,
+            },
+        })
+    }
+
+    fn certificate(bytes: &'a [u8], usage: &[u8]) -> Result<Self> {
+        let node = Node::parse(bytes, usage)?;
+        Ok(Self {
+            subject: node.certificate.subject,
+            spki: node.certificate.spki,
+            policy: node.policy,
+        })
+    }
+}
+
 struct Search<'a> {
-    anchors: Vec<(usize, Node<'a>)>,
+    anchors: Vec<(usize, Anchor<'a>)>,
     intermediates: Vec<Node<'a>>,
     now: i64,
     remaining: usize,
@@ -309,12 +401,12 @@ impl Search<'_> {
             if self.remaining == 0 {
                 return None;
             }
-            if child.certificate.issuer != anchor.certificate.subject {
+            if child.certificate.issuer != anchor.subject {
                 continue;
             }
             self.remaining -= 1;
-            if constrained(anchor, path)
-                && signature::verify(&child.certificate, anchor.certificate.spki).is_ok()
+            if constrained(&anchor.policy, path)
+                && signature::verify(&child.certificate, anchor.spki).is_ok()
             {
                 return Some(*index);
             }
@@ -331,7 +423,7 @@ impl Search<'_> {
                 .any(|n| n.certificate.tbs == candidate.certificate.tbs)
                 || child.certificate.issuer != candidate.certificate.subject
                 || !candidate.valid(self.now, false)
-                || !constrained(candidate, path)
+                || !constrained(&candidate.policy, path)
             {
                 continue;
             }
@@ -362,11 +454,11 @@ impl Search<'_> {
     }
 }
 
-fn constrained(issuer: &Node<'_>, path: &[&Node<'_>]) -> bool {
+fn constrained(issuer: &Policy<'_>, path: &[&Node<'_>]) -> bool {
     path.iter().enumerate().all(|(i, node)| {
         // Self-issued intermediate names are exempt; the target never is.
         (i != 0 && node.certificate.subject == node.certificate.issuer)
-            || issuer.policy.constrains(&node.policy)
+            || issuer.constrains(&node.policy)
     })
 }
 
@@ -382,6 +474,8 @@ pub fn verify(
     intermediates: &[Vec<u8>],
     now: i64,
 ) -> Result<usize> {
+    check_counts(anchors.len(), intermediates.len(), MAX_CANDIDATES)?;
+    let anchors = parse_anchors(anchors.iter().map(|a| Anchor::certificate(a, EK_USAGE)));
     verify_for_usage(leaf, anchors, intermediates, now, EK_USAGE, None)
 }
 
@@ -408,6 +502,8 @@ pub fn verify_tls_server(
     expected_server: &str,
 ) -> Result<usize> {
     let identity = Reference::parse(expected_server)?;
+    check_counts(anchors.len(), intermediates.len(), MAX_CANDIDATES)?;
+    let anchors = parse_anchors(anchors.iter().map(|a| Anchor::certificate(a, SERVER_USAGE)));
     verify_for_usage(
         leaf,
         anchors,
@@ -418,26 +514,67 @@ pub fn verify_tls_server(
     )
 }
 
-fn verify_for_usage(
+/// [`verify_tls_server`] with up to 256 certificate or key-form trust anchors,
+/// such as a bundled public root store. Malformed anchors are never used.
+pub fn verify_tls_server_anchors(
     leaf: &[u8],
-    anchors: &[Vec<u8>],
+    anchors: &[TrustAnchor],
     intermediates: &[Vec<u8>],
     now: i64,
-    usage: &[u8],
-    identity: Option<Reference<'_>>,
+    expected_server: &str,
 ) -> Result<usize> {
-    if anchors.is_empty() {
+    let identity = Reference::parse(expected_server)?;
+    check_counts(anchors.len(), intermediates.len(), MAX_ANCHORS)?;
+    let anchors = parse_anchors(anchors.iter().map(|a| Anchor::parse(a, SERVER_USAGE)));
+    verify_for_usage(
+        leaf,
+        anchors,
+        intermediates,
+        now,
+        SERVER_USAGE,
+        Some(identity),
+    )
+}
+
+/// Parse an anchor as a TLS server-path issuer without using it.
+#[cfg(all(test, feature = "kms"))]
+pub(crate) fn check_server_anchor(anchor: &TrustAnchor) -> Result<()> {
+    Anchor::parse(anchor, SERVER_USAGE).map(|_| ())
+}
+
+fn check_counts(anchors: usize, intermediates: usize, max_anchors: usize) -> Result<()> {
+    if anchors == 0 {
         return Err(Error::new(
             "invalid_request",
             "Supply certificate trust anchors",
         ));
     }
-    if anchors.len() > MAX_CANDIDATES || intermediates.len() > MAX_CANDIDATES {
+    if anchors > max_anchors || intermediates > MAX_CANDIDATES {
         return Err(Error::new(
             "limit_exceeded",
             "Too many certificate path candidates",
         ));
     }
+    Ok(())
+}
+
+fn parse_anchors<'a>(
+    anchors: impl Iterator<Item = Result<Anchor<'a>>>,
+) -> Vec<(usize, Anchor<'a>)> {
+    anchors
+        .enumerate()
+        .filter_map(|(i, anchor)| anchor.ok().map(|a| (i, a)))
+        .collect()
+}
+
+fn verify_for_usage(
+    leaf: &[u8],
+    anchors: Vec<(usize, Anchor<'_>)>,
+    intermediates: &[Vec<u8>],
+    now: i64,
+    usage: &[u8],
+    identity: Option<Reference<'_>>,
+) -> Result<usize> {
     let leaf = Node::parse(leaf, usage)?;
     let rejected = || {
         Error::new(
@@ -459,11 +596,7 @@ fn verify_for_usage(
         return Err(rejected());
     }
     let mut search = Search {
-        anchors: anchors
-            .iter()
-            .enumerate()
-            .filter_map(|(i, bytes)| Node::parse(bytes, usage).ok().map(|n| (i, n)))
-            .collect(),
+        anchors,
         intermediates: intermediates
             .iter()
             .filter_map(|bytes| Node::parse(bytes, usage).ok())
@@ -559,6 +692,75 @@ mod tests {
                 case["name"]
             );
         }
+    }
+
+    #[test]
+    fn key_form_anchors_match_certificate_anchors_and_keep_name_constraints() {
+        let vectors: ipg_json::Value = ipg_json::from_str(include_str!(
+            "../../tests/vectors/x509-server-identity.json"
+        ))
+        .unwrap();
+        let anchor = crate::hex::decode(vectors["anchor"].as_str().unwrap()).unwrap();
+        let now = vectors["now"].as_i64().unwrap();
+        let parsed = Certificate::parse(&anchor).unwrap();
+        let key = |name_constraints: Option<&[u8]>| TrustAnchor::Key {
+            subject: parsed.subject.to_vec(),
+            spki: parsed.spki.to_vec(),
+            name_constraints: name_constraints.map(<[u8]>::to_vec),
+        };
+        // NameConstraints { permittedSubtrees [0] { GeneralSubtree { dNSName } } }.
+        let permit = |domain: &[u8]| {
+            let mut out = vec![0x30, domain.len() as u8 + 6, 0xa0, domain.len() as u8 + 4];
+            out.extend_from_slice(&[0x30, domain.len() as u8 + 2, 0x82, domain.len() as u8]);
+            out.extend_from_slice(domain);
+            out
+        };
+        let (example, other) = (permit(b"example.test"), permit(b"other.test"));
+        let decoy = TrustAnchor::Key {
+            subject: vec![0x30, 0],
+            spki: parsed.spki.to_vec(),
+            name_constraints: None,
+        };
+        for case in vectors["cases"].as_array().unwrap() {
+            let leaf = crate::hex::decode(case["leaf"].as_str().unwrap()).unwrap();
+            let chain = [crate::hex::decode(case["intermediate"].as_str().unwrap()).unwrap()];
+            let host = case["host"].as_str().unwrap();
+            let accepted = case["accepted"].as_bool().unwrap();
+            let check = |anchors: &[TrustAnchor]| {
+                verify_tls_server_anchors(&leaf, anchors, &chain, now, host).ok()
+            };
+            let name = case["name"].as_str().unwrap();
+            assert_eq!(
+                check(&[TrustAnchor::Certificate(anchor.clone())]).is_some(),
+                accepted,
+                "{name}"
+            );
+            // Malformed anchors are skipped and indexes refer to the input list.
+            assert_eq!(
+                check(&[decoy.clone(), key(None)]),
+                accepted.then_some(1),
+                "{name}"
+            );
+            let dns = host.parse::<std::net::IpAddr>().is_err();
+            let wildcard = name.starts_with("wildcard");
+            assert_eq!(
+                check(&[key(Some(&example))]).is_some(),
+                accepted && !(dns && wildcard),
+                "{name}"
+            );
+            assert_eq!(
+                check(&[key(Some(&other))]).is_some(),
+                accepted && !dns,
+                "{name}"
+            );
+        }
+        assert!(verify_tls_server_anchors(&anchor, &[], &[], now, "kms.example.test").is_err());
+        assert_eq!(
+            verify_tls_server_anchors(&anchor, &vec![key(None); 257], &[], now, "x.test")
+                .unwrap_err()
+                .code,
+            "limit_exceeded"
+        );
     }
 
     #[test]

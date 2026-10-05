@@ -58,12 +58,14 @@ callers; a successful write is not a backup policy.
 
 ## Known limits
 
-OpenPGP support is an optional boundary (`openpgp` feature) built on rPGP rather
-than IronCrypto. It holds only Ed25519 and P-384 secret keys, because rPGP's RSA
-dependency has an unfixed private-key timing side channel (RUSTSEC-2023-0071); RSA is
-used only for public operations. The sole advisory exception in
-[cargo-audit's configuration](.cargo/audit.toml) records this exact boundary; adding
-RSA secret-key handling requires removing the exception or replacing the dependency.
+OpenPGP support is a separate boundary implemented natively over IronCrypto
+(default `openpgp-native` feature). It holds only Ed25519 and P-384 secret keys.
+RSA, DSA, P-256, P-521, Ed448 and X448 are used only with correspondents' public
+keys, through first-party code over IronCrypto arithmetic; RSA encryption pads
+secret session keys with Montgomery arithmetic that branches only on the public
+exponent. There are no advisory exceptions in
+[cargo-audit's configuration](.cargo/audit.toml). Adding RSA secret-key handling
+requires a constant-time private-key review first.
 `openpgp.message.verify` authenticates one embedded
 document signature against a pinned certificate before publishing plaintext;
 `openpgp.decrypt` still does not authenticate the sender. IPG trust snapshots do

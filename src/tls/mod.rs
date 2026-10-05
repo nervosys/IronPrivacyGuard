@@ -2,7 +2,7 @@
 //!
 //! Explicit full-DER roots and an independently chosen server identity are
 //! mandatory. See `docs/TLS.md` for the bounded profile and unsupported features.
-//! KMS still uses its existing transport; this module does not authorize actions.
+//! The `kms` feature uses it for AWS HTTPS; it does not authorize actions.
 mod record;
 mod schedule;
 mod wire;
@@ -70,6 +70,18 @@ impl Drop for Transport {
     }
 }
 impl Transport {
+    fn new(socket: TcpStream) -> Self {
+        Self {
+            socket,
+            receive: None,
+            send: None,
+            pending: Secret::new(Vec::with_capacity(MAX_HANDSHAKE)),
+            compatibility_ccs: 0,
+            allow_ccs: true,
+            deadline: Instant::now() + TIMEOUT,
+            records: 0,
+        }
+    }
     fn begin(&mut self) {
         self.deadline = Instant::now() + TIMEOUT;
         self.records = 0;
@@ -210,19 +222,26 @@ pub struct Client {
 impl Client {
     /// Authenticate a connected socket using host-supplied full DER root
     /// certificates and a DNS name or bare IP address. Uses the system clock.
-    /// Handshake deadline: 30 seconds. X25519 only; no HelloRetryRequest fallback.
+    /// Handshake deadline: 30 seconds. X25519, P-256 and P-384 shares are all
+    /// offered, so there is no HelloRetryRequest fallback.
     pub fn connect(socket: TcpStream, expected_server: &str, roots: &[Vec<u8>]) -> Result<Self> {
-        let mut transport = Transport {
-            socket,
-            receive: None,
-            send: None,
-            pending: Secret::new(Vec::with_capacity(MAX_HANDSHAKE)),
-            compatibility_ccs: 0,
-            allow_ccs: true,
-            deadline: Instant::now() + TIMEOUT,
-            records: 0,
-        };
-        let (suite, anchor) = connect(&mut transport, expected_server, roots)?;
+        let mut transport = Transport::new(socket);
+        let (suite, anchor) = connect(&mut transport, expected_server, Roots::Certificates(roots))?;
+        Ok(Self {
+            transport: Some(transport),
+            suite,
+            anchor,
+        })
+    }
+    /// As [`Client::connect`], with 1..256 certificate or key-form trust anchors
+    /// such as the bundled public root store. Anchor name constraints apply.
+    pub fn connect_with_anchors(
+        socket: TcpStream,
+        expected_server: &str,
+        anchors: &[x509::TrustAnchor],
+    ) -> Result<Self> {
+        let mut transport = Transport::new(socket);
+        let (suite, anchor) = connect(&mut transport, expected_server, Roots::Anchors(anchors))?;
         Ok(Self {
             transport: Some(transport),
             suite,
@@ -281,7 +300,7 @@ impl Client {
                     23 => {
                         t.boundary()?;
                         if content.len() > limit - out.len() {
-                            return Err(fail("TLS response exceeds limit"));
+                            return Err(Error::new("limit_exceeded", "TLS response exceeds limit"));
                         }
                         out.extend_from_slice(&content);
                     }
@@ -332,20 +351,92 @@ fn transcript_append(transcript: &mut Vec<u8>, message: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn connect(t: &mut Transport, expected: &str, roots: &[Vec<u8>]) -> Result<(Suite, usize)> {
+/// Key exchange groups, in preference order. Each is offered with a key share.
+#[derive(Clone, Copy)]
+enum Group {
+    X25519,
+    Secp256r1,
+    Secp384r1,
+}
+impl Group {
+    const ALL: [Group; 3] = [Group::X25519, Group::Secp256r1, Group::Secp384r1];
+    fn id(self) -> u16 {
+        match self {
+            Self::X25519 => 29,
+            Self::Secp256r1 => 23,
+            Self::Secp384r1 => 24,
+        }
+    }
+    fn generate(self, rng: &mut ic_drbg::Rng) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+        let (scalar, public) = match self {
+            Self::X25519 => (32, 32),
+            Self::Secp256r1 => (32, 65),
+            Self::Secp384r1 => (48, 97),
+        };
+        // NIST scalars outside 1..n are redrawn; failure is overwhelmingly unlikely.
+        for _ in 0..16 {
+            let mut secret = Zeroizing::new(vec![0; scalar]);
+            rng.fill(&mut secret)?;
+            let mut share = vec![0; public];
+            let result = match self {
+                Self::X25519 => ic_ec::X25519::public_key(&secret, &mut share),
+                Self::Secp256r1 => ic_ec::EcdhP256::public_key(&secret, &mut share),
+                Self::Secp384r1 => ic_ec::EcdhP384::public_key(&secret, &mut share),
+            };
+            if result.is_ok() {
+                return Ok((secret, share));
+            }
+        }
+        Err(Error::new(
+            "entropy_unavailable",
+            "Could not draw a valid TLS key share",
+        ))
+    }
+    /// Agree with a peer share: X25519 rejects low-order points; NIST shares
+    /// must be uncompressed, on-curve points (RFC 8446 section 4.2.8.2).
+    fn agree(self, secret: &[u8], peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        let invalid = || fail("Invalid TLS key share");
+        let mut shared = Zeroizing::new(vec![0; secret.len()]);
+        match self {
+            Self::X25519 if peer.len() == 32 => {
+                ic_ec::X25519::agree(secret, peer, &mut shared).map_err(|_| invalid())?
+            }
+            Self::Secp256r1 if peer.len() == 65 && peer[0] == 4 => {
+                ic_ec::EcdhP256::agree(secret, peer, &mut shared).map_err(|_| invalid())?
+            }
+            Self::Secp384r1 if peer.len() == 97 && peer[0] == 4 => {
+                ic_ec::EcdhP384::agree(secret, peer, &mut shared).map_err(|_| invalid())?
+            }
+            _ => return Err(invalid()),
+        }
+        Ok(shared)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Roots<'a> {
+    Certificates(&'a [Vec<u8>]),
+    Anchors(&'a [x509::TrustAnchor]),
+}
+
+fn connect(t: &mut Transport, expected: &str, roots: Roots<'_>) -> Result<(Suite, usize)> {
     use x509::identity::Reference;
     let identity = Reference::parse(expected)?;
-    if roots.is_empty() || roots.len() > 64 {
+    let (count, max) = match roots {
+        Roots::Certificates(roots) => (roots.len(), 64),
+        Roots::Anchors(anchors) => (anchors.len(), 256),
+    };
+    if count == 0 || count > max {
         return Err(Error::new(
             "invalid_request",
-            "TLS requires 1 to 64 explicit DER trust roots",
+            format!("TLS requires 1 to {max} explicit trust roots"),
         ));
     }
-    let mut secret = Zeroizing::new([0u8; 32]);
     let mut rng = ic_drbg::Rng::from_os()?;
-    rng.fill(&mut *secret)?;
-    let mut public = [0; 32];
-    ic_ec::X25519::public_key(&*secret, &mut public)?;
+    let shares = Group::ALL
+        .iter()
+        .map(|group| group.generate(&mut rng))
+        .collect::<Result<Vec<_>>>()?;
     let mut random = [0; 32];
     rng.fill(&mut random)?;
     let mut session = [0; 32];
@@ -360,12 +451,20 @@ fn connect(t: &mut Transport, expected: &str, roots: &[Vec<u8>]) -> Result<(Suit
         extension(&mut exts, 0, &list);
     }
     extension(&mut exts, 43, &[2, 3, 4]);
-    extension(&mut exts, 10, &[0, 2, 0, 29]);
-    let mut share = vec![0, 29];
-    vector(&mut share, &public, 2);
-    let mut shares = Vec::new();
-    vector(&mut shares, &share, 2);
-    extension(&mut exts, 51, &shares);
+    // Every offered group carries a key share, so no HelloRetryRequest is needed.
+    let mut groups = Vec::new();
+    let mut entries = Vec::new();
+    for (group, (_, public)) in Group::ALL.iter().zip(&shares) {
+        groups.extend_from_slice(&group.id().to_be_bytes());
+        entries.extend_from_slice(&group.id().to_be_bytes());
+        vector(&mut entries, public, 2);
+    }
+    let mut list = Vec::new();
+    vector(&mut list, &groups, 2);
+    extension(&mut exts, 10, &list);
+    let mut list = Vec::new();
+    vector(&mut list, &entries, 2);
+    extension(&mut exts, 51, &list);
     extension(&mut exts, 13, &[0, 12, 4, 3, 5, 3, 8, 4, 8, 5, 8, 6, 8, 7]);
     extension(
         &mut exts,
@@ -409,17 +508,16 @@ fn connect(t: &mut Transport, expected: &str, roots: &[Vec<u8>]) -> Result<(Suit
     for (id, value) in exts {
         match id {
             43 if value == [3, 4] => version = true,
-            51 => {
+            51 if peer.is_none() => {
                 let mut r = Reader(value);
-                if r.u16()? != 29 {
-                    return Err(fail("Unsupported TLS key share"));
-                }
+                let id = r.u16()?;
+                let group = Group::ALL
+                    .iter()
+                    .position(|g| g.id() == id)
+                    .ok_or_else(|| fail("Unsupported TLS key share"))?;
                 let key = r.vector(2)?;
-                if key.len() != 32 {
-                    return Err(fail("Invalid TLS key share"));
-                }
                 r.finish()?;
-                peer = Some(key);
+                peer = Some((group, key));
             }
             _ => return Err(fail("Unsupported ServerHello extension")),
         }
@@ -427,15 +525,11 @@ fn connect(t: &mut Transport, expected: &str, roots: &[Vec<u8>]) -> Result<(Suit
     if !version {
         return Err(fail("TLS 1.3 negotiation is required"));
     }
-    let mut shared = Zeroizing::new([0u8; 32]);
-    ic_ec::X25519::agree(
-        &*secret,
-        peer.ok_or_else(|| fail("Missing TLS key share"))?,
-        &mut *shared,
-    )?;
-    drop(secret);
+    let (group, peer) = peer.ok_or_else(|| fail("Missing TLS key share"))?;
+    let shared = Group::ALL[group].agree(&shares[group].0, peer)?;
+    drop(shares);
     transcript_append(&mut transcript, &server)?;
-    let schedule = Schedule::new(suite, &*shared, &suite.hash(&transcript))?;
+    let schedule = Schedule::new(suite, &shared, &suite.hash(&transcript))?;
     drop(shared);
     t.receive = Some(Traffic::new(suite, schedule.server.clone())?);
     t.send = Some(Traffic::new(suite, schedule.client.clone())?);
@@ -485,7 +579,14 @@ fn connect(t: &mut Transport, expected: &str, roots: &[Vec<u8>]) -> Result<(Suit
         .map_err(|_| fail("Invalid system time"))?
         .as_secs();
     let now = i64::try_from(now).map_err(|_| fail("System time exceeds supported range"))?;
-    let anchor = x509::verify_tls_server(&chain[0], roots, &chain[1..], now, expected)?;
+    let anchor = match roots {
+        Roots::Certificates(roots) => {
+            x509::verify_tls_server(&chain[0], roots, &chain[1..], now, expected)?
+        }
+        Roots::Anchors(anchors) => {
+            x509::verify_tls_server_anchors(&chain[0], anchors, &chain[1..], now, expected)?
+        }
+    };
     let leaf = x509::Certificate::parse(&chain[0])?;
     transcript_append(&mut transcript, &certificate)?;
     let proof = t.next_handshake(15)?;
