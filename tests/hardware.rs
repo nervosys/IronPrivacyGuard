@@ -212,7 +212,7 @@ fn kms_keys_fail_closed_and_refuse_pins() {
     // Hardware-only hosts refuse KMS keys; non-exportable hosts do not refuse on custody.
     let hardware = Host {
         custody: CustodyPolicy::Hardware,
-        delegation: None,
+        ..Default::default()
     };
     let refused = execute_with(
         request(
@@ -228,7 +228,7 @@ fn kms_keys_fail_closed_and_refuse_pins() {
             ),
             &Host {
                 custody: CustodyPolicy::NonExportable,
-                delegation: None,
+                ..Default::default()
             },
         );
         assert_eq!(unavailable.err().unwrap().code, "provider_unavailable");
@@ -348,7 +348,7 @@ fn host_custody_policy_refuses_software_private_keys() {
     let software = Host::default();
     let hardware = Host {
         custody: CustodyPolicy::Hardware,
-        delegation: None,
+        ..Default::default()
     };
     let generate =
         json!({"operation":"key.generate","output":path("key"),"passphrase_file":path("pass")});

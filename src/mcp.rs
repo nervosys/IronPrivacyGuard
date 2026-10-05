@@ -38,6 +38,18 @@ impl Config {
             match pair[0].as_str() {
                 "--trust-store" => store = Some(pair[1].clone()),
                 "--expected-store-digest" => digest = Some(pair[1].clone()),
+                "--inline-data" => {
+                    config.host.deny_inline = match pair[1].as_str() {
+                        "allow" => false,
+                        "deny" => true,
+                        _ => {
+                            return Err(Error::new(
+                                "invalid_request",
+                                "Inline data must be allow or deny",
+                            ));
+                        }
+                    }
+                }
                 "--grant" => grant = Some(pair[1].clone()),
                 "--grant-root" => grant_root = Some(pair[1].clone()),
                 "--expected-grant-root-fingerprint" => {
@@ -222,8 +234,8 @@ pub fn rpc_error(id: Value, code: i32, message: &str) -> Value {
 fn success(id: Value, result: Value) -> Value {
     json!({"jsonrpc":"2.0","id":id,"result":result})
 }
-fn tool_result(result: Result<crate::Outcome>) -> Value {
-    let (response, status) = crate::respond(None, result);
+fn tool_result(result: Result<crate::Outcome>, returned: &crate::inline::Returned) -> Value {
+    let (response, status) = crate::respond_returning(None, result, returned);
     json!({"content":[{"type":"text","text":response.to_string()}],"structuredContent":response,"isError":status != 0})
 }
 
@@ -376,16 +388,19 @@ impl Server {
             self.calls = 0;
         }
         if self.calls >= MAX_CALLS_PER_MINUTE {
-            return success(id,tool_result(Err(Error { code:"rate_limited",message:"At most 60 tool calls per minute per session; retry after the current window".into(),retryable:true })));
+            return success(id,tool_result(Err(Error { code:"rate_limited",message:"At most 60 tool calls per minute per session; retry after the current window".into(),retryable:true }), &Default::default()));
         }
         self.calls += 1;
         if map.contains_key("operation") {
             return success(
                 id,
-                tool_result(Err(Error::new(
-                    "invalid_request",
-                    "Tool arguments must not supply an operation tag",
-                ))),
+                tool_result(
+                    Err(Error::new(
+                        "invalid_request",
+                        "Tool arguments must not supply an operation tag",
+                    )),
+                    &Default::default(),
+                ),
             );
         }
         map.insert("operation".into(), json!(operation));
@@ -414,8 +429,12 @@ impl Server {
                     *target = Some(required.clone());
                 }
             }
-            crate::execute_with(request, &self.config.host)
+            Ok(request)
         });
-        success(id, tool_result(result))
+        let host = &self.config.host;
+        let (result, returned) = crate::inline::collect(!host.deny_inline, || {
+            result.and_then(|request| crate::execute_with(request, host))
+        });
+        success(id, tool_result(result, &returned))
     }
 }

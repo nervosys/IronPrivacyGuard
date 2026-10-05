@@ -6056,5 +6056,5 @@
   ],
   "@id": "ipg:ontology",
   "scope": "Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.36.0"
+  "version": "1.37.0"
 }

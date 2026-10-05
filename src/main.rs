@@ -75,7 +75,10 @@ fn main() {
             Err(e) => iron_privacy_guard::respond(None, Err(e)),
         }
     } else {
-        iron_privacy_guard::respond(None, parse(args).and_then(iron_privacy_guard::execute))
+        let (result, returned) = iron_privacy_guard::inline::collect(true, || {
+            parse(args).and_then(iron_privacy_guard::execute)
+        });
+        iron_privacy_guard::respond_returning(None, result, &returned)
     };
     if emit(&value).is_err() {
         std::process::exit(4);

@@ -356,6 +356,15 @@ to the pinned root at the host clock. An MCP host can pin a grant for a whole
 session with `--grant`, confining private-key use to the delegated identity and
 operations. See [delegation grants](docs/DELEGATION.md).
 
+## Inline data for agents
+
+Small payloads need no temporary files: any input path may be a
+`data:...;base64,` URI (up to 1 MiB), and any non-streaming output may be
+`return:<name>`, which returns the bytes base64-encoded in the response.
+Passphrases and PINs must still come from protected files, and MCP hosts can
+disable inline data with `--inline-data deny`. See
+[inline data](docs/PROTOCOL.md#inline-data-and-returned-outputs).
+
 ## Messages between agents
 
 `message.seal` signs and encrypts content to one pinned recipient, binding the

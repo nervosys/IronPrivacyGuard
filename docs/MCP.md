@@ -117,6 +117,13 @@ allowed directories, available passphrase files, and tool allowlist in the host.
 Pinning policy governs only encrypt/sign/verify; it does not disable decryption or
 private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 
+### Inline data
+
+Tools accept `data:...;base64,` inputs and `return:<name>` outputs (see
+[the protocol](PROTOCOL.md#inline-data-and-returned-outputs)); returned bytes
+appear in `structuredContent.returned`. `--inline-data deny` refuses both forms
+for the session, for hosts that want every payload to stay in files.
+
 ### Delegated sessions
 
 `--grant`, `--grant-root` and `--expected-grant-root-fingerprint` together pin an

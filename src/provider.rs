@@ -500,6 +500,8 @@ pub struct Host {
     pub custody: CustodyPolicy,
     /// A pinned delegation grant confining private-key use to its subject.
     pub delegation: Option<HostDelegation>,
+    /// Refuse `data:` inputs and `return:` outputs.
+    pub deny_inline: bool,
 }
 /// A grant the host pins at startup; every private-key operation in the
 /// session must be performed by its subject and, when delegable, be granted.

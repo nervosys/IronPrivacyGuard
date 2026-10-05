@@ -4292,6 +4292,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -8652,6 +8663,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -13008,6 +13030,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -17370,6 +17403,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -21736,6 +21780,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -26130,6 +26185,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -30503,6 +30569,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -34891,6 +34968,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -39277,6 +39365,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -43635,6 +43734,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -48023,6 +48133,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -52411,6 +52532,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -56791,6 +56923,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -61143,6 +61286,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -65495,6 +65649,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -69847,6 +70012,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -74199,6 +74375,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -78557,6 +78744,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -82930,6 +83128,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -87299,6 +87508,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -91686,6 +91906,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -96067,6 +96298,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -100451,6 +100693,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -104824,6 +105077,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -109280,6 +109544,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -113713,6 +113988,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -118150,6 +118436,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -122560,6 +122857,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -126933,6 +127241,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -131316,6 +131635,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -135714,6 +136044,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -140072,6 +140413,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -144430,6 +144782,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -148782,6 +149145,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -153159,6 +153533,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -157549,6 +157934,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -161949,6 +162345,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -166301,6 +166708,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -170664,6 +171082,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -175028,6 +175457,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -179412,6 +179852,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -183794,6 +184245,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -188192,6 +188654,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -192565,6 +193038,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -196933,6 +197417,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -201325,6 +201820,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -205692,6 +206198,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -210080,6 +210597,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -214458,6 +214986,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -218842,6 +219381,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -223205,6 +223755,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -227588,6 +228149,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -231947,6 +232519,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -236318,6 +236901,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -240689,6 +241283,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -245059,6 +245664,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -249438,6 +250054,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [
@@ -253829,6 +254456,17 @@
                   }
                 ],
                 "title": "Outcome"
+              },
+              "returned": {
+                "additionalProperties": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                },
+                "description": "Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]{1,32}$"
+                },
+                "type": "object"
               }
             },
             "required": [

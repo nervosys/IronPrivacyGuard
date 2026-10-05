@@ -15,6 +15,12 @@
   optional attached grant; opening checks everything before release and can
   record exclusive replay markers (`replay_detected`). Independent PyCA checks
   cover both directions. 58 operations.
+- Added inline data for agents: input path fields accept bounded
+  `data:...;base64,` URIs and non-streaming outputs accept `return:<name>`, with
+  the bytes returned in the response's `returned` map (each at most 1 MiB).
+  Passphrase and PIN files refuse inline data, streaming outputs require files,
+  and `ipg mcp --inline-data deny` disables both forms. Control messages are now
+  bounded at 2 MiB instead of 64 KiB.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

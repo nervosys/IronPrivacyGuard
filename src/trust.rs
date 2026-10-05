@@ -8,7 +8,7 @@ use ic_core::traits::Digest;
 use ic_hash::{Sha256, Sha384};
 use ipg_json::JsonSchema;
 use ipg_json::{Deserialize, Serialize};
-use std::{collections::HashSet, fs::File};
+use std::collections::HashSet;
 
 pub const MAX_IDENTITIES: usize = 256;
 /// Sized for 256 hybrid identities, whose composite certificates are ~7 KB each.
@@ -235,7 +235,7 @@ impl TrustStore {
 
 pub fn load(policy: &TrustPolicy) -> Result<TrustStore> {
     check_digest(&policy.expected_digest)?;
-    let bytes = crate::read_limited(File::open(&policy.store)?, MAX_STORE_BYTES)?;
+    let bytes = crate::read_limited(crate::inline::open(&policy.store)?, MAX_STORE_BYTES)?;
     let store: TrustStore = ipg_json::from_slice(&bytes)?;
     if store.digest()? != policy.expected_digest {
         return Err(Error::new(

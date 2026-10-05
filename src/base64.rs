@@ -1,7 +1,6 @@
-//! Standard base64 (RFC 4648) for KMS messages and PEM certificates.
+//! Standard base64 (RFC 4648) for KMS messages, PEM certificates and inline data.
 use crate::error::{Error, Result};
 
-#[cfg(feature = "kms")]
 pub(crate) fn encode(data: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);

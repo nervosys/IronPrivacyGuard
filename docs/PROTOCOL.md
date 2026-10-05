@@ -64,6 +64,31 @@ a successful result with a false verification flag.
 In `serve`, inspect each response's `ok` and error code; ordinary request errors
 do not terminate the session. A broken stdout pipe exits 4 without a response.
 
+## Inline data and returned outputs
+
+Agents can avoid temporary files for small payloads:
+
+- Any input path field (`input`, `signature`, `signer`, `recipient`, `key`,
+  `store` and so on) may instead hold an RFC 2397 data URI with base64 content,
+  `data:[<media type>];base64,<data>`, of at most 1 MiB decoded.
+- Any non-streaming output field may be `return:<name>` (1..32 of `a-z`, `0-9`,
+  `_`, `-`). The bytes then appear in the response, beside `result`, as
+  `"returned":{"<name>":"<base64>"}`, at most 1 MiB per call. No file is written.
+
+```json
+{"protocol":"ipg/1","id":"sign-inline","request":{"operation":"sign",
+ "input":"data:application/json;base64,eyJ0YXNrIjoiZGVwbG95In0=",
+ "output":"return:signature","key":"agent.json","passphrase_file":"agent-pass.bin"}}
+```
+
+Passphrase and PIN files never accept inline data, so secrets stay in protected
+files. Streaming outputs (`stream.encrypt`, `stream.decrypt`) must be files. A
+returned name may be used once per call, like an existing file. Failed calls
+return nothing. Control messages are bounded at 2 MiB to leave room for inline
+data. MCP hosts can refuse both forms with `ipg mcp --inline-data deny`.
+Returned plaintext enters the caller's context: hosts that must keep decrypted
+content out of an agent's context should deny inline data.
+
 ## Operations
 
 | Operation | Required parameters |

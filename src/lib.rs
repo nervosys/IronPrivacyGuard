@@ -3,7 +3,6 @@
 pub use ipg_json as json;
 pub mod artifact;
 pub mod attest;
-#[cfg(any(feature = "kms", feature = "attestation"))]
 mod base64;
 pub mod capabilities;
 #[cfg(all(feature = "tpm", windows))]
@@ -18,6 +17,7 @@ pub mod files;
 #[doc(hidden)]
 pub mod fuzz_support;
 pub mod hex;
+pub mod inline;
 #[cfg(feature = "kms")]
 mod kms;
 pub mod knowledge;
@@ -65,7 +65,8 @@ use std::{
 };
 
 pub const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024;
-pub const MAX_REQUEST_BYTES: u64 = 64 * 1024;
+/// Control-message bound; leaves room for 1 MiB of base64 inline data.
+pub const MAX_REQUEST_BYTES: u64 = 2 * 1024 * 1024;
 
 /// Identity suites that have software secret keys.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -969,12 +970,19 @@ pub fn read_limited(reader: impl Read, limit: u64) -> Result<Zeroizing<Vec<u8>>>
     Ok(data)
 }
 fn read(path: &str) -> Result<Zeroizing<Vec<u8>>> {
-    read_limited(File::open(path)?, MAX_FILE_BYTES)
+    read_limited(inline::open(path)?, MAX_FILE_BYTES)
 }
 pub(crate) fn load<T: DeserializeOwned>(path: &str) -> Result<T> {
     Ok(ipg_json::from_slice(&read(path)?)?)
 }
 fn password(path: &str) -> Result<Zeroizing<Vec<u8>>> {
+    // Secrets keep their protected channel: never request values.
+    if inline::is_inline(path) {
+        return Err(Error::new(
+            "invalid_request",
+            "Passphrases and PINs must come from protected files, not inline data",
+        ));
+    }
     read_limited(File::open(path)?, 4096)
 }
 /// Read an optional credential file; the provider decides whether the key needs one.
@@ -999,6 +1007,9 @@ fn software_secret(key: KeyFile) -> Result<crypto::SecretKey> {
 /// Publish a complete file without replacing an existing destination. Tempfile is
 /// in the destination directory and has mode 0600 on Unix. Windows inherits ACLs.
 pub fn write_new(path: &str, data: &[u8]) -> Result<()> {
+    if let Some(name) = inline::returned_name(path)? {
+        return inline::store(name, data);
+    }
     let target = Path::new(path);
     let parent = target
         .parent()
@@ -1027,6 +1038,16 @@ fn save<T: Serialize>(
     })
 }
 /// Report custody only for token-backed private-key operations.
+/// Whether any request string is inline data or a returned-output target.
+fn uses_inline(value: &Value) -> bool {
+    match value {
+        Value::String(text) => inline::is_inline(text),
+        Value::Array(items) => items.iter().any(uses_inline),
+        Value::Object(map) => map.values().any(uses_inline),
+        _ => false,
+    }
+}
+
 /// Under a host-pinned grant, private keys may only be those of the grant's
 /// subject, and delegable operations must be granted at the call's host time.
 fn confine(request: &Request, host: &Host) -> Result<()> {
@@ -1131,6 +1152,9 @@ fn save_reference(
 /// Fail before token work when the destination already exists. Publication still
 /// uses create-new semantics, so a racing writer cannot be replaced.
 pub(crate) fn require_absent(path: &str) -> Result<()> {
+    if let Some(name) = inline::returned_name(path)? {
+        return inline::require_unused(name);
+    }
     if Path::new(path).exists() {
         return Err(Error::new(
             "already_exists",
@@ -1173,7 +1197,10 @@ pub fn schemas() -> Value {
         "$schema":"https://json-schema.org/draft/2020-12/schema",
         "oneOf":[
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","result"],
-             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":true},"result":outcome}},
+             "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":true},"result":outcome,
+                "returned":{"type":"object","description":"Outputs requested with return:<name>, base64-encoded; at most 1 MiB in total.",
+                    "propertyNames":{"pattern":"^[a-z0-9_-]{1,32}$"},
+                    "additionalProperties":{"type":"string","contentEncoding":"base64"}}}},
             {"type":"object","additionalProperties":false,"required":["protocol","id","ok","error"],
              "properties":{"protocol":{"const":"ipg/1"},"id":{"type":["string","null"]},"ok":{"const":false},"error":ipg_json::schema_for!(Error)}}
         ]
@@ -1197,6 +1224,9 @@ pub fn execute(request: Request) -> Result<Outcome> {
 /// Execute under host policy. Callers never choose the host policy per request.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
     confine(&request, host)?;
+    if host.deny_inline && uses_inline(&ipg_json::to_value(&request)?) {
+        return Err(inline::refused());
+    }
     match request {
         Request::Validate { request } => Ok(Outcome::RequestValidation {
             validation: validation::validate(request),
@@ -1727,7 +1757,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let digest = trust::enforce(policy.as_ref(), key.public())?;
             let credential = credential(passphrase_file)?;
             let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
-            let signature = stream_signature::sign(&*identity, &mut File::open(&input)?)?;
+            let signature = stream_signature::sign(&*identity, &mut inline::open(&input)?)?;
             Ok(with_custody(
                 with_policy(
                     save(
@@ -1756,7 +1786,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &public,
                 &expected_fingerprint,
                 &load(&signature)?,
-                &mut File::open(&input)?,
+                &mut inline::open(&input)?,
             )?;
             let delegation = delegated(delegation.as_ref(), &public, "stream.sign")?;
             Ok(Outcome::Verified {
@@ -1799,11 +1829,11 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         }),
         Request::Inspect { input } => {
             // Streams can exceed the artifact limit; only their header is read.
-            let mut file = File::open(&input)?;
+            let mut file = inline::open(&input)?;
             let mut magic = [0u8; 8];
             let is_stream = file.read(&mut magic)? == 8 && &magic == stream::MAGIC;
             if is_stream {
-                let (_, _) = stream::read_header(&mut File::open(&input)?)?;
+                let (_, _) = stream::read_header(&mut inline::open(&input)?)?;
                 return Ok(Outcome::Inspection {
                     structurally_valid: true,
                     format: stream::FORMAT.into(),
@@ -1913,7 +1943,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             require_absent(&output)?;
             let key = load_key(&key)?;
             // Check the header and recipient before any passphrase work or token login.
-            let (header, _) = stream::read_header(&mut File::open(&input)?)?;
+            let (header, _) = stream::read_header(&mut inline::open(&input)?)?;
             if !header
                 .recipients
                 .iter()
@@ -2057,7 +2087,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         } => {
             host.permit(Custody::Software)?;
             require_absent(&output)?;
-            let data = read_limited(File::open(&input)?, openpgp::MAX_CERTIFICATE_BYTES)?;
+            let data = read_limited(inline::open(&input)?, openpgp::MAX_CERTIFICATE_BYTES)?;
             let key = openpgp::import_secret(
                 &data,
                 &expected_openpgp_fingerprint,
@@ -2107,7 +2137,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         Request::OpenpgpCertInspect { input } => Ok(Outcome::OpenpgpCertificate {
             path: None,
             certificate: openpgp::inspect(&read_limited(
-                File::open(&input)?,
+                inline::open(&input)?,
                 openpgp::MAX_CERTIFICATE_BYTES,
             )?)?,
         }),
@@ -2120,12 +2150,15 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 .into_iter()
                 .map(|r| {
                     Ok((
-                        read_limited(File::open(&r.certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                        read_limited(
+                            inline::open(&r.certificate)?,
+                            openpgp::MAX_CERTIFICATE_BYTES,
+                        )?,
                         r.expected_openpgp_fingerprint,
                     ))
                 })
                 .collect::<Result<Vec<_>>>()?;
-            let data = read_limited(File::open(&input)?, openpgp::MAX_PLAINTEXT_BYTES)?;
+            let data = read_limited(inline::open(&input)?, openpgp::MAX_PLAINTEXT_BYTES)?;
             let (armored, recipients) = openpgp::encrypt(&data, &certificates)?;
             write_new(&output, armored.as_bytes())?;
             Ok(Outcome::OpenpgpEncrypted {
@@ -2176,9 +2209,9 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             expected_openpgp_fingerprint,
         } => {
             let verification = openpgp::verify(
-                &read_limited(File::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &read_limited(inline::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
                 &expected_openpgp_fingerprint,
-                &read_limited(File::open(&signature)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &read_limited(inline::open(&signature)?, openpgp::MAX_CERTIFICATE_BYTES)?,
                 &read(&input)?,
             )?;
             Ok(Outcome::OpenpgpVerified {
@@ -2209,7 +2242,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 .transpose()?;
             let credential = credential(passphrase_file)?;
             let verified = openpgp::verify_message(
-                &read_limited(File::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
+                &read_limited(inline::open(&certificate)?, openpgp::MAX_CERTIFICATE_BYTES)?,
                 &expected_openpgp_fingerprint,
                 &read(&input)?,
                 recipient
@@ -2274,11 +2307,22 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
 }
 
 pub fn respond(id: Option<String>, result: Result<Outcome>) -> (Value, i32) {
+    respond_returning(id, result, &inline::Returned::new())
+}
+/// Respond with any `return:` outputs collected by the call.
+pub fn respond_returning(
+    id: Option<String>,
+    result: Result<Outcome>,
+    returned: &inline::Returned,
+) -> (Value, i32) {
     match result {
-        Ok(result) => (
-            json!({"protocol":"ipg/1", "id":id, "ok":true, "result":result}),
-            0,
-        ),
+        Ok(result) => {
+            let mut response = json!({"protocol":"ipg/1", "id":id, "ok":true, "result":result});
+            if !returned.is_empty() {
+                response["returned"] = inline::encode(returned);
+            }
+            (response, 0)
+        }
         Err(error) => {
             let code = error.exit_code();
             (
@@ -2300,7 +2344,10 @@ pub fn parse_call(data: &[u8]) -> Result<Call> {
 pub fn handle_call(data: &[u8]) -> (Value, i32) {
     let call = parse_call(data);
     match call {
-        Ok(call) if call.protocol == "ipg/1" => respond(Some(call.id), execute(call.request)),
+        Ok(call) if call.protocol == "ipg/1" => {
+            let (result, returned) = inline::collect(true, || execute(call.request));
+            respond_returning(Some(call.id), result, &returned)
+        }
         Ok(call) => respond(
             Some(call.id),
             Err(Error::new("invalid_request", "Supported protocol is ipg/1")),

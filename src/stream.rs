@@ -363,14 +363,14 @@ pub fn encrypt_file(
     input_path: &str,
     output_path: &str,
 ) -> Result<Header> {
-    let mut input = BufReader::new(std::fs::File::open(input_path)?);
+    let mut input = BufReader::new(crate::inline::open(input_path)?);
     publish(output_path, |out| encrypt(recipients, &mut input, out))
 }
 
 /// Decrypt `input_path` to a new `output_path`, published only after every chunk
 /// authenticates.
 pub fn decrypt_file(key: &dyn IdentityKey, input_path: &str, output_path: &str) -> Result<u64> {
-    let mut input = BufReader::new(std::fs::File::open(input_path)?);
+    let mut input = BufReader::new(crate::inline::open(input_path)?);
     let (header, bytes) = read_header(&mut input)?;
     publish(output_path, |out| {
         decrypt(key, &header, &bytes, &mut input, out)
@@ -381,6 +381,12 @@ fn publish<T>(
     path: &str,
     write: impl FnOnce(&mut BufWriter<&mut std::fs::File>) -> Result<T>,
 ) -> Result<T> {
+    if crate::inline::returned_name(path)?.is_some() {
+        return Err(Error::new(
+            "invalid_request",
+            "Streaming outputs must be written to files",
+        ));
+    }
     crate::require_absent(path)?;
     let target = std::path::Path::new(path);
     let parent = target
