@@ -204,3 +204,20 @@ fn every_component_of_the_evidence_is_bound() {
         "identity_mismatch"
     );
 }
+
+#[test]
+fn independent_certificate_policy_and_complete_rsa_binding() {
+    let vectors: ipg_json::Value =
+        ipg_json::from_str(include_str!("vectors/attestation-certificate-policy.json")).unwrap();
+    let anchor = iron_privacy_guard::hex::decode(vectors["anchor"].as_str().unwrap()).unwrap();
+    let (mut evidence, _, _) = fixture();
+    for case in vectors["cases"].as_array().unwrap() {
+        evidence.ek_certificates = vec![case["certificate"].as_str().unwrap().into()];
+        assert_eq!(
+            challenge_code(&evidence, std::slice::from_ref(&anchor), &[]),
+            case["expected"].as_str().unwrap(),
+            "{}",
+            case["name"]
+        );
+    }
+}

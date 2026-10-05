@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Tightened TPM endorsement-certificate binding to compare both RSA modulus and
+  exponent. Added independent public X.509 fixtures covering complete key binding,
+  validity, EK usage, CA leaf rejection, and unknown critical extensions.
 - Replaced cryptoki and secrecy with a first-party PKCS#11 boundary. The `pkcs11`
   build now passes the IronCrypto-only dependency gate. Vendor modules remain
   runtime requirements; sessions close on drop and modules stay loaded until exit.

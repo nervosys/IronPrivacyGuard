@@ -53,7 +53,8 @@ manufacturer's CRL for the EK certificate out of band.
    `expected_fingerprint`, `output`, `secret_output`) checks:
    - the identity matches the pin and is `ipg-public-p384-v1`;
    - the EK public area is exactly the TCG default RSA-2048 EK template (L-1), and
-     the EK certificate's key is that EK;
+     the EK certificate's RSA modulus and exponent both match that EK (TPM's
+     zero exponent encoding means 65537);
    - the EK certificate chains to a trust anchor (rustls-webpki path validation
      with IronCrypto's signature algorithms), is currently valid, and carries the
      EK-certificate usage if it declares any extended usage;

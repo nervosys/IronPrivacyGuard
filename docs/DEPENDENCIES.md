@@ -26,6 +26,18 @@ dependencies, including those introduced by IronCrypto adapters. The default
 and `pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
 blocker. CI checks default, minimal and `pkcs11` builds on each supported OS.
 
+The remaining replacements require a native X.509 path validator, TLS client,
+and the additional OpenPGP profiles. IronCrypto 0.2.7's `ic-pkix` supplies DER/key
+encoding and certificate issuance, but no certificate parser or path validator;
+`ic-rustls` supplies primitives to rustls, not a standalone TLS engine. These
+adapters therefore do not satisfy the transitive dependency gate. Replacements
+must retain certificate signatures, validity, chain constraints, critical-extension
+handling, EK usage/key binding, and TLS peer-name and handshake authentication.
+Removing certificate checks or silently disabling existing integrations is not
+a completed migration. Independent certificate-policy fixtures in
+`tests/vectors/attestation-certificate-policy.json` cover the EK boundary; they
+are a regression baseline, not a complete X.509 conformance suite.
+
 Publication creates a hard link from an exclusive temporary file in the output
 directory after authentication and synchronization. The filesystem must support
 hard links; IPG fails instead of falling back to a non-atomic copy or a replacing

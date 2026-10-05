@@ -1216,7 +1216,7 @@ pub fn export() -> Value {
         ),
         (
             "tpm-attestation",
-            "TPM attestation proves that an ipg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. ipg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
+            "TPM attestation proves that an ipg-tpm-key-v1 identity's two keys are resident, non-exportable (fixedTPM, fixedParent) keys generated inside (sensitiveDataOrigin) a TPM whose RSA-2048 endorsement key matches the certificate modulus and exponent and chains to a verifier-chosen manufacturer root. A restricted attestation key, derived from the TPM's endorsement seed, certifies both keys with TPM2_Certify bound to the identity; TPM2_ActivateCredential then proves that attestation key shares the TPM with the certified EK. It proves nothing about the host, its software or who controls the PIN, and certificates are not checked for revocation. It is a point-in-time statement. ipg-cng-key-v1 keys cannot be attested; Windows' built-in key attestation claim was rejected because it signs with SHA-1 by an OS-internal key not bound to the EK.",
         ),
         (
             "verifier-secret",
@@ -1479,5 +1479,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.30.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.31.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

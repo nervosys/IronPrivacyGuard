@@ -289,24 +289,7 @@ pub(crate) fn check_evidence(
     let parsed = webpki::EndEntityCert::try_from(&leaf)
         .map_err(|e| Error::new("invalid_format", format!("EK certificate: {e:?}")))?;
     let spki = parsed.subject_public_key_info();
-    let certified_modulus = match ic_pkix::PublicKeyInfo::from_der(spki.as_ref()) {
-        Ok(ic_pkix::PublicKeyInfo::Rsa { modulus, .. }) => modulus.to_vec(),
-        _ => {
-            return Err(Error::new(
-                "policy_mismatch",
-                "EK certificate does not hold an RSA key",
-            ));
-        }
-    };
-    let Key::Rsa { modulus, .. } = &ek.key else {
-        unreachable!("checked template");
-    };
-    if certified_modulus != *modulus {
-        return Err(Error::new(
-            "identity_mismatch",
-            "EK certificate is for a different endorsement key",
-        ));
-    }
+    require_ek_spki(&ek, spki.as_ref())?;
 
     // Each identity key certified by the AK, with the exact template and point.
     let points = [
@@ -385,6 +368,38 @@ pub(crate) fn check_evidence(
         ek,
         ak,
     })
+}
+
+#[cfg(feature = "attestation")]
+fn require_ek_spki(ek: &Public, spki: &[u8]) -> Result<()> {
+    let (certified_modulus, certified_exponent) = match ic_pkix::PublicKeyInfo::from_der(spki) {
+        Ok(ic_pkix::PublicKeyInfo::Rsa { modulus, exponent }) => (modulus, exponent),
+        _ => {
+            return Err(Error::new(
+                "policy_mismatch",
+                "EK certificate does not hold an RSA key",
+            ));
+        }
+    };
+    let Key::Rsa {
+        modulus, exponent, ..
+    } = &ek.key
+    else {
+        return Err(Error::new("policy_mismatch", "Endorsement key must be RSA"));
+    };
+    // TPM's zero exponent encodes the default RSA exponent, not the integer zero.
+    let exponent = if *exponent == 0 {
+        65537
+    } else {
+        u64::from(*exponent)
+    };
+    if certified_modulus != modulus || certified_exponent != exponent {
+        return Err(Error::new(
+            "identity_mismatch",
+            "EK certificate is for a different endorsement key",
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(feature = "attestation")]
