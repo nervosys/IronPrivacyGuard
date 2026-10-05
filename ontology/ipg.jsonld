@@ -4964,7 +4964,7 @@
       ],
       "label": "Exchange OpenPGP messages or GPG keys",
       "limitations": [
-        "The native implementation uses only IronCrypto and first-party code; correspondents may use RSA 2048-4096, NIST P-256/P-384/P-521, Ed25519, Ed448, Curve25519, X25519 or X448 keys, and send AES-128/192/256 messages with SEIPDv1 or SEIPDv2 EAX/OCB/GCM. It has not had independent review",
+        "The native implementation uses only IronCrypto and first-party code; correspondents may use RSA 2048-4096, NIST P-256/P-384/P-521, Ed25519, Ed448, Curve25519, X25519 or X448 keys, including GnuPG's LibrePGP v5 Ed448/Curve448 keys, and send AES-128/192/256 messages with SEIPDv1 or SEIPDv2 EAX/OCB/GCM, ZIP/ZLIB/BZip2 compression, or legacy-cipher SEIPDv1 messages that IPG reads but never writes. It has not had independent review",
         "v4 and v6 keys; IPG generates Ed25519 or P-384 keys and exports only passphrase-protected secret keys; imports support only one Ed25519/Curve25519 or P-384 signing primary and one encryption subkey with bounded protection parameters",
         "openpgp.decrypt does not verify embedded signatures; use openpgp.message.verify, which requires one document signature and refuses multiple or nested signatures",
         "No web of trust, keyservers or designated revokers; certificates are pinned by fingerprint and IPG trust snapshots do not apply",

@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
 description = "Native bounded JSON and typed contracts for IronPrivacyGuard"
+repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [dependencies]
 ipg-derive = { path = "../ipg-derive", version = "0.1.0" }

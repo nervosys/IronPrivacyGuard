@@ -445,3 +445,8 @@ run with `-max_total_time=300 -max_len=1048577 -timeout=10 -rss_limit_mb=2048
 -print_final_stats=1` (PRNG seed 756914129) executed 139,932 inputs in 301
 seconds with 746 MiB peak RSS, without crashes, oracle failures or sanitizer
 findings. The fuzz harness feature is now `openpgp-native`.
+A follow-up run after adding LibrePGP v5 parsing, BZip2 and decrypt-only legacy
+ciphers, with two v5 GnuPG seeds added, executed 127,478 inputs in 301 seconds
+(PRNG seed 1206025284, 741 MiB peak RSS) under the same settings, without
+crashes, oracle failures or sanitizer findings. The BZip2 decoder also has
+20,000 deterministic mutations in its stable unit tests.

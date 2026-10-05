@@ -1,4 +1,5 @@
-//! Bounded RFC 1951/1950 decoding for one OpenPGP ZIP or ZLIB packet.
+//! Bounded RFC 1951/1950 decoding for one OpenPGP ZIP or ZLIB packet; BZip2
+//! is decoded by the sibling `bzip2` module.
 //! No compression encoder or external compression dependency is required.
 use super::wire::invalid;
 use crate::error::{Error, Result};
@@ -243,6 +244,13 @@ pub(super) fn decompress(algorithm: u8, data: &[u8], limit: usize) -> Result<Zer
             }
             Ok(plain)
         }
+        3 => super::bzip2::decompress(data, limit).map_err(|message| {
+            if message == super::bzip2::LIMIT_ERROR {
+                Error::new("limit_exceeded", "Decompressed content exceeds limit")
+            } else {
+                invalid(message)
+            }
+        }),
         _ => Err(Error::new(
             "policy_mismatch",
             "Unsupported OpenPGP compression algorithm",

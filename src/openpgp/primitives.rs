@@ -127,6 +127,53 @@ pub(super) fn cfb(key: &[u8], iv: &[u8], data: &[u8], decrypt: bool) -> Result<Z
     }
 }
 
+/// Key length of a symmetric algorithm accepted for decryption: AES, or a
+/// legacy cipher kept only for reading old data. Nothing is encrypted with
+/// the legacy ciphers.
+pub(super) fn cipher_key_len(cipher: u8) -> Option<usize> {
+    match cipher {
+        7 => Some(16),
+        8 => Some(24),
+        9 => Some(32),
+        _ => super::legacy::key_len(cipher),
+    }
+}
+pub(super) fn cipher_block_len(cipher: u8) -> Option<usize> {
+    match cipher {
+        7..=13 => Some(16),
+        1..=4 => Some(8),
+        _ => None,
+    }
+}
+
+/// OpenPGP CFB decryption (no resynchronization) under an AES or legacy cipher.
+pub(super) fn cfb_decrypt(
+    cipher: u8,
+    key: &[u8],
+    iv: &[u8],
+    data: &[u8],
+) -> Result<Zeroizing<Vec<u8>>> {
+    if cipher_key_len(cipher) != Some(key.len()) || cipher_block_len(cipher) != Some(iv.len()) {
+        return Err(invalid("Invalid OpenPGP cipher key or IV"));
+    }
+    if matches!(cipher, 7..=9) {
+        return cfb(key, iv, data, true);
+    }
+    let legacy = super::legacy::Legacy::new(cipher, key)
+        .ok_or_else(|| invalid("Unsupported OpenPGP cipher"))?;
+    let mut feedback = Zeroizing::new(iv.to_vec());
+    let mut out = Zeroizing::new(data.to_vec());
+    for (input, output) in data.chunks(iv.len()).zip(out.chunks_mut(iv.len())) {
+        let mut pad = Zeroizing::new(feedback.to_vec());
+        legacy.encrypt_block(&mut pad);
+        for (b, p) in output.iter_mut().zip(pad.iter()) {
+            *b ^= *p;
+        }
+        feedback[..input.len()].copy_from_slice(input);
+    }
+    Ok(out)
+}
+
 fn xor(a: &mut [u8; 16], b: &[u8; 16]) {
     for (a, b) in a.iter_mut().zip(b) {
         *a ^= *b;

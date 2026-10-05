@@ -20,7 +20,7 @@ Without the feature, every `openpgp.*` operation fails with `provider_unavailabl
 ## What provides the cryptography
 
 IPG implements packet framing, ASCII armor, certificate policy, the OpenPGP CFB,
-EAX, OCB and key-derivation adapters, and bounded ZIP/ZLIB decoding. Primitives
+EAX, OCB and key-derivation adapters, and bounded ZIP, ZLIB and BZip2 decoding. Primitives
 come from IronCrypto: AES, AES-GCM, AES key wrap, CMAC, SHA-2, SHA-3, HKDF,
 Argon2id, ChaCha20-Poly1305, Ed25519, X25519 and NIST P-256/P-384/P-521 ECDH and
 ECDSA. First-party code over IronCrypto's arithmetic adds:
@@ -29,7 +29,10 @@ ECDSA. First-party code over IronCrypto's arithmetic adds:
   `ic-rsa`'s Montgomery arithmetic (`src/openpgp/public.rs`);
 - ECDSA verification over digests other than a curve's native hash, such as
   P-384 with SHA-512, and DSA verification used only to report binding status;
-- Ed448 verification and X448 key agreement (`src/openpgp/curve448.rs`).
+- Ed448 verification and X448 key agreement (`src/openpgp/curve448.rs`);
+- decrypt-only IDEA, TripleDES, CAST5, Blowfish, Twofish and Camellia block
+  functions for reading old data (`src/openpgp/legacy.rs`);
+- a bounded BZip2 decoder (`src/openpgp/bzip2.rs`).
 
 The build adds no third-party Cargo packages; native OpenPGP adds only IronCrypto's
 `ic-rsa` to the core graph. It does not invoke GnuPG, OpenSSL, a system compression
@@ -43,25 +46,33 @@ review.
 | Area | Supported profile |
 | --- | --- |
 | IPG-held keys | V4 legacy Ed25519/Curve25519, v6 Ed25519/X25519, and v4/v6 P-384 ECDSA/ECDH |
-| Correspondent signing keys | RSA 2048-4096, ECDSA P-256/P-384/P-521, Ed25519 (legacy and RFC 9580) and Ed448 |
-| Correspondent encryption keys | RSA 2048-4096, ECDH Curve25519/P-256/P-384/P-521, X25519 and X448 |
+| Key versions read | V4 and v6 (RFC 9580), and LibrePGP v5 as written by GnuPG 2.4 and later |
+| Correspondent signing keys | RSA 2048-4096, ECDSA P-256/P-384/P-521, Ed25519 (legacy and RFC 9580) and Ed448 (RFC 9580 and LibrePGP) |
+| Correspondent encryption keys | RSA 2048-4096, ECDH Curve25519/Curve448/P-256/P-384/P-521, X25519 and X448 |
 | Signature digests | SHA-256/384/512 and SHA3-256/512, at least 48 bytes for P-384 and 64 bytes for P-521 and Ed448; IPG signs with SHA-512 (Ed25519) or SHA-384 (P-384) |
-| Certificates | Direct-key and User ID certification, encryption/signing subkeys, authenticated flags and validity, primary/subkey/User ID revocation, signing-subkey back signatures; User Attributes and v3/v5 signatures are counted and ignored |
-| Messages written | AES-256 SEIPDv1 for v4 recipients; AES-256/OCB SEIPDv2 for v6 recipients |
-| Messages read | AES-128/192/256 with SEIPDv1, or SEIPDv2 with EAX, OCB or GCM; bounded ZIP/ZLIB or uncompressed data; Padding and Marker packets ignored |
-| Secret interchange | `ipg-openpgp-key-v1` storage; v4 AES-CFB with iterated SHA-1/SHA-2 S2K and SHA-1 integrity; v6 AES-256/OCB with bounded Argon2id |
+| Certificates | Direct-key and User ID certification, encryption/signing subkeys, authenticated flags and validity, primary/subkey/User ID revocation, signing-subkey back signatures; User Attributes and v3 signatures are counted and ignored |
+| Messages written | AES-256 SEIPDv1 for v4 and v5 recipients; AES-256/OCB SEIPDv2 for v6 recipients |
+| Messages read | SEIPDv1 with AES-128/192/256, or decrypt-only IDEA, TripleDES, CAST5, Blowfish, Twofish or Camellia-128/192/256; SEIPDv2 with AES and EAX, OCB or GCM; bounded ZIP, ZLIB, BZip2 or uncompressed data; Padding and Marker packets ignored |
+| Secret interchange | `ipg-openpgp-key-v1` storage; v4 CFB protection (AES, or a decrypt-only legacy cipher on import) with iterated SHA-1/SHA-2 S2K and SHA-1 integrity; v6 AES-256/OCB with bounded Argon2id |
 
 RSA keys shorter than 2048 or longer than 4096 bits, DSA, ElGamal, legacy-curve
 keys outside this table and unknown algorithms are parsed for fingerprints and
-inspection, but never used. Symmetric algorithms other than AES, bzip2,
-unprotected (SED) data and LibrePGP v5 keys are refused. There is no automatic
-fallback to another algorithm. Secret import retains the two-key IPG profile and
+inspection, but never used. Legacy ciphers are accepted only for reading
+existing messages and protected keys: IPG never encrypts with them, they use
+table lookups that are not constant-time, and the 64-bit-block ciphers offer
+little margin. Unprotected (SED) data, LibrePGP's tag-20 OCB packets and v5
+secret keys are refused. There is no automatic fallback to another algorithm. Secret import retains the two-key IPG profile and
 requires both derived public keys to match their private material. Messages are
 limited to 1,024 session-key packets across all recipients; packet parsing is
 also bounded by input bytes and an 8,192-packet ceiling.
 
-GnuPG creates Ed448/Curve448 keys as LibrePGP v5 packets, which RFC 9580 tools
-cannot read. IPG verifies RFC 9580 Ed448 signatures and encrypts to RFC 9580
+GnuPG creates Ed448/Curve448 keys as LibrePGP v5 packets. IPG reads v5
+certificates (SHA-256 fingerprints over a `0x9a` frame, v4-style User ID
+bindings), verifies v5 signatures (64-bit trailer length; document signatures
+also hash the literal packet's format, file name and date, or six zero octets
+when detached), and encrypts to v5 recipients with v3 session-key packets and
+SEIPDv1, using the leftmost 20 fingerprint octets in the ECDH KDF as LibrePGP
+specifies. IPG also verifies RFC 9580 Ed448 signatures and encrypts to RFC 9580
 X448 keys from other implementations.
 
 Native SHA-1 is confined to v4 fingerprints, legacy secret-key protection and
@@ -194,11 +205,12 @@ ipg openpgp key generate --output me-v6.json --passphrase-file pass.bin --user-i
 When decrypting, IPG:
 
 - accepts AES-128, AES-192 or AES-256 session keys chosen by the sender, with
-  SEIPDv1 for v4 keys and SEIPDv2 EAX, OCB or GCM for v6 keys;
+  SEIPDv1 for v4 keys and SEIPDv2 EAX, OCB or GCM for v6 keys, and decrypt-only
+  legacy ciphers with SEIPDv1;
 - refuses legacy messages without integrity protection (SED packets);
 - releases plaintext only after the integrity check passes;
-- accepts one compression layer (ZIP or ZLIB; bzip2 is not supported) and bounds
-  the decompressed output at 16 MiB;
+- accepts one compression layer (ZIP, ZLIB or BZip2, with every BZip2 block and
+  stream CRC verified) and bounds the decompressed output at 16 MiB;
 - reports `signed: true` when the message carries signatures, but never verifies
   them (`signatures_verified: false`). Sender identity is not authenticated; ask
   use `openpgp.message.verify` with a pinned signer certificate to authenticate
@@ -392,7 +404,9 @@ python tests/interop/gnupg_reference.py --ipg target/debug/ipg
 ```
 
 It exercises both directions for IPG's Ed25519 and P-384 keys, including
-GnuPG-chosen AES-128 and AES-192 messages, and for GnuPG Ed25519, P-256, P-384,
+GnuPG-chosen AES-128 and AES-192 messages, BZip2 compression and all eight
+legacy ciphers, LibrePGP v5 Ed448/Curve448 keys when the GnuPG version creates
+them (2.5 does; 2.4 builds without Ed448 report it as skipped), and GnuPG Ed25519, P-256, P-384,
 P-521, RSA-3072 and RSA-4096 peers, signing subkeys, multiple encryption subkeys, and
 the refusals for expired, revoked, SHA-1-bound, RSA-1024 and DSA certificates,
 SHA-1 data signatures and tampered ciphertext. Cases a GnuPG version will not
@@ -411,7 +425,7 @@ RFC 7748 Ed448/X448 vectors.
 
 ## Not supported
 
-v3 and v5 keys; symmetric algorithms other than AES; bzip2; mixed v4/v6 recipient sets; secret-key import outside the supported profile; cleartext
+v3 keys; v5 secret keys; LibrePGP tag-20 OCB packets; encryption with legacy ciphers; mixed v4/v6 recipient sets; secret-key import outside the supported profile; cleartext
 signatures and inline-signature generation; passphrase
 (symmetric) encryption; keyservers, WKD and the web of trust; smartcards and
 OpenPGP keys in HSMs or TPMs.

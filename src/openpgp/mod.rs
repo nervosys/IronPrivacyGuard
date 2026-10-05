@@ -10,9 +10,13 @@ use ipg_json::JsonSchema;
 use ipg_json::{Deserialize, Serialize};
 
 #[cfg(feature = "openpgp-native")]
+mod bzip2;
+#[cfg(feature = "openpgp-native")]
 mod curve448;
 #[cfg(feature = "openpgp-native")]
 mod inflate;
+#[cfg(feature = "openpgp-native")]
+mod legacy;
 #[cfg(feature = "openpgp-native")]
 mod native;
 #[cfg(feature = "openpgp-native")]

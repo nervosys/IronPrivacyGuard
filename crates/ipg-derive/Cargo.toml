@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
 description = "Dependency-free typed JSON contract derives for IronPrivacyGuard"
+repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [lib]
 proc-macro = true

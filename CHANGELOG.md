@@ -1,7 +1,37 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-10-05
 
+Every feature now depends only on IronCrypto and first-party crates. The rPGP
+OpenPGP backend and rustls are removed.
+
+Breaking changes:
+
+- `openpgp` is an alias of the default native `openpgp-native` feature; the
+  `iron_privacy_guard::json` types replace serde in the Rust API.
+- Refused OpenPGP secret-key imports report `policy_mismatch` instead of
+  `invalid_format`; certificates with unsupported algorithms now inspect with
+  per-key issues instead of failing to parse.
+- AWS KMS endpoints must support TLS 1.3 (all current AWS KMS endpoints do);
+  TLS 1.2-only endpoints are refused without downgrade.
+- Linux TPM access uses native device/swtpm commands; ESAPI-only transports
+  must migrate. Atomic publication requires filesystem hard links.
+
+Changes:
+
+- Read GnuPG's LibrePGP v5 certificates and signatures, including Ed448 and
+  Curve448 keys: SHA-256 `0x9a` fingerprints, v5 signature trailers and the
+  literal metadata hashed by v5 document signatures. IPG encrypts to v5
+  recipients with v3 session-key packets, SEIPDv1 and the LibrePGP 20-octet KDF
+  fingerprint. V5 secret keys and tag-20 OCB packets remain unsupported.
+- Added a bounded, CRC-verified BZip2 decoder, so every standard OpenPGP
+  compression algorithm can be read.
+- Added decrypt-only IDEA, TripleDES, CAST5, Blowfish, Twofish and
+  Camellia-128/192/256 for SEIPDv1 messages and v4 secret-key protection on
+  import. IPG never encrypts with them.
+- Tests: GnuPG 2.5 v5 fixtures and live checks, BZip2 and legacy-cipher GnuPG
+  messages, published and PyCA vectors for every legacy cipher, and Python
+  `bz2` vectors with mutation tests.
 - **Every feature combination now depends only on IronCrypto and first-party
   crates.** `cargo deny` allows only the AGPL first-party/IronCrypto graph, denies
   duplicate versions and has no advisory exceptions; CI gates `--all-features`.

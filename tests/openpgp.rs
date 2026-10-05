@@ -521,6 +521,103 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
     }
 }
 
+#[cfg(feature = "openpgp-native")]
+#[test]
+fn librepgp_v5_ed448_certificates_and_signatures_from_gnupg() {
+    let fixture: Value =
+        ipg_json::from_str(include_str!("vectors/openpgp-librepgp-v5.json")).unwrap();
+    let hex =
+        |name: &str| iron_privacy_guard::hex::decode(fixture[name].as_str().unwrap()).unwrap();
+    let fingerprint = fixture["fingerprint"].as_str().unwrap();
+    let f = Fixture::new();
+    for name in [
+        "document_hex",
+        "text_document_hex",
+        "certificate_hex",
+        "detached_signature_hex",
+        "embedded_zip_hex",
+        "embedded_text_bzip2_hex",
+    ] {
+        fs::write(f.path(name), hex(name)).unwrap();
+    }
+    let report =
+        call(json!({"operation":"openpgp.cert.inspect","input":f.path("certificate_hex")}))
+            .unwrap();
+    let certificate = &report["certificate"];
+    assert_eq!(certificate["fingerprint"], fingerprint);
+    assert_eq!(certificate["usable_for_signing"], true);
+    assert_eq!(certificate["usable_for_encryption"], true);
+    let keys = certificate["keys"].as_array().unwrap();
+    assert_eq!(keys[0]["algorithm"], "ed448");
+    assert_eq!(keys[1]["algorithm"], "ecdh-cv448");
+    let verified = call(
+        json!({"operation":"openpgp.verify","input":f.path("document_hex"),
+        "signature":f.path("detached_signature_hex"),"certificate":f.path("certificate_hex"),
+        "expected_openpgp_fingerprint":fingerprint}),
+    )
+    .unwrap();
+    assert_eq!(verified["verification"]["hash_algorithm"], "sha512");
+    // v5 detached signatures hash six zero octets, so a changed document fails.
+    fs::write(f.path("changed"), b"v5 document!\n").unwrap();
+    assert_eq!(
+        call(
+            json!({"operation":"openpgp.verify","input":f.path("changed"),
+            "signature":f.path("detached_signature_hex"),"certificate":f.path("certificate_hex"),
+            "expected_openpgp_fingerprint":fingerprint})
+        )
+        .unwrap_err(),
+        "authentication_failed"
+    );
+    // Embedded v5 signatures also hash the literal packet's format, name and date.
+    for (message, document) in [
+        ("embedded_zip_hex", "document_hex"),
+        ("embedded_text_bzip2_hex", "text_document_hex"),
+    ] {
+        let output = f.path(&format!("{message}.out"));
+        call(
+            json!({"operation":"openpgp.message.verify","input":f.path(message),"output":output,
+            "certificate":f.path("certificate_hex"),"expected_openpgp_fingerprint":fingerprint}),
+        )
+        .unwrap();
+        // GnuPG's text mode transmits canonical CRLF line endings.
+        let expected = if message.contains("text") {
+            String::from_utf8(hex(document))
+                .unwrap()
+                .replace('\n', "\r\n")
+                .into_bytes()
+        } else {
+            hex(document)
+        };
+        assert_eq!(fs::read(&output).unwrap(), expected, "{message}");
+    }
+    // Altering the literal file name inside the bzip2 stream is impossible
+    // without breaking its CRC, so alter the ZIP message's literal date instead.
+    let mut altered = hex("embedded_zip_hex");
+    let position = altered.len() / 2;
+    altered[position] ^= 1;
+    fs::write(f.path("altered"), altered).unwrap();
+    assert!(
+        call(
+            json!({"operation":"openpgp.message.verify","input":f.path("altered"),
+            "output":f.path("altered.out"),"certificate":f.path("certificate_hex"),
+            "expected_openpgp_fingerprint":fingerprint})
+        )
+        .is_err()
+    );
+    assert!(!std::path::Path::new(&f.path("altered.out")).exists());
+    // Encryption to the v5 X448 subkey uses a v3 PKESK and SEIPDv1.
+    let sent = call(
+        json!({"operation":"openpgp.encrypt","input":f.path("document_hex"),
+        "output":f.path("to-v5.asc"),"recipients":[{"certificate":f.path("certificate_hex"),
+        "expected_openpgp_fingerprint":fingerprint}]}),
+    )
+    .unwrap();
+    assert_eq!(
+        sent["recipients"][0]["encryption_keys"][0],
+        keys[1]["fingerprint"]
+    );
+}
+
 fn call(value: Value) -> Result<Value, String> {
     let request: Request = ipg_json::from_value(value).unwrap();
     execute_with(request, &Host::default())

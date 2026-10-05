@@ -1,13 +1,13 @@
 # Independent security review brief
 
-IPG 0.1.2 is experimental and has not received an independent security review.
+IPG 0.2.0 is experimental and has not received an independent security review.
 This brief defines a reproducible review target and the boundaries that should be
 tested before the native formats or APIs are treated as stable. It is not a claim
 that any review has occurred.
 
 ## Review target
 
-Review the exact source tree at the `v0.1.2` release tag, including `Cargo.lock`,
+Review the exact source tree at the `v0.2.0` release tag, including `Cargo.lock`,
 generated schemas and ontology, the optional OpenPGP adapter, and the official
 TypeScript MCP interoperability test. Resolve the tag to its commit before
 starting; record that immutable commit and the toolchain in the review report. A

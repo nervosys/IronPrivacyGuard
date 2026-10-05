@@ -65,7 +65,10 @@ keys, through first-party code over IronCrypto arithmetic; RSA encryption pads
 secret session keys with Montgomery arithmetic that branches only on the public
 exponent. There are no advisory exceptions in
 [cargo-audit's configuration](.cargo/audit.toml). Adding RSA secret-key handling
-requires a constant-time private-key review first.
+requires a constant-time private-key review first. Decrypt-only legacy ciphers
+(IDEA, TripleDES, CAST5, Blowfish, Twofish, Camellia) exist to read old data;
+they use secret-indexed tables, are not constant-time, and are never used to
+encrypt.
 `openpgp.message.verify` authenticates one embedded
 document signature against a pinned certificate before publishing plaintext;
 `openpgp.decrypt` still does not authenticate the sender. IPG trust snapshots do

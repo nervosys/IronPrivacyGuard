@@ -1,5 +1,7 @@
 //! Native RFC 9580 curve interchange using the existing IronCrypto primitives.
-use super::primitives::{Sha1, aead, aead_nonce_len, cfb, ocb};
+use super::primitives::{
+    Sha1, aead, aead_nonce_len, cfb, cfb_decrypt, cipher_block_len, cipher_key_len, ocb,
+};
 use super::wire::{self, Packet, Reader, armor, invalid, mpi, packet, unarmor};
 use super::*;
 use super::{curve448, public};
@@ -18,6 +20,9 @@ const X_OID: &[u8] = &[0x2b, 6, 1, 4, 1, 0x97, 0x55, 1, 5, 1];
 const P256_OID: &[u8] = &[0x2a, 0x86, 0x48, 0xce, 0x3d, 3, 1, 7];
 const P384_OID: &[u8] = &[0x2b, 0x81, 4, 0, 0x22];
 const P521_OID: &[u8] = &[0x2b, 0x81, 4, 0, 0x23];
+/// LibrePGP Ed448 (EdDSA) and X448 (ECDH) curve OIDs, used by GnuPG's v5 keys.
+const ED448_OID: &[u8] = &[0x2b, 0x65, 0x71];
+const X448_OID: &[u8] = &[0x2b, 0x65, 0x6f];
 const MESSAGE_LIMIT: usize = 24 * 1024 * 1024;
 fn auth() -> Error {
     Error::new("authentication_failed", "OpenPGP authentication failed")
@@ -87,17 +92,18 @@ struct Capability {
     encrypt: bool,
 }
 impl Key {
-    /// Parse any v4 or v6 public key. Unknown or disallowed algorithms remain
-    /// parseable for fingerprints and reporting; [`Key::capability`] decides use.
+    /// Parse any v4, LibrePGP v5 or v6 public key. Unknown or disallowed
+    /// algorithms remain parseable for fingerprints and reporting;
+    /// [`Key::capability`] decides use.
     fn parse(data: &[u8]) -> Result<Self> {
         let mut r = Reader::new(data);
         let version = r.byte()?;
-        if !matches!(version, 4 | 6) {
+        if !matches!(version, 4..=6) {
             return Err(unsupported());
         }
         let created = r.u32()? as u64;
         let alg = r.byte()?;
-        let mut material = if version == 6 {
+        let mut material = if version != 4 {
             let len = r.u32()? as usize;
             Reader::new(r.take(len)?)
         } else {
@@ -148,9 +154,22 @@ impl Key {
             }
         };
         material.finish()?;
-        if version == 6 {
+        if version != 4 {
             r.finish()?;
         }
+        // GnuPG writes native Curve448 points as MPIs, which drop leading zeros.
+        let width = match (alg, oid.as_slice()) {
+            (22, ED448_OID) => 57,
+            (18, X448_OID) => 56,
+            _ => 0,
+        };
+        let public = if width != 0 && public.len() < width {
+            let mut padded = vec![0; width - public.len()];
+            padded.extend(public);
+            padded
+        } else {
+            public
+        };
         let mut key = Self {
             raw: data.to_vec(),
             version,
@@ -170,7 +189,7 @@ impl Key {
         Ok(key)
     }
     fn framed(&self) -> Vec<u8> {
-        let mut v = vec![if self.version == 4 { 0x99 } else { 0x9b }];
+        let mut v = vec![0x95 + self.version];
         if self.version == 4 {
             v.extend_from_slice(&(self.raw.len() as u16).to_be_bytes());
         } else {
@@ -197,13 +216,21 @@ impl Key {
         (self.public.len() == size && public::ecdsa_public_valid(curve, &self.public))
             .then_some(curve)
     }
-    /// Legacy Curve25519 ECDH key with a native-point prefix (v4 only).
+    /// Legacy Curve25519 ECDH key with a native-point prefix (v4 or v5).
     fn cv25519(&self) -> bool {
         self.alg == 18
-            && self.version == 4
+            && self.version != 6
             && self.oid == X_OID
             && self.public.len() == 33
             && self.public[0] == 64
+    }
+    /// LibrePGP X448 ECDH key with a native 56-byte point (v4 or v5).
+    fn cv448(&self) -> bool {
+        self.alg == 18 && self.version != 6 && self.oid == X448_OID && self.public.len() == 56
+    }
+    /// LibrePGP Ed448 EdDSA key with a native 57-byte point (v4 or v5).
+    fn ed448_legacy(&self) -> bool {
+        self.alg == 22 && self.version != 6 && self.oid == ED448_OID && self.public.len() == 57
     }
     fn ecdh_kdf(&self) -> bool {
         self.kdf.len() == 3
@@ -238,8 +265,9 @@ impl Key {
                 (format!("rsa-{bits}"), usable, usable)
             }
             19 => (curve("ecdsa"), self.nist().is_some(), false),
+            22 if self.ed448_legacy() => ("ed448".into(), true, false),
             22 => {
-                let ok = self.version == 4
+                let ok = self.version != 6
                     && self.oid == ED_OID
                     && self.public.len() == 33
                     && self.public[0] == 64;
@@ -248,6 +276,7 @@ impl Key {
             27 => ("ed25519".into(), true, false),
             28 => ("ed448".into(), true, false),
             18 if self.cv25519() => ("ecdh-cv25519".into(), false, self.ecdh_kdf()),
+            18 if self.cv448() => ("ecdh-cv448".into(), false, self.ecdh_kdf()),
             18 => (
                 curve("ecdh"),
                 false,
@@ -273,6 +302,7 @@ impl Key {
         match (self.alg, self.nist()) {
             (19, Some(public::Curve::P384)) => 48,
             (19, Some(public::Curve::P521)) | (28, _) => 64,
+            (22, _) if self.ed448_legacy() => 64,
             _ => 32,
         }
     }
@@ -296,28 +326,31 @@ struct Sig {
     issuer_id: Option<Vec<u8>>,
     back: Option<Vec<u8>>,
     understood: bool,
+    /// LibrePGP v5 document signatures also hash the literal packet's format,
+    /// file name and date; detached signatures hash six zero octets instead.
+    literal: Vec<u8>,
 }
 impl Sig {
     fn parse(data: &[u8]) -> Result<Self> {
         let mut r = Reader::new(data);
         let version = r.byte()?;
-        if !matches!(version, 4 | 6) {
+        if !matches!(version, 4..=6) {
             return Err(invalid("Unsupported OpenPGP signature version"));
         }
         let kind = r.byte()?;
         let alg = r.byte()?;
         let hash = r.byte()?;
-        let len = if version == 4 {
-            r.u16()? as usize
-        } else {
+        let len = if version == 6 {
             r.u32()? as usize
+        } else {
+            r.u16()? as usize
         };
         let hashed = r.take(len)?;
         let prefix = data[..data.len() - r.data.len()].to_vec();
-        let len = if version == 4 {
-            r.u16()? as usize
-        } else {
+        let len = if version == 6 {
             r.u32()? as usize
+        } else {
+            r.u16()? as usize
         };
         let unhashed = r.take(len)?;
         let check = r.take(2)?.try_into().unwrap();
@@ -345,6 +378,7 @@ impl Sig {
             issuer_id: None,
             back: None,
             understood: true,
+            literal: vec![0; 6],
         };
         for (area, trusted) in [(hashed, true), (unhashed, false)] {
             let mut r = Reader::new(area);
@@ -382,7 +416,9 @@ impl Sig {
                         32 => s.back = Some(p.data.to_vec()),
                         33 => {
                             let v = p.byte()?;
-                            if (v == 4 && p.data.len() == 20) || (v == 6 && p.data.len() == 32) {
+                            if (v == 4 && p.data.len() == 20)
+                                || (matches!(v, 5 | 6) && p.data.len() == 32)
+                            {
                                 s.issuer = Some(p.data.to_vec());
                             } else {
                                 s.understood = false;
@@ -419,8 +455,16 @@ impl Sig {
         let mut v = self.salt.clone();
         v.extend_from_slice(data);
         v.extend_from_slice(&self.prefix);
-        v.extend_from_slice(&[self.version, 255]);
-        v.extend_from_slice(&(self.prefix.len() as u32).to_be_bytes());
+        if self.version == 5 {
+            if self.kind <= 1 {
+                v.extend_from_slice(&self.literal);
+            }
+            v.extend_from_slice(&[5, 255]);
+            v.extend_from_slice(&(self.prefix.len() as u64).to_be_bytes());
+        } else {
+            v.extend_from_slice(&[self.version, 255]);
+            v.extend_from_slice(&(self.prefix.len() as u32).to_be_bytes());
+        }
         v
     }
     fn verify(&self, key: &Key, data: &[u8]) -> bool {
@@ -465,6 +509,9 @@ impl Sig {
         match self.alg {
             27 => Ed25519::verify(&key.public, &d, &self.value).is_ok(),
             28 => curve448::ed448_verify(&key.public, &d, &self.value),
+            22 if key.ed448_legacy() => integers(2)
+                .and_then(|v| fixed(&v, 57))
+                .is_some_and(|sig| curve448::ed448_verify(&key.public, &d, &sig)),
             22 if key.signing() => integers(2)
                 .and_then(|v| fixed(&v, 32))
                 .is_some_and(|sig| Ed25519::verify(&key.public[1..], &d, &sig).is_ok()),
@@ -652,9 +699,9 @@ impl Cert {
                             "Too many certificate signatures",
                         ));
                     }
-                    // Legacy v3 and LibrePGP v5 signatures cannot authenticate
-                    // any component under this policy; count and skip them.
-                    if !matches!(p.body.first(), Some(4 | 6)) {
+                    // Legacy v3 signatures cannot authenticate any component
+                    // under this policy; count and skip them.
+                    if !matches!(p.body.first(), Some(4..=6)) {
                         continue;
                     }
                     let s = Sig::parse(&p.body)?;
@@ -715,7 +762,7 @@ impl Cert {
                 .max_by_key(|s| s.created)
             {
                 users.push(String::from_utf8_lossy(uid).to_string());
-                if primary.version == 4 {
+                if primary.version != 6 {
                     bindings.push(s);
                 }
             }
@@ -725,7 +772,7 @@ impl Cert {
                 .iter()
                 .filter(|s| s.kind == 0x1f && s.live(at) && s.verify(primary, &frame)),
         );
-        let binding = if primary.version == 4 && users.is_empty() {
+        let binding = if primary.version != 6 && users.is_empty() {
             None
         } else {
             bindings.into_iter().max_by_key(|s| s.created)
@@ -801,7 +848,7 @@ impl Cert {
             if i != 0 && !primary.signing() {
                 issues.push("primary key algorithm is not accepted by IPG policy".into());
             }
-            if i == 0 && primary.version == 4 && users.is_empty() {
+            if i == 0 && primary.version != 6 && users.is_empty() {
                 issues.push("no valid self-certified User ID".into());
             }
             keys.push(ComponentKey {
@@ -1372,6 +1419,7 @@ impl Agreement {
             25 => Some(Self::X25519),
             26 => Some(Self::X448),
             18 if key.cv25519() => Some(Self::X25519),
+            18 if key.cv448() => Some(Self::X448),
             18 => Some(match key.nist()? {
                 public::Curve::P256 => Self::P256,
                 public::Curve::P384 => Self::P384,
@@ -1487,7 +1535,14 @@ fn wrapping_key(
             data.extend([18, 3]);
             data.extend(&key.kdf);
             data.extend(b"Anonymous Sender    ");
-            data.extend(&key.fingerprint);
+            // LibrePGP binds only the leftmost 20 octets of a v5 fingerprint.
+            data.extend(
+                &key.fingerprint[..if key.version == 5 {
+                    20
+                } else {
+                    key.fingerprint.len()
+                }],
+            );
             let mut hash = Zeroizing::new(digest(key.kdf[1], &data)?);
             hash.truncate(aes_key_len(key.kdf[2]).ok_or_else(unsupported)?);
             Ok(hash)
@@ -1528,7 +1583,7 @@ fn key_wrap(key: &[u8], data: &[u8], decrypt: bool) -> Result<Zeroizing<Vec<u8>>
 }
 /// A PKESK packet body carrying an AES-256 session key to one recipient key.
 fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
-    let mut body = if key.version == 4 {
+    let mut body = if key.version != 6 {
         let mut v = vec![3];
         v.extend(key.id());
         v
@@ -1540,7 +1595,7 @@ fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
     body.push(key.alg);
     // v3 packets name the symmetric algorithm; RSA and ECDH add a checksum.
     let mut raw = Zeroizing::new(Vec::new());
-    if key.version == 4 && !matches!(key.alg, 25 | 26) {
+    if key.version != 6 && !matches!(key.alg, 25 | 26) {
         raw.push(9);
     }
     raw.extend_from_slice(session);
@@ -1572,7 +1627,7 @@ fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
         body.push(wrapped.len() as u8);
     } else {
         body.extend(ephemeral);
-        if key.version == 4 {
+        if key.version != 6 {
             body.push(wrapped.len() as u8 + 1);
             body.push(9);
         } else {
@@ -1661,7 +1716,7 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Sessio
         }
     }
     let expected = match cipher {
-        Some(cipher) => aes_key_len(cipher).ok_or_else(unsupported)?,
+        Some(cipher) => cipher_key_len(cipher).ok_or_else(unsupported)?,
         None => raw.len(),
     };
     if raw.len() != expected || !matches!(raw.len(), 16 | 24 | 32) {
@@ -1726,21 +1781,24 @@ fn seal_message(session: &[u8], version: u8, plain: &[u8]) -> Result<Vec<u8>> {
 fn open_message(session: &Session, version: u8, body: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     if body.first() == Some(&1) && version == 4 {
         // v3 PKESKs name the cipher; its key length must match the session key.
-        if session.cipher.and_then(aes_key_len) != Some(session.key.len()) {
+        // Legacy ciphers are accepted for reading only.
+        let cipher = session.cipher.ok_or_else(unsupported)?;
+        let block = cipher_block_len(cipher).ok_or_else(unsupported)?;
+        if cipher_key_len(cipher) != Some(session.key.len()) {
             return Err(unsupported());
         }
-        let data = cfb(&session.key, &[0; 16], &body[1..], true)?;
-        if data.len() < 40 {
+        let data = cfb_decrypt(cipher, &session.key, &vec![0; block], &body[1..])?;
+        if data.len() < block + 24 {
             return Err(auth());
         }
         let n = data.len();
-        if !ic_core::ct::verify(&data[14..16], &data[16..18])
+        if !ic_core::ct::verify(&data[block - 2..block], &data[block..block + 2])
             || data[n - 22..n - 20] != [0xd3, 0x14]
             || !ic_core::ct::verify(&Sha1::digest(&data[..n - 20]), &data[n - 20..])
         {
             return Err(auth());
         }
-        Ok(Zeroizing::new(data[18..n - 22].to_vec()))
+        Ok(Zeroizing::new(data[block + 2..n - 22].to_vec()))
     } else if body.first() == Some(&2) && version == 6 {
         if body.len() < 52 {
             return Err(auth());
@@ -1826,13 +1884,15 @@ pub(crate) fn encrypt(
                 "Recipient has no usable encryption key",
             ));
         }
-        if version != 0 && version != cert.keys[0].version {
+        // v4 and LibrePGP v5 recipients share v3 PKESKs and SEIPDv1.
+        let family = if cert.keys[0].version == 6 { 6 } else { 4 };
+        if version != 0 && version != family {
             return Err(Error::new(
                 "invalid_request",
                 "Mixed v4/v6 recipients are not supported",
             ));
         }
-        version = cert.keys[0].version;
+        version = family;
         certs.push(cert);
         reports.push(report);
     }
@@ -1999,11 +2059,14 @@ pub(crate) fn verify_message(
     } else {
         &packets[0]
     };
-    let sig = Sig::parse(&signature.body)?;
+    let mut sig = Sig::parse(&signature.body)?;
+    // The literal packet is second in both accepted layouts.
+    let header = &packets[1].body;
+    sig.literal = header[..2 + header[1] as usize + 4].to_vec();
     if packets.len() == 3 {
         let mut one = Reader::new(&packets[0].body);
         let v = one.byte()?;
-        if (sig.version == 4 && v != 3)
+        if (matches!(sig.version, 4 | 5) && v != 3)
             || (sig.version == 6 && v != 6)
             || one.byte()? != sig.kind
             || one.byte()? != sig.hash
@@ -2286,7 +2349,8 @@ fn protection<'a>(key: &Key, data: &'a [u8]) -> Result<Protection<'a>> {
     }
     if usage == 254 && key.version == 4 {
         let cipher = r.byte()?;
-        if !matches!(cipher, 7..=9) || r.byte()? != 3 {
+        let block = cipher_block_len(cipher).ok_or_else(unsupported)?;
+        if r.byte()? != 3 {
             return Err(unsupported());
         }
         let hash = r.byte()?;
@@ -2295,7 +2359,7 @@ fn protection<'a>(key: &Key, data: &'a [u8]) -> Result<Protection<'a>> {
         }
         let salt = r.take(8)?;
         let count = r.byte()?;
-        let iv = r.take(16)?;
+        let iv = r.take(block)?;
         if r.data.len() < 20 || r.data.len() > MAX_SECRET_BYTES {
             return Err(invalid("Invalid protected secret-key length"));
         }
@@ -2367,13 +2431,9 @@ fn unlock_packet(p: &Packet, password: &[u8]) -> Result<Packet> {
                 salt,
                 count,
                 password,
-                match cipher {
-                    7 => 16,
-                    8 => 24,
-                    _ => 32,
-                },
+                cipher_key_len(cipher).ok_or_else(unsupported)?,
             )?;
-            let mut plain = cfb(&wrapping, iv, encrypted, true)?;
+            let mut plain = cfb_decrypt(cipher, &wrapping, iv, encrypted)?;
             let n = plain.len();
             if !ic_core::ct::verify(&Sha1::digest(&plain[..n - 20]), &plain[n - 20..]) {
                 return Err(auth());
@@ -2632,6 +2692,48 @@ mod tests {
         secret.cert.signatures[0].push(signature);
         assert!(secret.cert.evaluate(now().unwrap()).revoked);
     }
+    /// Old exports may protect secret packets with legacy ciphers. GnuPG no
+    /// longer writes them, so protect a real v4 packet here with a test-only
+    /// CFB encryptor and require import's unlock path to recover it exactly.
+    #[test]
+    fn legacy_cipher_secret_key_protection_unlocks() {
+        let key =
+            generate_version("Legacy S2K", Algorithm::Ed25519, Version::V4, PASSWORD).unwrap();
+        let secret = unseal(&key, PASSWORD).unwrap();
+        let original = secret.packets.iter().find(|p| p.tag == 5).unwrap();
+        let end = public_end(&original.body).unwrap();
+        let material = &original.body[end + 1..original.body.len() - 2];
+        for cipher in [1, 2, 3, 4, 10, 11, 12, 13] {
+            let block = cipher_block_len(cipher).unwrap();
+            let salt = [7u8; 8];
+            let iv: Vec<u8> = (0..block as u8).collect();
+            let wrapping =
+                iterated_s2k(8, &salt, 96, PASSWORD, cipher_key_len(cipher).unwrap()).unwrap();
+            let mut plain = material.to_vec();
+            plain.extend(Sha1::digest(material));
+            let legacy = super::super::legacy::Legacy::new(cipher, &wrapping).unwrap();
+            let mut feedback = iv.clone();
+            let mut sealed = Vec::new();
+            for chunk in plain.chunks(block) {
+                let mut pad = feedback.clone();
+                legacy.encrypt_block(&mut pad);
+                let out: Vec<u8> = chunk.iter().zip(&pad).map(|(a, b)| a ^ b).collect();
+                feedback[..out.len()].copy_from_slice(&out);
+                sealed.extend(out);
+            }
+            let mut body = original.body[..end].to_vec();
+            body.extend([254, cipher, 3, 8]);
+            body.extend(salt);
+            body.push(96);
+            body.extend(&iv);
+            body.extend(&sealed);
+            let protected = Packet { tag: 5, body };
+            let unlocked = unlock_packet(&protected, PASSWORD).unwrap();
+            assert_eq!(unlocked.body, original.body, "cipher {cipher}");
+            assert!(unlock_packet(&protected, b"wrong legacy passphrase").is_err());
+        }
+    }
+
     #[test]
     fn fixed_width_gnupg_secret_mpis_still_require_matching_public_keys() {
         for (alg, oid, size) in [(22, ED_OID, 32), (19, P384_OID, 48)] {

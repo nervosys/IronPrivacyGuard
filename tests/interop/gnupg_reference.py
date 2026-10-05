@@ -53,6 +53,11 @@ def exercise(executable, gpg, directory):
             raise AssertionError(f"gpg {args}: {result.stderr.decode(errors='replace')}")
         return result
 
+    def fingerprint_any(uid):
+        # v5 fingerprints are 64 hex digits.
+        listing = run_gpg("--with-colons", "--fingerprint", f"<{uid}>").stdout.decode()
+        return re.search(r"^fpr:+([0-9A-F]{40,64}):", listing, re.M).group(1)
+
     def fingerprint(uid):
         # <email> matches exactly; a bare substring would also match ipg-<email>.
         listing = run_gpg("--with-colons", "--fingerprint", f"<{uid}>").stdout.decode()
@@ -83,6 +88,7 @@ def exercise(executable, gpg, directory):
         return response["error"]
 
     data = bytes(range(256)) * 40 + b"\r\nend\n"
+    skipped = []
     source = put("data", data)
     password = put("passphrase", PASSPHRASE)
 
@@ -110,6 +116,23 @@ def exercise(executable, gpg, directory):
         out = str(directory / f"from-gpg-{algorithm}")
         assert call("openpgp.decrypt", input=message, output=out, key=key, passphrase_file=password)["signed"] is False
         assert Path(out).read_bytes() == data
+        # BZip2 compression, which IPG decodes natively.
+        compressed = str(directory / f"to-{algorithm}-bzip2.asc")
+        run_gpg("--armor", "--compress-algo", "bzip2", "--recipient", generated["fingerprint"],
+                "--output", compressed, "--encrypt", source)
+        call("openpgp.decrypt", input=compressed, output=f"{out}-bzip2", key=key, passphrase_file=password)
+        assert Path(f"{out}-bzip2").read_bytes() == data
+        # Legacy ciphers are read-only compatibility; GnuPG needs an override to use them.
+        for cipher in ["IDEA", "3DES", "CAST5", "BLOWFISH", "TWOFISH", "CAMELLIA128", "CAMELLIA192",
+                       "CAMELLIA256"]:
+            legacy = str(directory / f"to-{algorithm}-{cipher}.gpg")
+            made = run_gpg("--allow-old-cipher-algos", "--cipher-algo", cipher, "--recipient",
+                           generated["fingerprint"], "--output", legacy, "--encrypt", source, check=False)
+            if made.returncode != 0:
+                skipped.append(f"legacy-{cipher}")
+                continue
+            call("openpgp.decrypt", input=legacy, output=f"{out}-{cipher}", key=key, passphrase_file=password)
+            assert Path(f"{out}-{cipher}").read_bytes() == data
         # Senders may choose smaller AES keys despite IPG's AES-256 preference.
         for cipher in ["AES128", "AES192"]:
             forced = str(directory / f"to-{algorithm}-{cipher}.asc")
@@ -284,7 +307,6 @@ def exercise(executable, gpg, directory):
          expected_openpgp_fingerprint=revoked_fp)
     assert call("openpgp.cert.inspect", input=revoked_cert)["certificate"]["revoked"] is True
 
-    skipped = []
     # SHA-1 self-signatures leave no valid User ID binding.
     made = run_gpg("--cert-digest-algo", "SHA1", "--quick-gen-key", "Sha1 <sha1@example.test>", "rsa2048",
                    "default", "never", check=False)
@@ -326,6 +348,32 @@ def exercise(executable, gpg, directory):
         run_gpg("--local-user", fp, "--output", weak_signature, "--detach-sign", source)
         call("openpgp.verify", "policy_mismatch", input=source, signature=weak_signature, certificate=cert,
              expected_openpgp_fingerprint=fp)
+
+    # LibrePGP v5 keys: GnuPG versions with Ed448 create them as v5 packets.
+    made = run_gpg("--quick-gen-key", "V5 <v5@example.test>", "ed448", "default", "never", check=False)
+    if made.returncode == 0:
+        v5_fp = fingerprint_any("v5@example.test")
+        run_gpg("--quick-add-key", v5_fp, "cv448", "encr", "never")
+        v5_cert = export("v5@example.test", "v5.asc")
+        report = call("openpgp.cert.inspect", input=v5_cert)["certificate"]
+        assert [k["algorithm"] for k in report["keys"]] == ["ed448", "ecdh-cv448"], report
+        assert report["usable_for_signing"] and report["usable_for_encryption"], report
+        for mode, args in [("detached", ["--detach-sign"]), ("embedded", ["--sign"]),
+                           ("text", ["--textmode", "--compress-algo", "bzip2", "--sign"])]:
+            signed = str(directory / f"v5-{mode}.sig")
+            run_gpg("--local-user", v5_fp, "--output", signed, *args, source)
+            if mode == "detached":
+                call("openpgp.verify", input=source, signature=signed, certificate=v5_cert,
+                     expected_openpgp_fingerprint=v5_fp)
+            else:
+                call("openpgp.message.verify", input=signed, output=signed + ".out", certificate=v5_cert,
+                     expected_openpgp_fingerprint=v5_fp)
+        message = str(directory / "to-v5.asc")
+        call("openpgp.encrypt", input=source, output=message,
+             recipients=[{"certificate": v5_cert, "expected_openpgp_fingerprint": v5_fp}])
+        assert run_gpg("--decrypt", message).stdout == data
+    else:
+        skipped.append("librepgp-v5-ed448")
 
     # Tampered ciphertext is refused and releases nothing.
     message = directory / "to-ed25519.asc"

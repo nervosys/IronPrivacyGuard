@@ -20,6 +20,13 @@ impl Zeroize for Vec<u8> {
         self.clear();
     }
 }
+impl Zeroize for Vec<u32> {
+    fn zeroize(&mut self) {
+        self.resize(self.capacity(), 0);
+        ic_core::Zeroize::zeroize(self.as_mut_slice());
+        self.clear();
+    }
+}
 impl Zeroize for String {
     fn zeroize(&mut self) {
         // into_bytes transfers the allocation; no UTF-8 mutation or unsafe code.
@@ -73,7 +80,7 @@ mod tests {
     fn secret_debug_is_redacted_and_owned_buffers_are_cleared() {
         let value = Zeroizing::new("do not disclose".to_string());
         assert_eq!(format!("{value:?}"), "Zeroizing([REDACTED])");
-        let mut bytes = vec![42; 64];
+        let mut bytes = vec![42u8; 64];
         bytes.truncate(4);
         let capacity = bytes.capacity();
         bytes.zeroize();

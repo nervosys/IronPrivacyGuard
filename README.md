@@ -16,7 +16,7 @@ encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS K
 signatures, signed revocation and validity certificates, and pinned immutable trust
 snapshots.
 
-**IronPrivacyGuard 0.1.2 is an experimental pre-1.0 release.** It is not an
+**IronPrivacyGuard 0.2.0 is an experimental pre-1.0 release.** It is not an
 audited or drop-in GPG replacement.
 Native IPG keys, envelopes and signatures are not OpenPGP. A separate
 [OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
@@ -32,12 +32,11 @@ See [dependency boundaries](docs/DEPENDENCIES.md).
 Install the CLI from [crates.io](https://crates.io/crates/ipg):
 
 ```sh
-cargo install ipg --version 0.1.2 --locked
+cargo install ipg --version 0.2.0 --locked
 ```
 
-This installs the published 0.1.2 core CLI. The IronCrypto-only OpenPGP, KMS and
-TLS work described here is a later, unreleased change in this checkout. Hardware and broader interoperability integrations are
-optional Cargo features; see their sections below. Prebuilt release binaries and
+This installs the 0.2.0 CLI, including native OpenPGP. Hardware and cloud
+integrations are optional Cargo features; see their sections below. Prebuilt release binaries and
 checksums are published on the [GitHub releases page](https://github.com/nervosys/IronPrivacyGuard/releases).
 
 ## Build
@@ -384,8 +383,10 @@ IPG generates v4 (default) or v6 OpenPGP keys (Ed25519, or P-384 for
 CNSA-aligned use), exports their certificates, encrypts to up to 32 pinned
 certificates, decrypts, and creates and verifies detached signatures.
 Correspondents may use RSA 2048-4096, P-256/P-384/P-521, Ed25519, Ed448,
-Curve25519, X25519 or X448 keys, and send AES-128/192/256 messages using SEIPDv1
-or SEIPDv2 with EAX, OCB or GCM. Output
+Curve25519, Curve448, X25519 or X448 keys, including GnuPG's LibrePGP v5 keys,
+and send AES-128/192/256 messages using SEIPDv1 or SEIPDv2 with EAX, OCB or
+GCM, compressed with ZIP, ZLIB or BZip2. Old messages and protected keys using
+IDEA, TripleDES, CAST5, Blowfish, Twofish or Camellia can be read, never written. Output
 from the default v4 path interoperates with GnuPG 2.2 and later. Select v6 with
 `--key-version v6` for correspondents supporting RFC 9580 and SEIPDv2/OCB.
 
