@@ -96,7 +96,7 @@ pub(crate) fn load() -> Result<Vec<Anchor>> {
             Ok(Anchor {
                 subject: decode(root.subject)?,
                 spki: decode(root.spki)?,
-                name_constraints: root.name_constraints.map(&decode).transpose()?,
+                name_constraints: root.name_constraints.map(decode).transpose()?,
             })
         })
         .collect()
