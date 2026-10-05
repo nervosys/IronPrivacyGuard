@@ -1,6 +1,10 @@
-//! Bounded, offline path building for explicitly pinned attestation roots.
+//! Bounded, offline path building with separate EK and TLS server purposes.
 //! No fetching, revocation service, or authorization decisions occur here.
-use super::{Certificate, boolean, der, malformed, name, oid, signature};
+use super::{
+    Certificate, boolean, der,
+    identity::{Reference, valid_domain},
+    malformed, name, oid, signature,
+};
 use crate::error::{Error, Result};
 use ic_pkix::der::Reader;
 
@@ -8,6 +12,7 @@ const MAX_PATH: usize = 8;
 const MAX_CANDIDATES: usize = 64;
 const MAX_SIGNATURE_CHECKS: usize = 256;
 const EK_USAGE: &[u8] = &[0x67, 0x81, 0x05, 8, 1];
+const SERVER_USAGE: &[u8] = &[0x2b, 6, 1, 5, 5, 7, 3, 1];
 
 #[derive(Clone, Copy)]
 struct GeneralName<'a> {
@@ -50,6 +55,7 @@ struct Policy<'a> {
     path_length: Option<u64>,
     usage: bool,
     can_sign: bool,
+    digital_signature: bool,
     names: Vec<GeneralName<'a>>,
     permitted: Vec<GeneralName<'a>>,
     excluded: Vec<GeneralName<'a>>,
@@ -74,12 +80,13 @@ fn subtrees<'a>(reader: &mut Reader<'a>, tag: u8) -> Result<Vec<GeneralName<'a>>
 }
 
 impl<'a> Policy<'a> {
-    fn parse(certificate: &Certificate<'a>) -> Result<Self> {
+    fn parse(certificate: &Certificate<'a>, usage: &[u8]) -> Result<Self> {
         let mut policy = Self {
             ca: false,
             path_length: None,
             usage: true,
             can_sign: true,
+            digital_signature: true,
             names: vec![GeneralName {
                 tag: 0xa4,
                 value: certificate.subject,
@@ -120,6 +127,7 @@ impl<'a> Policy<'a> {
                         return Err(malformed());
                     }
                     policy.can_sign = bits[1] & 0x04 != 0;
+                    policy.digital_signature = bits[1] & 0x80 != 0;
                 }
                 [0x55, 0x1d, 37] => {
                     let mut value = der(outer.sequence())?;
@@ -137,7 +145,7 @@ impl<'a> Policy<'a> {
                             return Err(malformed());
                         }
                         seen.push(id);
-                        policy.usage |= id == EK_USAGE;
+                        policy.usage |= id == usage;
                     }
                 }
                 [0x55, 0x1d, 17] => {
@@ -200,20 +208,6 @@ impl<'a> Policy<'a> {
                     .all(|c| matches(name, c) == Some(false))
         })
     }
-}
-
-fn valid_domain(value: &[u8]) -> bool {
-    !value.is_empty()
-        && value.len() <= 253
-        && value.split(|b| *b == b'.').all(|label| {
-            !label.is_empty()
-                && label.len() <= 63
-                && label[0] != b'-'
-                && label[label.len() - 1] != b'-'
-                && label
-                    .iter()
-                    .all(|b| b.is_ascii_alphanumeric() || *b == b'-')
-        })
 }
 
 fn domain(name: &[u8], constraint: &[u8]) -> Option<bool> {
@@ -279,9 +273,9 @@ struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
-    fn parse(bytes: &'a [u8]) -> Result<Self> {
+    fn parse(bytes: &'a [u8], usage: &[u8]) -> Result<Self> {
         let certificate = Certificate::parse(bytes)?;
-        let policy = Policy::parse(&certificate)?;
+        let policy = Policy::parse(&certificate, usage)?;
         Ok(Self {
             certificate,
             policy,
@@ -376,13 +370,61 @@ fn constrained(issuer: &Node<'_>, path: &[&Node<'_>]) -> bool {
     })
 }
 
-/// Returns the caller's anchor index. Parsing or possession of a certificate
-/// alone never produces success. `now` is explicit for deterministic testing.
-pub(crate) fn verify(
+/// Verify a TPM endorsement certificate path and return the accepted root index.
+///
+/// Inputs are complete DER certificates, with independently accepted roots and
+/// a trusted Unix timestamp in seconds. Extended key usage, if present, must
+/// contain the TPM EK purpose. This checks neither binding to a TPM public area
+/// nor credential activation; it is not a complete TPM attestation check.
+pub fn verify(
     leaf: &[u8],
     anchors: &[Vec<u8>],
     intermediates: &[Vec<u8>],
     now: i64,
+) -> Result<usize> {
+    verify_for_usage(leaf, anchors, intermediates, now, EK_USAGE, None)
+}
+
+/// Verify a server certificate path and DNS-ID or IP-ID for a signing TLS peer.
+///
+/// `expected_server` is an independently selected ASCII DNS host or bare IP
+/// address, never a name chosen from certificate metadata. Matching uses SANs
+/// only; CN, URI-ID and SRV-ID fallback are unsupported. A wildcard must occupy
+/// exactly the left-most label, followed by at least two literal DNS labels.
+/// Internationalized names require caller-supplied ASCII A-labels. One terminal
+/// dot in a DNS reference is accepted. No IDNA conversion or public suffix list
+/// is provided. Wildcard SANs under DNS constraints currently fail closed.
+///
+/// Roots are complete DER certificates, not raw SPKIs or sequence contents.
+/// Returns the accepted root index. Success verifies the certificate only: a TLS
+/// implementation must still verify proof of key possession, the transcript and
+/// Finished before releasing credentials or application data. No network access,
+/// revocation checking, implicit roots or host authorization occurs here.
+pub fn verify_tls_server(
+    leaf: &[u8],
+    anchors: &[Vec<u8>],
+    intermediates: &[Vec<u8>],
+    now: i64,
+    expected_server: &str,
+) -> Result<usize> {
+    let identity = Reference::parse(expected_server)?;
+    verify_for_usage(
+        leaf,
+        anchors,
+        intermediates,
+        now,
+        SERVER_USAGE,
+        Some(identity),
+    )
+}
+
+fn verify_for_usage(
+    leaf: &[u8],
+    anchors: &[Vec<u8>],
+    intermediates: &[Vec<u8>],
+    now: i64,
+    usage: &[u8],
+    identity: Option<Reference<'_>>,
 ) -> Result<usize> {
     if anchors.is_empty() {
         return Err(Error::new(
@@ -396,7 +438,7 @@ pub(crate) fn verify(
             "Too many certificate path candidates",
         ));
     }
-    let leaf = Node::parse(leaf)?;
+    let leaf = Node::parse(leaf, usage)?;
     let rejected = || {
         Error::new(
             "key_not_trusted",
@@ -406,15 +448,25 @@ pub(crate) fn verify(
     if !leaf.valid(now, true) {
         return Err(rejected());
     }
+    if let Some(identity) = identity
+        && (!leaf.policy.digital_signature
+            || !leaf
+                .policy
+                .names
+                .iter()
+                .any(|name| identity.matches(name.tag, name.value)))
+    {
+        return Err(rejected());
+    }
     let mut search = Search {
         anchors: anchors
             .iter()
             .enumerate()
-            .filter_map(|(i, bytes)| Node::parse(bytes).ok().map(|n| (i, n)))
+            .filter_map(|(i, bytes)| Node::parse(bytes, usage).ok().map(|n| (i, n)))
             .collect(),
         intermediates: intermediates
             .iter()
-            .filter_map(|bytes| Node::parse(bytes).ok())
+            .filter_map(|bytes| Node::parse(bytes, usage).ok())
             .collect(),
         now,
         remaining: MAX_SIGNATURE_CHECKS,

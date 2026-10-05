@@ -570,6 +570,7 @@ pub fn operation(id: &str) -> Value {
         ],
         "kms.key.bind" => vec![
             "kms-provider",
+            "kms-tls-authentication",
             "non-exportable-key",
             "possession-check",
             "no-attestation",
@@ -1217,6 +1218,10 @@ pub fn export() -> Value {
             "AWS KMS is reached with the host's AWS credentials (environment, web identity through STS, static or IAM Identity Center profile, ECS/EKS container credentials or EC2 IMDSv2 instance profile) over TLS from rustls with IronCrypto; requests can never supply credentials or endpoints. IPG_KMS_FIPS=1 selects FIPS endpoints; IPG_KMS_ENDPOINT is for local test services. Keys are never created by IPG: provision one ECC_NIST_P384 KEY_AGREEMENT key and one ECC_NIST_P384 SIGN_VERIFY key, and optionally one ML_DSA_65 SIGN_VERIFY key for composite post-quantum signatures, with infrastructure tooling, and grant only kms:GetPublicKey, kms:Sign and kms:DeriveSharedSecret. With the ML-DSA key every signature, revocation and validity certificate needs both ECDSA P-384 and ML-DSA-65 to verify; IPG sends KMS the FIPS 204 message representative (MessageType EXTERNAL_MU), so the result is a standard pure ML-DSA signature with IPG's context. Encryption stays P-384 ECDH: KMS offers no ML-KEM, so such identities are not protected against later quantum decryption. Every private-key operation is a billable, logged KMS call and fails if the network or AWS is unavailable.",
         ),
         (
+            "kms-tls-authentication",
+            "KMS HTTPS uses rustls with IronCrypto and a bundled, pinned Mozilla public root set; native x509-native certificate APIs do not replace its TLS handshake. Certificate rejection returns non-retryable key_not_trusted; other TLS validation failures return non-retryable authentication_failed. Stop and obtain operator review. Never add a presented certificate to the trust set, disable name checks or downgrade protocols after failure. The static root set changes only through a reviewed rebuild; it does not follow OS root or revocation policy. Ordinary network failures may be retryable, but private-key requests are billable and must not be retried blindly after ambiguous completion.",
+        ),
+        (
             "stream-envelope",
             "ipg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an ipg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
         ),
@@ -1327,7 +1332,7 @@ pub fn export() -> Value {
         (
             "key_not_trusted",
             3,
-            "Enroll the independently pinned identity into the authoritative snapshot; do not bypass the requested policy.",
+            "Stop and identify the failed trust boundary. For identity snapshots, enroll only an independently accepted identity through the authoritative policy workflow. For TLS or TPM certificates, obtain operator review of the expected peer, clock and accepted roots; never enroll a presented certificate automatically or bypass verification.",
         ),
         (
             "key_revoked",
@@ -1489,5 +1494,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.32.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.33.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

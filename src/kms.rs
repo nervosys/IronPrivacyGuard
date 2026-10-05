@@ -17,7 +17,7 @@ use ipg_json::{Value, json};
 use std::{
     io::{Read, Write},
     net::TcpStream,
-    sync::Arc,
+    sync::{Arc, OnceLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -729,28 +729,62 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
 }
 
 fn tls_config() -> Result<Arc<rustls::ClientConfig>> {
+    // Bundled roots and protocol policy are immutable for this binary. Decode
+    // them once instead of reparsing public root data for each KMS request.
+    static CONFIG: OnceLock<Arc<rustls::ClientConfig>> = OnceLock::new();
+    if let Some(config) = CONFIG.get() {
+        return Ok(Arc::clone(config));
+    }
     let roots = rustls::RootCertStore {
-        roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+        roots: crate::tls_roots::load()?
+            .into_iter()
+            .map(|root| rustls::pki_types::TrustAnchor {
+                subject: root.subject.into(),
+                subject_public_key_info: root.spki.into(),
+                name_constraints: root.name_constraints.map(Into::into),
+            })
+            .collect(),
     };
-    Ok(Arc::new(
+    let config = Arc::new(
         rustls::ClientConfig::builder_with_provider(ic_rustls::arc_provider())
             .with_safe_default_protocol_versions()
             .map_err(|e| Error::new("provider_error", format!("TLS configuration: {e}")))?
             .with_root_certificates(roots)
             .with_no_client_auth(),
-    ))
+    );
+    let _ = CONFIG.set(Arc::clone(&config));
+    Ok(config)
 }
 
 fn transport(endpoint: &Endpoint, request: &[u8]) -> Result<Vec<u8>> {
     exchange(endpoint, request, Duration::from_secs(30))
 }
+
+fn network_error(error: std::io::Error) -> Error {
+    // rustls wraps record/handshake failures as io::Error with the typed TLS
+    // error as its payload. Authentication rejection is not a transient outage.
+    if let Some(tls) = error
+        .get_ref()
+        .and_then(|cause| cause.downcast_ref::<rustls::Error>())
+    {
+        let code = match tls {
+            rustls::Error::InvalidCertificate(_) | rustls::Error::NoCertificatesPresented => {
+                "key_not_trusted"
+            }
+            _ => "authentication_failed",
+        };
+        return Error::new(code, format!("AWS TLS validation failed: {tls}"));
+    }
+    Error {
+        code: "provider_error",
+        message: format!("AWS network error: {error}"),
+        retryable: true,
+    }
+}
+
 fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Vec<u8>> {
     use std::net::ToSocketAddrs;
-    let network = |e: std::io::Error| Error {
-        code: "provider_error",
-        message: format!("AWS network error: {e}"),
-        retryable: true,
-    };
+    let network = network_error;
     let address = (endpoint.host.trim_matches(['[', ']']), endpoint.port)
         .to_socket_addrs()
         .map_err(network)?
@@ -1173,6 +1207,33 @@ pub fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tls_configuration_accepts_bundled_roots() {
+        // Construction uses the real bundled data and normal verifying builder;
+        // no test verifier, custom roots or authentication bypass is installed.
+        assert!(tls_config().is_ok());
+    }
+
+    #[test]
+    fn tls_validation_failures_never_suggest_network_retries() {
+        for tls in [
+            rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer),
+            rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature),
+            rustls::Error::NoCertificatesPresented,
+            rustls::Error::DecryptError,
+        ] {
+            let error = network_error(std::io::Error::new(std::io::ErrorKind::InvalidData, tls));
+            assert!(!error.retryable);
+            assert!(matches!(
+                error.code,
+                "key_not_trusted" | "authentication_failed"
+            ));
+        }
+        let timeout = network_error(std::io::ErrorKind::TimedOut.into());
+        assert_eq!(timeout.code, "provider_error");
+        assert!(timeout.retryable);
+    }
 
     #[test]
     fn sigv4_matches_the_published_get_vanilla_vector() {

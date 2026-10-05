@@ -51,6 +51,8 @@ pub fn build() -> Value {
         "core_external_executables_required":false,
         "core_requirements":["operating-system entropy", "filesystem access", "host clock"],
         "openpgp_backend":crate::openpgp::IMPLEMENTATION,
+        "native_x509":cfg!(feature = "x509-native"),
+        "kms_tls_backend":if cfg!(feature = "kms") { "rustls with IronCrypto" } else { "not_compiled" },
         "optional_integrations":{
             "pkcs11":{"compiled":cfg!(feature = "pkcs11"),"requires":"vendor library and token"},
             "tpm":{"compiled":cfg!(feature = "tpm"),"requires":"TPM transport; native Linux device or loopback swtpm; Windows uses OS TPM services"},

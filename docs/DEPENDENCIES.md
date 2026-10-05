@@ -32,6 +32,11 @@ IronCrypto primitives; see [the supported profile](ATTESTATION.md#native-certifi
 `ic-rustls` supplies primitives to rustls, not a standalone TLS engine, and
 therefore does not satisfy the transitive dependency gate. Its replacement must
 retain TLS peer-name, certificate-path and handshake authentication.
+The `webpki-roots` crate has been replaced by bundled public trust-anchor data;
+all 121 roots and their constraints match the previously pinned store. See
+[root provenance and maintenance](../data/README.md). The `x509-native` feature
+provides [offline TLS server certificate checks](X509.md) without additional
+third-party crates; it is not yet the KMS TLS transport.
 Removing certificate checks or silently disabling existing integrations is not
 a completed migration. Independent certificate-policy fixtures in
 `tests/vectors/attestation-certificate-policy.json`, `x509-signatures.json` and
@@ -51,6 +56,7 @@ Windows. Output directories must be access-controlled by the host.
 | `tpm` | TPM and configured native transport; Windows uses OS TPM services; native attestation uses IronCrypto only |
 | `kms` | Network, AWS services, credentials and provisioned keys |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
+| `x509-native` | Caller-selected roots, certificate chain, trusted time and (for TLS) expected host; offline Rust API only |
 
 The native PKCS#11 wrapper loads only the host-configured module. That module is
 trusted native code and must obey the PKCS#11 ABI; size checks cannot sandbox a

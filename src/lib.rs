@@ -31,6 +31,8 @@ pub mod reconciliation;
 pub mod secrets;
 pub mod stream;
 pub mod stream_signature;
+#[cfg(feature = "kms")]
+mod tls_roots;
 #[cfg(feature = "attestation")]
 mod tpm2;
 #[cfg(feature = "tpm")]
@@ -38,8 +40,8 @@ mod tpm_native;
 pub mod transport;
 pub mod trust;
 pub mod validation;
-#[cfg(feature = "attestation")]
-mod x509;
+#[cfg(feature = "x509-native")]
+pub mod x509;
 
 use crate::crypto::{Custody, Envelope, PublicKey, SecretKey, Signature};
 use crate::error::{Error, Result};

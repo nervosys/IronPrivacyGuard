@@ -808,7 +808,7 @@
       "goals": [
         "ipg:goal/service-custody"
       ],
-      "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set IPG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable.",
+      "guidance": "Create the two KMS keys in infrastructure code, bind them with kms.key.bind, and use the resulting file as the key without passphrase_file. Set IPG_KMS_FIPS=1 for FIPS endpoints. MCP hosts can add --key-custody non-exportable. Stop on certificate or TLS validation failure and obtain operator review; never add a presented certificate, disable name checks or downgrade protocols to make the request succeed. Do not retry billable operations blindly after ambiguous network completion.",
       "id": "managed-kms-custody",
       "keywords": [
         "aws kms",
@@ -823,7 +823,9 @@
         "AWS KMS only; IPG never creates KMS keys",
         "SSO profiles need a current `aws sso login`; IPG never refreshes SSO tokens",
         "Every private-key operation is a billable network call to AWS",
-        "Decryption releases one per-envelope shared secret into process memory"
+        "Decryption releases one per-envelope shared secret into process memory",
+        "TLS still uses rustls with IronCrypto; bundled public roots require a reviewed rebuild to update and do not follow OS trust or revocation policy",
+        "Certificate and TLS validation failures are non-retryable"
       ],
       "prerequisites": [
         "An ipg build with the kms feature",
@@ -2887,6 +2889,7 @@
       "conditional_effects": [],
       "constraints": [
         "ipg:constraint/kms-provider",
+        "ipg:constraint/kms-tls-authentication",
         "ipg:constraint/non-exportable-key",
         "ipg:constraint/possession-check",
         "ipg:constraint/no-attestation",
@@ -4274,5 +4277,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.20.0"
+  "version": "1.21.0"
 }

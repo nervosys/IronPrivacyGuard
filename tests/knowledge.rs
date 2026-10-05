@@ -201,6 +201,18 @@ fn live_availability_is_consistent_without_granting_authority() {
     }
     assert_eq!(discovery["build"]["cargo_dependencies"], true);
     assert_eq!(
+        discovery["build"]["native_x509"],
+        cfg!(feature = "x509-native")
+    );
+    assert_eq!(
+        discovery["build"]["kms_tls_backend"],
+        if cfg!(feature = "kms") {
+            "rustls with IronCrypto"
+        } else {
+            "not_compiled"
+        }
+    );
+    assert_eq!(
         discovery["build"]["ironcrypto_only"],
         !cfg!(any(feature = "kms", feature = "openpgp"))
     );

@@ -18,6 +18,7 @@ jobs:
       - run: cargo clippy --locked --all-targets --features pkcs11,kms,openpgp,attestation -- -D warnings
       - run: cargo test --locked --workspace
       - run: cargo test --locked --no-default-features
+      - run: cargo test --locked --no-default-features --features x509-native --test x509_server
       - run: cargo test --locked --no-default-features --features openpgp-native
       - run: cargo test --locked --features fuzzing,openpgp --test fuzz_regressions
       - run: cargo test --locked --features pkcs11,kms,openpgp,attestation
@@ -35,6 +36,7 @@ jobs:
       - run: python scripts/check-ironcrypto-only.py --no-default-features
       - run: python scripts/check-ironcrypto-only.py --features pkcs11
       - run: python scripts/check-ironcrypto-only.py --features tpm,pkcs11
+      - run: python scripts/check-ironcrypto-only.py --no-default-features --features x509-native
       - run: python scripts/fuzz-openpgp-policy-seeds.py --check
       - run: python scripts/fuzz-openpgp-large-certificates.py
       - run: python scripts/fuzz-openpgp-large-certificates.py --check
@@ -55,6 +57,7 @@ jobs:
       - run: python tests/interop/p384_mldsa_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/stream_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/kms_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/kms_tls_rejection.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       # GnuPG ships on the Linux and Windows runners (Git for Windows); macOS runners lack it.
       - if: runner.os != 'macOS'
         run: python tests/interop/gnupg_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}

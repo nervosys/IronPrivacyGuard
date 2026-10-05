@@ -33,7 +33,6 @@ ipg-json = { path = "crates/ipg-json", version = "0.1.0" }
 ipg-pkcs11 = { path = "crates/ipg-pkcs11", version = "0.1.0", optional = true }
 ic-rustls = { version = "=0.2.7", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
-webpki-roots = { version = "1", optional = true }
 # OpenPGP compatibility boundary. rPGP is pinned exactly: it supplies its own
 # (RustCrypto) primitives, and IPG adds certificate-validity policy on top.
 pgp = { version = "=0.20.0", default-features = false, optional = true }
@@ -61,9 +60,11 @@ pkcs11 = ["dep:ipg-pkcs11"]
 tpm = ["dep:ipg-cng", "attestation"]
 # Verify TPM key attestations (EK certificate chains, TPM2_Certify evidence and
 # credential activation) without a TPM.
-attestation = ["dep:ic-rsa", "dep:ic-pkix"]
+attestation = ["x509-native"]
+# Offline certificate-path and TLS server-identity checks; not a TLS transport.
+x509-native = ["dep:ic-rsa", "dep:ic-pkix"]
 # AWS KMS keys over TLS from rustls with IronCrypto's provider; no C compilation.
-kms = ["dep:ic-rustls", "dep:rustls", "dep:webpki-roots"]
+kms = ["dep:ic-rustls", "dep:rustls"]
 # OpenPGP (RFC 9580 v4/v6) keys, messages and signatures for GnuPG interoperability,
 # through rPGP. Pure Rust; bzip2 decompression is not included.
 openpgp = ["dep:pgp", "dep:rand_core"]

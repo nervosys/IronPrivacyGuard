@@ -78,6 +78,10 @@ IPG's native TPM command layer; Windows uses TPM Base Services through the small
 verifier holding only the manufacturer's root certificates; the verifier needs the
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
+The standalone `x509-native` feature provides [offline certificate checks](docs/X509.md)
+for Rust callers using only IronCrypto and first-party crates. KMS still uses
+rustls for its TLS transport, with [bundled public trust-anchor data](data/README.md).
+
 Native OpenPGP curve interchange is enabled by default; `--no-default-features`
 omits it. Explicit `--features openpgp-native` adds no
 dependencies to the base build. The broader `openpgp` feature uses the pure-Rust rPGP
@@ -429,7 +433,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tpm2/` | IPG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
 | `src/tpm_native.rs` | Native TPM keys through Linux device/loopback swtpm or Windows TBS, and the attestation prover |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
-| `src/x509.rs`, `src/x509/` | Bounded native certificate parser, signatures and offline attestation path validation |
+| `src/x509.rs`, `src/x509/` | Bounded certificate parsing, signatures, EK paths and TLS server-identity checks |
+| `src/tls_roots.rs`, `data/tls-roots.json` | Bundled KMS HTTPS trust anchors with pinned provenance and preserved constraints |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |
@@ -503,3 +508,7 @@ commercial IronCrypto terms. The optional `pkcs11` feature uses IPG's native
 wrapper; the vendor module has its own license. Contributions require agreement to the [CLA](CLA.md); see
 [CONTRIBUTING.md](CONTRIBUTING.md). Neither license is a statement about
 cryptographic assurance: there is no CMVP certificate and no independent audit.
+
+Bundled public TLS trust-anchor data has its own
+[CDLA-Permissive-2.0 license](data/tls-roots.LICENSE) and
+[provenance and update procedure](data/README.md).

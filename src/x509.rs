@@ -1,16 +1,23 @@
-//! Bounded certificate decoding for the native attestation migration.
+//! Bounded, offline certificate checks over IronCrypto (`x509-native` feature).
 //!
 //! Parsing is not trust validation. The caller must still validate a path to an
 //! explicitly supplied anchor, signatures, time and certificate constraints.
 //! DER primitives come from IronCrypto; signed bytes are borrowed verbatim.
 //! Certificate structure: RFC 5280 sections 4.1 and 4.2.
+//!
+//! These checks do not perform a TLS handshake, check revocation, fetch missing
+//! intermediates, or authorize application actions. Callers supply independently
+//! accepted DER root certificates and a trusted Unix timestamp in seconds.
 use ic_pkix::der::Reader;
 
 use crate::error::{Error, Result};
 
+mod identity;
 mod path;
 mod signature;
+#[cfg(feature = "attestation")]
 pub(crate) use path::verify;
+pub use path::{verify as verify_endorsement_certificate, verify_tls_server};
 
 const MAX_CERTIFICATE_BYTES: usize = 65_536;
 const MAX_EXTENSIONS: usize = 64;
