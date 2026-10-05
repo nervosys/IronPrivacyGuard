@@ -38,6 +38,8 @@ mod tpm_native;
 pub mod transport;
 pub mod trust;
 pub mod validation;
+#[cfg(feature = "attestation")]
+mod x509;
 
 use crate::crypto::{Custody, Envelope, PublicKey, SecretKey, Signature};
 use crate::error::{Error, Result};

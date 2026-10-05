@@ -10,7 +10,7 @@ Cargo.toml and Cargo.lock are the authoritative dependency declarations. IronCry
 provides primitives, OS-seeded DRBG output, hexadecimal conversion and volatile
 memory erasure. First-party IPG code provides JSON parsing, typed serialization,
 schema derives, secret-buffer wrappers, temporary-file handling and PKCS#11 FFI.
-TLS, attestation and broad OpenPGP still contain additional third-party crates, so the migration is
+TLS and broad OpenPGP still contain additional third-party crates, so the migration is
 not complete across every feature combination.
 The Rust standard library and platform runtime also remain requirements.
 
@@ -23,19 +23,19 @@ annotations fail compilation instead of silently weakening a contract.
 graph and fails while any third-party package remains. Run it with
 `--all-features` to audit optional integrations too. It follows transitive
 dependencies, including those introduced by IronCrypto adapters. The default
-and `pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
-blocker. CI checks default, minimal and `pkcs11` builds on each supported OS.
+and `tpm,pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
+blocker. CI checks default, minimal, `pkcs11` and `tpm,pkcs11` builds on each supported OS.
 
-The remaining replacements require a native X.509 path validator, TLS client,
-and the additional OpenPGP profiles. IronCrypto 0.2.7's `ic-pkix` supplies DER/key
-encoding and certificate issuance, but no certificate parser or path validator;
-`ic-rustls` supplies primitives to rustls, not a standalone TLS engine. These
-adapters therefore do not satisfy the transitive dependency gate. Replacements
-must retain certificate signatures, validity, chain constraints, critical-extension
-handling, EK usage/key binding, and TLS peer-name and handshake authentication.
+The remaining replacements require a native TLS client and additional OpenPGP
+profiles. Attestation now uses IPG's bounded X.509 parser and path validator over
+IronCrypto primitives; see [the supported profile](ATTESTATION.md#native-certificate-profile).
+`ic-rustls` supplies primitives to rustls, not a standalone TLS engine, and
+therefore does not satisfy the transitive dependency gate. Its replacement must
+retain TLS peer-name, certificate-path and handshake authentication.
 Removing certificate checks or silently disabling existing integrations is not
 a completed migration. Independent certificate-policy fixtures in
-`tests/vectors/attestation-certificate-policy.json` cover the EK boundary; they
+`tests/vectors/attestation-certificate-policy.json`, `x509-signatures.json` and
+`x509-paths.json` cover the EK boundary, signatures and path constraints; they
 are a regression baseline, not a complete X.509 conformance suite.
 
 Publication creates a hard link from an exclusive temporary file in the output
@@ -48,7 +48,7 @@ Windows. Output directories must be access-controlled by the host.
 | --- | --- |
 | `openpgp` | Broader rPGP implementation and its Cargo dependencies; no GPG subprocess |
 | `pkcs11` | A host-configured vendor library and token/HSM |
-| `tpm` | TPM and configured native transport; Windows uses OS TPM services; attestation still adds certificate-verification crates |
+| `tpm` | TPM and configured native transport; Windows uses OS TPM services; native attestation uses IronCrypto only |
 | `kms` | Network, AWS services, credentials and provisioned keys |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
 

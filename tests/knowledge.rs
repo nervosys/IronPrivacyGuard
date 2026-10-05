@@ -24,7 +24,7 @@ fn catalog_links_resolve_and_support_matches_tools() {
         }
     }
     for node in nodes {
-        for relation in ["tools", "goals", "algorithms"] {
+        for relation in ["tools", "goals", "algorithms", "constraints"] {
             if let Some(links) = node[relation].as_array() {
                 for link in links {
                     assert!(ids.contains(link.as_str().unwrap()), "unresolved {link}");
@@ -202,12 +202,7 @@ fn live_availability_is_consistent_without_granting_authority() {
     assert_eq!(discovery["build"]["cargo_dependencies"], true);
     assert_eq!(
         discovery["build"]["ironcrypto_only"],
-        !cfg!(any(
-            feature = "tpm",
-            feature = "kms",
-            feature = "attestation",
-            feature = "openpgp"
-        ))
+        !cfg!(any(feature = "kms", feature = "openpgp"))
     );
     assert_eq!(
         discovery["build"]["core_external_executables_required"],

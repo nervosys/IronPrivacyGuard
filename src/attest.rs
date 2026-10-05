@@ -47,9 +47,6 @@ pub const MAX_EK_CERTIFICATES: usize = 4;
 const MAX_CERTIFICATE_BYTES: usize = 4096;
 #[cfg(feature = "attestation")]
 const MAX_PUBLIC_BYTES: usize = 1024;
-/// tcg-kp-EKCertificate (2.23.133.8.1), DER content octets.
-#[cfg(feature = "attestation")]
-const EK_CERTIFICATE_EKU: &[u8] = &[0x67, 0x81, 0x05, 0x08, 0x01];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
@@ -285,11 +282,8 @@ pub(crate) fn check_evidence(
         .map(|c| hex_field(c, MAX_CERTIFICATE_BYTES, "EK certificate"))
         .collect::<Result<Vec<_>>>()?;
     let anchor = verify_chain(&certificates, anchors, intermediates)?;
-    let leaf = pki_types::CertificateDer::from(certificates[0].as_slice());
-    let parsed = webpki::EndEntityCert::try_from(&leaf)
-        .map_err(|e| Error::new("invalid_format", format!("EK certificate: {e:?}")))?;
-    let spki = parsed.subject_public_key_info();
-    require_ek_spki(&ek, spki.as_ref())?;
+    let parsed = crate::x509::Certificate::parse(&certificates[0])?;
+    require_ek_spki(&ek, parsed.spki)?;
 
     // Each identity key certified by the AK, with the exact template and point.
     let points = [
@@ -409,45 +403,33 @@ fn verify_chain(
     anchors: &[Vec<u8>],
     intermediates: &[Vec<u8>],
 ) -> Result<Vec<u8>> {
-    if anchors.is_empty() {
+    // Bound caller-provided material before making owned copies for path search.
+    if intermediates.len() > 64
+        || certificates.len().saturating_sub(1) + intermediates.len() > 64
+        || intermediates.iter().any(|c| c.len() > 65_536)
+    {
         return Err(Error::new(
-            "invalid_request",
-            "Supply the TPM manufacturer's root certificates as trust anchors",
+            "limit_exceeded",
+            "Certificate intermediates exceed native path limits",
         ));
     }
-    let leaf = pki_types::CertificateDer::from(certificates[0].as_slice());
-    let end_entity = webpki::EndEntityCert::try_from(&leaf)
-        .map_err(|e| Error::new("invalid_format", format!("EK certificate: {e:?}")))?;
-    let intermediates: Vec<pki_types::CertificateDer<'_>> = certificates[1..]
+    let intermediates: Vec<Vec<u8>> = certificates[1..]
         .iter()
         .chain(intermediates)
-        .map(|c| pki_types::CertificateDer::from(c.as_slice()))
+        .cloned()
         .collect();
-    let now = pki_types::UnixTime::now();
-    for anchor in anchors {
-        let der = pki_types::CertificateDer::from(anchor.as_slice());
-        let Ok(trust) = webpki::anchor_from_trusted_cert(&der) else {
-            continue;
-        };
-        let trust = [trust];
-        let verified = end_entity.verify_for_usage(
-            ic_rustls::SUPPORTED_SIG_ALGS.all,
-            &trust,
-            &intermediates,
-            now,
-            webpki::KeyUsage::required_if_present(EK_CERTIFICATE_EKU),
-            None,
-            None,
-        );
-        if verified.is_ok() {
-            return Ok(anchor.clone());
-        }
-        drop(verified);
-    }
-    Err(Error::new(
-        "key_not_trusted",
-        "EK certificate does not chain to a supplied trust anchor",
-    ))
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .and_then(|d| i64::try_from(d.as_secs()).ok())
+        .ok_or_else(|| {
+            Error::new(
+                "invalid_request",
+                "Host clock is outside the supported range",
+            )
+        })?;
+    let index = crate::x509::verify(&certificates[0], anchors, &intermediates, now)?;
+    Ok(anchors[index].clone())
 }
 
 #[cfg(feature = "attestation")]

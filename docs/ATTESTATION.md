@@ -55,8 +55,8 @@ manufacturer's CRL for the EK certificate out of band.
    - the EK public area is exactly the TCG default RSA-2048 EK template (L-1), and
      the EK certificate's RSA modulus and exponent both match that EK (TPM's
      zero exponent encoding means 65537);
-   - the EK certificate chains to a trust anchor (rustls-webpki path validation
-     with IronCrypto's signature algorithms), is currently valid, and carries the
+   - the EK certificate chains to a trust anchor (native path validation
+     over IronCrypto), is currently valid, and carries the
      EK-certificate usage if it declares any extended usage;
    - the AK public area is exactly IPG's AK template;
    - each certification is TPM-generated (`TPM_GENERATED_VALUE`), signed by the
@@ -80,6 +80,34 @@ manufacturer's CRL for the EK certificate out of band.
 Use each challenge once and keep the secret file private. Trust anchors are the
 verifier's policy: supply only the roots of manufacturers you accept (for example
 Infineon, STMicroelectronics, Nuvoton, Intel or AMD). IPG ships no roots.
+
+### Native certificate profile
+
+The bounded, offline validator checks certificate signatures, non-anchor validity,
+CA basic constraints, path length, intermediate `keyCertSign` when key usage is
+present, EK extended usage when present, and ancestor name constraints. It supports
+RSA-2048 through RSA-4096 with PKCS#1 or PSS and SHA-256/384/512, P-256/SHA-256,
+P-384/SHA-384 and Ed25519 certificate signatures. PSS requires MGF1 with the same
+hash and a salt equal to the hash length. SHA-1 is unsupported.
+
+DNS and IPv4/IPv6 constraints are supported. Other constrained name forms, and
+wildcard DNS names under DNS constraints, fail closed when applicable. Unknown
+critical extensions, including critical certificate-policy or CRL-distribution
+extensions, are rejected. Unsupported paths require operator review; do not remove
+constraints or substitute trust anchors to make verification succeed. Certificate
+revocation, policy-tree processing and network fetching are not implemented.
+
+Issuer/subject names match by exact DER encoding. Certificates require positive
+serial numbers of at most 20 magnitude bytes, canonical DER and UTC dates with
+seconds. There are at most 64 anchors, 64 combined intermediates, eight non-anchor
+certificates per path and 256 signature checks per verification. Each parsed
+certificate is limited to 64 KiB, 64 extensions and 128 name attributes; evidence
+retains its tighter 4 KiB certificate limit. Limit exhaustion never authenticates.
+Explicit trust anchors supply the root key and constraints; their expiration and
+self-signatures are not path-certificate checks.
+
+Independent PyCA fixtures cover signatures, paths and EK binding. These regression
+tests do not establish complete X.509 conformance or replace independent review.
 
 ## Platforms
 

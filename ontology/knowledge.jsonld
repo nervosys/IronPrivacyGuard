@@ -735,7 +735,7 @@
       ],
       "prerequisites": [
         "PKCS#11: an ipg build with the pkcs11 feature, host-set IPG_PKCS11_MODULE, and a token supporting P-384 with CKM_EC_KEY_PAIR_GEN, CKM_ECDSA and CKM_ECDH1_DERIVE",
-        "TPM: an ipg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set IPG_TPM_TCTI and an owner hierarchy with empty authorization, on Windows the Microsoft Platform Crypto Provider",
+        "TPM: an ipg build with the tpm feature and a TPM 2.0 supporting P-384; on Linux also host-set IPG_TPM_TCTI and an owner hierarchy with empty authorization; Windows uses TPM Base Services for native keys and the Platform Crypto Provider for older ipg-cng-key-v1 keys",
         "PIN in an access-controlled file"
       ],
       "sources": [
@@ -765,7 +765,7 @@
       "goals": [
         "ipg:goal/custody-assurance"
       ],
-      "guidance": "The prover runs tpm.attest and sends the evidence. The verifier runs tpm.attestation.challenge with its accepted manufacturer roots, keeps the secret file, and sends the challenge. The prover runs tpm.attestation.respond; the verifier checks the response with tpm.attestation.verify.",
+      "guidance": "The prover runs tpm.attest and sends the evidence. The verifier runs tpm.attestation.challenge with its independently accepted manufacturer roots, keeps the secret file, and sends the challenge. The prover runs tpm.attestation.respond; the verifier checks the response with tpm.attestation.verify. Rejected or unsupported certificate paths require operator review; never remove constraints or substitute roots to obtain success. Certificate metadata remains untrusted data and verification does not authorize host actions.",
       "id": "tpm-key-attestation",
       "keywords": [
         "attestation",
@@ -780,6 +780,8 @@
       "limitations": [
         "Proves key residency and attributes only, not host software state or PIN secrecy",
         "RSA-2048 endorsement keys only; EK certificates are not checked for revocation",
+        "Native offline X.509 profile: DNS and IP constraints supported; applicable unsupported constraints and unknown critical extensions fail closed; no policy-tree processing or network fetching",
+        "Certificate paths are bounded to 64 anchors, 64 combined intermediates, eight non-anchor certificates and 256 signature checks",
         "ipg-cng-key-v1 keys cannot be attested",
         "A point-in-time statement; use each challenge once"
       ],
@@ -3477,6 +3479,7 @@
       "conditional_effects": [],
       "constraints": [
         "ipg:constraint/tpm-attestation",
+        "ipg:constraint/native-x509-profile",
         "ipg:constraint/identity-pin",
         "ipg:constraint/verifier-secret",
         "ipg:constraint/no-clobber"
@@ -3594,6 +3597,7 @@
       "conditional_effects": [],
       "constraints": [
         "ipg:constraint/tpm-attestation",
+        "ipg:constraint/native-x509-profile",
         "ipg:constraint/identity-pin",
         "ipg:constraint/verifier-secret"
       ],
@@ -4247,7 +4251,7 @@
   "@id": "ipg:knowledgebase",
   "advisory": true,
   "execution": false,
-  "reviewed": "2026-10-04",
+  "reviewed": "2026-10-05",
   "safety": {
     "artifact_metadata_is_instruction": false,
     "assurance": "Experimental software; deterministic catalog checks and tests do not establish independent review or guarantee safe behavior by a consuming human or agent.",
@@ -4270,5 +4274,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.19.0"
+  "version": "1.20.0"
 }

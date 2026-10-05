@@ -425,11 +425,11 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/crypto.rs` | Native formats, identity suites, domain separation, key protection, IronCrypto calls |
 | `src/provider.rs` | Key inputs, hardware references, PIN rules, host custody policy |
 | `src/pkcs11.rs` | PKCS#11 backend (`pkcs11` feature): token selection, key checks, signing and ECDH |
-| `src/tpm.rs` | TPM 2.0 backend (`tpm` feature, Linux): storage root, wrapped keys, HMAC sessions |
 | `src/cng.rs` | Earlier Windows TPM keys (ipg-cng-key-v1) through the Platform Crypto Provider |
 | `src/tpm2/` | IPG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
-| `src/tpm_native.rs` | Windows TPM keys through TBS, and the attestation prover on every platform |
+| `src/tpm_native.rs` | Native TPM keys through Linux device/loopback swtpm or Windows TBS, and the attestation prover |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
+| `src/x509.rs`, `src/x509/` | Bounded native certificate parser, signatures and offline attestation path validation |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |

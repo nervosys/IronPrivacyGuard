@@ -4,7 +4,7 @@ use ipg_json::{Deserialize, Serialize};
 use ipg_json::{Value, json};
 use std::collections::BTreeSet;
 
-pub const VERSION: &str = "1.19.0";
+pub const VERSION: &str = "1.20.0";
 
 #[derive(Deserialize, Serialize, ipg_json::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -72,7 +72,7 @@ pub fn export() -> Value {
             .map(|op| crate::ontology::operation(op.0)),
     );
     json!({"@context":context(),"@id":"ipg:knowledgebase","version":VERSION,
-        "reviewed":"2026-10-04","scope":"Curated IPG application guidance, not exhaustive cryptography coverage",
+        "reviewed":"2026-10-05","scope":"Curated IPG application guidance, not exhaustive cryptography coverage",
         "advisory":true,"execution":false,
         "safety":safety_contract(),
         "upstream_algorithms":{"operation":"algorithms","meaning":"Primitive availability does not imply IPG protocol support"},

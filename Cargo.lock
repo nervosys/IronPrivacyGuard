@@ -867,8 +867,6 @@ dependencies = [
  "pgp",
  "rand_core",
  "rustls",
- "rustls-pki-types",
- "rustls-webpki",
  "webpki-roots",
 ]
 
