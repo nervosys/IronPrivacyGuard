@@ -28,6 +28,7 @@ impl Config {
         let mut config = Self::default();
         let mut store = None;
         let mut digest = None;
+        let (mut grant, mut grant_root, mut grant_root_fingerprint) = (None, None, None);
         let mut seen = BTreeSet::new();
         let (pairs, remainder) = args.as_chunks::<2>();
         for pair in pairs {
@@ -37,6 +38,11 @@ impl Config {
             match pair[0].as_str() {
                 "--trust-store" => store = Some(pair[1].clone()),
                 "--expected-store-digest" => digest = Some(pair[1].clone()),
+                "--grant" => grant = Some(pair[1].clone()),
+                "--grant-root" => grant_root = Some(pair[1].clone()),
+                "--expected-grant-root-fingerprint" => {
+                    grant_root_fingerprint = Some(pair[1].clone())
+                }
                 "--allow" => {
                     config.allowed = Some(pair[1].split(',').map(String::from).collect());
                 }
@@ -74,6 +80,20 @@ impl Config {
                 return Err(Error::new(
                     "invalid_request",
                     "Both trust-store and expected-store-digest are required",
+                ));
+            }
+        }
+        match (grant, grant_root, grant_root_fingerprint) {
+            (Some(grant), Some(root), Some(expected)) => {
+                config.host.delegation = Some(crate::provider::HostDelegation::load(
+                    &grant, &root, &expected,
+                )?);
+            }
+            (None, None, None) => {}
+            _ => {
+                return Err(Error::new(
+                    "invalid_request",
+                    "grant, grant-root and expected-grant-root-fingerprint are required together",
                 ));
             }
         }

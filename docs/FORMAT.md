@@ -257,6 +257,14 @@ certificate requests permanent retirement of both keys. It contains no trusted
 time or proof of distribution. No active-key status can be inferred from the
 absence of a certificate. See [lifecycle semantics](LIFECYCLE.md).
 
+## Delegation grant: ipg-grant-v1
+
+A chain of 1..8 signed links from a root principal to an acting identity. Each
+link carries the subject's public identity, delegable operations, purposes, a
+time window, remaining depth, a 16-byte nonce and the issuer's suite signature,
+and commits to the previous link with SHA-384. The signed framing, attenuation
+rules and host-clock checks are specified in [DELEGATION.md](DELEGATION.md).
+
 ## Trust snapshots: ipg-trust-v1, ipg-trust-v2 and ipg-trust-v3
 
 The public-identity and revocation collection format, canonical snapshot digest,

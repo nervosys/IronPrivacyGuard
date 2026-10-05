@@ -117,6 +117,15 @@ allowed directories, available passphrase files, and tool allowlist in the host.
 Pinning policy governs only encrypt/sign/verify; it does not disable decryption or
 private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 
+### Delegated sessions
+
+`--grant`, `--grant-root` and `--expected-grant-root-fingerprint` together pin an
+`ipg-grant-v1` delegation for the session. The grant is verified at startup and
+re-checked at each call's host time: delegable operations must use the grant's
+subject key and be granted, other private-key operations must use the subject
+key, re-delegation must extend the pinned grant, and OpenPGP secret-key
+operations are refused. See [delegation grants](DELEGATION.md#host-pinned-grants).
+
 ## Limits and unsupported capabilities
 
 Maximum input frame size is 65,546 bytes including the newline. Oversized frames
@@ -148,7 +157,7 @@ The release binary has been exercised on Windows with the
 [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) 2.2.0 and
 `jsonschema` 4.26.0. The suite uses real stdio subprocesses in both automatic and
 legacy negotiation modes, negotiating IPG's `2025-11-25` protocol. It lists all
-54 tools, validates advertised schemas and returned envelopes, checks generated
+56 tools, validates advertised schemas and returned envelopes, checks generated
 artifact schemas, preflights valid and invalid candidates, reconciles trust branches, and exercises active, revoked and
 expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also

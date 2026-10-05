@@ -60,6 +60,18 @@
     "sources": []
   },
   {
+    "id": "delegate-agent-authority",
+    "label": "Delegate scoped signing or decryption authority to an agent",
+    "keywords": ["delegation", "delegate", "agent", "multi-agent", "on behalf", "capability", "least privilege", "scoped authority"],
+    "goals": ["delegated-authority", "identity-policy"],
+    "support": "implemented",
+    "operations": ["grant.issue", "grant.verify", "sign", "verify", "stream.sign", "stream.verify"],
+    "prerequisites": ["The root principal's key and passphrase (or provider credentials) to issue the first grant", "Each delegate's public identity and an independently trusted fingerprint", "Relying parties hold the root's pinned public identity"],
+    "limitations": ["Grants are evidence checked at the host clock, not host or filesystem authorization", "Purposes are application labels the relying party must interpret", "No grant revocation list: keep grants short-lived and revoke compromised keys through trust snapshots", "Up to 8 links and depth 7; each link can only narrow its parent"],
+    "guidance": "Issue a short-lived grant naming only the operations and purposes the agent needs, with delegation_depth 0 unless it must re-delegate. Relying parties pass a delegation requirement to verify or stream.verify with the root pinned, and treat a purpose mismatch or expiry as refusal, never as a prompt to widen the grant.",
+    "sources": ["https://www.w3.org/TR/vc-data-model-2.0/", "https://datatracker.ietf.org/doc/html/rfc8693"]
+  },
+  {
     "id": "revoke-identity",
     "label": "Revoke an identity and enforce the revocation",
     "keywords": ["revocation", "compromise", "retire", "incident"],

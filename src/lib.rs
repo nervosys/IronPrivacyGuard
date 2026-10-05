@@ -11,6 +11,7 @@ mod cng;
 mod contract;
 pub mod control_json;
 pub mod crypto;
+pub mod delegation;
 pub mod error;
 pub mod files;
 #[cfg(feature = "fuzzing")]
@@ -154,6 +155,55 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
     },
+    #[serde(rename = "grant.issue")]
+    GrantIssue {
+        /// The issuer's key: a root principal, or an agent holding `parent`.
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// Public identity file of the delegate.
+        subject: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_subject_fingerprint: String,
+        #[schemars(schema_with = "crate::contract::grant_operations")]
+        operations: Vec<String>,
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::grant_purposes")]
+        purposes: Vec<String>,
+        #[schemars(schema_with = "crate::contract::time_start")]
+        not_before: u64,
+        #[schemars(schema_with = "crate::contract::time_end")]
+        not_after: u64,
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::grant_depth")]
+        delegation_depth: u8,
+        /// The issuer's own grant, when re-delegating; the new link may only narrow it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parent: Option<String>,
+        output: String,
+    },
+    #[serde(rename = "grant.verify")]
+    GrantVerify {
+        input: String,
+        /// Public identity file of the root principal.
+        root: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_root_fingerprint: String,
+        /// Require the chain to end at this identity.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_fingerprint")]
+        subject_fingerprint: Option<String>,
+        /// Require this delegable operation.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_grant_operation")]
+        required_operation: Option<String>,
+        /// Require this purpose when the chain restricts purposes.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_grant_purpose")]
+        purpose: Option<String>,
+    },
     #[serde(rename = "encrypt")]
     Encrypt {
         input: String,
@@ -194,6 +244,9 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         policy: Option<TrustPolicy>,
+        /// Require the signer to hold a valid delegation grant permitting `sign`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegation: Option<DelegationRequirement>,
     },
     #[serde(rename = "key.validity")]
     KeyValidity {
@@ -377,6 +430,9 @@ pub enum Request {
         #[schemars(schema_with = "crate::contract::fingerprint")]
         expected_fingerprint: String,
         policy: Option<TrustPolicy>,
+        /// Require the signer to hold a valid delegation grant permitting `stream.sign`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegation: Option<DelegationRequirement>,
     },
     #[serde(rename = "tpm.attest")]
     TpmAttest {
@@ -524,6 +580,22 @@ pub struct StreamRecipient {
     pub expected_fingerprint: String,
 }
 
+/// A delegation chain the verified signer must hold, rooted at a pinned principal.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DelegationRequirement {
+    /// ipg-grant-v1 file.
+    pub grant: String,
+    /// Public identity file of the root principal.
+    pub root: String,
+    #[schemars(schema_with = "crate::contract::fingerprint")]
+    pub expected_root_fingerprint: String,
+    /// Require this purpose when the chain restricts purposes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "crate::contract::optional_grant_purpose")]
+    pub purpose: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Call {
@@ -612,6 +684,13 @@ pub enum Outcome {
         fingerprint: String,
         policy_digest: Option<String>,
         policy_checked_at: Option<u64>,
+        /// Authority the signer's delegation grant conferred, when one was required.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        delegation: Option<delegation::Authority>,
+    },
+    GrantVerified {
+        authority: delegation::Authority,
+        authenticated: bool,
     },
     Digest {
         algorithm: String,
@@ -737,6 +816,8 @@ impl Request {
             Self::KeyRewrap { .. } => "key.rewrap",
             Self::KeyRevoke { .. } => "key.revoke",
             Self::RevocationVerify { .. } => "revocation.verify",
+            Self::GrantIssue { .. } => "grant.issue",
+            Self::GrantVerify { .. } => "grant.verify",
             Self::Encrypt { .. } => "encrypt",
             Self::Decrypt { .. } => "decrypt",
             Self::Sign { .. } => "sign",
@@ -790,7 +871,7 @@ pub fn read_limited(reader: impl Read, limit: u64) -> Result<Zeroizing<Vec<u8>>>
 fn read(path: &str) -> Result<Zeroizing<Vec<u8>>> {
     read_limited(File::open(path)?, MAX_FILE_BYTES)
 }
-fn load<T: DeserializeOwned>(path: &str) -> Result<T> {
+pub(crate) fn load<T: DeserializeOwned>(path: &str) -> Result<T> {
     Ok(ipg_json::from_slice(&read(path)?)?)
 }
 fn password(path: &str) -> Result<Zeroizing<Vec<u8>>> {
@@ -846,6 +927,75 @@ fn save<T: Serialize>(
     })
 }
 /// Report custody only for token-backed private-key operations.
+/// Under a host-pinned grant, private keys may only be those of the grant's
+/// subject, and delegable operations must be granted at the call's host time.
+fn confine(request: &Request, host: &Host) -> Result<()> {
+    let Some(pinned) = &host.delegation else {
+        return Ok(());
+    };
+    let subject = |key: &str, operation: Option<&str>| -> Result<()> {
+        pinned.check(Some(load_key(key)?.public()), operation)
+    };
+    match request {
+        Request::Sign { key, .. } => subject(key, Some("sign")),
+        Request::StreamSign { key, .. } => subject(key, Some("stream.sign")),
+        Request::Decrypt { key, .. } => subject(key, Some("decrypt")),
+        Request::StreamDecrypt { key, .. } => subject(key, Some("stream.decrypt")),
+        Request::KeyPublic { key, .. }
+        | Request::KeyRewrap { key, .. }
+        | Request::KeyRevoke { key, .. }
+        | Request::KeyValidity { key, .. }
+        | Request::TpmAttest { key, .. }
+        | Request::TpmKeyDelete { key, .. } => subject(key, None),
+        Request::GrantIssue { key, parent, .. } => {
+            subject(key, None)?;
+            // Re-delegation must stay inside the pinned grant.
+            let parent: Option<delegation::Grant> = parent.as_deref().map(load).transpose()?;
+            if parent.as_ref() != Some(&pinned.grant) {
+                return Err(Error::new(
+                    "policy_mismatch",
+                    "Under a pinned grant, grant.issue must re-delegate from that grant",
+                ));
+            }
+            Ok(())
+        }
+        Request::OpenpgpDecrypt { .. }
+        | Request::OpenpgpSign { .. }
+        | Request::OpenpgpKeyExport { .. }
+        | Request::OpenpgpMessageVerify { key: Some(_), .. } => Err(Error::new(
+            "policy_mismatch",
+            "A pinned grant confines private-key use to its native IPG subject",
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// Check a signer's delegation chain at the host clock, after signature checks.
+fn delegated(
+    requirement: Option<&DelegationRequirement>,
+    signer: &PublicKey,
+    operation: &str,
+) -> Result<Option<delegation::Authority>> {
+    let Some(requirement) = requirement else {
+        return Ok(None);
+    };
+    let grant: delegation::Grant = load(&requirement.grant)?;
+    let root: PublicKey = load(&requirement.root)?;
+    let need = delegation::Need {
+        subject: Some(&signer.fingerprint),
+        operation: Some(operation),
+        purpose: requirement.purpose.as_deref(),
+    };
+    delegation::verify(
+        &grant,
+        &root,
+        &requirement.expected_root_fingerprint,
+        need,
+        delegation::now()?,
+    )
+    .map(Some)
+}
+
 fn with_custody(mut outcome: Outcome, key: Custody) -> Outcome {
     if let Outcome::Artifact { custody, .. } = &mut outcome {
         *custody = (key != Custody::Software).then_some(key);
@@ -931,7 +1081,7 @@ pub fn schemas() -> Value {
     }
     json!({"call":ipg_json::schema_for!(Call), "request":ipg_json::schema_for!(Request),
         "outcome":ipg_json::schema_for!(Outcome), "response":response,
-        "formats":{"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
+        "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
         "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),
@@ -944,6 +1094,7 @@ pub fn execute(request: Request) -> Result<Outcome> {
 
 /// Execute under host policy. Callers never choose the host policy per request.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
+    confine(&request, host)?;
     match request {
         Request::Validate { request } => Ok(Outcome::RequestValidation {
             validation: validation::validate(request),
@@ -1186,6 +1337,75 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 policy_applied: false,
             })
         }
+        Request::GrantIssue {
+            key,
+            passphrase_file,
+            expected_fingerprint,
+            subject,
+            expected_subject_fingerprint,
+            operations,
+            purposes,
+            not_before,
+            not_after,
+            delegation_depth,
+            parent,
+            output,
+        } => {
+            let key = load_key(&key)?;
+            let subject: PublicKey = load(&subject)?;
+            let parent: Option<delegation::Grant> = parent.as_deref().map(load).transpose()?;
+            // Structure, pins and attenuation are checked before any unlock or login.
+            let template = delegation::template(
+                key.public(),
+                &expected_fingerprint,
+                &subject,
+                &expected_subject_fingerprint,
+                &operations,
+                &purposes,
+                not_before,
+                not_after,
+                delegation_depth,
+                parent.as_ref(),
+            )?;
+            let identity = provider::open(
+                &key,
+                credential(passphrase_file)?.as_deref().map(Vec::as_slice),
+                host,
+            )?;
+            let grant = delegation::sign(&*identity, template)?;
+            let subject = grant.subject().fingerprint.clone();
+            Ok(with_custody(
+                save(output, &grant, "grant", Some(subject))?,
+                identity.custody(),
+            ))
+        }
+        Request::GrantVerify {
+            input,
+            root,
+            expected_root_fingerprint,
+            subject_fingerprint,
+            required_operation,
+            purpose,
+        } => {
+            let grant: delegation::Grant = load(&input)?;
+            let root: PublicKey = load(&root)?;
+            let need = delegation::Need {
+                subject: subject_fingerprint.as_deref(),
+                operation: required_operation.as_deref(),
+                purpose: purpose.as_deref(),
+            };
+            let authority = delegation::verify(
+                &grant,
+                &root,
+                &expected_root_fingerprint,
+                need,
+                delegation::now()?,
+            )?;
+            Ok(Outcome::GrantVerified {
+                authority,
+                authenticated: true,
+            })
+        }
         Request::Encrypt {
             input,
             output,
@@ -1296,6 +1516,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             signer,
             expected_fingerprint,
             policy,
+            delegation,
         } => {
             let public: PublicKey = load(&signer)?;
             public.pin(&expected_fingerprint)?;
@@ -1306,11 +1527,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &load(&signature)?,
                 &mut File::open(&input)?,
             )?;
+            let delegation = delegated(delegation.as_ref(), &public, "stream.sign")?;
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
+                delegation,
             })
         }
         Request::Verify {
@@ -1319,6 +1542,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             signer,
             expected_fingerprint,
             policy,
+            delegation,
         } => {
             let public: PublicKey = load(&signer)?;
             public.pin(&expected_fingerprint)?;
@@ -1329,11 +1553,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &load(&signature)?,
                 &read(&input)?,
             )?;
+            let delegation = delegated(delegation.as_ref(), &public, "sign")?;
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
+                delegation,
             })
         }
         Request::Hash { input } => Ok(Outcome::Digest {

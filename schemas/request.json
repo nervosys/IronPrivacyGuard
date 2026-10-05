@@ -15,6 +15,46 @@
         }
       ]
     },
+    "DelegationRequirement": {
+      "additionalProperties": false,
+      "description": "A delegation chain the verified signer must hold, rooted at a pinned principal.",
+      "properties": {
+        "expected_root_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "grant": {
+          "description": "ipg-grant-v1 file.",
+          "type": "string"
+        },
+        "purpose": {
+          "description": "Require this purpose when the chain restricts purposes.",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9._:/-]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "Public identity file of the root principal.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "grant",
+        "root",
+        "expected_root_fingerprint"
+      ],
+      "type": "object"
+    },
     "Recipient": {
       "additionalProperties": false,
       "description": "An encryption recipient: a certificate file and its independently trusted\nprimary-key fingerprint.",
@@ -416,6 +456,186 @@
     {
       "additionalProperties": false,
       "properties": {
+        "delegation_depth": {
+          "default": 0,
+          "description": "Further re-delegations allowed; each child link must be strictly lower.",
+          "maximum": 7,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expected_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "expected_subject_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "key": {
+          "description": "The issuer's key: a root principal, or an agent holding `parent`.",
+          "type": "string"
+        },
+        "not_after": {
+          "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+          "maximum": 253402300799,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "not_before": {
+          "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+          "maximum": 253402300798,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operation": {
+          "const": "grant.issue",
+          "type": "string"
+        },
+        "operations": {
+          "description": "Operations the subject may perform; sorted, and a subset of the parent link's.",
+          "items": {
+            "enum": [
+              "decrypt",
+              "sign",
+              "stream.decrypt",
+              "stream.sign"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "output": {
+          "type": "string"
+        },
+        "parent": {
+          "description": "The issuer's own grant, when re-delegating; the new link may only narrow it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purposes": {
+          "default": [],
+          "description": "Sorted application-defined purposes; empty places no purpose restriction. A child of a restricted link must restrict to a subset.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z0-9._:/-]+$",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "subject": {
+          "description": "Public identity file of the delegate.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "expected_fingerprint",
+        "subject",
+        "expected_subject_fingerprint",
+        "operations",
+        "not_before",
+        "not_after",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_root_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "grant.verify",
+          "type": "string"
+        },
+        "purpose": {
+          "description": "Require this purpose when the chain restricts purposes.",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9._:/-]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "required_operation": {
+          "description": "Require this delegable operation.",
+          "enum": [
+            "decrypt",
+            "sign",
+            "stream.decrypt",
+            "stream.sign",
+            null
+          ],
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "Public identity file of the root principal.",
+          "type": "string"
+        },
+        "subject_fingerprint": {
+          "description": "Require the chain to end at this identity.",
+          "maxLength": 96,
+          "minLength": 64,
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "root",
+        "expected_root_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
         "expected_fingerprint": {
           "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
@@ -536,6 +756,17 @@
     {
       "additionalProperties": false,
       "properties": {
+        "delegation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelegationRequirement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Require the signer to hold a valid delegation grant permitting `sign`."
+        },
         "expected_fingerprint": {
           "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,
@@ -1320,6 +1551,17 @@
     {
       "additionalProperties": false,
       "properties": {
+        "delegation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelegationRequirement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Require the signer to hold a valid delegation grant permitting `stream.sign`."
+        },
         "expected_fingerprint": {
           "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
           "maxLength": 96,

@@ -75,9 +75,11 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | key.rewrap | key, output, expected_fingerprint, passphrase_file, new_passphrase_file |
 | key.revoke | key, output, expected_fingerprint, passphrase_file, reason |
 | revocation.verify | input, signer, expected_fingerprint |
+| grant.issue | key, expected_fingerprint, subject, expected_subject_fingerprint, operations, not_before, not_after, output; optional passphrase_file, purposes, delegation_depth, parent |
+| grant.verify | input, root, expected_root_fingerprint; optional subject_fingerprint, required_operation, purpose |
 | encrypt | input, output, recipient, expected_fingerprint |
 | decrypt, sign | input, output, key, passphrase_file |
-| verify | input, signature, signer, expected_fingerprint |
+| verify | input, signature, signer, expected_fingerprint; optional policy and delegation |
 | hash, inspect | input |
 | trust.init | output |
 | trust.add | store, expected_digest, public, expected_fingerprint, output |
@@ -86,7 +88,7 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | stream.encrypt | input, output, recipients (1..64 of public, expected_fingerprint), optional policy |
 | stream.decrypt | input, output, key (passphrase_file for software keys and PINs) |
 | stream.sign | input, output, key, optional passphrase_file and policy |
-| stream.verify | input, signature, signer, expected_fingerprint, optional policy |
+| stream.verify | input, signature, signer, expected_fingerprint, optional policy and delegation |
 | openpgp.key.generate | output, passphrase_file, user_id (optional algorithm: ed25519 or p384; key_version: v4 default or v6) |
 | openpgp.cert.export | key, output |
 | openpgp.cert.inspect | input |

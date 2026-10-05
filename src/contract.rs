@@ -291,6 +291,41 @@ pub fn time_end(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"integer", "minimum":1, "maximum":crate::lifecycle::MAX_UNIX_TIME,
         "description":"Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime)."})
 }
+fixed!(grant_format, crate::delegation::FORMAT);
+/// Sorted, unique delegable operations (checked at runtime).
+pub fn grant_operations(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::delegation::DELEGABLE.len(),
+        "uniqueItems":true, "items":{"type":"string", "enum":crate::delegation::DELEGABLE},
+        "description":"Operations the subject may perform; sorted, and a subset of the parent link's."})
+}
+/// Application purpose labels; empty means no purpose restriction.
+pub fn grant_purposes(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "maxItems":crate::delegation::MAX_PURPOSES, "uniqueItems":true,
+        "items":{"type":"string", "minLength":1, "maxLength":crate::delegation::MAX_PURPOSE_BYTES,
+            "pattern":"^[a-z0-9._:/-]+$"},
+        "description":"Sorted application-defined purposes; empty places no purpose restriction. A child of a restricted link must restrict to a subset."})
+}
+pub fn grant_depth(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":0, "maximum":crate::delegation::MAX_DEPTH,
+        "description":"Further re-delegations allowed; each child link must be strictly lower."})
+}
+pub fn grant_links(generator: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::delegation::MAX_LINKS,
+        "items":generator.subschema_for::<crate::delegation::Link>(),
+        "description":"Delegation links from the root principal to the acting identity."})
+}
+pub fn optional_fingerprint(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "minLength":64, "maxLength":96,
+        "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$"})
+}
+pub fn optional_grant_operation(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "enum":[crate::delegation::DELEGABLE[0], crate::delegation::DELEGABLE[1],
+        crate::delegation::DELEGABLE[2], crate::delegation::DELEGABLE[3], null]})
+}
+pub fn optional_grant_purpose(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "minLength":1, "maxLength":crate::delegation::MAX_PURPOSE_BYTES,
+        "pattern":"^[a-z0-9._:/-]+$"})
+}
 pub fn trust_format(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "enum":["ipg-trust-v1", "ipg-trust-v2", "ipg-trust-v3"],
         "description":"IPG writes ipg-trust-v3; v1 and v2 snapshots remain readable."})

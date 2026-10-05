@@ -237,7 +237,7 @@ def main():
     for variant in schemas["request"]["oneOf"]:
         operation = variant["properties"]["operation"]["const"]
         values = {"operation": operation}
-        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2", "user_id": "Alice <alice@example.test>", "expected_openpgp_fingerprint": "AB" * 20, "recipients": [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]}
+        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2", "user_id": "Alice <alice@example.test>", "expected_openpgp_fingerprint": "AB" * 20, "expected_subject_fingerprint": pin, "expected_root_fingerprint": pin, "operations": ["sign"], "recipients": [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]}
         for field in variant["required"]:
             if field != "operation":
                 values[field] = defaults.get(field, "path")

@@ -390,6 +390,51 @@
       ]
     },
     {
+      "@id": "ipg:application/delegate-agent-authority",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/delegated-authority",
+        "ipg:goal/identity-policy"
+      ],
+      "guidance": "Issue a short-lived grant naming only the operations and purposes the agent needs, with delegation_depth 0 unless it must re-delegate. Relying parties pass a delegation requirement to verify or stream.verify with the root pinned, and treat a purpose mismatch or expiry as refusal, never as a prompt to widen the grant.",
+      "id": "delegate-agent-authority",
+      "keywords": [
+        "delegation",
+        "delegate",
+        "agent",
+        "multi-agent",
+        "on behalf",
+        "capability",
+        "least privilege",
+        "scoped authority"
+      ],
+      "label": "Delegate scoped signing or decryption authority to an agent",
+      "limitations": [
+        "Grants are evidence checked at the host clock, not host or filesystem authorization",
+        "Purposes are application labels the relying party must interpret",
+        "No grant revocation list: keep grants short-lived and revoke compromised keys through trust snapshots",
+        "Up to 8 links and depth 7; each link can only narrow its parent"
+      ],
+      "prerequisites": [
+        "The root principal's key and passphrase (or provider credentials) to issue the first grant",
+        "Each delegate's public identity and an independently trusted fingerprint",
+        "Relying parties hold the root's pinned public identity"
+      ],
+      "sources": [
+        "https://www.w3.org/TR/vc-data-model-2.0/",
+        "https://datatracker.ietf.org/doc/html/rfc8693"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/grant.issue",
+        "ipg:operation/grant.verify",
+        "ipg:operation/sign",
+        "ipg:operation/verify",
+        "ipg:operation/stream.sign",
+        "ipg:operation/stream.verify"
+      ]
+    },
+    {
       "@id": "ipg:application/revoke-identity",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -910,6 +955,11 @@
       "@id": "ipg:goal/custody-assurance",
       "@type": "ipg:SecurityGoal",
       "label": "custody-assurance"
+    },
+    {
+      "@id": "ipg:goal/delegated-authority",
+      "@type": "ipg:SecurityGoal",
+      "label": "delegated-authority"
     },
     {
       "@id": "ipg:goal/hardware-custody",
@@ -2372,6 +2422,154 @@
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
+      "@id": "ipg:operation/grant.issue",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Sign a scoped, time-bounded delegation grant to a pinned subject identity, optionally re-delegating within the issuer's own grant",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "grant.issue",
+      "inputs": [
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint",
+        "ipg:PublicKey",
+        "ipg:DelegableOperation",
+        "ipg:GrantPurpose",
+        "ipg:UnixTime",
+        "ipg:Grant"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_grant_issue",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:Grant"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "grant.issue"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/grant.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Authenticate a delegation chain from a pinned root at the host clock and report the authority it confers",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "grant.verify",
+      "inputs": [
+        "ipg:Grant",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:DelegableOperation",
+        "ipg:GrantPurpose"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_grant_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:GrantVerification"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "grant.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
       "@id": "ipg:operation/decrypt",
       "@type": "ipg:Operation",
       "algorithms": [
@@ -2544,11 +2742,13 @@
       "constraints": [
         "ipg:constraint/identity-pin",
         "ipg:constraint/exact-bytes",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
         "ipg:constraint/hybrid-post-quantum",
         "ipg:constraint/snapshot-policy",
         "ipg:constraint/validity-window"
       ],
-      "description": "Verify exact bytes against a pinned signer",
+      "description": "Verify exact bytes against a pinned signer, optionally requiring a delegation grant",
       "deterministic": false,
       "effects": [
         "read_file"
@@ -2580,7 +2780,8 @@
         "ipg:Plaintext",
         "ipg:Signature",
         "ipg:PublicKey",
-        "ipg:Fingerprint"
+        "ipg:Fingerprint",
+        "ipg:Grant"
       ],
       "key_inputs": [],
       "mcp_tool": "ipg_verify",
@@ -3284,12 +3485,14 @@
       "constraints": [
         "ipg:constraint/identity-pin",
         "ipg:constraint/exact-bytes",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
         "ipg:constraint/stream-signature",
         "ipg:constraint/hybrid-post-quantum",
         "ipg:constraint/snapshot-policy",
         "ipg:constraint/validity-window"
       ],
-      "description": "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer",
+      "description": "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer, optionally requiring a delegation grant",
       "deterministic": false,
       "effects": [
         "read_file"
@@ -3321,7 +3524,8 @@
         "ipg:Plaintext",
         "ipg:StreamSignature",
         "ipg:PublicKey",
-        "ipg:Fingerprint"
+        "ipg:Fingerprint",
+        "ipg:Grant"
       ],
       "key_inputs": [],
       "mcp_tool": "ipg_stream_verify",
@@ -4280,5 +4484,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.22.0"
+  "version": "1.23.0"
 }

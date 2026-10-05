@@ -62,6 +62,81 @@
       ],
       "type": "object"
     },
+    "Authority": {
+      "description": "The authority a verified chain confers on its final subject.",
+      "properties": {
+        "checked_at": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "delegation_depth": {
+          "format": "uint8",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "links": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_after": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_before": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "purposes": {
+          "description": "Empty when the chain places no purpose restriction.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "root": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "subject": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "subject",
+        "operations",
+        "purposes",
+        "not_before",
+        "not_after",
+        "delegation_depth",
+        "links",
+        "checked_at"
+      ],
+      "type": "object"
+    },
     "Certificate": {
       "description": "Certificate evaluated under IPG policy at `evaluated_at` (host time).",
       "properties": {
@@ -1193,6 +1268,17 @@
             },
             {
               "properties": {
+                "delegation": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Authority"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Authority the signer's delegation grant conferred, when one was required."
+                },
                 "fingerprint": {
                   "type": "string"
                 },
@@ -1222,6 +1308,26 @@
                 "kind",
                 "valid",
                 "fingerprint"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "authenticated": {
+                  "type": "boolean"
+                },
+                "authority": {
+                  "$ref": "#/$defs/Authority"
+                },
+                "kind": {
+                  "const": "grant_verified",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "authority",
+                "authenticated"
               ],
               "type": "object"
             },

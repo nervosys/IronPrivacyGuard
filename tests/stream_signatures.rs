@@ -33,6 +33,7 @@ fn large_files_round_trip_without_in_memory_limit_and_never_clobber() {
         signer: path("public"),
         expected_fingerprint: key.public.fingerprint.clone(),
         policy: None,
+        delegation: None,
     };
     execute(verify()).unwrap();
     assert_eq!(

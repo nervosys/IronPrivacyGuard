@@ -116,6 +116,10 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
                 | "not_before"
                 | "not_after"
                 | "at_time"
+                | "operations"
+                | "purposes"
+                | "delegation_depth"
+                | "delegation"
         ) {
             iron_privacy_guard::control_json::parse(pair[1].as_bytes())?
         } else {
@@ -156,6 +160,9 @@ mod tests {
             json!({"operation":"key.revoke", "key":"secret", "output":"revocation", "expected_fingerprint":"00".repeat(32), "passphrase_file":"pass", "reason":"compromised"}),
             json!({"operation":"key.validity", "key":"secret", "output":"validity", "expected_fingerprint":"00".repeat(32), "passphrase_file":"pass", "not_before":1, "not_after":2}),
             json!({"operation":"revocation.verify", "input":"revocation", "signer":"public", "expected_fingerprint":"00".repeat(32)}),
+            json!({"operation":"grant.issue", "key":"secret", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "subject":"agent.public", "expected_subject_fingerprint":"11".repeat(32), "operations":["sign"], "purposes":["release"], "not_before":1, "not_after":2, "delegation_depth":1, "parent":"parent.grant", "output":"grant"}),
+            json!({"operation":"grant.verify", "input":"grant", "root":"root.public", "expected_root_fingerprint":"00".repeat(32), "subject_fingerprint":"11".repeat(32), "required_operation":"sign", "purpose":"release"}),
+            json!({"operation":"verify", "input":"file", "signature":"signature", "signer":"public", "expected_fingerprint":"00".repeat(32), "policy":policy, "delegation":{"grant":"grant", "root":"root.public", "expected_root_fingerprint":"11".repeat(32), "purpose":"release"}}),
             json!({"operation":"validity.verify", "input":"validity", "signer":"public", "expected_fingerprint":"00".repeat(32)}),
             json!({"operation":"trust.init", "output":"trust.json"}),
             json!({"operation":"trust.add", "store":"trust.json", "expected_digest":"00".repeat(32), "public":"public", "expected_fingerprint":"00".repeat(32), "output":"new.json"}),

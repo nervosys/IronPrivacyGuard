@@ -104,6 +104,12 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-grant-v1" => {
+            let value: crate::delegation::Grant = ipg_json::from_slice(data)?;
+            value.validate()?;
+            // The final subject; the chain is not authenticated by inspection.
+            Some(value.subject().fingerprint.clone())
+        }
         "ipg-revocation-v1" => {
             let value: Revocation = ipg_json::from_slice(data)?;
             value.validate()?;

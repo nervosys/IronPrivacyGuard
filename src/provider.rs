@@ -495,9 +495,46 @@ impl CustodyPolicy {
 }
 
 /// Host-controlled execution policy, fixed at process startup.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Host {
     pub custody: CustodyPolicy,
+    /// A pinned delegation grant confining private-key use to its subject.
+    pub delegation: Option<HostDelegation>,
+}
+/// A grant the host pins at startup; every private-key operation in the
+/// session must be performed by its subject and, when delegable, be granted.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HostDelegation {
+    pub grant: crate::delegation::Grant,
+    pub root: PublicKey,
+    pub expected_root: String,
+}
+impl HostDelegation {
+    /// Load and verify the grant once at startup; calls re-check at their own time.
+    pub fn load(grant: &str, root: &str, expected_root: &str) -> Result<Self> {
+        let delegation = Self {
+            grant: crate::load(grant)?,
+            root: crate::load(root)?,
+            expected_root: expected_root.into(),
+        };
+        delegation.check(None, None)?;
+        Ok(delegation)
+    }
+    /// Require the key to be the grant's subject and, if given, the operation granted.
+    pub fn check(&self, key: Option<&PublicKey>, operation: Option<&str>) -> Result<()> {
+        crate::delegation::verify(
+            &self.grant,
+            &self.root,
+            &self.expected_root,
+            crate::delegation::Need {
+                subject: key.map(|k| k.fingerprint.as_str()),
+                operation,
+                purpose: None,
+            },
+            crate::delegation::now()?,
+        )
+        .map(|_| ())
+    }
 }
 impl Host {
     /// Refuse private-key custody below the host's minimum.

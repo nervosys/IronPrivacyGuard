@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added scoped, chained delegation grants (`ipg-grant-v1`) for agents and
+  multi-agent systems: `grant.issue` and `grant.verify`, an optional `delegation`
+  requirement on `verify` and `stream.verify`, and MCP host pinning with
+  `--grant`, `--grant-root` and `--expected-grant-root-fingerprint`. Each link
+  can only narrow its parent's operations, purposes, window and depth, and
+  commits to the previous link. Independent PyCA checks cover both directions.
+  56 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

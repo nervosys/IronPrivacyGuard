@@ -178,6 +178,35 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "grant.issue",
+        "Sign a scoped, time-bounded delegation grant to a pinned subject identity, optionally re-delegating within the issuer's own grant",
+        &[
+            "SecretKey",
+            "Passphrase",
+            "Fingerprint",
+            "PublicKey",
+            "DelegableOperation",
+            "GrantPurpose",
+            "UnixTime",
+            "Grant",
+        ],
+        &["Grant"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "grant.verify",
+        "Authenticate a delegation chain from a pinned root at the host clock and report the authority it confers",
+        &[
+            "Grant",
+            "PublicKey",
+            "Fingerprint",
+            "DelegableOperation",
+            "GrantPurpose",
+        ],
+        &["GrantVerification"],
+        &["read_file"],
+    ),
+    (
         "decrypt",
         "Authenticate before releasing plaintext",
         &["Envelope", "SecretKey", "Passphrase"],
@@ -193,8 +222,14 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "verify",
-        "Verify exact bytes against a pinned signer",
-        &["Plaintext", "Signature", "PublicKey", "Fingerprint"],
+        "Verify exact bytes against a pinned signer, optionally requiring a delegation grant",
+        &[
+            "Plaintext",
+            "Signature",
+            "PublicKey",
+            "Fingerprint",
+            "Grant",
+        ],
         &["Verification"],
         &["read_file"],
     ),
@@ -287,8 +322,14 @@ pub const OPERATIONS: &[OperationDefinition] = &[
     ),
     (
         "stream.verify",
-        "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer",
-        &["Plaintext", "StreamSignature", "PublicKey", "Fingerprint"],
+        "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer, optionally requiring a delegation grant",
+        &[
+            "Plaintext",
+            "StreamSignature",
+            "PublicKey",
+            "Fingerprint",
+            "Grant",
+        ],
         &["Verification"],
         &["read_file"],
     ),
@@ -417,6 +458,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
+    "grant.issue",
     "key.public",
     "key.revoke",
     "key.validity",
@@ -456,6 +498,19 @@ pub fn operation(id: &str) -> Value {
         "revocation.verify" | "validity.verify" => {
             vec!["identity-pin", "certificate-not-enforcement"]
         }
+        "grant.issue" => vec![
+            "identity-pin",
+            "secret-channel",
+            "no-clobber",
+            "delegation-attenuation",
+            "delegation-not-authorization",
+        ],
+        "grant.verify" => vec![
+            "identity-pin",
+            "delegation-attenuation",
+            "delegation-not-authorization",
+            "host-clock",
+        ],
         "key.generate" | "key.public" | "sign" | "stream.sign" => {
             vec!["secret-channel", "no-clobber"]
         }
@@ -470,7 +525,12 @@ pub fn operation(id: &str) -> Value {
             "secret-channel",
             "no-clobber",
         ],
-        "verify" | "stream.verify" => vec!["identity-pin", "exact-bytes"],
+        "verify" | "stream.verify" => vec![
+            "identity-pin",
+            "exact-bytes",
+            "delegation-attenuation",
+            "delegation-not-authorization",
+        ],
         "inspect" => vec!["untrusted-metadata"],
         "hardware.tokens" => vec!["host-provider"],
         "tpm.info" => vec!["tpm-provider"],
@@ -626,10 +686,15 @@ pub fn operation(id: &str) -> Value {
             | "stream.verify"
             | "key.revoke"
             | "key.validity"
+            | "grant.issue"
+            | "grant.verify"
     ) {
         constraints.push("hybrid-post-quantum");
     }
-    if matches!(*id, "key.validity" | "trust.validity" | "trust.evaluate") {
+    if matches!(
+        *id,
+        "key.validity" | "trust.validity" | "trust.evaluate" | "grant.issue" | "grant.verify"
+    ) {
         constraints.push("validity-window");
     }
     let mut algorithms: Vec<&str> = match *id {
@@ -658,7 +723,9 @@ pub fn operation(id: &str) -> Value {
         "sign" | "stream.sign" | "key.revoke" | "key.validity" => {
             vec!["ed25519", "argon2id", "chacha20-poly1305"]
         }
+        "grant.issue" => vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"],
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
+        "grant.verify" => vec!["ed25519", "sha2-384"],
         "hash" => vec!["sha2-256"],
         "openpgp.key.generate"
         | "openpgp.key.import"
@@ -695,9 +762,9 @@ pub fn operation(id: &str) -> Value {
         ],
         "key.generate" | "key.rewrap" => &["ml-kem-768", "ml-dsa-65"],
         "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
-        | "revocation.verify" | "validity.verify" | "trust.add" | "trust.revoke"
-        | "trust.validity" | "trust.status" | "trust.evaluate" | "trust.compare"
-        | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
+        | "revocation.verify" | "validity.verify" | "grant.issue" | "grant.verify"
+        | "trust.add" | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
+        | "trust.compare" | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
         _ => &[],
     };
     for algorithm in p384 {
@@ -1048,6 +1115,26 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "Grant",
+            "An ipg-grant-v1 delegation chain: signed links from a root principal to an acting identity, each carrying the subject's public identity, operations, purposes, time window and remaining depth",
+            "public",
+        ),
+        (
+            "GrantVerification",
+            "Authority a chain confers at the host clock: root, subject, operations, purposes, window and depth; evidence, not authorization",
+            "public",
+        ),
+        (
+            "DelegableOperation",
+            "Closed vocabulary of private-key operations a grant may delegate: decrypt, sign, stream.decrypt, stream.sign",
+            "public",
+        ),
+        (
+            "GrantPurpose",
+            "Application-defined lowercase label narrowing what a delegated signature or decryption is for; untrusted data until a verified grant includes it",
+            "untrusted",
+        ),
+        (
             "Artifact",
             "A versioned native IPG JSON file or raw data",
             "public",
@@ -1168,6 +1255,18 @@ pub fn export() -> Value {
         (
             "old-copies-remain",
             "Rewrapping changes only passphrase protection. Existing copies remain usable with the old passphrase; it does not recover a compromised identity.",
+        ),
+        (
+            "delegation-attenuation",
+            "Every grant link must be signed by the previous subject, name a sorted subset of its operations and purposes, fit inside its time window and have strictly lower depth; any widening, splice, loop or unknown operation is refused.",
+        ),
+        (
+            "delegation-not-authorization",
+            "A verified grant is evidence that a pinned root delegated authority, checked at the host clock. It does not authorize filesystem, provider or host actions, does not replace trust snapshots or revocation of the keys involved, and purposes are labels for the relying application to enforce.",
+        ),
+        (
+            "host-clock",
+            "Time-bounded evidence is evaluated at the host clock; caller-supplied times never authorize actions.",
         ),
         (
             "certificate-not-enforcement",
@@ -1438,6 +1537,10 @@ pub fn export() -> Value {
         ),
         ("change-passphrase", vec!["key.rewrap", "key.public"]),
         ("self-revoke", vec!["key.revoke", "revocation.verify"]),
+        (
+            "delegate-signing",
+            vec!["grant.issue", "grant.verify", "sign", "verify"],
+        ),
         ("create-identity", vec!["key.generate", "key.public"]),
         (
             "create-hardware-identity",
@@ -1498,5 +1601,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.34.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.35.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

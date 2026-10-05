@@ -306,6 +306,344 @@
     "title": "Envelope",
     "type": "object"
   },
+  "grant": {
+    "$defs": {
+      "Link": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{128}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-sha384"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ed25519-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6746}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "algorithm": {
+                  "const": "ecdsa-p384-mldsa65"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "signature": {
+                  "pattern": "^[0-9a-f]{6810}$"
+                }
+              }
+            }
+          }
+        ],
+        "description": "One signed delegation step from `issuer` to `subject`.",
+        "properties": {
+          "algorithm": {
+            "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+            "enum": [
+              "ed25519",
+              "ecdsa-p384-sha384",
+              "ed25519-mldsa65",
+              "ecdsa-p384-mldsa65"
+            ],
+            "type": "string"
+          },
+          "delegation_depth": {
+            "description": "Further re-delegations allowed; each child link must be strictly lower.",
+            "maximum": 7,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "issuer": {
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "nonce": {
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          },
+          "not_after": {
+            "description": "Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime).",
+            "maximum": 253402300799,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "not_before": {
+            "description": "Unix seconds, inclusive; must be strictly less than not_after (checked at runtime).",
+            "maximum": 253402300798,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "operations": {
+            "description": "Operations the subject may perform; sorted, and a subset of the parent link's.",
+            "items": {
+              "enum": [
+                "decrypt",
+                "sign",
+                "stream.decrypt",
+                "stream.sign"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "purposes": {
+            "description": "Sorted application-defined purposes; empty places no purpose restriction. A child of a restricted link must restrict to a subset.",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9._:/-]+$",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "signature": {
+            "maxLength": 6810,
+            "minLength": 128,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/$defs/PublicKey"
+          }
+        },
+        "required": [
+          "issuer",
+          "subject",
+          "operations",
+          "purposes",
+          "not_before",
+          "not_after",
+          "delegation_depth",
+          "nonce",
+          "algorithm",
+          "signature"
+        ],
+        "type": "object"
+      },
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "A complete delegation chain from a root principal to the acting identity.",
+    "properties": {
+      "format": {
+        "const": "ipg-grant-v1",
+        "type": "string"
+      },
+      "links": {
+        "description": "Delegation links from the root principal to the acting identity.",
+        "items": {
+          "$ref": "#/$defs/Link"
+        },
+        "maxItems": 8,
+        "minItems": 1,
+        "type": "array"
+      }
+    },
+    "required": [
+      "format",
+      "links"
+    ],
+    "title": "Grant",
+    "type": "object"
+  },
   "hardware_key": {
     "$defs": {
       "PublicKey": {

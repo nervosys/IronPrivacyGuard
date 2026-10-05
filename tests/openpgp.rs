@@ -1049,6 +1049,7 @@ mod enabled {
         fs::write(f.path("data"), b"x").unwrap();
         let host = Host {
             custody: iron_privacy_guard::provider::CustodyPolicy::NonExportable,
+            delegation: None,
         };
         for request in [
             json!({"operation":"openpgp.key.import","input":f.path("missing"),"output":f.path("imported"),"expected_openpgp_fingerprint":"00".repeat(20),"passphrase_file":f.path("missing"),"new_passphrase_file":f.path("missing")}),

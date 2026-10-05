@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 54 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 56 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -125,7 +125,7 @@ For a persistent process, use `ipg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `ipg mcp`. It exposes all 54 operations as tools named
+For MCP clients, use `ipg mcp`. It exposes all 56 operations as tools named
 `ipg_discover`, `ipg_knowledge`, `ipg_knowledge_search`, `ipg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -167,6 +167,7 @@ ipg knowledge search --query "openpgp"
 | File digest | `hash` |
 | Protect private identities | `key.generate`, `key.public`, `key.rewrap` |
 | Manage trust and lifecycle | `trust.*`, `key.revoke`, `key.validity`, certificate verification |
+| Delegate scoped authority to agents | `grant.issue`, `grant.verify`, then `verify` or `stream.verify` with `delegation` |
 | Identify native artifacts | `inspect` |
 | Hardware key custody (PKCS#11 tokens, HSMs, TPM 2.0) | `hardware.*` or `tpm.*`, then any key operation with the key file |
 | Prove keys are resident in a genuine TPM | `tpm.attest`, `tpm.attestation.challenge`, `tpm.attestation.respond`, `tpm.attestation.verify` |
@@ -342,6 +343,18 @@ narrower signed validity windows. Conflicting windows fail without publication.
 The orchestrator still controls the current policy pin and approves new identities.
 See [branch reconciliation](docs/TRUST.md#comparing-and-reconciling-branches).
 
+## Delegating authority to agents
+
+A root principal can delegate scoped authority to an agent identity with a
+signed `ipg-grant-v1` grant: named operations (`sign`, `stream.sign`, `decrypt`,
+`stream.decrypt`), optional purposes, a time window and a re-delegation depth.
+Agents may pass narrower slices to sub-agents; every link can only narrow its
+parent. Relying parties add a `delegation` requirement to `verify` or
+`stream.verify` so a signature counts only if the signer's chain verifies back
+to the pinned root at the host clock. An MCP host can pin a grant for a whole
+session with `--grant`, confining private-key use to the delegated identity and
+operations. See [delegation grants](docs/DELEGATION.md).
+
 ## Any-size detached signatures
 
 Any-size detached native signatures use a separate `ipg-stream-signature-v1`
@@ -440,6 +453,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tls/` | Experimental bounded TLS 1.3 client (`tls-native`): X25519/P-256/P-384, record protection, key schedule |
 | `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA/prehash-ECDSA (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
+| `src/delegation.rs` | ipg-grant-v1 delegation chains: issue, attenuation, verification and host pinning |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
 | `src/reconciliation.rs` | Pinned snapshot comparison and conservative merging |
 | `src/knowledge.rs` | Embedded knowledgebase, application search and ontology nodes |
@@ -454,6 +468,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/knowledge.rs` | Application routing, graph integrity, query bounds and CLI checks |
 | `tests/security.rs` | Security regressions, workflow and protocol tests |
 | `tests/lifecycle.rs` | Rewrapping, certificate tampering, signature separation, CLI lifecycle |
+| `tests/delegation.rs` | Grant issue, attenuation, verification requirements, expiry and host-pinned sessions |
 | `tests/trust.rs` | Policy enforcement, snapshot tampering, monotonic revocation, publication |
 | `tests/mcp.rs` | MCP subprocess sessions, schemas, allowlists, mandatory policy, rate limits |
 | `tests/hardware.rs` | Fail-closed hardware configuration, custody policy, pre-login checks |
