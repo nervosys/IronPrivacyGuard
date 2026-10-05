@@ -47,11 +47,12 @@ pub fn build() -> Value {
     json!({
         "cargo_dependencies":true,
         "ironcrypto_only":!cfg!(any(feature="kms",feature="openpgp")),
-        "migration_status":"core/native OpenPGP, PKCS#11 and TPM attestation use only first-party and IronCrypto crates; TLS and broad OpenPGP are still being migrated",
+        "migration_status":"core/native OpenPGP, PKCS#11, TPM attestation and experimental native TLS 1.3 use only first-party and IronCrypto crates; KMS TLS and broad OpenPGP are still being migrated",
         "core_external_executables_required":false,
         "core_requirements":["operating-system entropy", "filesystem access", "host clock"],
         "openpgp_backend":crate::openpgp::IMPLEMENTATION,
         "native_x509":cfg!(feature = "x509-native"),
+        "native_tls":{"compiled":cfg!(feature = "tls-native"),"status":"experimental","interface":"Rust API only","profile":"TLS 1.3, X25519, explicit DER roots, bounded request/response","independently_reviewed":false,"kms_backend":false,"authorized":false},
         "kms_tls_backend":if cfg!(feature = "kms") { "rustls with IronCrypto" } else { "not_compiled" },
         "optional_integrations":{
             "pkcs11":{"compiled":cfg!(feature = "pkcs11"),"requires":"vendor library and token"},

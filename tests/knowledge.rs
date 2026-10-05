@@ -201,6 +201,16 @@ fn live_availability_is_consistent_without_granting_authority() {
     }
     assert_eq!(discovery["build"]["cargo_dependencies"], true);
     assert_eq!(
+        discovery["build"]["native_tls"]["compiled"],
+        cfg!(feature = "tls-native")
+    );
+    assert_eq!(discovery["build"]["native_tls"]["kms_backend"], false);
+    assert_eq!(discovery["build"]["native_tls"]["authorized"], false);
+    assert_eq!(
+        discovery["build"]["native_tls"]["independently_reviewed"],
+        false
+    );
+    assert_eq!(
         discovery["build"]["native_x509"],
         cfg!(feature = "x509-native")
     );

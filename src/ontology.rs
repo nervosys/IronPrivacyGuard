@@ -1222,6 +1222,10 @@ pub fn export() -> Value {
             "KMS HTTPS uses rustls with IronCrypto and a bundled, pinned Mozilla public root set; native x509-native certificate APIs do not replace its TLS handshake. Certificate rejection returns non-retryable key_not_trusted; other TLS validation failures return non-retryable authentication_failed. Stop and obtain operator review. Never add a presented certificate to the trust set, disable name checks or downgrade protocols after failure. The static root set changes only through a reviewed rebuild; it does not follow OS root or revocation policy. Ordinary network failures may be retryable, but private-key requests are billable and must not be retried blindly after ambiguous completion.",
         ),
         (
+            "native-tls-profile",
+            "The optional tls-native Rust API is an experimental bounded TLS 1.3 client using IronCrypto. It requires an independently chosen DNS/IP identity, explicitly accepted DER roots and the host clock; it verifies certificate paths, CertificateVerify and Finished before exposing application operations. It has no CLI or MCP operation and does not replace KMS TLS. No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, revocation fetching or implicit trust is supported. Every error closes the connection; reads release the collected response only after authenticated close_notify. Unsupported profiles require explicit host review, never automatic downgrade, adding peer roots or bypassing checks. A verified peer and its response do not authorize application actions; independent review remains outstanding.",
+        ),
+        (
             "stream-envelope",
             "ipg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an ipg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
         ),
@@ -1494,5 +1498,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.33.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.34.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

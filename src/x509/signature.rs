@@ -85,9 +85,42 @@ fn scheme(input: &[u8]) -> Result<Scheme> {
 pub(super) fn verify(certificate: &Certificate<'_>, issuer_spki: &[u8]) -> Result<()> {
     let rejected = || Error::new("key_not_trusted", "Certificate signature was not verified");
     let scheme = scheme(certificate.signature_algorithm).map_err(|_| rejected())?;
+    verify_message(scheme, issuer_spki, certificate.tbs, certificate.signature)
+}
+
+#[cfg(feature = "tls-native")]
+pub(crate) fn verify_tls13_signature(
+    id: u16,
+    spki: &[u8],
+    message: &[u8],
+    signature: &[u8],
+) -> Result<()> {
+    let scheme = match id {
+        0x0403 => Scheme::P256,
+        0x0503 => Scheme::P384,
+        0x0804 => Scheme::Pss(1),
+        0x0805 => Scheme::Pss(2),
+        0x0806 => Scheme::Pss(3),
+        0x0807 => Scheme::Ed25519,
+        _ => {
+            return Err(Error::new(
+                "authentication_failed",
+                "Unsupported TLS signature scheme",
+            ));
+        }
+    };
+    verify_message(scheme, spki, message, signature)
+        .map_err(|_| Error::new("authentication_failed", "TLS CertificateVerify failed"))
+}
+
+fn verify_message(
+    scheme: Scheme,
+    issuer_spki: &[u8],
+    message: &[u8],
+    signature: &[u8],
+) -> Result<()> {
+    let rejected = || Error::new("key_not_trusted", "Certificate signature was not verified");
     let key = PublicKeyInfo::from_der(issuer_spki).map_err(|_| rejected())?;
-    let message = certificate.tbs;
-    let signature = certificate.signature;
     let result = match (scheme, key) {
         (
             Scheme::P256,

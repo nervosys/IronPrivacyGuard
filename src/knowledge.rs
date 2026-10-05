@@ -4,7 +4,7 @@ use ipg_json::{Deserialize, Serialize};
 use ipg_json::{Value, json};
 use std::collections::BTreeSet;
 
-pub const VERSION: &str = "1.21.0";
+pub const VERSION: &str = "1.22.0";
 
 #[derive(Deserialize, Serialize, ipg_json::JsonSchema)]
 #[serde(deny_unknown_fields)]

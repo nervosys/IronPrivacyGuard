@@ -12,12 +12,14 @@ use ic_pkix::der::Reader;
 
 use crate::error::{Error, Result};
 
-mod identity;
+pub(crate) mod identity;
 mod path;
 mod signature;
 #[cfg(feature = "attestation")]
 pub(crate) use path::verify;
 pub use path::{verify as verify_endorsement_certificate, verify_tls_server};
+#[cfg(feature = "tls-native")]
+pub(crate) use signature::verify_tls13_signature;
 
 const MAX_CERTIFICATE_BYTES: usize = 65_536;
 const MAX_EXTENSIONS: usize = 64;

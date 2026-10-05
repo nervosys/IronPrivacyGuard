@@ -10,7 +10,7 @@ Cargo.toml and Cargo.lock are the authoritative dependency declarations. IronCry
 provides primitives, OS-seeded DRBG output, hexadecimal conversion and volatile
 memory erasure. First-party IPG code provides JSON parsing, typed serialization,
 schema derives, secret-buffer wrappers, temporary-file handling and PKCS#11 FFI.
-TLS and broad OpenPGP still contain additional third-party crates, so the migration is
+KMS TLS and broad OpenPGP still contain additional third-party crates, so the migration is
 not complete across every feature combination.
 The Rust standard library and platform runtime also remain requirements.
 
@@ -26,8 +26,11 @@ dependencies, including those introduced by IronCrypto adapters. The default
 and `tpm,pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
 blocker. CI checks default, minimal, `pkcs11` and `tpm,pkcs11` builds on each supported OS.
 
-The remaining replacements require a native TLS client and additional OpenPGP
-profiles. Attestation now uses IPG's bounded X.509 parser and path validator over
+The experimental `tls-native` Rust client now passes the IronCrypto-only gate.
+It supports a [bounded TLS 1.3 profile](TLS.md), with independent record vectors
+and local OpenSSL/PyCA handshake checks. Production review, KMS integration,
+TLS compatibility coverage and additional native OpenPGP profiles remain.
+Attestation now uses IPG's bounded X.509 parser and path validator over
 IronCrypto primitives; see [the supported profile](ATTESTATION.md#native-certificate-profile).
 `ic-rustls` supplies primitives to rustls, not a standalone TLS engine, and
 therefore does not satisfy the transitive dependency gate. Its replacement must
@@ -57,6 +60,7 @@ Windows. Output directories must be access-controlled by the host.
 | `kms` | Network, AWS services, credentials and provisioned keys |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
 | `x509-native` | Caller-selected roots, certificate chain, trusted time and (for TLS) expected host; offline Rust API only |
+| `tls-native` | Connected TCP socket, independently selected host, explicit full-DER roots and host clock; experimental Rust API only |
 
 The native PKCS#11 wrapper loads only the host-configured module. That module is
 trusted native code and must obey the PKCS#11 ABI; size checks cannot sandbox a

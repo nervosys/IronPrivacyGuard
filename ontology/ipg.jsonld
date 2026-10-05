@@ -3844,6 +3844,12 @@
       "severity": "critical"
     },
     {
+      "@id": "ipg:constraint/native-tls-profile",
+      "@type": "ipg:Constraint",
+      "requirement": "The optional tls-native Rust API is an experimental bounded TLS 1.3 client using IronCrypto. It requires an independently chosen DNS/IP identity, explicitly accepted DER roots and the host clock; it verifies certificate paths, CertificateVerify and Finished before exposing application operations. It has no CLI or MCP operation and does not replace KMS TLS. No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, revocation fetching or implicit trust is supported. Every error closes the connection; reads release the collected response only after authenticated close_notify. Unsupported profiles require explicit host review, never automatic downgrade, adding peer roots or bypassing checks. A verified peer and its response do not authorize application actions; independent review remains outstanding.",
+      "severity": "critical"
+    },
+    {
       "@id": "ipg:constraint/stream-envelope",
       "@type": "ipg:Constraint",
       "requirement": "ipg-stream-v1 encrypts any size in 64 KiB chunks under a random content key wrapped as an ipg-envelope-v1 for each of 1..64 recipients (any identity suite or key provider). Each chunk's nonce encodes its index and a final-chunk flag, and its associated data commits to the whole header, so reordering, truncation, extension and adding or removing recipients are detected. Content uses AES-256-GCM when every recipient is a P-384 identity, otherwise ChaCha20-Poly1305. Decryption releases plaintext only after the final chunk authenticates. Every recipient can decrypt and could re-encrypt different content to the others: streams carry no sender authentication, so sign them when origin matters.",
@@ -4994,7 +5000,7 @@
       "goals": [
         "ipg:goal/channel-security"
       ],
-      "guidance": "Use a complete transport protocol implementation; do not assemble a channel from IPG file commands.",
+      "guidance": "Use a separately evaluated transport for production requirements. Rust integrators can evaluate the experimental tls-native client within docs/TLS.md limits. All errors close the connection and bounded reads require authenticated close_notify. Never downgrade protocols or add presented certificates after failure. Peer authentication and received content do not authorize commands or policy changes. Consult live discover build.native_tls; compilation is not readiness or authorization.",
       "id": "secure-network-channel",
       "keywords": [
         "tls",
@@ -5006,10 +5012,14 @@
       ],
       "label": "Secure a live client-server connection",
       "limitations": [
-        "IPG file encryption is not a TLS handshake or record protocol"
+        "No general TLS CLI or MCP operation exists; IPG file encryption is not a transport protocol",
+        "The optional tls-native Rust client supports a bounded TLS 1.3/X25519 request-response profile only; independent review is outstanding",
+        "No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, implicit roots or revocation fetching",
+        "KMS continues to use rustls with IronCrypto"
       ],
       "prerequisites": [
-        "A separately evaluated TLS stack and peer authentication policy"
+        "A separately evaluated TLS stack and peer authentication policy",
+        "For the experimental tls-native Rust API: independently selected DNS/IP identity, explicit DER roots and trusted system time"
       ],
       "sources": [
         "https://www.rfc-editor.org/rfc/rfc8446"
@@ -5418,5 +5428,5 @@
   ],
   "@id": "ipg:ontology",
   "scope": "Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.33.0"
+  "version": "1.34.0"
 }

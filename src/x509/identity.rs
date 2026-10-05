@@ -3,7 +3,7 @@
 use crate::error::{Error, Result};
 use std::net::IpAddr;
 
-pub(super) enum Reference<'a> {
+pub(crate) enum Reference<'a> {
     Dns(&'a [u8]),
     Ip(IpAddr),
 }

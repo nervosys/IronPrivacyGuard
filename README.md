@@ -81,6 +81,9 @@ verifier holding only the manufacturer's root certificates; the verifier needs t
 The standalone `x509-native` feature provides [offline certificate checks](docs/X509.md)
 for Rust callers using only IronCrypto and first-party crates. KMS still uses
 rustls for its TLS transport, with [bundled public trust-anchor data](data/README.md).
+The opt-in `tls-native` feature adds an [experimental TLS 1.3 Rust client](docs/TLS.md)
+using only IronCrypto and first-party crates. It has a bounded profile and does
+not yet replace the KMS transport.
 
 Native OpenPGP curve interchange is enabled by default; `--no-default-features`
 omits it. Explicit `--features openpgp-native` adds no
