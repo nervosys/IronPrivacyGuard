@@ -24,9 +24,11 @@ reports `provider_unavailable` for every hardware operation.
 cargo build --release --locked --features pkcs11
 ```
 
-The feature adds [`cryptoki`](https://crates.io/crates/cryptoki) (Apache-2.0),
-which loads the vendor module at runtime. There is no C compilation and no change
-to schemas, the ontology or artifact formats.
+The feature adds the first-party `ipg-pkcs11` wrapper, which loads the vendor
+module at runtime and depends only on IronCrypto for buffer erasure. There is no
+C compilation and no change to schemas or artifact formats. Sessions close on
+drop; loaded modules remain initialized until process exit. See
+[dependency boundaries](DEPENDENCIES.md) for module-lifetime and trust requirements.
 
 The host names the module with an environment variable. It must be an absolute path
 to an existing file; a bare library name would make the loader search `PATH` or

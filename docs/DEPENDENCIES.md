@@ -5,12 +5,12 @@ profile. It does not invoke GPG, OpenSSL, Python, Node.js or another cryptograph
 executable. It uses OS entropy, filesystem access and the host clock. Build and
 test tools are not required to run the resulting binary.
 
-**The default build has no third-party Cargo dependencies outside IronCrypto.**
+**Default, minimal, and `pkcs11` builds have no third-party Cargo dependencies outside IronCrypto.**
 Cargo.toml and Cargo.lock are the authoritative dependency declarations. IronCrypto
 provides primitives, OS-seeded DRBG output, hexadecimal conversion and volatile
 memory erasure. First-party IPG code provides JSON parsing, typed serialization,
-schema derives, secret-buffer wrappers and temporary-file handling. Optional
-integrations still contain additional third-party crates, so the migration is
+schema derives, secret-buffer wrappers, temporary-file handling and PKCS#11 FFI.
+TLS, attestation and broad OpenPGP still contain additional third-party crates, so the migration is
 not complete across every feature combination.
 The Rust standard library and platform runtime also remain requirements.
 
@@ -23,8 +23,8 @@ annotations fail compilation instead of silently weakening a contract.
 graph and fails while any third-party package remains. Run it with
 `--all-features` to audit optional integrations too. It follows transitive
 dependencies, including those introduced by IronCrypto adapters. The default
-build passes this gate; the full-feature graph still fails and remains a migration
-blocker. CI checks the default and minimal builds on each supported OS.
+and `pkcs11` builds pass this gate; the full-feature graph still fails and remains a migration
+blocker. CI checks default, minimal and `pkcs11` builds on each supported OS.
 
 Publication creates a hard link from an exclusive temporary file in the output
 directory after authentication and synchronization. The filesystem must support
@@ -39,6 +39,14 @@ Windows. Output directories must be access-controlled by the host.
 | `tpm` | TPM and configured native transport; Windows uses OS TPM services; attestation still adds certificate-verification crates |
 | `kms` | Network, AWS services, credentials and provisioned keys |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
+
+The native PKCS#11 wrapper loads only the host-configured module. That module is
+trusted native code and must obey the PKCS#11 ABI; size checks cannot sandbox a
+malicious vendor library. Calls are serialized and sessions close on drop. Modules
+are initialized once and retained until process exit (at most 64 distinct canonical
+paths), so closing one IPG context cannot finalize a module used by another
+context or embedding application. Changing a loaded module requires restarting
+the process. Token login state follows PKCS#11's process-wide rules.
 
 `cargo build --release --locked` builds the default native profile. To omit
 OpenPGP, use `--no-default-features`. Enabling `openpgp` selects rPGP, including

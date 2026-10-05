@@ -73,7 +73,7 @@ cargo build --release --locked --features pkcs11 --target-dir target
 AWS KMS identities need the `kms` feature (still no C compilation: TLS uses rustls
 with IronCrypto's provider). TPM 2.0 identities need the `tpm` feature: Linux uses
 IPG's native TPM command layer; Windows uses TPM Base Services through the small
-`ipg-cng` crate, the only code in IPG with `unsafe`. See
+`ipg-cng` crate. Native FFI is isolated in `ipg-cng` and `ipg-pkcs11`. See
 [hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
 verifier holding only the manufacturer's root certificates; the verifier needs the
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
@@ -432,7 +432,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
-| `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS; the only `unsafe` code |
+| `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |
+| `crates/ipg-pkcs11` | Native PKCS#11 FFI, bounded buffers, and session ownership |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4, TLS via IronCrypto, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary: native IronCrypto curve interchange (`openpgp-native`) or broader rPGP support (`openpgp`), with certificate policy |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
@@ -498,7 +499,7 @@ IPG is dual-licensed, on the same terms as IronCrypto:
   without AGPL obligations. Contact licensing@nervosys.ai.
 
 IronCrypto's license applies to its source; commercial IPG use also needs
-commercial IronCrypto terms. The optional `pkcs11` feature adds `cryptoki`
-(Apache-2.0). Contributions require agreement to the [CLA](CLA.md); see
+commercial IronCrypto terms. The optional `pkcs11` feature uses IPG's native
+wrapper; the vendor module has its own license. Contributions require agreement to the [CLA](CLA.md); see
 [CONTRIBUTING.md](CONTRIBUTING.md). Neither license is a statement about
 cryptographic assurance: there is no CMVP certificate and no independent audit.

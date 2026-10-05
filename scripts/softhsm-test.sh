@@ -34,4 +34,4 @@ export IPG_TEST_PKCS11_SERIAL="$SERIAL"
 export IPG_TEST_PKCS11_PIN="$PIN"
 export IPG_TEST_PKCS11_REQUIRED=1
 echo "SoftHSM module $MODULE, token serial $SERIAL"
-cargo test --locked --features pkcs11 "$@"
+cargo test --locked --workspace --features pkcs11 "$@"

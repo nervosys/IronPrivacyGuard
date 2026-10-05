@@ -46,8 +46,8 @@ pub fn operation(id: &str) -> Value {
 pub fn build() -> Value {
     json!({
         "cargo_dependencies":true,
-        "ironcrypto_only":!cfg!(any(feature="pkcs11",feature="tpm",feature="kms",feature="attestation",feature="openpgp")),
-        "migration_status":"core/native OpenPGP use only first-party and IronCrypto crates; optional integrations are still being migrated",
+        "ironcrypto_only":!cfg!(any(feature="tpm",feature="kms",feature="attestation",feature="openpgp")),
+        "migration_status":"core/native OpenPGP and PKCS#11 use only first-party and IronCrypto crates; TLS, attestation and broad OpenPGP are still being migrated",
         "core_external_executables_required":false,
         "core_requirements":["operating-system entropy", "filesystem access", "host clock"],
         "openpgp_backend":crate::openpgp::IMPLEMENTATION,

@@ -203,7 +203,6 @@ fn live_availability_is_consistent_without_granting_authority() {
     assert_eq!(
         discovery["build"]["ironcrypto_only"],
         !cfg!(any(
-            feature = "pkcs11",
             feature = "tpm",
             feature = "kms",
             feature = "attestation",

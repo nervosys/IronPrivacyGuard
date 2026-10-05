@@ -33,6 +33,7 @@ jobs:
       - run: python scripts/check-openpgp-native-deps.py
       - run: python scripts/check-ironcrypto-only.py
       - run: python scripts/check-ironcrypto-only.py --no-default-features
+      - run: python scripts/check-ironcrypto-only.py --features pkcs11
       - run: python scripts/fuzz-openpgp-policy-seeds.py --check
       - run: python scripts/fuzz-openpgp-large-certificates.py
       - run: python scripts/fuzz-openpgp-large-certificates.py --check

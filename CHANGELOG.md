@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replaced cryptoki and secrecy with a first-party PKCS#11 boundary. The `pkcs11`
+  build now passes the IronCrypto-only dependency gate. Vendor modules remain
+  runtime requirements; sessions close on drop and modules stay loaded until exit.
 - Replaced Linux tss-esapi access with native TPM device/swtpm commands, retaining
   the existing P-384 key templates and SHA-384 salted authorization sessions.
   ESAPI-only transports must migrate to a supported transport. The attestation

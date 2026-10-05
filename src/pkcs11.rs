@@ -9,18 +9,9 @@ use crate::{
     provider::{self, HardwareKey, Inventory, LibraryInfo, MechanismSupport, Protection},
     provider::{TokenBinding, TokenReport},
 };
-use cryptoki::{
-    context::{CInitializeArgs, CInitializeFlags, Pkcs11},
-    error::{Error as CkError, RvError},
-    mechanism::{
-        Mechanism, MechanismType,
-        aead::GcmParams,
-        elliptic_curve::{EcKdf, Ecdh1DeriveParams},
-    },
-    object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle},
-    session::{Session, UserType},
-    slot::Slot,
-    types::{RawAuthPin, Ulong},
+use ipg_pkcs11::{
+    Attribute, AttributeType, Error as CkError, KeyType, ObjectClass, ObjectHandle, Pkcs11,
+    Session, Slot,
 };
 
 /// DER OBJECT IDENTIFIER 1.3.132.0.34 (secp384r1), the CKA_EC_PARAMS value.
@@ -30,62 +21,41 @@ fn map(error: CkError) -> Error {
     let CkError::Pkcs11(rv, function) = &error else {
         return Error::new("provider_error", format!("PKCS#11 binding error: {error}"));
     };
-    let detail = format!("{function:?} returned {rv:?}");
+    let detail = format!("{function} returned 0x{rv:x}");
     match rv {
-        RvError::PinIncorrect | RvError::PinInvalid | RvError::PinLenRange => {
-            Error::new("authentication_failed", detail)
-        }
-        RvError::PinLocked | RvError::PinExpired => Error::new("pin_locked", detail),
-        RvError::MechanismInvalid
-        | RvError::MechanismParamInvalid
-        | RvError::CurveNotSupported
-        | RvError::DomainParamsInvalid
-        | RvError::KeySizeRange => Error::new("mechanism_unsupported", detail),
-        RvError::TokenNotPresent | RvError::DeviceRemoved | RvError::SlotIdInvalid => {
-            Error::new("hardware_not_found", detail)
-        }
-        RvError::TokenWriteProtected => Error::new("policy_mismatch", detail),
+        0xa0..=0xa2 => Error::new("authentication_failed", detail),
+        0xa3 | 0xa4 => Error::new("pin_locked", detail),
+        0x70 | 0x71 | 0x140 | 0x130 | 0x62 => Error::new("mechanism_unsupported", detail),
+        0xe0 | 0x32 | 3 => Error::new("hardware_not_found", detail),
+        0xe2 => Error::new("policy_mismatch", detail),
         _ => Error::new("provider_error", detail),
     }
 }
 
-/// Return codes meaning the token lacks in-token X9.63 derivation for this key.
-fn unsupported(rv: &RvError) -> bool {
+/// Token return codes that permit the existing software-KDF fallback.
+fn unsupported(rv: &u64) -> bool {
     matches!(
         rv,
-        RvError::MechanismInvalid
-            | RvError::MechanismParamInvalid
-            | RvError::FunctionNotSupported
-            | RvError::AttributeValueInvalid
-            | RvError::AttributeTypeInvalid
-            | RvError::TemplateInconsistent
-            | RvError::TemplateIncomplete
-            | RvError::KeyTypeInconsistent
-            | RvError::DomainParamsInvalid
+        0x70 | 0x71 | 0x54 | 0x13 | 0x12 | 0xd1 | 0xd0 | 0x63 | 0x130
     )
 }
 
 fn context() -> Result<Pkcs11> {
-    let path = provider::module_path()?;
-    let context = Pkcs11::new(&path).map_err(|e| {
+    Pkcs11::new(provider::module_path()?).map_err(|e| {
         Error::new(
             "provider_unavailable",
             format!("PKCS#11 module could not be loaded: {e}"),
         )
-    })?;
-    match context.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
-        Ok(()) | Err(CkError::Pkcs11(RvError::CryptokiAlreadyInitialized, _)) => Ok(context),
-        Err(e) => Err(map(e)),
-    }
+    })
 }
 
 fn binding(context: &Pkcs11, slot: Slot) -> Result<TokenBinding> {
     let info = context.get_token_info(slot).map_err(map)?;
     Ok(TokenBinding {
-        serial: token_text(info.serial_number()),
-        label: token_text(info.label()),
-        manufacturer: token_text(info.manufacturer_id()),
-        model: token_text(info.model()),
+        serial: token_text(&info.serial),
+        label: token_text(&info.label),
+        manufacturer: token_text(&info.manufacturer),
+        model: token_text(&info.model),
     })
 }
 
@@ -116,21 +86,15 @@ fn find_token(context: &Pkcs11, serial: &str) -> Result<(Slot, TokenBinding)> {
 }
 
 fn login(context: &Pkcs11, slot: Slot, pin: &[u8], read_write: bool) -> Result<Session> {
-    let session = if read_write {
-        context.open_rw_session(slot)
-    } else {
-        context.open_ro_session(slot)
-    }
-    .map_err(map)?;
-    // SecretBox wipes this copy when dropped.
-    let pin = RawAuthPin::new(Box::new(pin.to_vec()));
-    match session.login_with_raw(UserType::User, &pin) {
-        Ok(()) | Err(CkError::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(session),
+    let session = context.open_session(slot, read_write).map_err(map)?;
+    // The native wrapper wipes its mutable PIN copy after C_Login returns.
+    match session.login(pin) {
+        Ok(()) | Err(CkError::Pkcs11(0x100, _)) => Ok(session),
         Err(e) => Err(map(e)),
     }
 }
 
-fn find(session: &Session, class: ObjectClass, id: &[u8]) -> Result<Vec<ObjectHandle>> {
+fn find(session: &Session, class: std::ffi::c_ulong, id: &[u8]) -> Result<Vec<ObjectHandle>> {
     session
         .find_objects(&[
             Attribute::Class(class),
@@ -139,7 +103,7 @@ fn find(session: &Session, class: ObjectClass, id: &[u8]) -> Result<Vec<ObjectHa
         ])
         .map_err(map)
 }
-fn find_one(session: &Session, class: ObjectClass, id: &[u8]) -> Result<ObjectHandle> {
+fn find_one(session: &Session, class: std::ffi::c_ulong, id: &[u8]) -> Result<ObjectHandle> {
     match find(session, class, id)?.as_slice() {
         [handle] => Ok(*handle),
         [] => Err(Error::new(
@@ -248,7 +212,7 @@ pub struct TokenIdentity {
     session: Session,
     encryption: ObjectHandle,
     signing: ObjectHandle,
-    // Declared last: the session must close before the module finalizes.
+    // Keep the module context associated with this identity.
     _context: Pkcs11,
 }
 impl IdentityKey for TokenIdentity {
@@ -261,11 +225,7 @@ impl IdentityKey for TokenIdentity {
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
         // Raw CKM_ECDSA over SHA-384 equals ECDSA-SHA384 over the message.
         self.session
-            .sign(
-                &Mechanism::Ecdsa,
-                self.signing,
-                &crypto::p384_digest(message),
-            )
+            .sign(self.signing, &crypto::p384_digest(message))
             .map_err(map)
     }
     /// Derive a sensitive, non-extractable AES-256 key with ECDH and the X9.63 KDF,
@@ -273,11 +233,7 @@ impl IdentityKey for TokenIdentity {
     /// mechanisms return `None` and the caller falls back to [`Self::agree`].
     fn open_in_device(&self, sealed: &crypto::Sealed) -> Result<Option<Zeroizing<Vec<u8>>>> {
         crypto::p384_point(sealed.peer)?;
-        let mechanism = Mechanism::Ecdh1Derive(Ecdh1DeriveParams::new(
-            EcKdf::sha384(sealed.shared_info),
-            sealed.peer,
-        ));
-        let length = Ulong::try_from(32usize).map_err(map)?;
+        let length = 32;
         let template = [
             Attribute::Class(ObjectClass::SECRET_KEY),
             Attribute::KeyType(KeyType::AES),
@@ -287,53 +243,44 @@ impl IdentityKey for TokenIdentity {
             Attribute::Extractable(false),
             Attribute::Decrypt(true),
         ];
-        let handle = match self
-            .session
-            .derive_key(&mechanism, self.encryption, &template)
-        {
+        let handle = match self.session.derive_key(
+            self.encryption,
+            sealed.peer,
+            Some(sealed.shared_info),
+            &template,
+        ) {
             Ok(handle) => handle,
             Err(CkError::Pkcs11(rv, _)) if unsupported(&rv) => return Ok(None),
             Err(error) => return Err(map(error)),
         };
-        let mut nonce = sealed.nonce.to_vec();
-        let result = GcmParams::new(
-            &mut nonce,
-            sealed.aad,
-            Ulong::try_from(128usize).map_err(map)?,
-        )
-        .map_err(map)
-        .and_then(|params| {
-            self.session
-                .decrypt(
-                    &Mechanism::AesGcm(params),
-                    handle,
-                    sealed.ciphertext_and_tag,
-                )
-                .map_err(|error| match error {
-                    // A GCM tag mismatch: the envelope does not authenticate.
-                    CkError::Pkcs11(RvError::EncryptedDataInvalid, _) => Error::new(
-                        "authentication_failed",
-                        "Cryptographic operation rejected its input",
-                    ),
-                    error => map(error),
-                })
-        });
+        let result = self
+            .session
+            .decrypt_gcm(handle, sealed.nonce, sealed.aad, sealed.ciphertext_and_tag)
+            .map(Zeroizing::new)
+            .map_err(|error| match error {
+                CkError::Pkcs11(0x40, _) => Error::new(
+                    "authentication_failed",
+                    "Cryptographic operation rejected its input",
+                ),
+                error => map(error),
+            });
         let destroyed = self.session.destroy_object(handle);
         match result {
             Ok(plaintext) => {
                 destroyed.map_err(map)?;
-                Ok(Some(Zeroizing::new(plaintext)))
+                Ok(Some(plaintext))
             }
             // Some tokens refuse in-token GCM; derivation already worked, so fall back.
-            Err(error) if error.code == "mechanism_unsupported" => Ok(None),
+            Err(error) if error.code == "mechanism_unsupported" => {
+                destroyed.map_err(map)?;
+                Ok(None)
+            }
             Err(error) => Err(error),
         }
     }
     fn agree(&self, peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
         crypto::p384_point(peer)?;
-        let mechanism = Mechanism::Ecdh1Derive(Ecdh1DeriveParams::new(EcKdf::null(), peer));
-        // CK_ULONG width is platform-specific; 48 always fits.
-        let length = Ulong::try_from(48usize).map_err(map)?;
+        let length = 48;
         // A short-lived session object: extractable only so HKDF can run here.
         let template = [
             Attribute::Class(ObjectClass::SECRET_KEY),
@@ -345,7 +292,7 @@ impl IdentityKey for TokenIdentity {
         ];
         let handle = self
             .session
-            .derive_key(&mechanism, self.encryption, &template)
+            .derive_key(self.encryption, peer, None, &template)
             .map_err(map)?;
         let value = self.session.get_attributes(handle, &[AttributeType::Value]);
         let destroyed = self.session.destroy_object(handle);
@@ -469,9 +416,7 @@ fn key_pair(session: &Session, id: &[u8], label: &str, signing: bool) -> Result<
         Attribute::Id(id.to_vec()),
         Attribute::Label(label.as_bytes().to_vec()),
     ];
-    let (public, private) = session
-        .generate_key_pair(&Mechanism::EccKeyPairGen, &public, &private)
-        .map_err(map)?;
+    let (public, private) = session.generate_key_pair(&public, &private).map_err(map)?;
     Ok([public, private])
 }
 
@@ -564,9 +509,9 @@ pub fn inventory() -> Result<Inventory> {
         let slot_info = context.get_slot_info(slot).map_err(map)?;
         let available = context.get_mechanism_list(slot).unwrap_or_default();
         let mechanisms = MechanismSupport {
-            ec_key_pair_generation: available.contains(&MechanismType::ECC_KEY_PAIR_GEN),
-            ecdsa: available.contains(&MechanismType::ECDSA),
-            ecdh_derive: available.contains(&MechanismType::ECDH1_DERIVE),
+            ec_key_pair_generation: available.contains(&0x1040),
+            ecdsa: available.contains(&0x1041),
+            ecdh_derive: available.contains(&0x1050),
         };
         let suites =
             if mechanisms.ec_key_pair_generation && mechanisms.ecdsa && mechanisms.ecdh_derive {
@@ -577,21 +522,21 @@ pub fn inventory() -> Result<Inventory> {
         tokens.push(TokenReport {
             slot: slot.id(),
             token: binding(&context, slot)?,
-            token_initialized: token_info.token_initialized(),
-            user_pin_initialized: token_info.user_pin_initialized(),
-            login_required: token_info.login_required(),
-            hardware_slot: slot_info.hardware_slot(),
-            removable: slot_info.removable_device(),
+            token_initialized: token_info.initialized,
+            user_pin_initialized: token_info.pin_initialized,
+            login_required: token_info.login_required,
+            hardware_slot: slot_info.hardware,
+            removable: slot_info.removable,
             mechanisms,
             suites,
         });
     }
     Ok(Inventory {
         library: LibraryInfo {
-            description: info.library_description().trim_end().into(),
-            manufacturer: info.manufacturer_id().trim_end().into(),
-            library_version: info.library_version().to_string(),
-            cryptoki_version: info.cryptoki_version().to_string(),
+            description: info.description,
+            manufacturer: info.manufacturer,
+            library_version: info.version,
+            cryptoki_version: info.cryptoki_version,
         },
         tokens,
     })
@@ -629,10 +574,6 @@ mod tests {
         };
         // Single-threaded use of the module path by this test binary only.
         let context = Pkcs11::new(&module).unwrap();
-        match context.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
-            Ok(()) | Err(CkError::Pkcs11(RvError::CryptokiAlreadyInitialized, _)) => {}
-            Err(error) => panic!("{error}"),
-        }
         let (slot, _) = find_token(&context, &serial).unwrap();
         let (encryption_id, signing_id) = {
             let session = login(&context, slot, pin.as_bytes(), true).unwrap();
@@ -693,11 +634,10 @@ mod tests {
 
     #[test]
     fn pin_failures_map_to_non_retryable_codes() {
-        use cryptoki::context::Function;
-        let code = |rv| map(CkError::Pkcs11(rv, Function::Login)).code;
-        assert_eq!(code(RvError::PinIncorrect), "authentication_failed");
-        assert_eq!(code(RvError::PinLocked), "pin_locked");
-        assert_eq!(code(RvError::CurveNotSupported), "mechanism_unsupported");
-        assert_eq!(code(RvError::GeneralError), "provider_error");
+        let code = |rv| map(CkError::Pkcs11(rv, "C_Login")).code;
+        assert_eq!(code(0xa0), "authentication_failed");
+        assert_eq!(code(0xa4), "pin_locked");
+        assert_eq!(code(0x140), "mechanism_unsupported");
+        assert_eq!(code(5), "provider_error");
     }
 }
