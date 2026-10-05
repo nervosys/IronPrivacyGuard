@@ -51,7 +51,7 @@ cargo clippy --locked --all-targets --target-dir target -- -D warnings
 
 The executable is `target/release/ipg` (`ipg.exe` on Windows). To install the
 current checkout instead, run `cargo install --path . --locked`. IronCrypto
-components are pinned to crates.io release `0.2.7`, and Cargo.lock pins the
+components are pinned to crates.io release `0.2.10`, and Cargo.lock pins the
 remaining dependency graph for this repository.
 Native IPG identity and envelope cryptography uses IronCrypto. There is no OpenSSL, C
 compilation, TLS library, GPG subprocess, or external cryptographic executable. OS

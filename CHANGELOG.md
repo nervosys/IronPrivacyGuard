@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
+  bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
+  slower; outputs are unchanged). This also lets IPG share a dependency graph
+  with IronSocketLayer, which requires 0.2.10 or later.
+
 ## 0.2.0 — 2026-10-05
 
 Every feature now depends only on IronCrypto and first-party crates. The rPGP

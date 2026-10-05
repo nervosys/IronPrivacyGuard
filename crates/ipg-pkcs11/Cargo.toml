@@ -8,4 +8,4 @@ description = "Native PKCS#11 boundary for IronPrivacyGuard"
 repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [dependencies]
-ic-core = "=0.2.7"
+ic-core = "=0.2.10"
