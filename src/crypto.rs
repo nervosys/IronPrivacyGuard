@@ -235,7 +235,7 @@ pub struct SecretKey {
     #[schemars(schema_with = "crate::contract::hex_bytes::<16>")]
     pub tag: String,
 }
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[schemars(transform = crate::contract::envelope_suite)]
 pub struct Envelope {

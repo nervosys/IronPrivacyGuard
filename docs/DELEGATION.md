@@ -49,7 +49,8 @@ Each link must:
 - be signed by the previous link's subject (the first by the pinned root);
 - carry the subject's complete public identity, whose fingerprint must verify;
 - name a sorted, unique, non-empty subset of the parent's operations, drawn from
-  `decrypt`, `sign`, `stream.decrypt` and `stream.sign`;
+  `decrypt`, `message.open`, `message.seal`, `sign`, `stream.decrypt` and
+  `stream.sign`;
 - name a sorted subset of the parent's purposes when the parent restricts them
   (an empty list means no purpose restriction);
 - fit inside the parent's time window, and have strictly lower

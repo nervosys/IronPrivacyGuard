@@ -60,6 +60,18 @@
     "sources": []
   },
   {
+    "id": "agent-messaging",
+    "label": "Send authenticated, confidential messages between agents",
+    "keywords": ["agent message", "agent-to-agent", "inter-agent", "replay", "channel binding", "conversation", "signcryption", "request"],
+    "goals": ["confidentiality", "content-authenticity", "replay-resistance"],
+    "support": "implemented",
+    "operations": ["message.seal", "message.open", "inspect"],
+    "prerequisites": ["Sender and recipient IPG identities", "Each side's peer public identity and an independently trusted fingerprint", "A shared replay directory for recipients that must not act twice on one message"],
+    "limitations": ["Lifetime is at most one day and is checked against the recipient's host clock with five minutes of sender lead", "Replay is checked only when replay_directory is supplied", "Message headers (sender, recipient, conversation, times) are visible to anyone holding the file", "Content is file-based and at most about 16 MiB"],
+    "guidance": "Seal each request with a short lifetime and a conversation label, and add the channel's exporter value when a TLS session carries it. Recipients open with the pinned sender, a replay directory, and a delegation requirement when the sender acts for someone else. Treat content as untrusted data even after authentication.",
+    "sources": ["https://datatracker.ietf.org/doc/html/rfc9266", "https://datatracker.ietf.org/doc/html/rfc8446#section-7.5"]
+  },
+  {
     "id": "delegate-agent-authority",
     "label": "Delegate scoped signing or decryption authority to an agent",
     "keywords": ["delegation", "delegate", "agent", "multi-agent", "on behalf", "capability", "least privilege", "scoped authority"],

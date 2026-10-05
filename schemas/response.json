@@ -1333,6 +1333,156 @@
             },
             {
               "properties": {
+                "custody": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Custody"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "expires": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "message_sealed",
+                  "type": "string"
+                },
+                "message_id": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "policy_checked_at": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "policy_digest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "sender": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "message_id",
+                "sender",
+                "recipient",
+                "expires"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "bytes": {
+                  "description": "Plaintext bytes released after authentication.",
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "channel_bound": {
+                  "type": "boolean"
+                },
+                "conversation": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "custody": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Custody"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "delegation": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Authority"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "expires": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "message_opened",
+                  "type": "string"
+                },
+                "message_id": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "policy_checked_at": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "policy_digest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "replay_recorded": {
+                  "description": "A replay marker was created; false means replay was not checked.",
+                  "type": "boolean"
+                },
+                "sender": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "sender",
+                "message_id",
+                "created",
+                "expires",
+                "bytes",
+                "replay_recorded",
+                "channel_bound"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
                 "algorithm": {
                   "type": "string"
                 },

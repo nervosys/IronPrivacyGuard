@@ -26,6 +26,7 @@ impl Error {
             | "key_not_trusted"
             | "policy_mismatch"
             | "merge_conflict"
+            | "replay_detected"
             | "pin_locked" => 3,
             "io_error" | "already_exists" | "hardware_not_found" => 4,
             _ => 5,

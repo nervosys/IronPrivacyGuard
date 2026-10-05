@@ -120,6 +120,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
                 | "purposes"
                 | "delegation_depth"
                 | "delegation"
+                | "lifetime"
         ) {
             iron_privacy_guard::control_json::parse(pair[1].as_bytes())?
         } else {

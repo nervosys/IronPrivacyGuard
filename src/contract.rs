@@ -292,6 +292,19 @@ pub fn time_end(_: &mut SchemaGenerator) -> Schema {
         "description":"Unix seconds, exclusive; must be strictly greater than not_before (checked at runtime)."})
 }
 fixed!(grant_format, crate::delegation::FORMAT);
+fixed!(message_format, crate::message::FORMAT);
+pub fn message_lifetime(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":1, "maximum":crate::message::MAX_LIFETIME,
+        "description":"Seconds from the host clock until the message expires."})
+}
+pub fn conversation(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "minLength":1, "maxLength":crate::message::MAX_CONVERSATION_BYTES,
+        "pattern":"^[A-Za-z0-9._:/-]+$", "description":"Optional conversation label bound into the signed header."})
+}
+pub fn channel_binding(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "minLength":32, "maxLength":crate::message::MAX_CHANNEL_BINDING*2,
+        "pattern":"^([0-9a-f]{2})+$", "description":"Optional 16..64-byte channel binding, such as a TLS exporter value; the recipient must present the same value."})
+}
 /// Sorted, unique delegable operations (checked at runtime).
 pub fn grant_operations(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"array", "minItems":1, "maxItems":crate::delegation::DELEGABLE.len(),
@@ -319,8 +332,12 @@ pub fn optional_fingerprint(_: &mut SchemaGenerator) -> Schema {
         "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$"})
 }
 pub fn optional_grant_operation(_: &mut SchemaGenerator) -> Schema {
-    json_schema!({"type":["string","null"], "enum":[crate::delegation::DELEGABLE[0], crate::delegation::DELEGABLE[1],
-        crate::delegation::DELEGABLE[2], crate::delegation::DELEGABLE[3], null]})
+    let mut values: Vec<ipg_json::Value> = crate::delegation::DELEGABLE
+        .iter()
+        .map(|v| ipg_json::json!(v))
+        .collect();
+    values.push(ipg_json::Value::Null);
+    json_schema!({"type":["string","null"], "enum":values})
 }
 pub fn optional_grant_purpose(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":["string","null"], "minLength":1, "maxLength":crate::delegation::MAX_PURPOSE_BYTES,

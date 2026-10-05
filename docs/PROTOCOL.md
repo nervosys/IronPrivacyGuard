@@ -76,6 +76,8 @@ do not terminate the session. A broken stdout pipe exits 4 without a response.
 | key.revoke | key, output, expected_fingerprint, passphrase_file, reason |
 | revocation.verify | input, signer, expected_fingerprint |
 | grant.issue | key, expected_fingerprint, subject, expected_subject_fingerprint, operations, not_before, not_after, output; optional passphrase_file, purposes, delegation_depth, parent |
+| message.seal | input, output, key, recipient, expected_recipient_fingerprint, lifetime; optional passphrase_file, conversation, channel_binding, grant, policy |
+| message.open | input, output, key, sender, expected_sender_fingerprint; optional passphrase_file, conversation, channel_binding, replay_directory, delegation, policy |
 | grant.verify | input, root, expected_root_fingerprint; optional subject_fingerprint, required_operation, purpose |
 | encrypt | input, output, recipient, expected_fingerprint |
 | decrypt, sign | input, output, key, passphrase_file |

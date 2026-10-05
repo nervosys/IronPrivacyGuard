@@ -104,6 +104,12 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-message-v1" => {
+            let value: crate::message::Message = ipg_json::from_slice(data)?;
+            value.validate()?;
+            // The claimed sender; authenticated only by message.open.
+            Some(value.sender)
+        }
         "ipg-grant-v1" => {
             let value: crate::delegation::Grant = ipg_json::from_slice(data)?;
             value.validate()?;

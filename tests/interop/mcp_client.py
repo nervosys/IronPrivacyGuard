@@ -131,6 +131,9 @@ async def exercise(executable, directory):
         granted = await checked.call("grant.verify", {"input": path("grant"), "root": path("public"), "expected_root_fingerprint": fingerprint, "required_operation": "sign", "purpose": "release"})
         assert granted["authenticated"] and granted["authority"]["subject"] == agent["fingerprint"]
         await checked.call("grant.verify", {"input": path("grant"), "root": path("public"), "expected_root_fingerprint": fingerprint, "required_operation": "decrypt"}, error="policy_mismatch")
+        await checked.call("message.seal", {"input": path("message"), "output": path("agent-message"), "key": path("key"), "passphrase_file": path("pass"), "recipient": path("agent-public"), "expected_recipient_fingerprint": agent["fingerprint"], "lifetime": 300, "conversation": "mcp/1"})
+        opened = await checked.call("message.open", {"input": path("agent-message"), "output": path("agent-message-out"), "key": path("agent"), "passphrase_file": path("pass"), "sender": path("public"), "expected_sender_fingerprint": fingerprint, "conversation": "mcp/1"})
+        assert opened["sender"] == fingerprint and Path(path("agent-message-out")).read_bytes() == message
         await checked.call("key.revoke", {"key": path("key"), "output": path("certificate"), "expected_fingerprint": fingerprint, "passphrase_file": path("pass"), "reason": "retired"})
         revocation = await checked.call("revocation.verify", {"input": path("certificate"), "signer": path("public"), "expected_fingerprint": fingerprint})
         assert revocation["authenticated"] is True and revocation["policy_applied"] is False
@@ -154,7 +157,7 @@ async def exercise(executable, directory):
         await checked.call("verify", {**verification, "input": path("altered")}, error="authentication_failed")
         await checked.call("stream.verify", {**stream_verification, "input": path("altered")}, error="authentication_failed")
         Draft202012Validator(schemas["formats"]["stream_signature"]).validate(json.loads(Path(path("stream-signature")).read_text()))
-        for filename, schema_name in [("merged", "trust_store"), ("validity", "validity"), ("expired", "trust_store"), ("key", "secret_key"), ("rewrapped", "secret_key"), ("public", "public_key"), ("encrypted", "envelope"), ("signature", "signature"), ("certificate", "revocation"), ("grant", "grant"), ("empty", "trust_store"), ("active", "trust_store"), ("revoked", "trust_store")]:
+        for filename, schema_name in [("merged", "trust_store"), ("validity", "validity"), ("expired", "trust_store"), ("key", "secret_key"), ("rewrapped", "secret_key"), ("public", "public_key"), ("encrypted", "envelope"), ("signature", "signature"), ("certificate", "revocation"), ("grant", "grant"), ("agent-message", "message"), ("empty", "trust_store"), ("active", "trust_store"), ("revoked", "trust_store")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))

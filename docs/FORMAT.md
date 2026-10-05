@@ -257,6 +257,14 @@ certificate requests permanent retirement of both keys. It contains no trusted
 time or proof of distribution. No active-key status can be inferred from the
 absence of a certificate. See [lifecycle semantics](LIFECYCLE.md).
 
+## Agent message: ipg-message-v1
+
+A signed, sealed message: sender, recipient, 16-byte message ID, optional
+conversation label, creation and expiry times (lifetime at most one day),
+optional channel binding, and an `ipg-envelope-v1` carrying the signature, an
+optional attached grant and the content. The signed framing, opening checks and
+replay markers are specified in [MESSAGES.md](MESSAGES.md).
+
 ## Delegation grant: ipg-grant-v1
 
 A chain of 1..8 signed links from a root principal to an acting identity. Each

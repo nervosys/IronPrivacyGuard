@@ -427,13 +427,15 @@
             "items": {
               "enum": [
                 "decrypt",
+                "message.open",
+                "message.seal",
                 "sign",
                 "stream.decrypt",
                 "stream.sign"
               ],
               "type": "string"
             },
-            "maxItems": 4,
+            "maxItems": 6,
             "minItems": 1,
             "type": "array",
             "uniqueItems": true
@@ -1142,6 +1144,205 @@
       "sources"
     ],
     "title": "Application",
+    "type": "object"
+  },
+  "message": {
+    "$defs": {
+      "Envelope": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "x25519-hkdf-sha256-chacha20poly1305"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "p384-x963kdf-sha384-aes256gcm"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "suite": {
+                  "const": "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "ephemeral_key": {
+                  "pattern": "^[0-9a-f]{2240}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "ciphertext": {
+            "not": {
+              "pattern": "[^0-9a-fA-F]"
+            },
+            "pattern": "^([0-9a-fA-F]{2})*$",
+            "type": "string"
+          },
+          "ephemeral_key": {
+            "description": "Sender ephemeral public key in the envelope suite; hybrid envelopes prefix the ML-KEM-768 ciphertext.",
+            "maxLength": 2240,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2240})$",
+            "type": "string"
+          },
+          "format": {
+            "const": "ipg-envelope-v1",
+            "type": "string"
+          },
+          "nonce": {
+            "maxLength": 24,
+            "minLength": 24,
+            "pattern": "^[0-9a-f]{24}$",
+            "type": "string"
+          },
+          "recipient": {
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "suite": {
+            "enum": [
+              "x25519-hkdf-sha256-chacha20poly1305",
+              "p384-x963kdf-sha384-aes256gcm",
+              "mlkem768-x25519-hkdf-sha256-chacha20poly1305"
+            ],
+            "type": "string"
+          },
+          "tag": {
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "suite",
+          "recipient",
+          "ephemeral_key",
+          "nonce",
+          "ciphertext",
+          "tag"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "The outer message: a signed header copy plus the sealed payload.",
+    "properties": {
+      "channel_binding": {
+        "description": "Optional 16..64-byte channel binding, such as a TLS exporter value; the recipient must present the same value.",
+        "maxLength": 128,
+        "minLength": 32,
+        "pattern": "^([0-9a-f]{2})+$",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "conversation": {
+        "description": "Optional conversation label bound into the signed header.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:/-]+$",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "created": {
+        "maximum": 253402300799,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "envelope": {
+        "$ref": "#/$defs/Envelope"
+      },
+      "expires": {
+        "maximum": 253402300799,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "format": {
+        "const": "ipg-message-v1",
+        "type": "string"
+      },
+      "message_id": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "recipient": {
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      },
+      "sender": {
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "sender",
+      "recipient",
+      "message_id",
+      "created",
+      "expires",
+      "envelope"
+    ],
+    "title": "Message",
     "type": "object"
   },
   "openpgp_key": {

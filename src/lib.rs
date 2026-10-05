@@ -23,6 +23,7 @@ mod kms;
 pub mod knowledge;
 pub mod lifecycle;
 pub mod mcp;
+pub mod message;
 pub mod ontology;
 pub mod openpgp;
 #[cfg(feature = "pkcs11")]
@@ -203,6 +204,60 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(schema_with = "crate::contract::optional_grant_purpose")]
         purpose: Option<String>,
+    },
+    #[serde(rename = "message.seal")]
+    MessageSeal {
+        input: String,
+        output: String,
+        /// The sender's key.
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        /// Public identity file of the recipient.
+        recipient: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_recipient_fingerprint: String,
+        /// Seconds until expiry, 1..86400; short lifetimes bound replay storage.
+        #[schemars(schema_with = "crate::contract::message_lifetime")]
+        lifetime: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::conversation")]
+        conversation: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::channel_binding")]
+        channel_binding: Option<String>,
+        /// The sender's own ipg-grant-v1, attached so recipients can check delegation.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        grant: Option<String>,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "message.open")]
+    MessageOpen {
+        input: String,
+        output: String,
+        /// The recipient's key.
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        /// Public identity file of the expected sender.
+        sender: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_sender_fingerprint: String,
+        /// Require this conversation label.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::conversation")]
+        conversation: Option<String>,
+        /// The channel's binding value; required when the message is bound.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::channel_binding")]
+        channel_binding: Option<String>,
+        /// Directory of exclusive replay markers; a second open is refused.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        replay_directory: Option<String>,
+        /// Require the message's attached grant to delegate `message.seal` from a pinned root.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegation: Option<MessageDelegation>,
+        policy: Option<TrustPolicy>,
     },
     #[serde(rename = "encrypt")]
     Encrypt {
@@ -596,6 +651,19 @@ pub struct DelegationRequirement {
     pub purpose: Option<String>,
 }
 
+/// A pinned root whose delegation the message's attached grant must prove.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MessageDelegation {
+    /// Public identity file of the root principal.
+    pub root: String,
+    #[schemars(schema_with = "crate::contract::fingerprint")]
+    pub expected_root_fingerprint: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "crate::contract::optional_grant_purpose")]
+    pub purpose: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Call {
@@ -691,6 +759,36 @@ pub enum Outcome {
     GrantVerified {
         authority: delegation::Authority,
         authenticated: bool,
+    },
+    MessageSealed {
+        path: String,
+        message_id: String,
+        sender: String,
+        recipient: String,
+        expires: u64,
+        policy_digest: Option<String>,
+        policy_checked_at: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        custody: Option<Custody>,
+    },
+    MessageOpened {
+        path: String,
+        sender: String,
+        message_id: String,
+        conversation: Option<String>,
+        created: u64,
+        expires: u64,
+        /// Plaintext bytes released after authentication.
+        bytes: u64,
+        /// A replay marker was created; false means replay was not checked.
+        replay_recorded: bool,
+        channel_bound: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        delegation: Option<delegation::Authority>,
+        policy_digest: Option<String>,
+        policy_checked_at: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        custody: Option<Custody>,
     },
     Digest {
         algorithm: String,
@@ -818,6 +916,8 @@ impl Request {
             Self::RevocationVerify { .. } => "revocation.verify",
             Self::GrantIssue { .. } => "grant.issue",
             Self::GrantVerify { .. } => "grant.verify",
+            Self::MessageSeal { .. } => "message.seal",
+            Self::MessageOpen { .. } => "message.open",
             Self::Encrypt { .. } => "encrypt",
             Self::Decrypt { .. } => "decrypt",
             Self::Sign { .. } => "sign",
@@ -941,6 +1041,8 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         Request::StreamSign { key, .. } => subject(key, Some("stream.sign")),
         Request::Decrypt { key, .. } => subject(key, Some("decrypt")),
         Request::StreamDecrypt { key, .. } => subject(key, Some("stream.decrypt")),
+        Request::MessageSeal { key, .. } => subject(key, Some("message.seal")),
+        Request::MessageOpen { key, .. } => subject(key, Some("message.open")),
         Request::KeyPublic { key, .. }
         | Request::KeyRewrap { key, .. }
         | Request::KeyRevoke { key, .. }
@@ -1081,7 +1183,7 @@ pub fn schemas() -> Value {
     }
     json!({"call":ipg_json::schema_for!(Call), "request":ipg_json::schema_for!(Request),
         "outcome":ipg_json::schema_for!(Outcome), "response":response,
-        "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
+        "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
         "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),
@@ -1376,6 +1478,135 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let subject = grant.subject().fingerprint.clone();
             Ok(with_custody(
                 save(output, &grant, "grant", Some(subject))?,
+                identity.custody(),
+            ))
+        }
+        Request::MessageSeal {
+            input,
+            output,
+            key,
+            passphrase_file,
+            recipient,
+            expected_recipient_fingerprint,
+            lifetime,
+            conversation,
+            channel_binding,
+            grant,
+            policy,
+        } => {
+            let key = load_key(&key)?;
+            let recipient: PublicKey = load(&recipient)?;
+            recipient.pin(&expected_recipient_fingerprint)?;
+            let digest = trust::enforce(policy.as_ref(), &recipient)?;
+            let grant: Option<delegation::Grant> = grant.as_deref().map(load).transpose()?;
+            let content = read(&input)?;
+            if content.len() as u64 > (MAX_FILE_BYTES - 65_536) / 2 {
+                return Err(Error::new(
+                    "limit_exceeded",
+                    "Message content exceeds envelope capacity",
+                ));
+            }
+            let identity = provider::open(
+                &key,
+                credential(passphrase_file)?.as_deref().map(Vec::as_slice),
+                host,
+            )?;
+            let sealed = message::seal(
+                &*identity,
+                &recipient,
+                &expected_recipient_fingerprint,
+                message::Header {
+                    conversation: conversation.as_deref(),
+                    lifetime,
+                    channel_binding: channel_binding.as_deref(),
+                },
+                grant.as_ref(),
+                &content,
+                delegation::now()?,
+            )?;
+            write_new(&output, &ipg_json::to_vec_pretty(&sealed)?)?;
+            Ok(with_custody(
+                Outcome::MessageSealed {
+                    path: output,
+                    message_id: sealed.message_id,
+                    sender: sealed.sender,
+                    recipient: sealed.recipient,
+                    expires: sealed.expires,
+                    policy_checked_at: digest.as_ref().map(|e| e.checked_at),
+                    policy_digest: digest.map(|e| e.digest),
+                    custody: None,
+                },
+                identity.custody(),
+            ))
+        }
+        Request::MessageOpen {
+            input,
+            output,
+            key,
+            passphrase_file,
+            sender,
+            expected_sender_fingerprint,
+            conversation,
+            channel_binding,
+            replay_directory,
+            delegation: required,
+            policy,
+        } => {
+            let key = load_key(&key)?;
+            let sender: PublicKey = load(&sender)?;
+            let sealed: message::Message = load(&input)?;
+            let now = delegation::now()?;
+            message::precheck(
+                &sealed,
+                key.public(),
+                &sender,
+                &expected_sender_fingerprint,
+                &message::Expect {
+                    conversation: conversation.as_deref(),
+                    channel_binding: channel_binding.as_deref(),
+                },
+                now,
+            )?;
+            let digest = trust::enforce(policy.as_ref(), &sender)?;
+            let identity = provider::open(
+                &key,
+                credential(passphrase_file)?.as_deref().map(Vec::as_slice),
+                host,
+            )?;
+            let opened = message::open(&*identity, &sender, &sealed)?;
+            let authority = match &required {
+                Some(required) => Some(message::delegated(
+                    &opened,
+                    &sender,
+                    &load(&required.root)?,
+                    &required.expected_root_fingerprint,
+                    required.purpose.as_deref(),
+                    now,
+                )?),
+                None => None,
+            };
+            // The replay marker is the commit point: plaintext is released only
+            // after this message has been recorded as consumed.
+            if let Some(directory) = &replay_directory {
+                message::record(directory, &sealed)?;
+            }
+            write_new(&output, &opened.content)?;
+            Ok(with_custody(
+                Outcome::MessageOpened {
+                    path: output,
+                    sender: sealed.sender,
+                    message_id: sealed.message_id,
+                    conversation: sealed.conversation,
+                    created: sealed.created,
+                    expires: sealed.expires,
+                    bytes: opened.content.len() as u64,
+                    replay_recorded: replay_directory.is_some(),
+                    channel_bound: sealed.channel_binding.is_some(),
+                    delegation: authority,
+                    policy_checked_at: digest.as_ref().map(|e| e.checked_at),
+                    policy_digest: digest.map(|e| e.digest),
+                    custody: None,
+                },
                 identity.custody(),
             ))
         }

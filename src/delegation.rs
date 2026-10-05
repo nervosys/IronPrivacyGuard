@@ -23,7 +23,14 @@ pub const MAX_DEPTH: u8 = 7;
 pub const MAX_PURPOSES: usize = 16;
 pub const MAX_PURPOSE_BYTES: usize = 64;
 /// Operations that use an identity's private key and can therefore be delegated.
-pub const DELEGABLE: &[&str] = &["decrypt", "sign", "stream.decrypt", "stream.sign"];
+pub const DELEGABLE: &[&str] = &[
+    "decrypt",
+    "message.open",
+    "message.seal",
+    "sign",
+    "stream.decrypt",
+    "stream.sign",
+];
 
 /// One signed delegation step from `issuer` to `subject`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

@@ -55,6 +55,40 @@
       ],
       "type": "object"
     },
+    "MessageDelegation": {
+      "additionalProperties": false,
+      "description": "A pinned root whose delegation the message's attached grant must prove.",
+      "properties": {
+        "expected_root_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "purpose": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9._:/-]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "Public identity file of the root principal.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "expected_root_fingerprint"
+      ],
+      "type": "object"
+    },
     "Recipient": {
       "additionalProperties": false,
       "description": "An encryption recipient: a certificate file and its independently trusted\nprimary-key fingerprint.",
@@ -508,13 +542,15 @@
           "items": {
             "enum": [
               "decrypt",
+              "message.open",
+              "message.seal",
               "sign",
               "stream.decrypt",
               "stream.sign"
             ],
             "type": "string"
           },
-          "maxItems": 4,
+          "maxItems": 6,
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
@@ -600,6 +636,8 @@
           "description": "Require this delegable operation.",
           "enum": [
             "decrypt",
+            "message.open",
+            "message.seal",
             "sign",
             "stream.decrypt",
             "stream.sign",
@@ -630,6 +668,194 @@
         "input",
         "root",
         "expected_root_fingerprint"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "channel_binding": {
+          "description": "Optional 16..64-byte channel binding, such as a TLS exporter value; the recipient must present the same value.",
+          "maxLength": 128,
+          "minLength": 32,
+          "pattern": "^([0-9a-f]{2})+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conversation": {
+          "description": "Optional conversation label bound into the signed header.",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:/-]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected_recipient_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "grant": {
+          "description": "The sender's own ipg-grant-v1, attached so recipients can check delegation.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input": {
+          "type": "string"
+        },
+        "key": {
+          "description": "The sender's key.",
+          "type": "string"
+        },
+        "lifetime": {
+          "description": "Seconds until expiry, 1..86400; short lifetimes bound replay storage.",
+          "maximum": 86400,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "operation": {
+          "const": "message.seal",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recipient": {
+          "description": "Public identity file of the recipient.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "key",
+        "recipient",
+        "expected_recipient_fingerprint",
+        "lifetime"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "channel_binding": {
+          "description": "The channel's binding value; required when the message is bound.",
+          "maxLength": 128,
+          "minLength": 32,
+          "pattern": "^([0-9a-f]{2})+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conversation": {
+          "description": "Require this conversation label.",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:/-]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delegation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageDelegation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Require the message's attached grant to delegate `message.seal` from a pinned root."
+        },
+        "expected_sender_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "key": {
+          "description": "The recipient's key.",
+          "type": "string"
+        },
+        "operation": {
+          "const": "message.open",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "replay_directory": {
+          "description": "Directory of exclusive replay markers; a second open is refused.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sender": {
+          "description": "Public identity file of the expected sender.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "input",
+        "output",
+        "key",
+        "sender",
+        "expected_sender_fingerprint"
       ],
       "type": "object"
     },

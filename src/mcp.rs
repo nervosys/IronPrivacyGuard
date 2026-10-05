@@ -399,7 +399,9 @@ impl Server {
                     | Request::StreamSign { policy, .. }
                     | Request::StreamVerify { policy, .. }
                     | Request::Sign { policy, .. }
-                    | Request::Verify { policy, .. } => Some(policy),
+                    | Request::Verify { policy, .. }
+                    | Request::MessageSeal { policy, .. }
+                    | Request::MessageOpen { policy, .. } => Some(policy),
                     _ => None,
                 };
                 if let Some(target) = target {

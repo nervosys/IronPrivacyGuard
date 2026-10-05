@@ -72,6 +72,7 @@ jobs:
       - run: python tests/interop/openpgp_v6_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/openpgp_recipient_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/delegation_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/message_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - if: runner.os != 'macOS'
         run: cargo build --release --locked --no-default-features --features openpgp-native --target-dir target/native
       - if: runner.os != 'macOS'

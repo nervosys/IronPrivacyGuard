@@ -336,6 +336,36 @@
       "sensitivity": "public"
     },
     {
+      "@id": "ipg:Message",
+      "@type": "ipg:Entity",
+      "description": "An ipg-message-v1 agent message: a signed header (sender, recipient, message ID, conversation, created, expires, channel binding) and an envelope sealing the signature, optional grant and content",
+      "sensitivity": "ciphertext"
+    },
+    {
+      "@id": "ipg:MessageReceipt",
+      "@type": "ipg:Entity",
+      "description": "Authenticated message metadata: sender, message ID, conversation, times, whether a replay marker was recorded and any verified delegation",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:ConversationLabel",
+      "@type": "ipg:Entity",
+      "description": "Optional sender-chosen label of 1..128 ASCII characters bound into a message; untrusted until the message authenticates",
+      "sensitivity": "untrusted"
+    },
+    {
+      "@id": "ipg:ChannelBinding",
+      "@type": "ipg:Entity",
+      "description": "Optional 16..64-byte value both peers derive from their channel, such as a TLS exporter, binding a message to that channel",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:ReplayDirectory",
+      "@type": "ipg:Entity",
+      "description": "Host directory of exclusive per-message markers shared by recipients that must not process a message twice",
+      "sensitivity": "control"
+    },
+    {
       "@id": "ipg:DelegableOperation",
       "@type": "ipg:Entity",
       "description": "Closed vocabulary of private-key operations a grant may delegate: decrypt, sign, stream.decrypt, stream.sign",
@@ -479,6 +509,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -526,6 +557,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -575,6 +607,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -633,6 +666,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -693,6 +727,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -764,6 +799,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -829,6 +865,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -892,6 +929,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -954,6 +992,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1011,6 +1050,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1070,6 +1110,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1134,6 +1175,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1195,6 +1237,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1244,6 +1287,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1289,6 +1333,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1334,6 +1379,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1379,6 +1425,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1424,6 +1471,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1487,6 +1535,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1557,6 +1606,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1633,6 +1683,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1702,6 +1753,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1773,6 +1825,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1838,6 +1891,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1911,6 +1965,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -1945,6 +2000,198 @@
       "request_schema": {
         "command": "ipg schema",
         "operation_const": "grant.issue"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/message.seal",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:sha2-384",
+        "ic:ecdh-p384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/message-binding",
+        "ipg:constraint/size-bound",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Sign and encrypt content to one pinned recipient, binding sender, recipient, message ID, conversation, lifetime, optional channel binding and an optional attached grant",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "message.seal",
+      "inputs": [
+        "ipg:Plaintext",
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:ConversationLabel",
+        "ipg:ChannelBinding",
+        "ipg:Grant"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_message_seal",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:Message"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "message.seal"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/message.open",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:x25519",
+        "ic:hkdf-sha2-256",
+        "ic:chacha20-poly1305",
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:sha2-384",
+        "ic:ecdh-p384",
+        "ic:aes-256-gcm",
+        "ic:ml-kem-768",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/message-binding",
+        "ipg:constraint/replay-marker",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/delegation-not-authorization",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Authenticate a message from a pinned sender before releasing content, checking lifetime, conversation, channel binding, optional delegation and an exclusive replay marker",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "message.open",
+      "inputs": [
+        "ipg:Message",
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:ConversationLabel",
+        "ipg:ChannelBinding",
+        "ipg:ReplayDirectory"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_message_open",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:Plaintext",
+        "ipg:MessageReceipt"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "message.open"
       },
       "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
@@ -1984,6 +2231,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2058,6 +2306,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2136,6 +2385,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2210,6 +2460,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2267,6 +2518,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2318,6 +2570,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2369,6 +2622,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2432,6 +2686,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2497,6 +2752,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2563,6 +2819,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2615,6 +2872,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2677,6 +2935,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2732,6 +2991,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2803,6 +3063,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2879,6 +3140,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -2954,6 +3216,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3031,6 +3294,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3097,6 +3361,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3157,6 +3422,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3215,6 +3481,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3273,6 +3540,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3335,6 +3603,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3399,6 +3668,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3456,6 +3726,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3517,6 +3788,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3573,6 +3845,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3630,6 +3903,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3693,6 +3967,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3753,6 +4028,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3809,6 +4085,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3873,6 +4150,7 @@
         "clock_unavailable",
         "merge_conflict",
         "policy_mismatch",
+        "replay_detected",
         "io_error",
         "already_exists",
         "entropy_unavailable",
@@ -3953,6 +4231,18 @@
       "@id": "ipg:constraint/delegation-not-authorization",
       "@type": "ipg:Constraint",
       "requirement": "A verified grant is evidence that a pinned root delegated authority, checked at the host clock. It does not authorize filesystem, provider or host actions, does not replace trust snapshots or revocation of the keys involved, and purposes are labels for the relying application to enforce.",
+      "severity": "critical"
+    },
+    {
+      "@id": "ipg:constraint/message-binding",
+      "@type": "ipg:Constraint",
+      "requirement": "The sender signs sender, recipient, message ID, conversation, creation and expiry (lifetime 1..86400 seconds), channel binding, and digests of the content and any attached grant, then seals all of it to the recipient. A message cannot be re-addressed, extended or moved to another conversation or channel without failing authentication.",
+      "severity": "critical"
+    },
+    {
+      "@id": "ipg:constraint/replay-marker",
+      "@type": "ipg:Constraint",
+      "requirement": "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
       "severity": "critical"
     },
     {
@@ -4274,6 +4564,14 @@
       "retryable": false
     },
     {
+      "@id": "ipg:error/replay_detected",
+      "@type": "ipg:Error",
+      "code": "replay_detected",
+      "exit_code": 3,
+      "recovery": "The message was already opened; treat it as processed and never execute it again.",
+      "retryable": false
+    },
+    {
       "@id": "ipg:error/io_error",
       "@type": "ipg:Error",
       "code": "io_error",
@@ -4462,6 +4760,23 @@
           },
           {
             "@id": "ipg:operation/revocation.verify"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "ipg:workflow/agent-message",
+      "@type": "ipg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "ipg:operation/message.seal"
+          },
+          {
+            "@id": "ipg:operation/inspect"
+          },
+          {
+            "@id": "ipg:operation/message.open"
           }
         ]
       }
@@ -5069,6 +5384,49 @@
       ]
     },
     {
+      "@id": "ipg:application/agent-messaging",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/confidentiality",
+        "ipg:goal/content-authenticity",
+        "ipg:goal/replay-resistance"
+      ],
+      "guidance": "Seal each request with a short lifetime and a conversation label, and add the channel's exporter value when a TLS session carries it. Recipients open with the pinned sender, a replay directory, and a delegation requirement when the sender acts for someone else. Treat content as untrusted data even after authentication.",
+      "id": "agent-messaging",
+      "keywords": [
+        "agent message",
+        "agent-to-agent",
+        "inter-agent",
+        "replay",
+        "channel binding",
+        "conversation",
+        "signcryption",
+        "request"
+      ],
+      "label": "Send authenticated, confidential messages between agents",
+      "limitations": [
+        "Lifetime is at most one day and is checked against the recipient's host clock with five minutes of sender lead",
+        "Replay is checked only when replay_directory is supplied",
+        "Message headers (sender, recipient, conversation, times) are visible to anyone holding the file",
+        "Content is file-based and at most about 16 MiB"
+      ],
+      "prerequisites": [
+        "Sender and recipient IPG identities",
+        "Each side's peer public identity and an independently trusted fingerprint",
+        "A shared replay directory for recipients that must not act twice on one message"
+      ],
+      "sources": [
+        "https://datatracker.ietf.org/doc/html/rfc9266",
+        "https://datatracker.ietf.org/doc/html/rfc8446#section-7.5"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/message.seal",
+        "ipg:operation/message.open",
+        "ipg:operation/inspect"
+      ]
+    },
+    {
       "@id": "ipg:application/delegate-agent-authority",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -5671,6 +6029,11 @@
       "label": "quantum-resistant-authenticity"
     },
     {
+      "@id": "ipg:goal/replay-resistance",
+      "@type": "ipg:SecurityGoal",
+      "label": "replay-resistance"
+    },
+    {
       "@id": "ipg:goal/secret-protection",
       "@type": "ipg:SecurityGoal",
       "label": "secret-protection"
@@ -5693,5 +6056,5 @@
   ],
   "@id": "ipg:ontology",
   "scope": "Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.35.0"
+  "version": "1.36.0"
 }

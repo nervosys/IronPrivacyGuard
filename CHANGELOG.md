@@ -9,6 +9,12 @@
   can only narrow its parent's operations, purposes, window and depth, and
   commits to the previous link. Independent PyCA checks cover both directions.
   56 operations.
+- Added authenticated, confidential agent messages (`ipg-message-v1`):
+  `message.seal` and `message.open` bind sender, recipient, message ID,
+  conversation, lifetime (up to one day), optional channel binding and an
+  optional attached grant; opening checks everything before release and can
+  record exclusive replay markers (`replay_detected`). Independent PyCA checks
+  cover both directions. 58 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

@@ -194,6 +194,38 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file", "read_passphrase", "create_file"],
     ),
     (
+        "message.seal",
+        "Sign and encrypt content to one pinned recipient, binding sender, recipient, message ID, conversation, lifetime, optional channel binding and an optional attached grant",
+        &[
+            "Plaintext",
+            "SecretKey",
+            "Passphrase",
+            "PublicKey",
+            "Fingerprint",
+            "ConversationLabel",
+            "ChannelBinding",
+            "Grant",
+        ],
+        &["Message"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "message.open",
+        "Authenticate a message from a pinned sender before releasing content, checking lifetime, conversation, channel binding, optional delegation and an exclusive replay marker",
+        &[
+            "Message",
+            "SecretKey",
+            "Passphrase",
+            "PublicKey",
+            "Fingerprint",
+            "ConversationLabel",
+            "ChannelBinding",
+            "ReplayDirectory",
+        ],
+        &["Plaintext", "MessageReceipt"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
         "grant.verify",
         "Authenticate a delegation chain from a pinned root at the host clock and report the authority it confers",
         &[
@@ -459,6 +491,8 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "grant.issue",
+    "message.open",
+    "message.seal",
     "key.public",
     "key.revoke",
     "key.validity",
@@ -503,6 +537,23 @@ pub fn operation(id: &str) -> Value {
             "secret-channel",
             "no-clobber",
             "delegation-attenuation",
+            "delegation-not-authorization",
+        ],
+        "message.seal" => vec![
+            "identity-pin",
+            "secret-channel",
+            "no-clobber",
+            "message-binding",
+            "size-bound",
+        ],
+        "message.open" => vec![
+            "identity-pin",
+            "authenticate-before-release",
+            "secret-channel",
+            "no-clobber",
+            "message-binding",
+            "replay-marker",
+            "host-clock",
             "delegation-not-authorization",
         ],
         "grant.verify" => vec![
@@ -688,6 +739,8 @@ pub fn operation(id: &str) -> Value {
             | "key.validity"
             | "grant.issue"
             | "grant.verify"
+            | "message.seal"
+            | "message.open"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -726,6 +779,22 @@ pub fn operation(id: &str) -> Value {
         "grant.issue" => vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"],
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
         "grant.verify" => vec!["ed25519", "sha2-384"],
+        "message.seal" => vec![
+            "x25519",
+            "hkdf-sha2-256",
+            "chacha20-poly1305",
+            "ed25519",
+            "argon2id",
+            "sha2-384",
+        ],
+        "message.open" => vec![
+            "x25519",
+            "hkdf-sha2-256",
+            "chacha20-poly1305",
+            "ed25519",
+            "argon2id",
+            "sha2-384",
+        ],
         "hash" => vec!["sha2-256"],
         "openpgp.key.generate"
         | "openpgp.key.import"
@@ -753,6 +822,14 @@ pub fn operation(id: &str) -> Value {
         "encrypt" | "decrypt" | "stream.encrypt" | "stream.decrypt" => {
             &["ecdh-p384", "sha2-384", "aes-256-gcm", "ml-kem-768"]
         }
+        "message.seal" | "message.open" => &[
+            "ecdh-p384",
+            "sha2-384",
+            "aes-256-gcm",
+            "ml-kem-768",
+            "ecdsa-p384-sha384",
+            "ml-dsa-65",
+        ],
         "key.public" => &[
             "ecdh-p384",
             "ecdsa-p384-sha384",
@@ -774,7 +851,14 @@ pub fn operation(id: &str) -> Value {
     }
     let governed = matches!(
         *id,
-        "encrypt" | "stream.encrypt" | "sign" | "verify" | "stream.sign" | "stream.verify"
+        "encrypt"
+            | "stream.encrypt"
+            | "sign"
+            | "verify"
+            | "stream.sign"
+            | "stream.verify"
+            | "message.seal"
+            | "message.open"
     );
     if matches!(*id, "stream.sign" | "stream.verify") && !algorithms.contains(&"sha2-384") {
         algorithms.push("sha2-384");
@@ -847,7 +931,7 @@ pub fn operation(id: &str) -> Value {
         "constraints":constraints.iter().map(|s|format!("ipg:constraint/{s}")).collect::<Vec<_>>(),
         "algorithms":algorithms.iter().map(|s|format!("ic:{s}")).collect::<Vec<_>>(),
         "request_schema":{"command":"ipg schema", "operation_const":id},
-        "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked"]})
+        "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","replay_detected","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked"]})
 }
 pub fn discover() -> Value {
     json!({"name":"IronPrivacyGuard", "binary":"ipg", "version":env!("CARGO_PKG_VERSION"),
@@ -1125,6 +1209,31 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "Message",
+            "An ipg-message-v1 agent message: a signed header (sender, recipient, message ID, conversation, created, expires, channel binding) and an envelope sealing the signature, optional grant and content",
+            "ciphertext",
+        ),
+        (
+            "MessageReceipt",
+            "Authenticated message metadata: sender, message ID, conversation, times, whether a replay marker was recorded and any verified delegation",
+            "public",
+        ),
+        (
+            "ConversationLabel",
+            "Optional sender-chosen label of 1..128 ASCII characters bound into a message; untrusted until the message authenticates",
+            "untrusted",
+        ),
+        (
+            "ChannelBinding",
+            "Optional 16..64-byte value both peers derive from their channel, such as a TLS exporter, binding a message to that channel",
+            "public",
+        ),
+        (
+            "ReplayDirectory",
+            "Host directory of exclusive per-message markers shared by recipients that must not process a message twice",
+            "control",
+        ),
+        (
             "DelegableOperation",
             "Closed vocabulary of private-key operations a grant may delegate: decrypt, sign, stream.decrypt, stream.sign",
             "public",
@@ -1263,6 +1372,14 @@ pub fn export() -> Value {
         (
             "delegation-not-authorization",
             "A verified grant is evidence that a pinned root delegated authority, checked at the host clock. It does not authorize filesystem, provider or host actions, does not replace trust snapshots or revocation of the keys involved, and purposes are labels for the relying application to enforce.",
+        ),
+        (
+            "message-binding",
+            "The sender signs sender, recipient, message ID, conversation, creation and expiry (lifetime 1..86400 seconds), channel binding, and digests of the content and any attached grant, then seals all of it to the recipient. A message cannot be re-addressed, extended or moved to another conversation or channel without failing authentication.",
+        ),
+        (
+            "replay-marker",
+            "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
         ),
         (
             "host-clock",
@@ -1472,6 +1589,11 @@ pub fn export() -> Value {
             3,
             "Resolve the identity via a trusted channel; do not automatically replace the pin.",
         ),
+        (
+            "replay_detected",
+            3,
+            "The message was already opened; treat it as processed and never execute it again.",
+        ),
         ("io_error", 4, "Check file availability and permissions."),
         (
             "already_exists",
@@ -1538,6 +1660,10 @@ pub fn export() -> Value {
         ("change-passphrase", vec!["key.rewrap", "key.public"]),
         ("self-revoke", vec!["key.revoke", "revocation.verify"]),
         (
+            "agent-message",
+            vec!["message.seal", "inspect", "message.open"],
+        ),
+        (
             "delegate-signing",
             vec!["grant.issue", "grant.verify", "sign", "verify"],
         ),
@@ -1601,5 +1727,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.35.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.36.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }
