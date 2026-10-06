@@ -297,6 +297,29 @@ fixed!(json_signature_format, crate::json_signature::FORMAT);
 fixed!(approval_format, crate::approval::FORMAT);
 fixed!(rotation_format, crate::rotation::FORMAT);
 fixed!(share_format, crate::backup::FORMAT);
+fixed!(mls_key_package_format, crate::mls_ops::KEY_PACKAGE_FORMAT);
+pub fn mls_sealed_format(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "enum":[crate::mls_ops::STATE_FORMAT, crate::mls_ops::KEY_PACKAGE_SECRETS_FORMAT]})
+}
+pub fn mls_lifetime(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":1, "maximum":crate::mls_ops::MAX_LIFETIME,
+        "description":"Seconds the KeyPackage stays valid (at most 90 days)."})
+}
+pub fn mls_adds(generator: &mut SchemaGenerator) -> Schema {
+    let item = generator.subschema_for::<crate::mls_ops::MlsAdd>();
+    json_schema!({"type":"array", "maxItems":crate::mls_ops::MAX_MEMBERS_PER_COMMIT, "items":item})
+}
+pub fn mls_removes(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "maxItems":crate::mls_ops::MAX_MEMBERS_PER_COMMIT,
+        "items":{"type":"string", "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$"},
+        "description":"IPG fingerprints of members to remove."})
+}
+pub fn mls_export_length(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":1, "maximum":64})
+}
+pub fn mls_label(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":1, "maxLength":255})
+}
 pub fn share_threshold(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"integer", "minimum":2, "maximum":crate::backup::MAX_SHARES,
         "description":"Shares needed to recover (k); at most the number of shares (checked at runtime)."})

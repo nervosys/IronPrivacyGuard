@@ -45,6 +45,19 @@
   by both the previous and the successor key, and `rotation.verify` follows a
   chain of up to 16 statements from a pinned identity and can write the current
   public identity. Rotation is not revocation. 71 operations.
+- Added MLS groups for agents (RFC 9420, cipher suites 1 and 3):
+  - operations: `mls.key_package`, `mls.group.create`, `mls.commit`,
+    `mls.join`, `mls.encrypt`, `mls.process`, `mls.status` and `mls.export`;
+  - identity: each leaf binds a fresh MLS signature key to an IPG identity, so
+    members are pinned and reported by fingerprint;
+  - state: sealed and replaced atomically under a lock;
+  - interoperability: messages and Welcomes are standard RFC 9420 bytes;
+  - conformance: verified against the MLS working group vectors, including
+    the passive-client scenarios;
+  - fix found during development: message keys are consumed only after a
+    message is fully accepted.
+
+  81 operations.
 - Added threshold backups. `backup.split` seals a file of up to 1 MiB under a
   fresh key and splits that key into k-of-n `ipg-share-v1` shares with
   IronCrypto's Shamir sharing (n at most 16). `backup.combine` authenticates

@@ -115,5 +115,23 @@
     "ipg_usage": "Splits a random 32-byte ChaCha20-Poly1305 key into k-of-n backup shares; the protected file is sealed under that key so recovery is authenticated",
     "limitations": ["Shares have no integrity of their own; IPG relies on the AEAD to detect wrong or insufficient shares", "Any k shares recover the key", "Not threshold signing or decryption: the key is reassembled in one place"],
     "sources": ["https://dl.acm.org/doi/10.1145/359168.359176"]
+  },
+  {
+    "@id": "ic:hpke-x25519-sha256",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "HPKE (DHKEM(X25519, HKDF-SHA256), base mode)",
+    "role": "Public-key encryption to a recipient key",
+    "ipg_usage": "MLS EncryptWithLabel for Welcome group secrets and UpdatePath path secrets, and DeriveKeyPair for ratchet tree node keys",
+    "limitations": ["Base mode does not authenticate the sender; MLS signs and confirms what it encrypts", "X25519 only: no post-quantum protection for MLS groups"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9180"]
+  },
+  {
+    "@id": "ic:aes-128-gcm",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "AES-128-GCM",
+    "role": "Authenticated encryption",
+    "ipg_usage": "MLS cipher suite 1 message, sender-data and Welcome protection",
+    "limitations": ["128-bit key; MLS suite 3 with ChaCha20-Poly1305 is IPG's default", "Nonce reuse is catastrophic; MLS ratchets and reuse guards prevent it"],
+    "sources": ["https://doi.org/10.6028/NIST.SP.800-38D"]
   }
 ]

@@ -49,7 +49,8 @@ Each link must:
 - be signed by the previous link's subject (the first by the pinned root);
 - carry the subject's complete public identity, whose fingerprint must verify;
 - name a sorted, unique, non-empty subset of the parent's operations, drawn from
-  `approval.sign`, `audit.checkpoint`, `decrypt`, `json.sign`, `message.open`, `message.seal`, `provenance.attest`,
+  `approval.sign`, `audit.checkpoint`, `decrypt`, `json.sign`, `message.open`, `message.seal`, `mls.group.create`,
+  `mls.key_package`, `provenance.attest`,
   `sign`, `stream.decrypt` and `stream.sign`;
 - name a sorted subset of the parent's purposes when the parent restricts them
   (an empty list means no purpose restriction);
@@ -81,7 +82,8 @@ time. Within the session:
 
 - every delegable operation (`sign`, `stream.sign`, `decrypt`,
   `stream.decrypt`, `message.seal`, `message.open`, `json.sign`,
-  `approval.sign`, `audit.checkpoint` and `provenance.attest`) requires the grant's subject key and a grant that
+  `approval.sign`, `audit.checkpoint`, `mls.key_package`, `mls.group.create`
+  and `provenance.attest`) requires the grant's subject key and a grant that
   permits the operation;
 - `key.public`, `key.rewrap`, `key.revoke`, `key.validity`, `tpm.attest` and
   `tpm.key.delete` require the subject key;

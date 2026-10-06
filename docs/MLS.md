@@ -1,0 +1,118 @@
+# MLS groups for agents
+
+IPG implements Messaging Layer Security ([RFC 9420](https://www.rfc-editor.org/rfc/rfc9420))
+for end-to-end encrypted groups of agents. Groups get forward secrecy and
+post-compromise security as members commit. Membership changes are
+authenticated by the whole group.
+
+## Suites and conformance
+
+The supported cipher suites are:
+
+- 3, `x25519-chacha20poly1305-sha256-ed25519` (the default);
+- 1, `x25519-aes128gcm-sha256-ed25519`.
+
+Every primitive comes from IronCrypto: HPKE, HKDF-SHA256, SHA-256, Ed25519,
+AES-128-GCM and ChaCha20-Poly1305. The MLS layers are verified against the
+working group's
+[test vectors](https://github.com/mlswg/mls-implementations) for both suites:
+
+- deserialization, tree math, crypto basics, key schedule, PSK secret and
+  transcript hashes;
+- the secret tree, message round trips and message protection;
+- tree validation, tree operations and TreeKEM;
+- the passive-client scenarios: Welcome, handling commits, and a random
+  200-epoch run with 1542 proposals.
+
+Not supported: post-quantum suites, external commits, ReInit and custom
+proposal types. Suites 1 and 3 use X25519, so groups are not protected against
+quantum attackers.
+
+## Operations
+
+| Operation | Purpose |
+| --- | --- |
+| `mls.key_package` | Create a KeyPackage bound to this IPG identity. Writes the public `ipg-mls-key-package-v1` file and its sealed private keys. |
+| `mls.group.create` | Create a one-member group and its sealed state. |
+| `mls.commit` | Add members by KeyPackage and pinned fingerprint, and remove members by fingerprint. Writes the commit and, when adding, a Welcome. |
+| `mls.join` | Join from a Welcome with the sealed KeyPackage secrets. |
+| `mls.encrypt` | Encrypt application data to the group. |
+| `mls.process` | Process a received message: release application data, store a proposal, or apply a commit. |
+| `mls.status` | Report the epoch, members by IPG fingerprint and the epoch authenticator. |
+| `mls.export` | Derive a secret from the current epoch with the MLS exporter. |
+
+Commits, application messages and Welcomes are raw RFC 9420 `MLSMessage` bytes.
+Handshake and application messages are PrivateMessages.
+
+## Identity binding
+
+Each membership uses a fresh Ed25519 MLS signature key. The leaf carries an IPG
+identity extension (type `0xF1B0`) with the member's IPG public identity and
+that identity's signature over:
+
+```text
+frame("IPG MLS identity v1", fingerprint, u16 cipher_suite, mls_signature_key)
+```
+
+The basic credential names the same fingerprint. Any IPG identity can join a
+group this way: software, hybrid post-quantum, PKCS#11, TPM or KMS. Only the
+MLS layer itself uses X25519 and Ed25519.
+
+Every leaf IPG sees must carry a valid binding: on join, in commits and in
+status reports. `mls.commit` adds a member only when its binding verifies and its
+fingerprint matches the pin. It can also apply a trust snapshot to new members.
+Senders of application data are reported by IPG fingerprint.
+
+`mls.key_package` and `mls.group.create` use the IPG private key, so they are
+delegable and confined by host-pinned grants.
+
+## State
+
+Group state and KeyPackage secrets are sealed with Argon2id and
+ChaCha20-Poly1305 under `state_passphrase_file`. This should differ from the
+identity passphrase.
+
+Forward secrecy requires deleting superseded epoch secrets and used message
+keys. MLS state is therefore the one IPG artifact that is replaced, not written
+once:
+
+- **Locking:** each state-changing call holds `<state>.lock` and replaces the
+  file atomically through a temporary file. Concurrent callers get
+  `already_exists`.
+- **Order:** state is saved before the message is written. A failed write can
+  lose that message but never reuses a ratchet key.
+- **Backups:** don't keep copies of old state files. They hold the secrets
+  forward secrecy is meant to erase.
+
+## Delivery
+
+MLS needs a delivery channel that gives every member each commit in the same
+order. Two members committing in the same epoch fork the group, and only one
+commit may be applied. Deliver each Welcome to its new members, and every commit
+to all existing members.
+
+A member that processes a commit removing it sees `removed: true`. That state
+can no longer send or receive. Messages a member has already processed are
+replays (`replay_detected`).
+
+Comparing `epoch_authenticator` values out of band confirms that members share
+the same epoch.
+
+## Example
+
+```text
+ipg mls.key_package --key bob.key --passphrase-file bob.pass --expected-fingerprint <bob> \
+    --state-passphrase-file bob.state-pass --lifetime 86400 \
+    --output bob.kp.json --secrets-output bob.kp-secrets.json
+ipg mls.group.create --key alice.key --passphrase-file alice.pass --expected-fingerprint <alice> \
+    --state-passphrase-file alice.state-pass --output alice.mls
+ipg mls.commit --state alice.mls --state-passphrase-file alice.state-pass \
+    --add '[{"key_package":"bob.kp.json","expected_fingerprint":"<bob>"}]' \
+    --output add.commit --welcome-output add.welcome
+ipg mls.join --welcome add.welcome --key-package-secrets bob.kp-secrets.json \
+    --state-passphrase-file bob.state-pass --output bob.mls
+ipg mls.encrypt --state alice.mls --state-passphrase-file alice.state-pass \
+    --input note.txt --output note.mls
+ipg mls.process --state bob.mls --state-passphrase-file bob.state-pass \
+    --input note.mls --output note.txt
+```

@@ -104,6 +104,14 @@ content out of an agent's context should deny inline data.
 | message.seal | input, output, key, recipient, expected_recipient_fingerprint, lifetime; optional passphrase_file, conversation, channel_binding, grant, policy |
 | message.open | input, output, key, sender, expected_sender_fingerprint; optional passphrase_file, conversation, channel_binding, replay_directory, delegation, policy |
 | grant.verify | input, root, expected_root_fingerprint; optional subject_fingerprint, required_operation, purpose |
+| mls.key_package | key, expected_fingerprint, state_passphrase_file, lifetime, output, secrets_output; optional passphrase_file, suite |
+| mls.group.create | key, expected_fingerprint, state_passphrase_file, output; optional passphrase_file, suite |
+| mls.join | welcome, key_package_secrets, state_passphrase_file, output |
+| mls.commit | state, state_passphrase_file, output; optional add, remove, welcome_output, policy |
+| mls.encrypt | state, state_passphrase_file, input, output; optional authenticated_data |
+| mls.process | state, state_passphrase_file, input; output for application data |
+| mls.status | state, state_passphrase_file |
+| mls.export | state, state_passphrase_file, label, length, output; optional context |
 | backup.split | input, threshold, outputs |
 | backup.combine | inputs, output |
 | key.rotate | key, expected_fingerprint, next_key, expected_next_fingerprint, reason, output; optional passphrase_file, next_passphrase_file |

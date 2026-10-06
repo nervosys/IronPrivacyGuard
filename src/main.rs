@@ -141,6 +141,9 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
                 | "lifetime"
                 | "subjects"
                 | "approvals"
+                | "add"
+                | "remove"
+                | "length"
                 | "inputs"
                 | "outputs"
                 | "checkpoints"
@@ -190,6 +193,8 @@ mod tests {
             json!({"operation":"grant.issue", "key":"secret", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "subject":"agent.public", "expected_subject_fingerprint":"11".repeat(32), "operations":["sign"], "purposes":["release"], "not_before":1, "not_after":2, "delegation_depth":1, "parent":"parent.grant", "output":"grant"}),
             json!({"operation":"grant.verify", "input":"grant", "root":"root.public", "expected_root_fingerprint":"00".repeat(32), "subject_fingerprint":"11".repeat(32), "required_operation":"sign", "purpose":"release"}),
             json!({"operation":"verify", "input":"file", "signature":"signature", "signer":"public", "expected_fingerprint":"00".repeat(32), "policy":policy, "delegation":{"grant":"grant", "root":"root.public", "expected_root_fingerprint":"11".repeat(32), "purpose":"release"}}),
+            json!({"operation":"mls.commit", "state":"alice.mls", "state_passphrase_file":"state-pass", "add":[{"key_package":"bob.kp", "expected_fingerprint":"00".repeat(32)}], "remove":["11".repeat(32)], "output":"add.commit", "welcome_output":"add.welcome", "policy":policy}),
+            json!({"operation":"mls.export", "state":"alice.mls", "state_passphrase_file":"state-pass", "label":"agent-channel", "context":"v1", "length":32, "output":"secret"}),
             json!({"operation":"backup.split", "input":"key", "threshold":2, "outputs":["s1", "s2", "s3"]}),
             json!({"operation":"backup.combine", "inputs":["s1", "s3"], "output":"recovered"}),
             json!({"operation":"key.rotate", "key":"old", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "next_key":"new", "next_passphrase_file":"new-pass", "expected_next_fingerprint":"11".repeat(32), "reason":"upgraded", "output":"rotation"}),

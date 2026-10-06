@@ -132,6 +132,16 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-mls-key-package-v1" => {
+            let value: crate::mls_ops::KeyPackageFile = ipg_json::from_slice(data)?;
+            crate::crypto::check_fingerprint(&value.fingerprint)?;
+            // The claimed identity; mls.commit verifies the binding.
+            Some(value.fingerprint)
+        }
+        "ipg-mls-state-v1" | "ipg-mls-key-package-secrets-v1" => {
+            let _: crate::mls_ops::SealedFile = ipg_json::from_slice(data)?;
+            None
+        }
         "ipg-share-v1" => {
             let value: crate::backup::ShareFile = ipg_json::from_slice(data)?;
             value.validate()?;

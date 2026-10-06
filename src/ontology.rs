@@ -266,6 +266,85 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "mls.key_package",
+        "Create an RFC 9420 KeyPackage whose leaf binds a fresh MLS signature key to this IPG identity, with its private keys sealed under a passphrase",
+        &["SecretKey", "Passphrase", "Fingerprint", "MlsSuite"],
+        &["MlsKeyPackage", "MlsKeyPackageSecrets"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "mls.group.create",
+        "Create a one-member MLS group at epoch 0 with this IPG identity and seal its state",
+        &["SecretKey", "Passphrase", "Fingerprint", "MlsSuite"],
+        &["MlsGroupState", "MlsGroupStatus"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "mls.join",
+        "Join an MLS group from a Welcome, verifying the tree, every member's IPG identity binding and the confirmation tag",
+        &["MlsWelcome", "MlsKeyPackageSecrets", "Passphrase"],
+        &["MlsGroupState", "MlsGroupStatus"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "mls.commit",
+        "Add pinned members and remove members by fingerprint in one commit with a fresh update path, writing the commit and any Welcome and replacing the sealed state",
+        &[
+            "MlsGroupState",
+            "Passphrase",
+            "MlsKeyPackage",
+            "Fingerprint",
+        ],
+        &["MlsMessage", "MlsWelcome", "MlsGroupStatus"],
+        &[
+            "read_file",
+            "read_passphrase",
+            "create_file",
+            "replace_file",
+            "create_lock_file",
+        ],
+    ),
+    (
+        "mls.encrypt",
+        "Encrypt application data to the group under the sender's ratchet, saving the advanced state before writing the message",
+        &["MlsGroupState", "Passphrase", "Plaintext"],
+        &["MlsMessage"],
+        &[
+            "read_file",
+            "read_passphrase",
+            "create_file",
+            "replace_file",
+            "create_lock_file",
+        ],
+    ),
+    (
+        "mls.process",
+        "Process a group message: release application data with its bound sender, store proposals, or apply commits",
+        &["MlsGroupState", "Passphrase", "MlsMessage"],
+        &["Plaintext", "MlsGroupStatus"],
+        &[
+            "read_file",
+            "read_passphrase",
+            "create_file",
+            "replace_file",
+            "create_lock_file",
+        ],
+    ),
+    (
+        "mls.status",
+        "Report a group's epoch, members by IPG fingerprint and epoch authenticator",
+        &["MlsGroupState", "Passphrase"],
+        &["MlsGroupStatus"],
+        &["read_file", "read_passphrase"],
+    ),
+    (
+        "mls.export",
+        "Derive a secret from the current epoch with the MLS exporter",
+        &["MlsGroupState", "Passphrase"],
+        &["Plaintext"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
         "backup.split",
         "Seal a file under a fresh key and split that key into k-of-n Shamir shares, one file per custodian",
         &["Plaintext", "ShareThreshold"],
@@ -632,6 +711,8 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "approval.sign",
+    "mls.key_package",
+    "mls.group.create",
     "key.rotate",
     "audit.checkpoint",
     "grant.issue",
@@ -708,6 +789,32 @@ pub fn operation(id: &str) -> Value {
             "delegation-not-authorization",
             "host-clock",
         ],
+        "mls.key_package" | "mls.group.create" => {
+            vec!["mls-identity-binding", "secret-channel", "no-clobber"]
+        }
+        "mls.join" => vec![
+            "mls-identity-binding",
+            "authenticate-before-release",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "mls.commit" => vec![
+            "identity-pin",
+            "mls-identity-binding",
+            "mls-mutable-state",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "mls.encrypt" => vec!["mls-mutable-state", "secret-channel", "no-clobber"],
+        "mls.process" => vec![
+            "mls-identity-binding",
+            "mls-mutable-state",
+            "authenticate-before-release",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "mls.status" => vec!["mls-identity-binding", "secret-channel"],
+        "mls.export" => vec!["secret-channel", "no-clobber"],
         "backup.split" => vec!["threshold-shares", "no-clobber", "size-bound"],
         "backup.combine" => vec![
             "threshold-shares",
@@ -990,6 +1097,17 @@ pub fn operation(id: &str) -> Value {
         "audit.init" | "audit.append" => vec!["sha2-384"],
         "key.rotate" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
         "backup.split" | "backup.combine" => vec!["chacha20-poly1305", "shamir-gf256"],
+        "mls.key_package" | "mls.group.create" | "mls.join" | "mls.commit" | "mls.encrypt"
+        | "mls.process" | "mls.status" | "mls.export" => vec![
+            "hpke-x25519-sha256",
+            "x25519",
+            "ed25519",
+            "hkdf-sha2-256",
+            "sha2-256",
+            "aes-128-gcm",
+            "chacha20-poly1305",
+            "argon2id",
+        ],
         "rotation.verify" => vec!["ed25519"],
         "audit.verify" => vec!["ed25519", "sha2-384"],
         "json.sign" | "provenance.attest" | "approval.sign" | "audit.checkpoint" => {
@@ -1111,6 +1229,12 @@ pub fn operation(id: &str) -> Value {
                     | "audit.init"
                     | "audit.append"
                     | "backup.split"
+                    | "mls.key_package"
+                    | "mls.group.create"
+                    | "mls.join"
+                    | "mls.commit"
+                    | "mls.encrypt"
+                    | "mls.process"
                     | "key.rewrap"
                     | "hardware.tokens"
                     | "hardware.key.generate"
@@ -1440,6 +1564,41 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "MlsSuite",
+            "MLS cipher suite: x25519-chacha20poly1305-sha256-ed25519 (3, default) or x25519-aes128gcm-sha256-ed25519 (1)",
+            "public",
+        ),
+        (
+            "MlsKeyPackage",
+            "An ipg-mls-key-package-v1 file: the RFC 9420 KeyPackage, its reference and the bound IPG fingerprint; public, single use",
+            "public",
+        ),
+        (
+            "MlsKeyPackageSecrets",
+            "The KeyPackage's init, leaf and MLS signature private keys, sealed under a passphrase; needed with a Welcome to join",
+            "secret",
+        ),
+        (
+            "MlsGroupState",
+            "A sealed ipg-mls-state-v1 file holding the group's tree, epoch secrets, ratchets and this member's private keys; replaced in place",
+            "secret",
+        ),
+        (
+            "MlsMessage",
+            "RFC 9420 MLSMessage bytes: PrivateMessage commits, proposals and application data, interoperable with other MLS implementations",
+            "ciphertext",
+        ),
+        (
+            "MlsWelcome",
+            "RFC 9420 Welcome bytes for members added by a commit, carrying the ratchet tree",
+            "ciphertext",
+        ),
+        (
+            "MlsGroupStatus",
+            "Group ID, epoch, suite, this member's fingerprint, every member's bound IPG fingerprint and the epoch authenticator",
+            "public",
+        ),
+        (
             "BackupShare",
             "An ipg-share-v1 file: a random set ID, threshold, share count and index, one Shamir share of a 32-byte key, and the ChaCha20-Poly1305-sealed file shared by every share",
             "secret",
@@ -1566,7 +1725,7 @@ pub fn export() -> Value {
         ),
         (
             "DelegableOperation",
-            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, audit.checkpoint, decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
+            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, audit.checkpoint, decrypt, json.sign, message.open, message.seal, mls.group.create, mls.key_package, provenance.attest, sign, stream.decrypt, stream.sign",
             "public",
         ),
         (
@@ -1711,6 +1870,14 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "mls-identity-binding",
+            "Every MLS leaf must carry an IPG identity extension: the member's IPG public identity and its signature over the MLS signature key and suite, with the basic credential naming the same fingerprint. Members are reported, pinned and removed by IPG fingerprint; leaves without a valid binding are refused.",
+        ),
+        (
+            "mls-mutable-state",
+            "MLS forward secrecy requires deleting superseded epoch secrets and used message keys, so the sealed state file is replaced atomically in place under an exclusive <state>.lock rather than written once. State is saved before a message is written, so a failure loses at most that message and never reuses a key; keep no stale copies of state files.",
         ),
         (
             "threshold-shares",
@@ -2034,6 +2201,17 @@ pub fn export() -> Value {
         ),
         ("sign-structured-data", vec!["json.sign", "json.verify"]),
         (
+            "agent-group",
+            vec![
+                "mls.key_package",
+                "mls.group.create",
+                "mls.commit",
+                "mls.join",
+                "mls.encrypt",
+                "mls.process",
+            ],
+        ),
+        (
             "threshold-backup",
             vec!["backup.split", "inspect", "backup.combine", "key.public"],
         ),
@@ -2118,5 +2296,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.42.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.43.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

@@ -237,7 +237,7 @@ def main():
     for variant in schemas["request"]["oneOf"]:
         operation = variant["properties"]["operation"]["const"]
         values = {"operation": operation}
-        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2", "user_id": "Alice <alice@example.test>", "expected_openpgp_fingerprint": "AB" * 20, "expected_subject_fingerprint": pin, "expected_root_fingerprint": pin, "expected_recipient_fingerprint": pin, "expected_sender_fingerprint": pin, "lifetime": 60, "subjects": [{"name": "artifact", "input": "path"}], "action": "build", "approvals": ["path"], "approvers": [{"public": "path", "expected_fingerprint": pin}], "threshold": 1, "expected_next_fingerprint": pin, "reason": "retired", "inputs": ["path", "path"], "outputs": ["path", "path"], "operations": ["sign"], "recipients": [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]}
+        defaults = {"request": {"operation": "hash", "input": "missing"}, "base": policy, "candidate": policy, "incoming": policy, "expected_fingerprint": pin, "expected_digest": pin, "not_before": 0, "not_after": 1, "at_time": 0, "reason": "retired", "encryption_key_id": "01" * 16, "signing_key_id": "02" * 16, "region": "us-east-1", "encryption_key_arn": "arn:aws:kms:us-east-1:123456789012:key/1", "signing_key_arn": "arn:aws:kms:us-east-1:123456789012:key/2", "user_id": "Alice <alice@example.test>", "expected_openpgp_fingerprint": "AB" * 20, "expected_subject_fingerprint": pin, "expected_root_fingerprint": pin, "expected_recipient_fingerprint": pin, "expected_sender_fingerprint": pin, "lifetime": 60, "subjects": [{"name": "artifact", "input": "path"}], "action": "build", "approvals": ["path"], "approvers": [{"public": "path", "expected_fingerprint": pin}], "threshold": 1, "expected_next_fingerprint": pin, "reason": "retired", "inputs": ["path", "path"], "length": 32, "outputs": ["path", "path"], "operations": ["sign"], "recipients": [{"certificate": "path", "expected_openpgp_fingerprint": "ab" * 20}]}
         for field in variant["required"]:
             if field != "operation":
                 values[field] = defaults.get(field, "path")
@@ -304,6 +304,19 @@ def main():
             for field, bad in [("approvers", []), ("approvers", [approver] * 33), ("approvers", [{"public": "path"}]),
                                ("approvals", []), ("approvals", ["path"] * 65), ("threshold", 0), ("threshold", 33),
                                ("content", "json")]:
+                check(tool_schema, {**arguments, field: bad}, False)
+        if operation == "mls.commit":
+            check(tool_schema, {**arguments, "add": [{"key_package": "path", "expected_fingerprint": pin}] * 64})
+            for field, bad in [("add", [{"key_package": "path"}]), ("add", [{"key_package": "path", "expected_fingerprint": pin}] * 65),
+                               ("remove", ["AB" * 32]), ("remove", [pin] * 65)]:
+                check(tool_schema, {**arguments, field: bad}, False)
+        if operation == "mls.key_package":
+            for bad in [0, 7776001]:
+                check(tool_schema, {**arguments, "lifetime": bad}, False)
+            check(tool_schema, {**arguments, "suite": "x25519-aes128gcm-sha256-ed25519"})
+            check(tool_schema, {**arguments, "suite": "p384"}, False)
+        if operation == "mls.export":
+            for field, bad in [("length", 0), ("length", 65), ("label", "")]:
                 check(tool_schema, {**arguments, field: bad}, False)
         if operation == "backup.split":
             check(tool_schema, {**arguments, "threshold": 16, "outputs": ["path"] * 16})

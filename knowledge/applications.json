@@ -96,6 +96,18 @@
     "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
   },
   {
+    "id": "mls-agent-groups",
+    "label": "Run an end-to-end encrypted group of agents with MLS",
+    "keywords": ["mls", "rfc 9420", "group chat", "group encryption", "ratchet tree", "multi-agent", "swarm", "forward secrecy", "post-compromise"],
+    "goals": ["confidentiality", "content-authenticity", "forward-secrecy"],
+    "support": "implemented",
+    "operations": ["mls.key_package", "mls.group.create", "mls.commit", "mls.join", "mls.encrypt", "mls.process", "mls.status", "mls.export"],
+    "prerequisites": ["An IPG identity per agent", "Pinned fingerprints of agents to add", "A delivery channel that gives every member each commit in order"],
+    "limitations": ["Cipher suites 1 and 3 only: X25519, not post-quantum", "No external commits or ReInit", "State files are replaced in place; keep no stale copies", "The delivery service must order commits; concurrent commits fork the group"],
+    "guidance": "Have each agent publish a KeyPackage, add agents with mls.commit using their pinned fingerprints, and deliver every commit to every member in order. Use mls.process for each received message and compare epoch authenticators out of band when stakes are high. Commit regularly (an empty commit refreshes the sender) for post-compromise security.",
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9420", "https://www.rfc-editor.org/rfc/rfc9750"]
+  },
+  {
     "id": "threshold-backup",
     "label": "Back up a key so k of n custodians can recover it",
     "keywords": ["backup", "shamir", "secret sharing", "threshold", "k-of-n", "recovery", "escrow", "custodians"],

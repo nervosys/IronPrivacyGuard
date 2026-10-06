@@ -31,6 +31,7 @@ pub mod lifecycle;
 pub mod mcp;
 pub mod message;
 pub mod mls;
+pub mod mls_ops;
 pub mod ontology;
 pub mod openpgp;
 #[cfg(feature = "pkcs11")]
@@ -158,6 +159,103 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
         reason: RevocationReason,
+    },
+    #[serde(rename = "mls.key_package")]
+    MlsKeyPackage {
+        /// The member's IPG identity, which signs the MLS identity binding.
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// Seals the KeyPackage secrets and later the group state (16..4096 bytes).
+        state_passphrase_file: String,
+        /// Default x25519-chacha20poly1305-sha256-ed25519.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        suite: Option<mls_ops::MlsSuite>,
+        #[schemars(schema_with = "crate::contract::mls_lifetime")]
+        lifetime: u64,
+        /// Public ipg-mls-key-package-v1, to hand to the group.
+        output: String,
+        /// Sealed private keys, needed with the Welcome to join.
+        secrets_output: String,
+    },
+    #[serde(rename = "mls.group.create")]
+    MlsGroupCreate {
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        state_passphrase_file: String,
+        /// Default x25519-chacha20poly1305-sha256-ed25519.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        suite: Option<mls_ops::MlsSuite>,
+        /// New sealed ipg-mls-state-v1 file.
+        output: String,
+    },
+    #[serde(rename = "mls.join")]
+    MlsJoin {
+        /// RFC 9420 MLSMessage(Welcome) bytes.
+        welcome: String,
+        key_package_secrets: String,
+        state_passphrase_file: String,
+        output: String,
+    },
+    #[serde(rename = "mls.commit")]
+    MlsCommit {
+        /// Sealed state, replaced in place under `<state>.lock`.
+        state: String,
+        state_passphrase_file: String,
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::mls_adds")]
+        add: Vec<mls_ops::MlsAdd>,
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::mls_removes")]
+        remove: Vec<String>,
+        /// RFC 9420 MLSMessage commit bytes for every current member.
+        output: String,
+        /// Welcome bytes for added members; required exactly when adding.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        welcome_output: Option<String>,
+        /// Applied to every added member's identity.
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "mls.encrypt")]
+    MlsEncrypt {
+        state: String,
+        state_passphrase_file: String,
+        input: String,
+        output: String,
+        /// Authenticated but unencrypted context, such as a ticket ID.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        authenticated_data: Option<String>,
+    },
+    #[serde(rename = "mls.process")]
+    MlsProcess {
+        state: String,
+        state_passphrase_file: String,
+        input: String,
+        /// Where application data is written; required for application messages.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output: Option<String>,
+    },
+    #[serde(rename = "mls.status")]
+    MlsStatus {
+        state: String,
+        state_passphrase_file: String,
+    },
+    #[serde(rename = "mls.export")]
+    MlsExport {
+        state: String,
+        state_passphrase_file: String,
+        #[schemars(schema_with = "crate::contract::mls_label")]
+        label: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        context: Option<String>,
+        #[schemars(schema_with = "crate::contract::mls_export_length")]
+        length: usize,
+        output: String,
     },
     #[serde(rename = "backup.split")]
     BackupSplit {
@@ -972,6 +1070,53 @@ pub enum Outcome {
         authority: delegation::Authority,
         authenticated: bool,
     },
+    MlsKeyPackage {
+        path: String,
+        secrets_path: String,
+        fingerprint: String,
+        /// RFC 9420 KeyPackageRef.
+        reference: String,
+        suite: mls_ops::MlsSuite,
+    },
+    MlsGroup {
+        status: mls_ops::MlsGroupStatus,
+    },
+    MlsCommitted {
+        commit: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        welcome: Option<String>,
+        status: mls_ops::MlsGroupStatus,
+    },
+    MlsEncrypted {
+        path: String,
+        epoch: u64,
+        bytes: u64,
+    },
+    MlsProcessed {
+        /// application, proposal or commit.
+        message_kind: String,
+        /// The application sender's bound IPG fingerprint.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        sender: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        bytes: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        authenticated_data: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        proposal_reference: Option<String>,
+        epoch: u64,
+        /// This member was removed by the commit; the state can no longer send.
+        removed: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        status: Option<mls_ops::MlsGroupStatus>,
+    },
+    MlsExported {
+        path: String,
+        epoch: u64,
+        bytes: u64,
+    },
     BackupSplit {
         set_id: String,
         threshold: u8,
@@ -1199,6 +1344,14 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::MlsKeyPackage { .. } => "mls.key_package",
+            Self::MlsGroupCreate { .. } => "mls.group.create",
+            Self::MlsJoin { .. } => "mls.join",
+            Self::MlsCommit { .. } => "mls.commit",
+            Self::MlsEncrypt { .. } => "mls.encrypt",
+            Self::MlsProcess { .. } => "mls.process",
+            Self::MlsStatus { .. } => "mls.status",
+            Self::MlsExport { .. } => "mls.export",
             Self::BackupSplit { .. } => "backup.split",
             Self::BackupCombine { .. } => "backup.combine",
             Self::KeyRotate { .. } => "key.rotate",
@@ -1360,6 +1513,8 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         Request::MessageOpen { key, .. } => subject(key, Some("message.open")),
         Request::JsonSign { key, .. } => subject(key, Some("json.sign")),
         Request::ApprovalSign { key, .. } => subject(key, Some("approval.sign")),
+        Request::MlsKeyPackage { key, .. } => subject(key, Some("mls.key_package")),
+        Request::MlsGroupCreate { key, .. } => subject(key, Some("mls.group.create")),
         Request::AuditCheckpoint { key, .. } => subject(key, Some("audit.checkpoint")),
         Request::ProvenanceAttest { key, .. } => subject(key, Some("provenance.attest")),
         Request::KeyPublic { key, .. }
@@ -1513,7 +1668,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"rotation":ipg_json::schema_for!(rotation::Rotation),"share":ipg_json::schema_for!(backup::ShareFile),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"rotation":ipg_json::schema_for!(rotation::Rotation),"share":ipg_json::schema_for!(backup::ShareFile),"mls_key_package":ipg_json::schema_for!(mls_ops::KeyPackageFile),"mls_sealed":ipg_json::schema_for!(mls_ops::SealedFile),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -2123,6 +2278,121 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 delegation,
             })
         }
+        Request::MlsKeyPackage {
+            key,
+            passphrase_file,
+            expected_fingerprint,
+            state_passphrase_file,
+            suite,
+            lifetime,
+            output,
+            secrets_output,
+        } => {
+            let state = password(&state_passphrase_file)?;
+            let credential = credential(passphrase_file)?;
+            mls_ops::key_package(
+                &key,
+                credential.as_deref().map(Vec::as_slice),
+                &expected_fingerprint,
+                &state,
+                suite.unwrap_or(mls_ops::MlsSuite::ChaCha20Poly1305),
+                lifetime,
+                output,
+                &secrets_output,
+                host,
+            )
+        }
+        Request::MlsGroupCreate {
+            key,
+            passphrase_file,
+            expected_fingerprint,
+            state_passphrase_file,
+            suite,
+            output,
+        } => {
+            let state = password(&state_passphrase_file)?;
+            let credential = credential(passphrase_file)?;
+            mls_ops::create(
+                &key,
+                credential.as_deref().map(Vec::as_slice),
+                &expected_fingerprint,
+                &state,
+                suite.unwrap_or(mls_ops::MlsSuite::ChaCha20Poly1305),
+                &output,
+                host,
+            )
+        }
+        Request::MlsJoin {
+            welcome,
+            key_package_secrets,
+            state_passphrase_file,
+            output,
+        } => mls_ops::join(
+            &welcome,
+            &key_package_secrets,
+            &password(&state_passphrase_file)?,
+            &output,
+        ),
+        Request::MlsCommit {
+            state,
+            state_passphrase_file,
+            add,
+            remove,
+            output,
+            welcome_output,
+            policy,
+        } => mls_ops::commit(
+            &state,
+            &password(&state_passphrase_file)?,
+            &add,
+            &remove,
+            &output,
+            welcome_output.as_deref(),
+            policy.as_ref(),
+        ),
+        Request::MlsEncrypt {
+            state,
+            state_passphrase_file,
+            input,
+            output,
+            authenticated_data,
+        } => mls_ops::encrypt(
+            &state,
+            &password(&state_passphrase_file)?,
+            &input,
+            &output,
+            authenticated_data.as_deref(),
+        ),
+        Request::MlsProcess {
+            state,
+            state_passphrase_file,
+            input,
+            output,
+        } => mls_ops::process(
+            &state,
+            &password(&state_passphrase_file)?,
+            &input,
+            output.as_deref(),
+        ),
+        Request::MlsStatus {
+            state,
+            state_passphrase_file,
+        } => mls_ops::group_status(&state, &password(&state_passphrase_file)?),
+        Request::MlsExport {
+            state,
+            state_passphrase_file,
+            label,
+            context,
+            length,
+            output,
+        } => mls_ops::export(
+            &state,
+            &password(&state_passphrase_file)?,
+            &label,
+            context.as_deref(),
+            length,
+            &output,
+        ),
         Request::BackupSplit {
             input,
             threshold,

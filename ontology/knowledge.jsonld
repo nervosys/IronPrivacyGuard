@@ -219,6 +219,34 @@
       ]
     },
     {
+      "@id": "ic:hpke-x25519-sha256",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "MLS EncryptWithLabel for Welcome group secrets and UpdatePath path secrets, and DeriveKeyPair for ratchet tree node keys",
+      "label": "HPKE (DHKEM(X25519, HKDF-SHA256), base mode)",
+      "limitations": [
+        "Base mode does not authenticate the sender; MLS signs and confirms what it encrypts",
+        "X25519 only: no post-quantum protection for MLS groups"
+      ],
+      "role": "Public-key encryption to a recipient key",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9180"
+      ]
+    },
+    {
+      "@id": "ic:aes-128-gcm",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "MLS cipher suite 1 message, sender-data and Welcome protection",
+      "label": "AES-128-GCM",
+      "limitations": [
+        "128-bit key; MLS suite 3 with ChaCha20-Poly1305 is IPG's default",
+        "Nonce reuse is catastrophic; MLS ratchets and reuse guards prevent it"
+      ],
+      "role": "Authenticated encryption",
+      "sources": [
+        "https://doi.org/10.6028/NIST.SP.800-38D"
+      ]
+    },
+    {
       "@id": "ipg:application/confidential-file-transfer",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -529,6 +557,55 @@
         "ipg:operation/provenance.attest",
         "ipg:operation/provenance.verify",
         "ipg:operation/inspect"
+      ]
+    },
+    {
+      "@id": "ipg:application/mls-agent-groups",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/confidentiality",
+        "ipg:goal/content-authenticity",
+        "ipg:goal/forward-secrecy"
+      ],
+      "guidance": "Have each agent publish a KeyPackage, add agents with mls.commit using their pinned fingerprints, and deliver every commit to every member in order. Use mls.process for each received message and compare epoch authenticators out of band when stakes are high. Commit regularly (an empty commit refreshes the sender) for post-compromise security.",
+      "id": "mls-agent-groups",
+      "keywords": [
+        "mls",
+        "rfc 9420",
+        "group chat",
+        "group encryption",
+        "ratchet tree",
+        "multi-agent",
+        "swarm",
+        "forward secrecy",
+        "post-compromise"
+      ],
+      "label": "Run an end-to-end encrypted group of agents with MLS",
+      "limitations": [
+        "Cipher suites 1 and 3 only: X25519, not post-quantum",
+        "No external commits or ReInit",
+        "State files are replaced in place; keep no stale copies",
+        "The delivery service must order commits; concurrent commits fork the group"
+      ],
+      "prerequisites": [
+        "An IPG identity per agent",
+        "Pinned fingerprints of agents to add",
+        "A delivery channel that gives every member each commit in order"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9420",
+        "https://www.rfc-editor.org/rfc/rfc9750"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/mls.key_package",
+        "ipg:operation/mls.group.create",
+        "ipg:operation/mls.commit",
+        "ipg:operation/mls.join",
+        "ipg:operation/mls.encrypt",
+        "ipg:operation/mls.process",
+        "ipg:operation/mls.status",
+        "ipg:operation/mls.export"
       ]
     },
     {
@@ -1274,6 +1351,11 @@
       "@id": "ipg:goal/delegated-authority",
       "@type": "ipg:SecurityGoal",
       "label": "delegated-authority"
+    },
+    {
+      "@id": "ipg:goal/forward-secrecy",
+      "@type": "ipg:SecurityGoal",
+      "label": "forward-secrecy"
     },
     {
       "@id": "ipg:goal/hardware-custody",
@@ -3351,6 +3433,577 @@
         "operation_const": "verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/mls.key_package",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider"
+      ],
+      "description": "Create an RFC 9420 KeyPackage whose leaf binds a fresh MLS signature key to this IPG identity, with its private keys sealed under a passphrase",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.key_package",
+      "inputs": [
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint",
+        "ipg:MlsSuite"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_mls_key_package",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsKeyPackage",
+        "ipg:MlsKeyPackageSecrets"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.key_package"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.group.create",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider"
+      ],
+      "description": "Create a one-member MLS group at epoch 0 with this IPG identity and seal its state",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.group.create",
+      "inputs": [
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint",
+        "ipg:MlsSuite"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_mls_group_create",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsGroupState",
+        "ipg:MlsGroupStatus"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.group.create"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.join",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Join an MLS group from a Welcome, verifying the tree, every member's IPG identity binding and the confirmation tag",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.join",
+      "inputs": [
+        "ipg:MlsWelcome",
+        "ipg:MlsKeyPackageSecrets",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_join",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsGroupState",
+        "ipg:MlsGroupStatus"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.join"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.commit",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/mls-mutable-state",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Add pinned members and remove members by fingerprint in one commit with a fresh update path, writing the commit and any Welcome and replacing the sealed state",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file",
+        "replace_file",
+        "create_lock_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.commit",
+      "inputs": [
+        "ipg:MlsGroupState",
+        "ipg:Passphrase",
+        "ipg:MlsKeyPackage",
+        "ipg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_commit",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsMessage",
+        "ipg:MlsWelcome",
+        "ipg:MlsGroupStatus"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.commit"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.encrypt",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/mls-mutable-state",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Encrypt application data to the group under the sender's ratchet, saving the advanced state before writing the message",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file",
+        "replace_file",
+        "create_lock_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.encrypt",
+      "inputs": [
+        "ipg:MlsGroupState",
+        "ipg:Passphrase",
+        "ipg:Plaintext"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_encrypt",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsMessage"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.encrypt"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.process",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/mls-mutable-state",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Process a group message: release application data with its bound sender, store proposals, or apply commits",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file",
+        "replace_file",
+        "create_lock_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.process",
+      "inputs": [
+        "ipg:MlsGroupState",
+        "ipg:Passphrase",
+        "ipg:MlsMessage"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_process",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:Plaintext",
+        "ipg:MlsGroupStatus"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.process"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/mls.status",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/mls-identity-binding",
+        "ipg:constraint/secret-channel"
+      ],
+      "description": "Report a group's epoch, members by IPG fingerprint and epoch authenticator",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "read_passphrase"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.status",
+      "inputs": [
+        "ipg:MlsGroupState",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_status",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:MlsGroupStatus"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.status"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/mls.export",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:hpke-x25519-sha256",
+        "ic:x25519",
+        "ic:ed25519",
+        "ic:hkdf-sha2-256",
+        "ic:sha2-256",
+        "ic:aes-128-gcm",
+        "ic:chacha20-poly1305",
+        "ic:argon2id"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Derive a secret from the current epoch with the MLS exporter",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "mls.export",
+      "inputs": [
+        "ipg:MlsGroupState",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_mls_export",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:Plaintext"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "mls.export"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
       "@id": "ipg:operation/backup.split",
@@ -6105,5 +6758,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.29.0"
+  "version": "1.30.0"
 }

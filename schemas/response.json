@@ -670,6 +670,84 @@
       ],
       "type": "object"
     },
+    "MlsGroupStatus": {
+      "description": "Group facts reported by state-changing operations.",
+      "properties": {
+        "epoch": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "epoch_authenticator": {
+          "description": "Equal across members exactly when they share the epoch's secrets.",
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/MlsMember"
+          },
+          "type": "array"
+        },
+        "own": {
+          "description": "This member's IPG fingerprint.",
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "removed": {
+          "type": "boolean"
+        },
+        "suite": {
+          "$ref": "#/$defs/MlsSuite"
+        }
+      },
+      "required": [
+        "path",
+        "group_id",
+        "epoch",
+        "suite",
+        "own",
+        "members",
+        "epoch_authenticator",
+        "removed"
+      ],
+      "type": "object"
+    },
+    "MlsMember": {
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "leaf": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "leaf",
+        "fingerprint"
+      ],
+      "type": "object"
+    },
+    "MlsSuite": {
+      "oneOf": [
+        {
+          "const": "x25519-aes128gcm-sha256-ed25519",
+          "description": "MLS cipher suite 1.",
+          "type": "string"
+        },
+        {
+          "const": "x25519-chacha20poly1305-sha256-ed25519",
+          "description": "MLS cipher suite 3.",
+          "type": "string"
+        }
+      ]
+    },
     "Protection": {
       "description": "Evidence read from the token about both private keys. Never an attestation:\nthe token itself reports these attributes.",
       "properties": {
@@ -1487,6 +1565,208 @@
                 "kind",
                 "authority",
                 "authenticated"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "mls_key_package",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "reference": {
+                  "description": "RFC 9420 KeyPackageRef.",
+                  "type": "string"
+                },
+                "secrets_path": {
+                  "type": "string"
+                },
+                "suite": {
+                  "$ref": "#/$defs/MlsSuite"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "secrets_path",
+                "fingerprint",
+                "reference",
+                "suite"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "mls_group",
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/$defs/MlsGroupStatus"
+                }
+              },
+              "required": [
+                "kind",
+                "status"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "commit": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "mls_committed",
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/$defs/MlsGroupStatus"
+                },
+                "welcome": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "commit",
+                "status"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "bytes": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "epoch": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "mls_encrypted",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "epoch",
+                "bytes"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "authenticated_data": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "bytes": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "epoch": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "mls_processed",
+                  "type": "string"
+                },
+                "message_kind": {
+                  "description": "application, proposal or commit.",
+                  "type": "string"
+                },
+                "path": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "proposal_reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "removed": {
+                  "description": "This member was removed by the commit; the state can no longer send.",
+                  "type": "boolean"
+                },
+                "sender": {
+                  "description": "The application sender's bound IPG fingerprint.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/MlsGroupStatus"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "message_kind",
+                "epoch",
+                "removed"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "bytes": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "epoch": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "mls_exported",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "epoch",
+                "bytes"
               ],
               "type": "object"
             },

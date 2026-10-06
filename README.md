@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 73 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 81 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -125,7 +125,7 @@ For a persistent process, use `ipg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `ipg mcp`. It exposes all 73 operations as tools named
+For MCP clients, use `ipg mcp`. It exposes all 81 operations as tools named
 `ipg_discover`, `ipg_knowledge`, `ipg_knowledge_search`, `ipg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -171,6 +171,7 @@ ipg knowledge search --query "openpgp"
 | Sign structured JSON that survives re-serialization | `json.canonicalize`, `json.sign`, `json.verify` |
 | Record verifiable provenance of agent actions | `provenance.attest`, `provenance.verify` |
 | Require m-of-n approvals before an agent acts | `approval.sign`, `quorum.verify` |
+| Run an end-to-end encrypted group of agents (MLS, RFC 9420) | `mls.key_package`, `mls.group.create`, `mls.commit`, `mls.join`, `mls.encrypt`, `mls.process`, `mls.status`, `mls.export` |
 | Back up a key so k of n custodians can recover it | `backup.split`, `backup.combine` |
 | Rotate an identity to a successor key | `key.rotate`, `rotation.verify` |
 | Keep a tamper-evident audit log of agent activity | `audit.init`, `audit.append`, `audit.checkpoint`, `audit.verify`; `ipg mcp --audit-log` |
@@ -395,6 +396,17 @@ one action, for at most seven days. `quorum.verify` proceeds only when at least
 m distinct, pinned approvers have valid approvals, and reports every rejected
 one. See [structured signatures, approvals and provenance](docs/PROVENANCE.md).
 
+## MLS groups for agents
+
+IPG implements Messaging Layer Security (RFC 9420) cipher suites 1 and 3. It
+passes the MLS working group's test vectors, including the passive-client
+scenarios. Each member's leaf binds a fresh MLS signature key to its IPG
+identity, so members are added, reported and removed by pinned fingerprint.
+Any IPG identity (software, hybrid, PKCS#11, TPM or KMS) can join. Messages are
+standard RFC 9420 bytes. Group state is sealed and replaced in place, since
+forward secrecy requires deleting old epoch secrets. See
+[MLS groups](docs/MLS.md).
+
 ## MCP over loopback HTTP
 
 `ipg mcp-http --listen 127.0.0.1:8765 --token-file mcp-token` serves the same
@@ -519,6 +531,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |
 | `src/jcs.rs`, `src/json_signature.rs` | RFC 8785 canonicalization and ipg-json-signature-v1 |
+| `src/mls/` | RFC 9420: encoding, suites, key schedule, secret tree, framing, ratchet tree, TreeKEM and group state |
+| `src/mls_ops.rs` | IPG MLS operations: identity binding, sealed state and KeyPackage secrets |
 | `src/backup.rs` | ipg-share-v1 threshold backups: AEAD sealing and IronCrypto Shamir shares |
 | `src/rotation.rs` | ipg-rotation-v1 statements and chain following |
 | `src/audit.rs` | ipg-audit-v1 hash-chained logs, locking appends and signed checkpoints |
@@ -541,6 +555,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/security.rs` | Security regressions, workflow and protocol tests |
 | `tests/lifecycle.rs` | Rewrapping, certificate tampering, signature separation, CLI lifecycle |
 | `tests/messages.rs` | Message binding, replay, tampering, attached delegation and host-pinned grants |
+| `tests/mls.rs` | Identity-bound groups: add, Welcome, messages, replay, removal, exporter, sealed state and locks |
+| `tests/data/mls/` | MLS working group test vectors for suites 1 and 3 |
 | `tests/backup.rs` | Threshold recovery, insufficient, duplicate and altered shares |
 | `tests/rotation.rs` | Rotation chains, countersignatures, ordering, cycles and delegated refusal |
 | `tests/audit.rs` | Chain tampering, truncation, rewritten history, locking and MCP call recording |

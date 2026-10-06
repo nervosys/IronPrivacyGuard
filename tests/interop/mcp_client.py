@@ -181,6 +181,16 @@ async def exercise(executable, directory):
         await checked.call("backup.split", {"input": path("key"), "threshold": 2, "outputs": shares})
         await checked.call("backup.combine", {"inputs": [shares[2], shares[0]], "output": path("key-recovered")})
         assert Path(path("key-recovered")).read_bytes() == Path(path("key")).read_bytes()
+        Path(path("state-pass")).write_bytes(os.urandom(32))
+        Path(path("state-pass")).chmod(0o600)
+        await checked.call("mls.group.create", {"key": path("key"), "passphrase_file": path("pass"), "expected_fingerprint": fingerprint, "state_passphrase_file": path("state-pass"), "output": path("alice.mls")})
+        await checked.call("mls.key_package", {"key": path("successor"), "passphrase_file": path("pass"), "expected_fingerprint": successor["fingerprint"], "state_passphrase_file": path("state-pass"), "lifetime": 3600, "output": path("bob.kp"), "secrets_output": path("bob.kp-secrets")})
+        await checked.call("mls.commit", {"state": path("alice.mls"), "state_passphrase_file": path("state-pass"), "add": [{"key_package": path("bob.kp"), "expected_fingerprint": successor["fingerprint"]}], "output": path("add.commit"), "welcome_output": path("add.welcome")})
+        joined = await checked.call("mls.join", {"welcome": path("add.welcome"), "key_package_secrets": path("bob.kp-secrets"), "state_passphrase_file": path("state-pass"), "output": path("bob.mls")})
+        assert [m["fingerprint"] for m in joined["status"]["members"]] == [fingerprint, successor["fingerprint"]]
+        await checked.call("mls.encrypt", {"state": path("alice.mls"), "state_passphrase_file": path("state-pass"), "input": path("message"), "output": path("group.msg")})
+        received = await checked.call("mls.process", {"state": path("bob.mls"), "state_passphrase_file": path("state-pass"), "input": path("group.msg"), "output": path("group.out")})
+        assert received["sender"] == fingerprint and Path(path("group.out")).read_bytes() == message
         await checked.call("audit.init", {"output": path("audit-log")})
         Path(path("audit-event")).write_text('{"agent": "mcp", "step": 1}')
         appended = await checked.call("audit.append", {"log": path("audit-log"), "event": path("audit-event")})
@@ -196,7 +206,7 @@ async def exercise(executable, directory):
         attested = await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("message")}], "action": "relay"})
         assert attested["verified_subjects"] == ["message"] and attested["statement"]["agent"] == fingerprint
         await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("agent-message")}]}, error="authentication_failed")
-        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("rotation", "rotation"), ("share-0", "share"), ("statement", "dsse_envelope")]:
+        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("rotation", "rotation"), ("share-0", "share"), ("bob.kp", "mls_key_package"), ("alice.mls", "mls_sealed"), ("statement", "dsse_envelope")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))
@@ -288,7 +298,7 @@ def main():
     args = parser.parse_args()
     executable = args.ipg.resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix="ipg-mcp-interop-") as directory:
-        result = asyncio.run(asyncio.wait_for(exercise(executable, Path(directory)), timeout=120))
+        result = asyncio.run(asyncio.wait_for(exercise(executable, Path(directory)), timeout=300))
     print(json.dumps({"ok": True, **result}, indent=2))
 
 

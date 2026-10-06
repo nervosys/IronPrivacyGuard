@@ -273,6 +273,13 @@ Provenance statements are standard DSSE envelopes holding canonical in-toto v1
 statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
 [PROVENANCE.md](PROVENANCE.md).
 
+## MLS: ipg-mls-key-package-v1 and sealed state
+
+`ipg-mls-key-package-v1` carries an RFC 9420 KeyPackage (hex), its reference
+and the bound IPG fingerprint. `ipg-mls-state-v1` and
+`ipg-mls-key-package-secrets-v1` are Argon2id and ChaCha20-Poly1305 sealed
+files. MLS messages and Welcomes are raw RFC 9420 bytes. See [MLS.md](MLS.md).
+
 ## Backup share: ipg-share-v1
 
 One of n threshold shares of a backup: a Shamir share of a random key, plus the

@@ -30,6 +30,8 @@ pub const DELEGABLE: &[&str] = &[
     "json.sign",
     "message.open",
     "message.seal",
+    "mls.group.create",
+    "mls.key_package",
     "provenance.attest",
     "sign",
     "stream.decrypt",

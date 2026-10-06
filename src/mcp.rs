@@ -618,6 +618,7 @@ impl Server {
                 | Request::MessageOpen { policy, .. }
                 | Request::JsonSign { policy, .. }
                 | Request::ApprovalSign { policy, .. }
+                | Request::MlsCommit { policy, .. }
                 | Request::QuorumVerify { policy, .. }
                 | Request::JsonVerify { policy, .. }
                 | Request::ProvenanceAttest { policy, .. }
