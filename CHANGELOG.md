@@ -61,6 +61,10 @@
   - JSON responses without SSE, so `--require-approval` is refused at startup.
 
   Verified with the official Python SDK's streamable HTTP client.
+- Moved the exact IronCrypto pins to 0.2.11 and added `ic-hpke`. OpenPGP ECDSA
+  over non-native digests now uses IronCrypto's `verify_prehash`, and public
+  points are validated by IronCrypto's ECDH. This removes IPG's first-party
+  NIST curve arithmetic. `ipg-cng` now declares Rust 1.87, as 0.2.11 requires.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

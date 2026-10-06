@@ -2,12 +2,12 @@
 name = "ipg-cng"
 version = "0.1.2"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.87"
 license = "AGPL-3.0-or-later"
 description = "Minimal safe wrapper over Windows CNG and TPM Base Services (IronPrivacyGuard)"
 repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [dev-dependencies]
-ic-core = "=0.2.10"
-ic-ec = "=0.2.10"
-ic-hash = "=0.2.10"
+ic-core = "=0.2.11"
+ic-ec = "=0.2.11"
+ic-hash = "=0.2.11"

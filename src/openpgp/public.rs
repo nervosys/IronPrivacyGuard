@@ -1,13 +1,17 @@
 //! Public-key operations for OpenPGP interchange.
 //!
-//! RSASSA-PKCS1-v1_5 and DSA verification, RSAES-PKCS1-v1_5 encryption, and
-//! ECDSA verification over NIST P-256/384/521 with a caller-supplied digest of
-//! any length. Every input is public, so the arithmetic here is variable time
-//! except where it touches the RSA encryption block. Integers are big-endian,
-//! as in OpenPGP MPIs; leading zeros are tolerated but not required.
+//! RSASSA-PKCS1-v1_5 and DSA verification and RSAES-PKCS1-v1_5 encryption, plus
+//! ECDSA over NIST P-256/384/521 with a caller-supplied digest, which delegates
+//! to IronCrypto's `verify_prehash`. Every input is public, so the arithmetic
+//! here is variable time except where it touches the RSA encryption block.
+//! Integers are big-endian, as in OpenPGP MPIs; leading zeros are tolerated but
+//! not required.
 
 use core::cmp::Ordering;
 use ic_core::Zeroizing;
+use ic_core::traits::KeyAgreement;
+use ic_ec::p521::{EcdhP521, EcdsaP521Sha512};
+use ic_ec::{EcdhP256, EcdhP384, EcdsaP256Sha256, EcdsaP384Sha384};
 use ic_rsa::uint::{MAX_BYTES, MAX_LIMBS, Modulus, Uint};
 
 /// Digest algorithms accepted for RSASSA-PKCS1-v1_5.
@@ -244,256 +248,61 @@ pub(crate) enum Curve {
     P521,
 }
 
-/// Domain parameters, FIPS 186-5 / SP 800-186 §3.2.1, big-endian hex.
-struct Params {
-    p: &'static str,
-    n: &'static str,
-    b: &'static str,
-    gx: &'static str,
-    gy: &'static str,
+/// Uncompressed SEC1 point width and scalar width for each curve.
+fn widths(curve: Curve) -> (usize, usize) {
+    match curve {
+        Curve::P256 => (65, 32),
+        Curve::P384 => (97, 48),
+        Curve::P521 => (133, 66),
+    }
 }
 
-const P256: Params = Params {
-    p: "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
-    n: "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
-    b: "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b",
-    gx: "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
-    gy: "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5",
-};
-
-const P384: Params = Params {
-    p: "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe\
-        ffffffff0000000000000000ffffffff",
-    n: "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf\
-        581a0db248b0a77aecec196accc52973",
-    b: "b3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875a\
-        c656398d8a2ed19d2a85c8edd3ec2aef",
-    gx: "aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a38\
-         5502f25dbf55296c3a545e3872760ab7",
-    gy: "3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c0\
-         0a60b1ce1d7e819d7a431d7c90ea0e5f",
-};
-
-const P521: Params = Params {
-    p: "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\
-        ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\
-        ffff",
-    n: "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\
-        fffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e9138\
-        6409",
-    b: "0051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef1\
-        09e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b50\
-        3f00",
-    gx: "00c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d\
-         3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5\
-         bd66",
-    gy: "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e\
-         662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd1\
-         6650",
-};
-
-fn hex_uint(s: &str) -> Uint {
-    let mut v = Uint::ZERO;
-    for (i, c) in s.bytes().rev().enumerate() {
-        let d = (c as char).to_digit(16).unwrap_or(0);
-        v.0[i / 16] |= u64::from(d) << (4 * (i % 16));
+/// IronCrypto's ECDH validates the peer point (canonical coordinates, on the
+/// curve, not the identity), so agreeing with the scalar 1 checks a public key.
+fn on_curve<K: KeyAgreement>(public: &[u8]) -> bool {
+    let mut one = vec![0u8; K::PRIVATE_KEY_LEN];
+    if let Some(last) = one.last_mut() {
+        *last = 1;
     }
-    v
-}
-
-/// A point in Jacobian coordinates, Montgomery form; `z = 0` is the identity.
-#[derive(Clone, Copy)]
-struct Point {
-    x: Uint,
-    y: Uint,
-    z: Uint,
-}
-
-/// Curve arithmetic: field `p`, order `n`, `b` and `1` in Montgomery form.
-struct Group {
-    p: Modulus,
-    n: Modulus,
-    b: Uint,
-    one: Uint,
-    g: Point,
-    field_bytes: usize,
-}
-
-impl Group {
-    fn new(curve: Curve) -> Option<Group> {
-        let c = match curve {
-            Curve::P256 => &P256,
-            Curve::P384 => &P384,
-            Curve::P521 => &P521,
-        };
-        let p = Modulus::new(hex_uint(c.p))?;
-        let n = Modulus::new(hex_uint(c.n))?;
-        let one = p.to_mont(&Uint::one());
-        let g = Point {
-            x: p.to_mont(&hex_uint(c.gx)),
-            y: p.to_mont(&hex_uint(c.gy)),
-            z: one,
-        };
-        Some(Group {
-            b: p.to_mont(&hex_uint(c.b)),
-            field_bytes: p.byte_len(),
-            p,
-            n,
-            one,
-            g,
-        })
-    }
-
-    fn identity(&self) -> Point {
-        Point {
-            x: self.one,
-            y: self.one,
-            z: Uint::ZERO,
-        }
-    }
-
-    fn mul(&self, a: &Uint, b: &Uint) -> Uint {
-        self.p.mont_mul(a, b)
-    }
-
-    fn sub(&self, a: &Uint, b: &Uint) -> Uint {
-        self.p.sub_mod(a, b)
-    }
-
-    fn add(&self, a: &Uint, b: &Uint) -> Uint {
-        self.p.sub_mod(a, &self.p.sub_mod(&Uint::ZERO, b))
-    }
-
-    /// `y^2 = x^3 - 3x + b`, Montgomery-form inputs.
-    fn on_curve(&self, x: &Uint, y: &Uint) -> bool {
-        let x3 = self.mul(&self.mul(x, x), x);
-        let three_x = self.add(x, &self.add(x, x));
-        self.mul(y, y) == self.add(&self.sub(&x3, &three_x), &self.b)
-    }
-
-    /// SEC1 uncompressed, coordinates below `p`, on the curve.
-    fn decode(&self, public: &[u8]) -> Option<Point> {
-        let fb = self.field_bytes;
-        if public.len() != 1 + 2 * fb || public[0] != 0x04 {
-            return None;
-        }
-        let x = Uint::from_be_bytes(&public[1..1 + fb])?;
-        let y = Uint::from_be_bytes(&public[1 + fb..])?;
-        if !lt(&x, self.p.value()) || !lt(&y, self.p.value()) {
-            return None;
-        }
-        let (x, y) = (self.p.to_mont(&x), self.p.to_mont(&y));
-        // (0, 0) is not on any of these curves, so the identity cannot pass.
-        self.on_curve(&x, &y).then_some(Point { x, y, z: self.one })
-    }
-
-    /// dbl-2001-b, `a = -3`.
-    fn double(&self, a: &Point) -> Point {
-        if is_zero(&a.z) {
-            return *a;
-        }
-        let delta = self.mul(&a.z, &a.z);
-        let gamma = self.mul(&a.y, &a.y);
-        let beta = self.mul(&a.x, &gamma);
-        let t = self.mul(&self.sub(&a.x, &delta), &self.add(&a.x, &delta));
-        let alpha = self.add(&t, &self.add(&t, &t));
-        let beta2 = self.add(&beta, &beta);
-        let beta4 = self.add(&beta2, &beta2);
-        let x = self.sub(&self.mul(&alpha, &alpha), &self.add(&beta4, &beta4));
-        let yz = self.add(&a.y, &a.z);
-        let z = self.sub(&self.sub(&self.mul(&yz, &yz), &gamma), &delta);
-        let g2 = self.add(&gamma, &gamma);
-        let g4 = self.mul(&g2, &g2);
-        let y = self.sub(
-            &self.mul(&alpha, &self.sub(&beta4, &x)),
-            &self.add(&g4, &g4),
-        );
-        Point { x, y, z }
-    }
-
-    /// General Jacobian addition; falls back to doubling when `a == b`.
-    fn add_points(&self, a: &Point, b: &Point) -> Point {
-        if is_zero(&a.z) {
-            return *b;
-        }
-        if is_zero(&b.z) {
-            return *a;
-        }
-        let z1z1 = self.mul(&a.z, &a.z);
-        let z2z2 = self.mul(&b.z, &b.z);
-        let u1 = self.mul(&a.x, &z2z2);
-        let u2 = self.mul(&b.x, &z1z1);
-        let s1 = self.mul(&a.y, &self.mul(&b.z, &z2z2));
-        let s2 = self.mul(&b.y, &self.mul(&a.z, &z1z1));
-        let h = self.sub(&u2, &u1);
-        let r = self.sub(&s2, &s1);
-        if is_zero(&h) {
-            return if is_zero(&r) {
-                self.double(a)
-            } else {
-                self.identity()
-            };
-        }
-        let hh = self.mul(&h, &h);
-        let hhh = self.mul(&h, &hh);
-        let v = self.mul(&u1, &hh);
-        let x = self.sub(&self.sub(&self.mul(&r, &r), &hhh), &self.add(&v, &v));
-        let y = self.sub(&self.mul(&r, &self.sub(&v, &x)), &self.mul(&s1, &hhh));
-        let z = self.mul(&h, &self.mul(&a.z, &b.z));
-        Point { x, y, z }
-    }
-
-    /// `[k1]P1 + [k2]P2`, Shamir's trick. Variable time.
-    fn double_mul(&self, k1: &Uint, p1: &Point, k2: &Uint, p2: &Point) -> Point {
-        let both = self.add_points(p1, p2);
-        let mut acc = self.identity();
-        for i in (0..k1.bits().max(k2.bits())).rev() {
-            acc = self.double(&acc);
-            match (k1.bit(i), k2.bit(i)) {
-                (1, 1) => acc = self.add_points(&acc, &both),
-                (1, _) => acc = self.add_points(&acc, p1),
-                (_, 1) => acc = self.add_points(&acc, p2),
-                _ => {}
-            }
-        }
-        acc
-    }
-
-    /// Affine `x`, out of Montgomery form; `None` for the identity.
-    fn affine_x(&self, a: &Point) -> Option<Uint> {
-        let zinv = self.p.invert_vartime(&self.p.from_mont(&a.z))?;
-        let zinv2 = self.p.mul_mod(&zinv, &zinv);
-        Some(self.p.mul_mod(&self.p.from_mont(&a.x), &zinv2))
-    }
+    let mut shared = Zeroizing::new(vec![0u8; K::SHARED_SECRET_LEN]);
+    K::agree(&one, public, &mut shared).is_ok()
 }
 
 /// Whether `public` is a valid SEC1 uncompressed point on `curve`.
 pub(crate) fn ecdsa_public_valid(curve: Curve, public: &[u8]) -> bool {
-    Group::new(curve).and_then(|g| g.decode(public)).is_some()
-}
-
-/// ECDSA verification (FIPS 186-5 §6.4.2) over a precomputed digest of any
-/// length, truncated to the order's bit length.
-pub(crate) fn ecdsa_verify(curve: Curve, public: &[u8], digest: &[u8], r: &[u8], s: &[u8]) -> bool {
-    let Some(g) = Group::new(curve) else {
-        return false;
-    };
-    let (Some(q), Some(r), Some(s)) = (g.decode(public), int(r), int(s)) else {
-        return false;
-    };
-    let in_n = |v: &Uint| !is_zero(v) && lt(v, g.n.value());
-    if !(in_n(&r) && in_n(&s)) {
+    if public.len() != widths(curve).0 || public.first() != Some(&0x04) {
         return false;
     }
-    // e < 2^bits(n) < 2n and x < p < 2n for these curves: one subtraction reduces.
-    let (Some(e), Some(w)) = (bits2int(digest, g.n.value().bits()), g.n.invert_vartime(&s)) else {
+    match curve {
+        Curve::P256 => on_curve::<EcdhP256>(public),
+        Curve::P384 => on_curve::<EcdhP384>(public),
+        Curve::P521 => on_curve::<EcdhP521>(public),
+    }
+}
+
+/// ECDSA verification (FIPS 186-5 §6.4.2) over a precomputed digest, through
+/// IronCrypto's `verify_prehash`. `r` and `s` are OpenPGP MPIs: leading zeros
+/// are tolerated. The digest must be 28, 32, 48 or 64 bytes.
+pub(crate) fn ecdsa_verify(curve: Curve, public: &[u8], digest: &[u8], r: &[u8], s: &[u8]) -> bool {
+    let width = widths(curve).1;
+    let mut signature = vec![0u8; 2 * width];
+    for (i, value) in [r, s].into_iter().enumerate() {
+        let start = value.iter().position(|b| *b != 0).unwrap_or(value.len());
+        let value = &value[start..];
+        if value.len() > width {
+            return false;
+        }
+        signature[(i + 1) * width - value.len()..(i + 1) * width].copy_from_slice(value);
+    }
+    if !ecdsa_public_valid(curve, public) {
         return false;
-    };
-    let e = g.n.reduce_once(&e);
-    let u1 = g.n.mul_mod(&e, &w);
-    let u2 = g.n.mul_mod(&r, &w);
-    let point = g.double_mul(&u1, &g.g, &u2, &q);
-    g.affine_x(&point).is_some_and(|x| g.n.reduce_once(&x) == r)
+    }
+    match curve {
+        Curve::P256 => EcdsaP256Sha256::verify_prehash(public, digest, &signature),
+        Curve::P384 => EcdsaP384Sha384::verify_prehash(public, digest, &signature),
+        Curve::P521 => EcdsaP521Sha512::verify_prehash(public, digest, &signature),
+    }
+    .is_ok()
 }
 
 #[cfg(test)]
@@ -519,30 +328,33 @@ mod tests {
         ic_drbg::Rng::from_os().unwrap()
     }
 
-    #[test]
-    fn generators_are_on_their_curves_with_order_n() {
-        for curve in [Curve::P256, Curve::P384, Curve::P521] {
-            let g = Group::new(curve).unwrap();
-            assert!(g.on_curve(&g.g.x, &g.g.y), "{curve:?}");
-            let zero = Uint::ZERO;
-            let ng = g.double_mul(g.n.value(), &g.g, &zero, &g.g);
-            assert!(is_zero(&ng.z), "{curve:?}: [n]G is not the identity");
-            // [n-1]G = -G shares G's x coordinate.
-            let mut n1 = *g.n.value();
-            n1.sub_assign(&Uint::one(), MAX_LIMBS);
-            let x = g.affine_x(&g.double_mul(&n1, &g.g, &zero, &g.g)).unwrap();
-            assert_eq!(x, g.p.from_mont(&g.g.x));
-            // [2]G by doubling and by addition agree.
-            let d = g.affine_x(&g.double(&g.g)).unwrap();
-            let two = Uint::from_u64(2);
-            assert_eq!(
-                d,
-                g.affine_x(&g.double_mul(&two, &g.g, &zero, &g.g)).unwrap()
-            );
-            assert!(is_zero(
-                &g.add_points(&g.g, &g.double_mul(&n1, &g.g, &zero, &g.g)).z
-            ));
+    /// P-256 field prime, base point and the group orders, big-endian hex.
+    const P256_P: &str = "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff";
+    const P256_GX: &str = "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296";
+    const P256_GY: &str = "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5";
+
+    fn order(curve: Curve) -> Uint {
+        hex_uint(match curve {
+            Curve::P256 => "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
+            Curve::P384 => concat!(
+                "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf",
+                "581a0db248b0a77aecec196accc52973"
+            ),
+            Curve::P521 => concat!(
+                "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                "fffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e9138",
+                "6409"
+            ),
+        })
+    }
+
+    fn hex_uint(s: &str) -> Uint {
+        let mut v = Uint::ZERO;
+        for (i, c) in s.bytes().rev().enumerate() {
+            let d = (c as char).to_digit(16).unwrap_or(0);
+            v.0[i / 16] |= u64::from(d) << (4 * (i % 16));
         }
+        v
     }
 
     #[test]
@@ -563,9 +375,9 @@ mod tests {
     ) {
         let mut rng = rng();
         let fb = (S::PUBLIC_KEY_LEN - 1) / 2;
-        let n = Group::new(curve).unwrap().n;
+        let n = order(curve);
         let mut nbytes = vec![0u8; fb];
-        n.value().to_be_bytes(&mut nbytes);
+        n.to_be_bytes(&mut nbytes);
         for round in 0..8 {
             let mut sk = vec![0u8; sk_len];
             rng.fill(&mut sk).unwrap();
@@ -596,7 +408,7 @@ mod tests {
             assert!(!ecdsa_verify(curve, &public, &d, r, &nbytes));
             // s + n has the same residue but is out of range.
             let mut big = int(s).unwrap();
-            let carry = big.add_assign(n.value(), MAX_LIMBS);
+            let carry = big.add_assign(&n, MAX_LIMBS);
             assert_eq!(carry, 0);
             let mut sn = vec![0u8; fb + 1];
             big.to_be_bytes(&mut sn);
@@ -627,10 +439,7 @@ mod tests {
 
     #[test]
     fn ecdsa_public_encoding() {
-        let g = Group::new(Curve::P256).unwrap();
-        let mut public = vec![0x04u8; 65];
-        g.p.from_mont(&g.g.x).to_be_bytes(&mut public[1..33]);
-        g.p.from_mont(&g.g.y).to_be_bytes(&mut public[33..]);
+        let public: Vec<u8> = [vec![0x04], hex(P256_GX), hex(P256_GY)].concat();
         assert!(ecdsa_public_valid(Curve::P256, &public));
         assert!(!ecdsa_public_valid(Curve::P384, &public));
         assert!(!ecdsa_public_valid(Curve::P256, &public[..64]));
@@ -642,7 +451,7 @@ mod tests {
         assert!(!ecdsa_public_valid(Curve::P256, &prefix));
         // A coordinate equal to p is not a canonical field element.
         let mut xp = public.clone();
-        g.p.value().to_be_bytes(&mut xp[1..33]);
+        xp[1..33].copy_from_slice(&hex(P256_P));
         assert!(!ecdsa_public_valid(Curve::P256, &xp));
         assert!(!ecdsa_public_valid(Curve::P256, &[0x00]));
         assert!(!ecdsa_public_valid(Curve::P256, &[0u8; 65]));

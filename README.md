@@ -51,7 +51,7 @@ cargo clippy --locked --all-targets --target-dir target -- -D warnings
 
 The executable is `target/release/ipg` (`ipg.exe` on Windows). To install the
 current checkout instead, run `cargo install --path . --locked`. IronCrypto
-components are pinned to crates.io release `0.2.10`, and Cargo.lock pins the
+components are pinned to crates.io release `0.2.11`, and Cargo.lock pins the
 remaining dependency graph for this repository.
 Native IPG identity and envelope cryptography uses IronCrypto. There is no OpenSSL, C
 compilation, TLS library, GPG subprocess, or external cryptographic executable. OS
@@ -514,7 +514,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `crates/ipg-pkcs11` | Native PKCS#11 FFI, bounded buffers, and session ownership |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over native TLS 1.3, Sign and DeriveSharedSecret |
 | `src/tls/` | Experimental bounded TLS 1.3 client (`tls-native`): X25519/P-256/P-384, record protection, key schedule |
-| `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA/prehash-ECDSA (`public.rs`) and Ed448/X448 (`curve448.rs`) |
+| `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA and prehash-ECDSA glue to IronCrypto (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |
 | `src/jcs.rs`, `src/json_signature.rs` | RFC 8785 canonicalization and ipg-json-signature-v1 |

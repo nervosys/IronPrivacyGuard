@@ -20,7 +20,7 @@ pending = [metadata["resolve"]["root"]]
 seen = set()
 ironcrypto = {
     "ic-core", "ic-cipher", "ic-drbg", "ic-ec", "ic-hash", "ic-kdf", "ic-mac",
-    "ic-mlkem", "ic-mldsa", "ic-ontology", "ic-json", "ic-rsa", "ic-pkix",
+    "ic-hpke", "ic-mlkem", "ic-mldsa", "ic-ontology", "ic-json", "ic-rsa", "ic-pkix",
     "ic-rustls", "ic-fips", "ic-vectors", "iron-crypto",
 }
 violations = []
