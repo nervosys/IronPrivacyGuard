@@ -394,6 +394,13 @@ one action, for at most seven days. `quorum.verify` proceeds only when at least
 m distinct, pinned approvers have valid approvals, and reports every rejected
 one. See [structured signatures, approvals and provenance](docs/PROVENANCE.md).
 
+## MCP over loopback HTTP
+
+`ipg mcp-http --listen 127.0.0.1:8765 --token-file mcp-token` serves the same
+tools over MCP Streamable HTTP. It binds loopback addresses only, requires a
+bearer token, checks `Origin` and issues per-client sessions. See
+[the HTTP transport](docs/MCP.md#http-transport).
+
 ## Human approval for MCP tools
 
 `ipg mcp --require-approval sign,decrypt` makes each listed call wait for a
@@ -522,6 +529,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `knowledge/` | Curated application guidance and primitive references |
 | `src/validation.rs` | Request preflight with JSON Pointer diagnostics |
 | `src/control_json.rs` | Strict JSON decoding with duplicate-member rejection |
+| `src/http.rs` | Minimal loopback HTTP/1.1 server for MCP Streamable HTTP |
 | `src/mcp.rs` | MCP lifecycle, generated tool catalog, host controls, dispatch |
 | `src/transport.rs` | Bounded newline framing shared by both stdio transports |
 | `src/lib.rs` | Typed operations, bounded file I/O, no-clobber publication, response protocol |
@@ -537,6 +545,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/provenance.rs` | JSON re-serialization, provenance binding, tampering, delegation and host pinning |
 | `tests/delegation.rs` | Grant issue, attenuation, verification requirements, expiry and host-pinned sessions |
 | `tests/trust.rs` | Policy enforcement, snapshot tampering, monotonic revocation, publication |
+| `tests/mcp_http.rs` | Loopback-only binding, bearer tokens, Origin checks, sessions and media types |
 | `tests/mcp_approval.rs` | Human approval by elicitation, cancellation, and task-augmented calls |
 | `tests/mcp.rs` | MCP subprocess sessions, schemas, allowlists, mandatory policy, rate limits |
 | `tests/hardware.rs` | Fail-closed hardware configuration, custody policy, pre-login checks |

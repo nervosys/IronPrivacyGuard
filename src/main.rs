@@ -47,6 +47,21 @@ fn main() {
             }
         }
     }
+    if args.first().is_some_and(|s| s == "mcp-http") {
+        let result =
+            iron_privacy_guard::http::HttpServer::bind(&args[1..]).and_then(|mut server| {
+                iron_privacy_guard::http::announce(server.local_addr()?);
+                server.serve()
+            });
+        if let Err(error) = result {
+            eprintln!(
+                "{}",
+                ipg_json::to_string(&error).expect("serializable error")
+            );
+            std::process::exit(error.exit_code());
+        }
+        return;
+    }
     if args.first().is_some_and(|s| s == "serve") && args.len() == 1 {
         let stdin = io::stdin();
         let mut input = stdin.lock();

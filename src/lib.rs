@@ -19,6 +19,7 @@ pub mod files;
 #[doc(hidden)]
 pub mod fuzz_support;
 pub mod hex;
+pub mod http;
 pub mod inline;
 pub mod jcs;
 pub mod json_signature;

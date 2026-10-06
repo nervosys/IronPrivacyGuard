@@ -185,6 +185,40 @@ subject key and be granted, other private-key operations must use the subject
 key, re-delegation must extend the pinned grant, and OpenPGP secret-key
 operations are refused. See [delegation grants](DELEGATION.md#host-pinned-grants).
 
+## HTTP transport
+
+`ipg mcp-http` serves MCP Streamable HTTP for clients that cannot launch a
+subprocess:
+
+```text
+ipg mcp-http --listen 127.0.0.1:8765 --token-file mcp-token [ipg mcp flags]
+```
+
+It prints `{"listening":"127.0.0.1:8765","endpoint":"/mcp"}` on stderr. Port 0
+picks a free port.
+
+- **Exposure:** listeners must be loopback addresses. Every request needs
+  `Authorization: Bearer <token>`, where the token file holds at least 32 bytes
+  (surrounding whitespace is ignored). Requests with an `Origin` other than
+  `http://127.0.0.1:<port>`, `http://localhost:<port>` or `http://[::1]:<port>`
+  are refused, which blocks DNS rebinding from browsers.
+- **Requests:** `POST /mcp` with `Content-Type: application/json` and an
+  `Accept` that includes `application/json`. Bodies are at most 2 MiB with
+  `Content-Length`; chunked bodies are refused. Each connection carries one
+  request.
+- **Responses:** JSON, or `202 Accepted` for notifications. There are no SSE
+  streams: `GET` returns 405, and so `--require-approval` is refused at startup
+  rather than skipped.
+- **Sessions:** `initialize` issues an `Mcp-Session-Id`, which later requests
+  must carry. Unknown sessions get 404, `DELETE /mcp` ends a session, and at
+  most 8 sessions exist at once.
+- **Session state:** each session has its own MCP server with the given host
+  flags, so policy, allowlists, custody, delegation, audit logs, inline-data
+  control, rate limits and tasks work as over stdio.
+
+Prefer stdio when the host can launch IPG. Any local process that can read the
+token file can use the server.
+
 ## Limits and unsupported capabilities
 
 Maximum input frame size is 2 MiB plus the newline. Oversized frames

@@ -58,6 +58,7 @@ jobs:
           cache-dependency-path: tests/interop/node/package-lock.json
       - run: npm ci --prefix tests/interop/node --ignore-scripts --no-fund --no-audit
       - run: node tests/interop/node/mcp_client.mjs --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
+      - run: python tests/interop/mcp_http_client.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/crypto_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/stream_signature_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}
       - run: python tests/interop/p384_reference.py --ipg target/release/ipg${{ runner.os == 'Windows' && '.exe' || '' }}

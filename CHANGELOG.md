@@ -53,6 +53,14 @@
   - Task-augmented `tools/call` with `tasks/get`, `tasks/result` and
     `tasks/cancel` is supported; gated tasks wait in `input_required`.
 - Corrected the documented MCP frame limit to 2 MiB.
+- Added `ipg mcp-http`, MCP Streamable HTTP for loopback clients:
+  - security: loopback listeners only, a bearer token from a file, and `Origin`
+    checks;
+  - sessions: `Mcp-Session-Id`, at most 8 at once, each with the full
+    `ipg mcp` host controls;
+  - JSON responses without SSE, so `--require-approval` is refused at startup.
+
+  Verified with the official Python SDK's streamable HTTP client.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph
