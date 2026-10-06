@@ -30,6 +30,7 @@ pub mod knowledge;
 pub mod lifecycle;
 pub mod mcp;
 pub mod message;
+pub mod mls;
 pub mod ontology;
 pub mod openpgp;
 #[cfg(feature = "pkcs11")]
