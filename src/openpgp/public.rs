@@ -282,7 +282,9 @@ pub(crate) fn ecdsa_public_valid(curve: Curve, public: &[u8]) -> bool {
 
 /// ECDSA verification (FIPS 186-5 §6.4.2) over a precomputed digest, through
 /// IronCrypto's `verify_prehash`. `r` and `s` are OpenPGP MPIs: leading zeros
-/// are tolerated. The digest must be 28, 32, 48 or 64 bytes.
+/// are tolerated. The digest must be 32, 48 or 64 bytes and at least as wide
+/// as the curve (32 for P-256, 48 for P-384, 64 for P-521); narrower digests
+/// are refused, because they are weaker than the curve.
 pub(crate) fn ecdsa_verify(curve: Curve, public: &[u8], digest: &[u8], r: &[u8], s: &[u8]) -> bool {
     let width = widths(curve).1;
     let mut signature = vec![0u8; 2 * width];
@@ -485,6 +487,16 @@ mod tests {
     fn ecdsa_pyca_vectors() {
         for (i, v) in ECDSA.iter().enumerate() {
             let (public, d, r, s) = (hex(v.public), hex(v.digest), hex(v.r), hex(v.s));
+            let minimum = match v.curve {
+                Curve::P256 => 32,
+                Curve::P384 => 48,
+                Curve::P521 => 64,
+            };
+            if d.len() < minimum {
+                // Valid under the narrower hash, but weaker than the curve.
+                assert!(!ecdsa_verify(v.curve, &public, &d, &r, &s), "vector {i}");
+                continue;
+            }
             assert!(ecdsa_verify(v.curve, &public, &d, &r, &s), "vector {i}");
             for bit in [0, 7, 77, 200] {
                 assert!(!ecdsa_verify(v.curve, &public, &flip(&d, bit), &r, &s));

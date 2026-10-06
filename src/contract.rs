@@ -275,6 +275,10 @@ pub fn hex_bytes<const N: usize>(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"string", "minLength":N*2, "maxLength":N*2,
         "pattern":format!("^[0-9a-f]{{{}}}$", N*2)})
 }
+/// An MLS hash reference: `Nh` bytes, 32 for suites 1 and 3 or 48 for suite 7.
+pub fn mls_reference(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "pattern":"^([0-9a-f]{64}|[0-9a-f]{96})$"})
+}
 pub fn ciphertext(_: &mut SchemaGenerator) -> Schema {
     // Runtime accepts either hex case only for variable-length ciphertext.
     json_schema!({"type":"string", "pattern":"^([0-9a-fA-F]{2})*$",

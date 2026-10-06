@@ -5,7 +5,7 @@
 //! Receivers may skip ahead up to `MAX_FORWARD` generations and keep at most
 //! `MAX_SKIPPED` unused keys per ratchet for out-of-order delivery; each key
 //! is usable once.
-use super::suite::{NH, NONCE_LEN, Suite};
+use super::suite::{NONCE_LEN, Suite};
 use super::tree_math;
 use crate::error::{Error, Result};
 use crate::secrets::Zeroizing;
@@ -39,7 +39,8 @@ impl Ratchet {
         })
     }
     fn advance(&mut self, suite: Suite) -> Result<()> {
-        self.secret = suite.derive_tree_secret(&self.secret, "secret", self.generation, NH)?;
+        self.secret =
+            suite.derive_tree_secret(&self.secret, "secret", self.generation, suite.nh())?;
         self.generation = self
             .generation
             .checked_add(1)
@@ -102,12 +103,13 @@ impl SecretTree {
             );
             self.nodes.insert(
                 left,
-                self.suite.expand_with_label(&secret, "tree", b"left", NH)?,
+                self.suite
+                    .expand_with_label(&secret, "tree", b"left", self.suite.nh())?,
             );
             self.nodes.insert(
                 right,
                 self.suite
-                    .expand_with_label(&secret, "tree", b"right", NH)?,
+                    .expand_with_label(&secret, "tree", b"right", self.suite.nh())?,
             );
         }
         let leaf_secret = self.nodes.remove(&target).ok_or_else(stale)?;
@@ -118,7 +120,12 @@ impl SecretTree {
             self.ratchets.insert(
                 (leaf, kind),
                 Ratchet {
-                    secret: self.suite.expand_with_label(&leaf_secret, label, &[], NH)?,
+                    secret: self.suite.expand_with_label(
+                        &leaf_secret,
+                        label,
+                        &[],
+                        self.suite.nh(),
+                    )?,
                     generation: 0,
                     skipped: BTreeMap::new(),
                 },
@@ -274,10 +281,10 @@ impl SecretTree {
             && self
                 .nodes
                 .iter()
-                .all(|(node, secret)| u64::from(*node) < width && secret.len() == NH)
+                .all(|(node, secret)| u64::from(*node) < width && secret.len() == suite.nh())
             && self.ratchets.iter().all(|((leaf, _), ratchet)| {
                 *leaf < self.n_leaves
-                    && ratchet.secret.len() == NH
+                    && ratchet.secret.len() == suite.nh()
                     && ratchet.skipped.len() <= MAX_SKIPPED
                     && ratchet.skipped.values().all(|k| {
                         k.key.len() == suite.key_len() && k.nonce.len() == super::suite::NONCE_LEN
@@ -292,7 +299,7 @@ pub fn sender_data_key_nonce(
     sender_data_secret: &[u8],
     ciphertext: &[u8],
 ) -> Result<KeyNonce> {
-    let sample = &ciphertext[..ciphertext.len().min(NH)];
+    let sample = &ciphertext[..ciphertext.len().min(suite.nh())];
     Ok(KeyNonce {
         key: suite.expand_with_label(sender_data_secret, "key", sample, suite.key_len())?,
         nonce: suite.expand_with_label(sender_data_secret, "nonce", sample, NONCE_LEN)?,

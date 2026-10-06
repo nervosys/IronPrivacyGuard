@@ -4,7 +4,7 @@ use super::key_schedule::GroupContext;
 use super::messages::{
     HpkeCiphertext, LeafNode, LeafNodeSource, Node, ParentNode, UpdatePath, UpdatePathNode,
 };
-use super::suite::{NH, Suite};
+use super::suite::Suite;
 use super::tree::RatchetTree;
 use super::tree_math;
 use crate::error::{Error, Result};
@@ -236,7 +236,7 @@ pub fn create(
     excluded: &BTreeSet<u32>,
     context: &mut GroupContext,
 ) -> Result<Created> {
-    let leaf_secret = crate::crypto::random::<NH>()?;
+    let leaf_secret = suite.random_secret()?;
     let (leaf_private, leaf_public) = node_keys(suite, leaf_secret.as_ref())?;
     let path = tree.filtered_direct_path(me);
     let mut secrets = Vec::with_capacity(path.len());

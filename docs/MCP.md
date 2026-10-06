@@ -150,7 +150,8 @@ when they would use:
   ChaCha20-Poly1305;
 - Curve25519 or `ipg-public-hybrid-v1` identities (X25519, Ed25519,
   ChaCha20-Poly1305), as signer, recipient or verifier;
-- MLS, Shamir backups (`backup.*`) or OpenPGP (`openpgp.*`).
+- MLS, including suite 7 (whose derivations are not SP 800-56C KDFs), Shamir
+  backups (`backup.*`) or OpenPGP (`openpgp.*`).
 
 What remains is P-384 identities (`ipg-public-p384-v1` and the composite
 `ipg-public-p384-mldsa65-v1`) with ECDH/ECDSA P-384, AES-256-GCM, SHA-384,

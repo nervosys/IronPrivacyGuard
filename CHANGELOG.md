@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Moved the exact IronCrypto pins to 0.2.15 and added MLS cipher suite 7
+  (`p384-aes256gcm-sha384-p384`): HPKE with DHKEM(P-384, HKDF-SHA384),
+  AES-256-GCM, SHA-384 and DER-encoded ECDSA P-384 signatures, verified
+  against the MLS working group's suite 7 test vectors, including the
+  passive-client scenarios. KeyPackage references are 48 bytes in suite 7.
 - Security: fixed every finding of the 2026-10 audit
   ([SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)): authorization (delegation
   purposes, chain revocation, MLS custody and grants), host path confinement

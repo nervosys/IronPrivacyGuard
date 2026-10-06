@@ -10,12 +10,17 @@ authenticated by the whole group.
 The supported cipher suites are:
 
 - 3, `x25519-chacha20poly1305-sha256-ed25519` (the default);
-- 1, `x25519-aes128gcm-sha256-ed25519`.
+- 1, `x25519-aes128gcm-sha256-ed25519`;
+- 7, `p384-aes256gcm-sha384-p384`: HPKE with DHKEM(P-384, HKDF-SHA384),
+  AES-256-GCM, SHA-384 and ECDSA P-384 with SHA-384 (DER signatures,
+  uncompressed SEC1 keys).
 
-Every primitive comes from IronCrypto: HPKE, HKDF-SHA256, SHA-256, Ed25519,
-AES-128-GCM and ChaCha20-Poly1305. The MLS layers are verified against the
-working group's
-[test vectors](https://github.com/mlswg/mls-implementations) for both suites:
+Every primitive comes from IronCrypto: HPKE, HKDF-SHA256 and HKDF-SHA384,
+SHA-256 and SHA-384, Ed25519, ECDSA P-384, AES-128-GCM, AES-256-GCM and
+ChaCha20-Poly1305. A group's suite is fixed at `mls.group.create`, and members
+join with a KeyPackage of the same suite. The MLS layers are verified against
+the working group's
+[test vectors](https://github.com/mlswg/mls-implementations) for all three suites:
 
 - deserialization, tree math, crypto basics, key schedule, PSK secret and
   transcript hashes;
@@ -25,8 +30,14 @@ working group's
   200-epoch run with 1542 proposals.
 
 Not supported: post-quantum suites, external commits, ReInit and custom
-proposal types. Suites 1 and 3 use X25519, so groups are not protected against
-quantum attackers.
+proposal types. No supported suite protects groups against quantum attackers.
+
+Suite 7 is built from FIPS-approved primitives (ECDH and ECDSA P-384,
+HMAC/HKDF-SHA384, AES-256-GCM), but it is not an approved scheme: DHKEM's
+labeled extract step is not an SP 800-56C key derivation, and the MLS key
+schedule is not an approved KDF either. MLS therefore stays refused under
+`--algorithm-policy fips`. Group state is sealed with Argon2id and
+ChaCha20-Poly1305 for every suite.
 
 ## Operations
 

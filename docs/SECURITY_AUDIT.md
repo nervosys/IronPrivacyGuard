@@ -61,9 +61,10 @@ Residual risks, by design or awaiting dependencies:
 
 - **FIPS 140-3** still needs a validated module. `--algorithm-policy fips`
   restricts IPG to approved algorithms but does not validate them.
-- **MLS** stays refused under the FIPS policy. IronCrypto 0.2.15 adds DHKEM(P-384)
-  for MLS suite 7, but its labeled extract step is not an SP 800-56C KDF, so the
-  suite is built from approved primitives rather than being an approved scheme.
+- **MLS** stays refused under the FIPS policy. IPG now offers MLS suite 7
+  (`p384-aes256gcm-sha384-p384`, on IronCrypto 0.2.15's DHKEM(P-384)), but its
+  labeled extract step is not an SP 800-56C KDF, so the suite is built from
+  approved primitives rather than being an approved scheme.
 - **Signing time:** signatures carry no trusted time; delegated signatures are
   judged at the verifier's clock (see DELEGATION.md).
 - **Parsed JSON values** holding provider secrets (for example a KMS
@@ -212,7 +213,7 @@ Residual risks, by design or awaiting dependencies:
 
 - `cargo deny check advisories` (RustSec) reports no advisories for either the
   main or the fuzz lockfile.
-- Runtime dependencies are limited to the IronCrypto crates at `=0.2.12` plus
+- Runtime dependencies are limited to the IronCrypto crates at `=0.2.12` (since moved to `=0.2.15`) plus
   first-party crates. `scripts/check-ironcrypto-only.py` confirms this.
 - Unsafe code is confined to the FFI crates `ipg-pkcs11` (70 sites) and
   `ipg-cng` (39). The main crate is `#![forbid(unsafe_code)]`.
@@ -304,8 +305,8 @@ A FIPS mode would need to:
    (MCP.md) refuses software keys, Curve25519 and hybrid identities, MLS,
    Shamir backups and OpenPGP.
 2. Seal files with PBKDF2 (SP 800-132) and AES-256-GCM.
-3. Use an MLS P-384 suite. IronCrypto 0.2.15 provides DHKEM(P-384), but RFC
-   9420 suite 7 remains built from approved primitives, not an approved scheme.
+3. Use an MLS P-384 suite. IPG supports RFC 9420 suite 7 on IronCrypto 0.2.15,
+   but it remains built from approved primitives, not an approved scheme.
 4. Run on a validated module.
 
 **CNSA 2.0:** the P-384 + ML-KEM-768 + ML-DSA-65 + AES-256 profile follows its

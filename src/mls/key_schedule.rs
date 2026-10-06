@@ -1,7 +1,7 @@
 //! The MLS key schedule, pre-shared keys and transcript hashes (RFC 9420
 //! sections 8 and 8.2).
 use super::codec::Writer;
-use super::suite::{NH, Suite};
+use super::suite::Suite;
 use crate::error::Result;
 use crate::secrets::Zeroizing;
 
@@ -69,7 +69,7 @@ pub fn joiner_secret(
     context: &GroupContext,
 ) -> Result<Zeroizing<Vec<u8>>> {
     let prk = suite.extract(init_secret, commit_secret)?;
-    suite.expand_with_label(&prk, "joiner", &context.encode(), NH)
+    suite.expand_with_label(&prk, "joiner", &context.encode(), suite.nh())
 }
 
 /// Every epoch secret from `joiner_secret` and `psk_secret`.
@@ -80,7 +80,8 @@ pub fn epoch_secrets(
     context: &GroupContext,
 ) -> Result<EpochSecrets> {
     let intermediate = suite.extract(joiner_secret, psk_secret)?;
-    let epoch_secret = suite.expand_with_label(&intermediate, "epoch", &context.encode(), NH)?;
+    let epoch_secret =
+        suite.expand_with_label(&intermediate, "epoch", &context.encode(), suite.nh())?;
     let mut secrets = from_epoch_secret(suite, epoch_secret)?;
     secrets.joiner_secret = Zeroizing::new(joiner_secret.to_vec());
     secrets.welcome_secret = suite.derive_secret(&intermediate, "welcome")?;
@@ -115,7 +116,7 @@ pub fn export(
     context: &[u8],
     length: usize,
 ) -> Result<Zeroizing<Vec<u8>>> {
-    let secret = suite.expand_with_label_bytes(exporter_secret, label, &[], NH)?;
+    let secret = suite.expand_with_label_bytes(exporter_secret, label, &[], suite.nh())?;
     suite.expand_with_label(&secret, "exported", &suite.hash(context), length)
 }
 
@@ -141,14 +142,15 @@ pub fn resumption_psk_id(usage: u8, group_id: &[u8], epoch: u64, nonce: &[u8]) -
 
 /// `psk_secret` over an ordered list of PSKs (all zeros when empty).
 pub fn psk_secret(suite: Suite, psks: &[Psk<'_>]) -> Result<Zeroizing<Vec<u8>>> {
-    let zero = vec![0u8; NH];
+    let zero = vec![0u8; suite.nh()];
     let mut secret = Zeroizing::new(zero.clone());
     let count = psks.len() as u16;
     for (index, psk) in psks.iter().enumerate() {
         let extracted = suite.extract(&zero, psk.secret)?;
         let mut label = Writer::new();
         label.raw(&psk.id).u16(index as u16).u16(count);
-        let input = suite.expand_with_label(&extracted, "derived psk", &label.finish(), NH)?;
+        let input =
+            suite.expand_with_label(&extracted, "derived psk", &label.finish(), suite.nh())?;
         secret = suite.extract(&input, &secret)?;
     }
     Ok(secret)
@@ -282,8 +284,8 @@ mod tests {
             let suite = suite(&v);
             let content = h(&v["authenticated_content"]);
             // The commit's confirmation_tag<V> (a one-byte prefix and Nh bytes) ends the content.
-            let (input, tag) = content.split_at(content.len() - 1 - NH);
-            assert_eq!(usize::from(tag[0]), NH);
+            let (input, tag) = content.split_at(content.len() - 1 - suite.nh());
+            assert_eq!(usize::from(tag[0]), suite.nh());
             let confirmed =
                 confirmed_transcript_hash(suite, &h(&v["interim_transcript_hash_before"]), input);
             assert_eq!(confirmed, h(&v["confirmed_transcript_hash_after"]));

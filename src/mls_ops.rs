@@ -37,18 +37,23 @@ pub enum MlsSuite {
     /// MLS cipher suite 3.
     #[serde(rename = "x25519-chacha20poly1305-sha256-ed25519")]
     ChaCha20Poly1305,
+    /// MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.
+    #[serde(rename = "p384-aes256gcm-sha384-p384")]
+    P384,
 }
 impl MlsSuite {
     fn suite(self) -> Suite {
         match self {
             Self::Aes128Gcm => Suite::X25519Aes128GcmSha256Ed25519,
             Self::ChaCha20Poly1305 => Suite::X25519ChaCha20Poly1305Sha256Ed25519,
+            Self::P384 => Suite::P384Aes256GcmSha384P384,
         }
     }
     fn of(suite: Suite) -> Self {
         match suite {
             Suite::X25519Aes128GcmSha256Ed25519 => Self::Aes128Gcm,
             Suite::X25519ChaCha20Poly1305Sha256Ed25519 => Self::ChaCha20Poly1305,
+            Suite::P384Aes256GcmSha384P384 => Self::P384,
         }
     }
 }
@@ -73,7 +78,7 @@ pub struct KeyPackageFile {
     pub fingerprint: String,
     pub suite: MlsSuite,
     /// RFC 9420 KeyPackageRef.
-    #[schemars(schema_with = "crate::contract::hex_bytes::<32>")]
+    #[schemars(schema_with = "crate::contract::mls_reference")]
     pub reference: String,
     /// The RFC 9420 MLSMessage(KeyPackage), hex.
     #[schemars(schema_with = "crate::contract::ciphertext")]
@@ -445,7 +450,7 @@ fn bound_key_package(
     if lifetime == 0 || lifetime > MAX_LIFETIME {
         return Err(invalid("KeyPackage lifetime must be 1 second to 90 days"));
     }
-    let signer = Zeroizing::new(crypto::random::<32>()?.to_vec());
+    let signer = suite.signature_private()?;
     let signature_key = suite.signature_public(&signer)?;
     let now = crate::delegation::now()?;
     let not_after = now.saturating_add(lifetime);

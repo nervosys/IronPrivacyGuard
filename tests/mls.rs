@@ -188,3 +188,63 @@ fn agents_form_an_mls_group_bound_to_ipg_identities() {
     assert_eq!(status["status"]["epoch"], 2);
     assert_eq!(status["status"]["removed"], false);
 }
+
+#[test]
+fn agents_form_a_p384_group_with_suite_7() {
+    const SUITE: &str = "p384-aes256gcm-sha384-p384";
+    let f = Fixture::new();
+    let alice = f.identity("alice", None);
+    let bob = f.identity("bob", None);
+    let created = call(json!({"operation":"mls.group.create","key":f.path("alice"),"passphrase_file":f.path("pass"),
+        "expected_fingerprint":alice,"state_passphrase_file":f.path("state-pass"),"suite":SUITE,
+        "output":f.state("alice")}))
+    .unwrap();
+    assert_eq!(created["status"]["suite"], SUITE);
+
+    // A suite 3 KeyPackage cannot join a suite 7 group.
+    f.key_package("bob", &bob);
+    let mixed = call(
+        json!({"operation":"mls.commit","state":f.state("alice"),"state_passphrase_file":f.path("state-pass"),
+        "add":[{"key_package":f.path("bob.kp"),"expected_fingerprint":bob}],
+        "output":f.path("bad.commit"),"welcome_output":f.path("bad.welcome"),"policy":null}),
+    );
+    assert!(mixed.is_err());
+
+    let kp = call(
+        json!({"operation":"mls.key_package","key":f.path("bob"),"passphrase_file":f.path("pass"),
+        "expected_fingerprint":bob,"state_passphrase_file":f.path("state-pass"),"suite":SUITE,
+        "lifetime":3600,"output":f.path("bob7.kp"),"secrets_output":f.path("bob7.kp-secrets")}),
+    )
+    .unwrap();
+    assert_eq!(kp["suite"], SUITE);
+    assert_eq!(kp["reference"].as_str().unwrap().len(), 96);
+    let committed = call(json!({"operation":"mls.commit","state":f.state("alice"),"state_passphrase_file":f.path("state-pass"),
+        "add":[{"key_package":f.path("bob7.kp"),"expected_fingerprint":bob}],
+        "output":f.path("add.commit"),"welcome_output":f.path("add.welcome"),"policy":null}))
+    .unwrap();
+    let joined = call(json!({"operation":"mls.join","welcome":f.path("add.welcome"),
+        "key_package_secrets":f.path("bob7.kp-secrets"),"state_passphrase_file":f.path("state-pass"),
+        "output":f.state("bob")}))
+    .unwrap();
+    assert_eq!(
+        joined["status"]["epoch_authenticator"],
+        committed["status"]["epoch_authenticator"]
+    );
+    assert_eq!(
+        joined["status"]["epoch_authenticator"]
+            .as_str()
+            .unwrap()
+            .len(),
+        96
+    );
+
+    f.encrypt("alice", b"suite 7 payload", "m1");
+    let received = f.process("bob", "m1", Some("m1.out")).unwrap();
+    assert_eq!(received["sender"], alice);
+    assert_eq!(fs::read(f.path("m1.out")).unwrap(), b"suite 7 payload");
+    f.encrypt("bob", b"reply", "m2");
+    assert_eq!(
+        f.process("alice", "m2", Some("m2.out")).unwrap()["sender"],
+        bob
+    );
+}

@@ -133,5 +133,23 @@
     "ipg_usage": "MLS cipher suite 1 message, sender-data and Welcome protection",
     "limitations": ["128-bit key; MLS suite 3 with ChaCha20-Poly1305 is IPG's default", "Nonce reuse is catastrophic; MLS ratchets and reuse guards prevent it"],
     "sources": ["https://doi.org/10.6028/NIST.SP.800-38D"]
+  },
+  {
+    "@id": "ic:hpke-p384-sha384",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "HPKE (DHKEM(P-384, HKDF-SHA384), base mode)",
+    "role": "Public-key encryption to a recipient key",
+    "ipg_usage": "MLS cipher suite 7: EncryptWithLabel for Welcome group secrets and UpdatePath path secrets, and DeriveKeyPair for ratchet tree node keys",
+    "limitations": ["Base mode does not authenticate the sender; MLS signs and confirms what it encrypts", "Built from FIPS-approved primitives, but DHKEM's labeled extract is not an SP 800-56C KDF, so the scheme is not FIPS-approved", "Not post-quantum"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9180", "https://www.rfc-editor.org/rfc/rfc9420"]
+  },
+  {
+    "@id": "ic:hkdf-sha2-384",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "HKDF-SHA-384",
+    "role": "Key derivation from keying material",
+    "ipg_usage": "The MLS cipher suite 7 key schedule, secret tree and labeled expansions",
+    "limitations": ["Not a password-hardening function", "No standalone IPG derivation command"],
+    "sources": ["https://www.rfc-editor.org/rfc/rfc5869"]
   }
 ]

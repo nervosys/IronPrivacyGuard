@@ -1114,6 +1114,12 @@ pub fn operation(id: &str) -> Value {
             "sha2-256",
             "aes-128-gcm",
             "chacha20-poly1305",
+            "hpke-p384-sha384",
+            "ecdh-p384",
+            "ecdsa-p384-sha384",
+            "hkdf-sha2-384",
+            "sha2-384",
+            "aes-256-gcm",
             "argon2id",
         ],
         "rotation.verify" => vec!["ed25519"],
@@ -1573,7 +1579,7 @@ pub fn export() -> Value {
         ),
         (
             "MlsSuite",
-            "MLS cipher suite: x25519-chacha20poly1305-sha256-ed25519 (3, default) or x25519-aes128gcm-sha256-ed25519 (1)",
+            "MLS cipher suite: x25519-chacha20poly1305-sha256-ed25519 (3, default), x25519-aes128gcm-sha256-ed25519 (1) or p384-aes256gcm-sha384-p384 (7)",
             "public",
         ),
         (

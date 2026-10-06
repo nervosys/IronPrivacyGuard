@@ -3405,6 +3405,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -4299,6 +4304,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -9778,6 +9788,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -10680,6 +10695,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -16159,6 +16179,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -17057,6 +17082,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -22536,6 +22566,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -23440,6 +23475,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -28919,6 +28959,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -29827,6 +29872,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -35306,6 +35356,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -36242,6 +36297,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -41721,6 +41781,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -42636,6 +42701,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -48115,6 +48185,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -49045,6 +49120,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -54524,6 +54604,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -55452,6 +55537,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -60931,6 +61021,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -61831,6 +61926,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -67310,6 +67410,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -68240,6 +68345,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -73719,6 +73829,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -74649,6 +74764,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -80128,6 +80248,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -81050,6 +81175,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -86529,6 +86659,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -87423,6 +87558,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -92902,6 +93042,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -93796,6 +93941,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -99275,6 +99425,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -100169,6 +100324,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -105648,6 +105808,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -106542,6 +106707,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -112021,6 +112191,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -112921,6 +113096,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -118400,6 +118580,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -119315,6 +119500,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -124794,6 +124984,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -125705,6 +125900,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -131184,6 +131384,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -132113,6 +132318,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -137592,6 +137802,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -138515,6 +138730,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -143994,6 +144214,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -144920,6 +145145,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -150399,6 +150629,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -151314,6 +151549,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -156793,6 +157033,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -157803,6 +158048,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -163282,6 +163532,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -164257,6 +164512,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -169736,6 +169996,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -170715,6 +170980,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -176194,6 +176464,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -177158,6 +177433,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -182637,6 +182917,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -183552,6 +183837,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -189031,6 +189321,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -189956,6 +190251,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -195435,6 +195735,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -196375,6 +196680,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -201854,6 +202164,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -202805,6 +203120,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -208284,6 +208604,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -209221,6 +209546,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -214700,6 +215030,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -215613,6 +215948,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -221092,6 +221432,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -222038,6 +222383,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -227517,6 +227867,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -228436,6 +228791,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -233915,6 +234275,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -234830,6 +235195,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -240309,6 +240679,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -241213,6 +241588,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -246692,6 +247072,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -247618,6 +248003,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -253097,6 +253487,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -254015,6 +254410,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -259494,6 +259894,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -260404,6 +260809,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -265883,6 +266293,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -266831,6 +267246,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -272310,6 +272730,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -273250,6 +273675,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -278729,6 +279159,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -279629,6 +280064,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -285108,6 +285548,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -286014,6 +286459,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -291493,6 +291943,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -292399,6 +292854,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -297878,6 +298338,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -298792,6 +299257,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -304271,6 +304741,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -305196,6 +305671,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -310675,6 +311155,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -311620,6 +312105,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -317099,6 +317589,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -318049,6 +318544,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -323528,6 +324028,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -324432,6 +324937,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -329911,6 +330421,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -330835,6 +331350,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -336314,6 +336834,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -337254,6 +337779,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -342733,6 +343263,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -343696,6 +344231,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -349175,6 +349715,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -350131,6 +350676,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -355610,6 +356160,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -356510,6 +357065,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -361989,6 +362549,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -362889,6 +363454,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -368368,6 +368938,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -369262,6 +369837,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -374741,6 +375321,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -375660,6 +376245,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -381139,6 +381729,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -382071,6 +382666,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -387550,6 +388150,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -388492,6 +389097,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -393971,6 +394581,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -394865,6 +395480,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -400344,6 +400964,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -401249,6 +401874,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -406728,6 +407358,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -407634,6 +408269,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -413113,6 +413753,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -414039,6 +414684,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -419518,6 +420168,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -420442,6 +421097,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -425921,6 +426581,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -426861,6 +427526,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -432340,6 +433010,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -433255,6 +433930,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -438734,6 +439414,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -439644,6 +440329,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -445123,6 +445813,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -446057,6 +446752,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -451536,6 +452236,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -452445,6 +453150,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -457924,6 +458634,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -458854,6 +459569,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -464333,6 +465053,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -465253,6 +465978,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -470732,6 +471462,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -471658,6 +472393,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -477137,6 +477877,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -478042,6 +478787,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -483521,6 +484271,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -484446,6 +485201,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -489925,6 +490685,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -490826,6 +491591,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -496305,6 +497075,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -497218,6 +497993,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -502697,6 +503477,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -503610,6 +504395,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -509089,6 +509879,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -510001,6 +510796,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -515480,6 +516280,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -516401,6 +517206,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]
@@ -521880,6 +522690,11 @@
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
                 "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
+                "type": "string"
               }
             ]
           },
@@ -522813,6 +523628,11 @@
               {
                 "const": "x25519-chacha20poly1305-sha256-ed25519",
                 "description": "MLS cipher suite 3.",
+                "type": "string"
+              },
+              {
+                "const": "p384-aes256gcm-sha384-p384",
+                "description": "MLS cipher suite 7: DHKEM(P-384), AES-256-GCM, SHA-384 and ECDSA P-384.",
                 "type": "string"
               }
             ]

@@ -5,7 +5,7 @@ use super::framing;
 use super::key_schedule::{self, EpochSecrets, GroupContext, Psk};
 use super::messages::*;
 use super::secret_tree::SecretTree;
-use super::suite::{NH, NONCE_LEN, Suite};
+use super::suite::{NONCE_LEN, Suite};
 use super::tree::{RatchetTree, verify_leaf_signature};
 use super::tree_math;
 use super::treekem::{self, Received, TreePrivate};
@@ -198,12 +198,12 @@ pub fn create_key_package(
     not_after: u64,
     leaf_extensions: &dyn Fn(&[u8]) -> Result<Vec<Extension>>,
 ) -> Result<(KeyPackage, KeyPackageSecrets)> {
-    let init_seed = crate::crypto::random::<NH>()?;
-    let leaf_seed = crate::crypto::random::<NH>()?;
-    let (init_private, init_key) = suite.derive_key_pair(init_seed.as_ref())?;
+    let init_seed = suite.random_secret()?;
+    let leaf_seed = suite.random_secret()?;
+    let (init_private, init_key) = suite.derive_key_pair(&init_seed)?;
     // Extensions may commit to the init key, such as an identity binding.
     let leaf_extensions = leaf_extensions(&init_key)?;
-    let (encryption_private, encryption_key) = suite.derive_key_pair(leaf_seed.as_ref())?;
+    let (encryption_private, encryption_key) = suite.derive_key_pair(&leaf_seed)?;
     let mut leaf = LeafNode {
         encryption_key,
         signature_key: suite.signature_public(signature_private)?,
@@ -393,7 +393,7 @@ impl Group {
             confirmed_transcript_hash: Vec::new(),
             extensions: encode_extensions(&extensions),
         };
-        let epoch_secret = Zeroizing::new(crate::crypto::random::<NH>()?.to_vec());
+        let epoch_secret = suite.random_secret()?;
         let epoch = key_schedule::from_epoch_secret(suite, epoch_secret)?;
         let confirmation_tag = key_schedule::confirmation_tag(suite, &epoch.confirmation_key, &[])?;
         let mut group = Self {
@@ -601,7 +601,7 @@ impl Group {
     fn resolve_psk(&self, id: &PreSharedKeyId, psks: &PskStore) -> Result<Zeroizing<Vec<u8>>> {
         match id {
             PreSharedKeyId::External { psk_id, nonce } => {
-                if nonce.len() != NH {
+                if nonce.len() != self.suite.nh() {
                     return Err(invalid("PSK nonce length"));
                 }
                 psks.get(psk_id)
@@ -614,7 +614,10 @@ impl Group {
                 epoch,
                 nonce,
             } => {
-                if nonce.len() != NH || *usage != 1 || *group_id != self.context.group_id {
+                if nonce.len() != self.suite.nh()
+                    || *usage != 1
+                    || *group_id != self.context.group_id
+                {
                     return Err(invalid("unsupported resumption PSK"));
                 }
                 self.resumption
@@ -831,7 +834,7 @@ impl Group {
                     treekem::merge(suite, &mut tree, committer, path, &context.group_id)?;
                 context.tree_hash = tree.root_hash(suite);
                 if removed_self {
-                    Zeroizing::new(vec![0; NH])
+                    Zeroizing::new(vec![0; suite.nh()])
                 } else {
                     private.prune(&tree);
                     let excluded: BTreeSet<u32> =
@@ -847,7 +850,7 @@ impl Group {
             }
             None => {
                 context.tree_hash = tree.root_hash(suite);
-                Zeroizing::new(vec![0; NH])
+                Zeroizing::new(vec![0; suite.nh()])
             }
         };
         let mut input = Writer::new();
@@ -1120,8 +1123,8 @@ impl Group {
     pub fn propose_update(&mut self) -> Result<MlsMessage> {
         let suite = self.suite;
         let me = self.private.leaf;
-        let seed = crate::crypto::random::<NH>()?;
-        let (private, public) = suite.derive_key_pair(seed.as_ref())?;
+        let seed = suite.random_secret()?;
+        let (private, public) = suite.derive_key_pair(&seed)?;
         let mut leaf = LeafNode {
             encryption_key: public,
             source: LeafNodeSource::Update,
@@ -1186,12 +1189,13 @@ impl Group {
         let mut psk_secrets = Vec::new();
         for id in &group_secrets.psks {
             match id {
-                PreSharedKeyId::External { psk_id, nonce } if nonce.len() == NH => psk_secrets
-                    .push(
+                PreSharedKeyId::External { psk_id, nonce } if nonce.len() == suite.nh() => {
+                    psk_secrets.push(
                         psks.get(psk_id)
                             .cloned()
                             .ok_or_else(|| invalid("unknown external PSK"))?,
-                    ),
+                    )
+                }
                 _ => {
                     return Err(Error::new(
                         "mechanism_unsupported",
@@ -1432,8 +1436,8 @@ impl Group {
         }
         let hashes = [&interim_transcript_hash, &confirmation_tag];
         let sized = leaf < tree.n_leaves()
-            && signature_private.len() == 32
-            && hashes.iter().all(|h| h.len() == super::suite::NH)
+            && signature_private.len() == suite.signature_private_len()
+            && hashes.iter().all(|h| h.len() == suite.nh())
             && [
                 &keys.init_secret,
                 &keys.sender_data_secret,
@@ -1443,11 +1447,9 @@ impl Group {
                 &keys.resumption_psk,
             ]
             .iter()
-            .all(|k| k.len() == super::suite::NH)
-            && resumption.values().all(|k| k.len() == super::suite::NH)
-            && pending
-                .iter()
-                .all(|p| p.reference.len() == super::suite::NH)
+            .all(|k| k.len() == suite.nh())
+            && resumption.values().all(|k| k.len() == suite.nh())
+            && pending.iter().all(|p| p.reference.len() == suite.nh())
             && secret_tree.consistent(suite, tree.n_leaves());
         if !sized {
             return Err(Error::new("invalid_format", "MLS state is inconsistent"));

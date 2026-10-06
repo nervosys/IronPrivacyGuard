@@ -338,7 +338,7 @@
     {
       "@id": "ipg:MlsSuite",
       "@type": "ipg:Entity",
-      "description": "MLS cipher suite: x25519-chacha20poly1305-sha256-ed25519 (3, default) or x25519-aes128gcm-sha256-ed25519 (1)",
+      "description": "MLS cipher suite: x25519-chacha20poly1305-sha256-ed25519 (3, default), x25519-aes128gcm-sha256-ed25519 (1) or p384-aes256gcm-sha384-p384 (7)",
       "sensitivity": "public"
     },
     {
@@ -2665,6 +2665,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [
@@ -2744,6 +2750,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [
@@ -2823,6 +2835,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -2892,6 +2910,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -2966,6 +2990,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -3035,6 +3065,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -3107,6 +3143,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -3171,6 +3213,12 @@
         "ic:sha2-256",
         "ic:aes-128-gcm",
         "ic:chacha20-poly1305",
+        "ic:hpke-p384-sha384",
+        "ic:ecdh-p384",
+        "ic:ecdsa-p384-sha384",
+        "ic:hkdf-sha2-384",
+        "ic:sha2-384",
+        "ic:aes-256-gcm",
         "ic:argon2id"
       ],
       "conditional_effects": [],
@@ -7279,6 +7327,36 @@
       "role": "Authenticated encryption",
       "sources": [
         "https://doi.org/10.6028/NIST.SP.800-38D"
+      ]
+    },
+    {
+      "@id": "ic:hpke-p384-sha384",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "MLS cipher suite 7: EncryptWithLabel for Welcome group secrets and UpdatePath path secrets, and DeriveKeyPair for ratchet tree node keys",
+      "label": "HPKE (DHKEM(P-384, HKDF-SHA384), base mode)",
+      "limitations": [
+        "Base mode does not authenticate the sender; MLS signs and confirms what it encrypts",
+        "Built from FIPS-approved primitives, but DHKEM's labeled extract is not an SP 800-56C KDF, so the scheme is not FIPS-approved",
+        "Not post-quantum"
+      ],
+      "role": "Public-key encryption to a recipient key",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9180",
+        "https://www.rfc-editor.org/rfc/rfc9420"
+      ]
+    },
+    {
+      "@id": "ic:hkdf-sha2-384",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "The MLS cipher suite 7 key schedule, secret tree and labeled expansions",
+      "label": "HKDF-SHA-384",
+      "limitations": [
+        "Not a password-hardening function",
+        "No standalone IPG derivation command"
+      ],
+      "role": "Key derivation from keying material",
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc5869"
       ]
     },
     {
