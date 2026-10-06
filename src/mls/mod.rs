@@ -5,6 +5,7 @@
 //! against the MLS working group's test vectors.
 pub mod codec;
 pub mod framing;
+pub mod group;
 pub mod key_schedule;
 pub mod messages;
 pub mod secret_tree;

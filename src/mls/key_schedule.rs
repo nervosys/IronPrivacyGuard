@@ -81,10 +81,19 @@ pub fn epoch_secrets(
 ) -> Result<EpochSecrets> {
     let intermediate = suite.extract(joiner_secret, psk_secret)?;
     let epoch_secret = suite.expand_with_label(&intermediate, "epoch", &context.encode(), NH)?;
+    let mut secrets = from_epoch_secret(suite, epoch_secret)?;
+    secrets.joiner_secret = Zeroizing::new(joiner_secret.to_vec());
+    secrets.welcome_secret = suite.derive_secret(&intermediate, "welcome")?;
+    Ok(secrets)
+}
+
+/// Secrets derived from an epoch secret alone, as a group creator's epoch 0
+/// uses (no joiner or welcome secret).
+pub fn from_epoch_secret(suite: Suite, epoch_secret: Zeroizing<Vec<u8>>) -> Result<EpochSecrets> {
     let derive = |label: &str| suite.derive_secret(&epoch_secret, label);
     Ok(EpochSecrets {
-        joiner_secret: Zeroizing::new(joiner_secret.to_vec()),
-        welcome_secret: suite.derive_secret(&intermediate, "welcome")?,
+        joiner_secret: Zeroizing::new(Vec::new()),
+        welcome_secret: Zeroizing::new(Vec::new()),
         sender_data_secret: derive("sender data")?,
         encryption_secret: derive("encryption")?,
         exporter_secret: derive("exporter")?,

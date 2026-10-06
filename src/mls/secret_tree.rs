@@ -144,31 +144,123 @@ impl SecretTree {
         Ok((generation, key))
     }
 
-    /// The key for a received message at `generation`; usable once.
-    pub fn get(&mut self, leaf: u32, kind: ContentKind, generation: u32) -> Result<KeyNonce> {
+    /// The key for a received message at `generation`, without consuming it:
+    /// call `consume` once the message authenticates, so a forgery cannot
+    /// burn a key the genuine message still needs.
+    pub fn peek(&mut self, leaf: u32, kind: ContentKind, generation: u32) -> Result<KeyNonce> {
         let suite = self.suite;
         let ratchet = self.ratchet(leaf, kind)?;
-        if generation < ratchet.generation {
-            return ratchet.skipped.remove(&generation).ok_or_else(stale);
+        if generation >= ratchet.generation {
+            if generation - ratchet.generation > MAX_FORWARD {
+                return Err(Error::new(
+                    "limit_exceeded",
+                    "MLS message is too far ahead of the sender's ratchet",
+                ));
+            }
+            while ratchet.generation <= generation {
+                let skipped = ratchet.key_nonce(suite)?;
+                ratchet.skipped.insert(ratchet.generation, skipped);
+                ratchet.advance(suite)?;
+            }
+            while ratchet.skipped.len() > MAX_SKIPPED {
+                let oldest = *ratchet.skipped.keys().next().expect("non-empty");
+                ratchet.skipped.remove(&oldest);
+            }
         }
-        if generation - ratchet.generation > MAX_FORWARD {
-            return Err(Error::new(
-                "limit_exceeded",
-                "MLS message is too far ahead of the sender's ratchet",
-            ));
+        let key = ratchet.skipped.get(&generation).ok_or_else(stale)?;
+        Ok(KeyNonce {
+            key: key.key.clone(),
+            nonce: key.nonce.clone(),
+        })
+    }
+
+    /// Delete a received key after its message authenticated.
+    pub fn consume(&mut self, leaf: u32, kind: ContentKind, generation: u32) {
+        if let Some(ratchet) = self.ratchets.get_mut(&(leaf, kind)) {
+            ratchet.skipped.remove(&generation);
         }
-        while ratchet.generation < generation {
-            let skipped = ratchet.key_nonce(suite)?;
-            ratchet.skipped.insert(ratchet.generation, skipped);
-            ratchet.advance(suite)?;
-        }
-        while ratchet.skipped.len() > MAX_SKIPPED {
-            let oldest = *ratchet.skipped.keys().next().expect("non-empty");
-            ratchet.skipped.remove(&oldest);
-        }
-        let key = ratchet.key_nonce(suite)?;
-        ratchet.advance(suite)?;
+    }
+
+    /// The key for a received message at `generation`; usable once.
+    pub fn get(&mut self, leaf: u32, kind: ContentKind, generation: u32) -> Result<KeyNonce> {
+        let key = self.peek(leaf, kind, generation)?;
+        self.consume(leaf, kind, generation);
         Ok(key)
+    }
+}
+
+impl SecretTree {
+    pub fn encode(&self, w: &mut super::codec::Writer) {
+        w.u16(self.suite.id()).u32(self.n_leaves);
+        w.vector(|w| {
+            for (node, secret) in &self.nodes {
+                w.u32(*node).opaque(secret);
+            }
+        });
+        w.vector(|w| {
+            for ((leaf, kind), r) in &self.ratchets {
+                w.u32(*leaf)
+                    .u8(matches!(kind, ContentKind::Application) as u8)
+                    .opaque(&r.secret)
+                    .u32(r.generation);
+                w.vector(|w| {
+                    for (generation, kn) in &r.skipped {
+                        w.u32(*generation).opaque(&kn.key).opaque(&kn.nonce);
+                    }
+                });
+            }
+        });
+    }
+
+    pub fn decode(r: &mut super::codec::Reader<'_>) -> Result<Self> {
+        let suite = Suite::from_id(r.u16()?)?;
+        let n_leaves = r.u32()?;
+        if n_leaves == 0 || !n_leaves.is_power_of_two() {
+            return Err(super::codec::malformed("secret tree size"));
+        }
+        let nodes = r
+            .vector(|r| Ok((r.u32()?, Zeroizing::new(r.opaque()?.to_vec()))))?
+            .into_iter()
+            .collect();
+        let ratchets = r
+            .vector(|r| {
+                let leaf = r.u32()?;
+                let kind = match r.u8()? {
+                    0 => ContentKind::Handshake,
+                    1 => ContentKind::Application,
+                    _ => return Err(super::codec::malformed("ratchet kind")),
+                };
+                let secret = Zeroizing::new(r.opaque()?.to_vec());
+                let generation = r.u32()?;
+                let skipped = r
+                    .vector(|r| {
+                        Ok((
+                            r.u32()?,
+                            KeyNonce {
+                                key: Zeroizing::new(r.opaque()?.to_vec()),
+                                nonce: Zeroizing::new(r.opaque()?.to_vec()),
+                            },
+                        ))
+                    })?
+                    .into_iter()
+                    .collect();
+                Ok((
+                    (leaf, kind),
+                    Ratchet {
+                        secret,
+                        generation,
+                        skipped,
+                    },
+                ))
+            })?
+            .into_iter()
+            .collect();
+        Ok(Self {
+            suite,
+            n_leaves,
+            nodes,
+            ratchets,
+        })
     }
 }
 

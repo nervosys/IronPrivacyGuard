@@ -203,14 +203,23 @@ pub fn encrypt(
     })
 }
 
-/// Decrypt a PrivateMessage; the signature is checked by the caller, who
-/// knows the sender's key.
+/// The ratchet key a decrypted message used; consume it once the message
+/// has been fully processed.
+#[derive(Clone, Copy, Debug)]
+pub struct KeyUse {
+    pub leaf: u32,
+    pub kind: ContentKind,
+    pub generation: u32,
+}
+
+/// Decrypt a PrivateMessage without consuming its key; the signature is
+/// checked by the caller, who knows the sender's key.
 pub fn decrypt(
     suite: Suite,
     tree: &mut SecretTree,
     sender_data_secret: &[u8],
     message: &PrivateMessage,
-) -> Result<(FramedContent, AuthData)> {
+) -> Result<(FramedContent, AuthData, KeyUse)> {
     let sd = sender_data_key_nonce(suite, sender_data_secret, &message.ciphertext)?;
     let sender_data = suite
         .open(
@@ -223,7 +232,7 @@ pub fn decrypt(
     let mut r = Reader::new(&sender_data);
     let (leaf, generation, reuse_guard) = (r.u32()?, r.u32()?, r.take(4)?.to_vec());
     r.finish()?;
-    let mut key = tree.get(leaf, kind(message.content_type), generation)?;
+    let mut key = tree.peek(leaf, kind(message.content_type), generation)?;
     for (n, g) in key.nonce.iter_mut().zip(&reuse_guard) {
         *n ^= g;
     }
@@ -240,6 +249,11 @@ pub fn decrypt(
             &message.ciphertext,
         )
         .map_err(|_| invalid("MLS message does not authenticate"))?;
+    let used = KeyUse {
+        leaf,
+        kind: kind(message.content_type),
+        generation,
+    };
     let mut r = Reader::new(&plaintext);
     let content = Content::decode_body(message.content_type, &mut r)?;
     let auth = AuthData::decode(message.content_type, &mut r)?;
@@ -257,6 +271,7 @@ pub fn decrypt(
             content,
         },
         auth,
+        used,
     ))
 }
 
@@ -340,7 +355,7 @@ mod tests {
                     panic!("private");
                 };
                 let mut tree = SecretTree::new(suite, &encryption, 2);
-                let (content, auth) = decrypt(suite, &mut tree, &sender_data, &private).unwrap();
+                let (content, auth, _) = decrypt(suite, &mut tree, &sender_data, &private).unwrap();
                 assert_eq!(content.content, expected(content_type));
                 verify(suite, &pk, WIRE_PRIVATE, &content, &auth, &context).unwrap();
 
@@ -360,8 +375,9 @@ mod tests {
                 let sealed =
                     encrypt(suite, &mut sender_tree, &sender_data, &framed, &auth, 7).unwrap();
                 let mut receiver = SecretTree::new(suite, &encryption, 2);
-                let (opened, opened_auth) =
+                let (opened, opened_auth, used) =
                     decrypt(suite, &mut receiver, &sender_data, &sealed).unwrap();
+                receiver.consume(used.leaf, used.kind, used.generation);
                 assert_eq!(opened, framed);
                 verify(suite, &pk, WIRE_PRIVATE, &opened, &opened_auth, &context).unwrap();
                 assert!(
