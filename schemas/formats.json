@@ -2286,6 +2286,247 @@
     "title": "Revocation",
     "type": "object"
   },
+  "rotation": {
+    "$defs": {
+      "PublicKey": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-p384-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-hybrid-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^[0-9a-f]{2432}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^[0-9a-f]{3968}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "format": {
+                  "const": "ipg-public-p384-mldsa65-v1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "encryption_key": {
+                  "pattern": "^04[0-9a-f]{192}$"
+                },
+                "fingerprint": {
+                  "pattern": "^[0-9a-f]{96}$"
+                },
+                "signing_key": {
+                  "pattern": "^04[0-9a-f]{4096}$"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "encryption_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+            "maxLength": 96,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "ipg-public-v1",
+              "ipg-public-p384-v1",
+              "ipg-public-hybrid-v1",
+              "ipg-public-p384-mldsa65-v1"
+            ],
+            "type": "string"
+          },
+          "signing_key": {
+            "description": "Length and encoding follow the artifact suite; P-384 points must lie on the curve and ML-KEM keys must be canonical (checked at runtime).",
+            "maxLength": 4098,
+            "minLength": 64,
+            "not": {
+              "pattern": "[^0-9a-f]"
+            },
+            "pattern": "^([0-9a-f]{64}|04[0-9a-f]{192}|[0-9a-f]{2432}|[0-9a-f]{3968}|04[0-9a-f]{4096})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "encryption_key",
+          "signing_key",
+          "fingerprint"
+        ],
+        "type": "object"
+      },
+      "RotationReason": {
+        "oneOf": [
+          {
+            "const": "scheduled",
+            "description": "Planned replacement.",
+            "type": "string"
+          },
+          {
+            "const": "upgraded",
+            "description": "Replaced by a stronger suite or custody, such as hardware or post-quantum keys.",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "format": {
+        "const": "ipg-rotation-v1",
+        "type": "string"
+      },
+      "next": {
+        "$ref": "#/$defs/PublicKey",
+        "description": "The successor's complete public identity."
+      },
+      "next_algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
+        ],
+        "type": "string"
+      },
+      "next_signature": {
+        "maxLength": 6810,
+        "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
+        "type": "string"
+      },
+      "previous": {
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      },
+      "previous_algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
+        ],
+        "type": "string"
+      },
+      "previous_signature": {
+        "maxLength": 6810,
+        "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
+        "type": "string"
+      },
+      "reason": {
+        "$ref": "#/$defs/RotationReason"
+      },
+      "time": {
+        "description": "Host time of the rotation.",
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "format",
+      "previous",
+      "next",
+      "reason",
+      "time",
+      "previous_algorithm",
+      "previous_signature",
+      "next_algorithm",
+      "next_signature"
+    ],
+    "title": "Rotation",
+    "type": "object"
+  },
   "secret_key": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,

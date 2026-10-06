@@ -126,6 +126,7 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
                 | "lifetime"
                 | "subjects"
                 | "approvals"
+                | "inputs"
                 | "checkpoints"
                 | "approvers"
                 | "threshold"
@@ -173,6 +174,8 @@ mod tests {
             json!({"operation":"grant.issue", "key":"secret", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "subject":"agent.public", "expected_subject_fingerprint":"11".repeat(32), "operations":["sign"], "purposes":["release"], "not_before":1, "not_after":2, "delegation_depth":1, "parent":"parent.grant", "output":"grant"}),
             json!({"operation":"grant.verify", "input":"grant", "root":"root.public", "expected_root_fingerprint":"00".repeat(32), "subject_fingerprint":"11".repeat(32), "required_operation":"sign", "purpose":"release"}),
             json!({"operation":"verify", "input":"file", "signature":"signature", "signer":"public", "expected_fingerprint":"00".repeat(32), "policy":policy, "delegation":{"grant":"grant", "root":"root.public", "expected_root_fingerprint":"11".repeat(32), "purpose":"release"}}),
+            json!({"operation":"key.rotate", "key":"old", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "next_key":"new", "next_passphrase_file":"new-pass", "expected_next_fingerprint":"11".repeat(32), "reason":"upgraded", "output":"rotation"}),
+            json!({"operation":"rotation.verify", "inputs":["ab.rotation", "bc.rotation"], "signer":"a.public", "expected_fingerprint":"00".repeat(32), "output":"current.public"}),
             json!({"operation":"audit.append", "log":"agent.log", "event":"event.json"}),
             json!({"operation":"audit.verify", "log":"agent.log", "checkpoints":["a.checkpoint"], "signer":"auditor.public", "expected_fingerprint":"00".repeat(32)}),
             json!({"operation":"approval.sign", "input":"plan.json", "output":"plan.approval", "key":"secret", "passphrase_file":"pass", "action":"deploy", "content":"rfc8785", "lifetime":600, "policy":policy}),

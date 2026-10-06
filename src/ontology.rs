@@ -266,6 +266,20 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "key.rotate",
+        "Have the current identity name its successor, with both keys signing one statement so the successor proves possession",
+        &["SecretKey", "Passphrase", "Fingerprint"],
+        &["Rotation"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "rotation.verify",
+        "Follow a chain of rotation statements from a pinned identity and report, and optionally write, the current successor",
+        &["Rotation", "PublicKey", "Fingerprint"],
+        &["RotationVerification", "PublicKey"],
+        &["read_file", "create_file"],
+    ),
+    (
         "audit.init",
         "Create an empty ipg-audit-v1 log with a random log ID",
         &[],
@@ -604,6 +618,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "approval.sign",
+    "key.rotate",
     "audit.checkpoint",
     "grant.issue",
     "json.sign",
@@ -679,6 +694,13 @@ pub fn operation(id: &str) -> Value {
             "delegation-not-authorization",
             "host-clock",
         ],
+        "key.rotate" => vec![
+            "identity-pin",
+            "rotation-not-revocation",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "rotation.verify" => vec!["identity-pin", "rotation-not-revocation", "no-clobber"],
         "audit.init" => vec!["no-clobber"],
         "audit.append" => vec!["hash-chain", "host-clock", "size-bound"],
         "audit.checkpoint" => vec!["hash-chain", "secret-channel", "no-clobber"],
@@ -903,6 +925,8 @@ pub fn operation(id: &str) -> Value {
             | "quorum.verify"
             | "audit.checkpoint"
             | "audit.verify"
+            | "key.rotate"
+            | "rotation.verify"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -944,6 +968,8 @@ pub fn operation(id: &str) -> Value {
             vec!["ed25519", "sha2-384"]
         }
         "audit.init" | "audit.append" => vec!["sha2-384"],
+        "key.rotate" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
+        "rotation.verify" => vec!["ed25519"],
         "audit.verify" => vec!["ed25519", "sha2-384"],
         "json.sign" | "provenance.attest" | "approval.sign" | "audit.checkpoint" => {
             vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"]
@@ -1011,9 +1037,11 @@ pub fn operation(id: &str) -> Value {
         "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
         | "revocation.verify" | "validity.verify" | "grant.issue" | "grant.verify"
         | "json.sign" | "json.verify" | "provenance.attest" | "provenance.verify"
-        | "approval.sign" | "quorum.verify" | "audit.checkpoint" | "audit.verify" | "trust.add"
-        | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
-        | "trust.compare" | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
+        | "approval.sign" | "quorum.verify" | "audit.checkpoint" | "audit.verify"
+        | "key.rotate" | "rotation.verify" | "trust.add" | "trust.revoke" | "trust.validity"
+        | "trust.status" | "trust.evaluate" | "trust.compare" | "trust.merge" => {
+            &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"]
+        }
         _ => &[],
     };
     for algorithm in p384 {
@@ -1390,6 +1418,16 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "Rotation",
+            "An ipg-rotation-v1 statement: the previous fingerprint, the successor's complete public identity, a reason (scheduled or upgraded) and host time, signed by both the previous and the successor key",
+            "public",
+        ),
+        (
+            "RotationVerification",
+            "The pinned starting identity, every authenticated successor in order with reasons, and the current identity",
+            "public",
+        ),
+        (
             "AuditLog",
             "An ipg-audit-v1 log: newline-delimited RFC 8785 JSON, a header with a random log ID, then hash-chained entries (seq, host time, previous hash, event, hash)",
             "public",
@@ -1641,6 +1679,10 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "rotation-not-revocation",
+            "A rotation shows that the previous key endorsed a successor that holds its own private key. It does not revoke the previous key, and it proves nothing if the previous key was compromised: revoke compromised keys with key.revoke and check revocation status of every identity in a chain with trust snapshots.",
         ),
         (
             "hash-chain",
@@ -1955,6 +1997,10 @@ pub fn export() -> Value {
         ),
         ("sign-structured-data", vec!["json.sign", "json.verify"]),
         (
+            "rotate-identity",
+            vec!["key.generate", "key.rotate", "rotation.verify", "trust.add"],
+        ),
+        (
             "tamper-evident-audit",
             vec![
                 "audit.init",
@@ -2031,5 +2077,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.40.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.41.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

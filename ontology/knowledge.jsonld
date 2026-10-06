@@ -517,6 +517,44 @@
       ]
     },
     {
+      "@id": "ipg:application/rotate-identity",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/identity-policy"
+      ],
+      "guidance": "Generate the successor, run key.rotate with both keys and publish the statement. Relying parties run rotation.verify from their pinned fingerprint, check trust snapshots for revocations, then pin the new fingerprint with trust.add. Revoke the old key once peers have moved.",
+      "id": "rotate-identity",
+      "keywords": [
+        "rotation",
+        "rotate",
+        "key rollover",
+        "successor",
+        "key update",
+        "rekey",
+        "migrate key"
+      ],
+      "label": "Rotate an identity to a successor key",
+      "limitations": [
+        "Not revocation: the previous key stays valid until revoked or expired",
+        "Proves nothing if the previous key was compromised; revoke instead",
+        "Chains of at most 16 statements"
+      ],
+      "prerequisites": [
+        "Both the current and the successor private keys",
+        "Relying parties hold a pinned fingerprint of an identity earlier in the chain"
+      ],
+      "sources": [
+        "https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/key.generate",
+        "ipg:operation/key.rotate",
+        "ipg:operation/rotation.verify",
+        "ipg:operation/trust.add"
+      ]
+    },
+    {
       "@id": "ipg:application/tamper-evident-audit",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -3256,6 +3294,147 @@
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
+      "@id": "ipg:operation/key.rotate",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/rotation-not-revocation",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Have the current identity name its successor, with both keys signing one statement so the successor proves possession",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "key.rotate",
+      "inputs": [
+        "ipg:SecretKey",
+        "ipg:Passphrase",
+        "ipg:Fingerprint"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_key_rotate",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:Rotation"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "key.rotate"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/rotation.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:ecdsa-p384-sha384",
+        "ic:sha2-384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/rotation-not-revocation",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Follow a chain of rotation statements from a pinned identity and report, and optionally write, the current successor",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "rotation.verify",
+      "inputs": [
+        "ipg:Rotation",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_rotation_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:RotationVerification",
+        "ipg:PublicKey"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "rotation.verify"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
       "@id": "ipg:operation/audit.init",
       "@type": "ipg:Operation",
       "algorithms": [
@@ -5750,5 +5929,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.27.0"
+  "version": "1.28.0"
 }

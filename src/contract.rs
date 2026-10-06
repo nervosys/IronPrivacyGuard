@@ -295,6 +295,11 @@ fixed!(grant_format, crate::delegation::FORMAT);
 fixed!(message_format, crate::message::FORMAT);
 fixed!(json_signature_format, crate::json_signature::FORMAT);
 fixed!(approval_format, crate::approval::FORMAT);
+fixed!(rotation_format, crate::rotation::FORMAT);
+pub fn rotation_chain(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::rotation::MAX_CHAIN,
+        "items":{"type":"string"}, "description":"ipg-rotation-v1 files in order, starting from the pinned identity."})
+}
 fixed!(audit_format, crate::audit::FORMAT);
 fixed!(audit_checkpoint_format, crate::audit::CHECKPOINT_FORMAT);
 pub fn audit_event(_: &mut SchemaGenerator) -> Schema {

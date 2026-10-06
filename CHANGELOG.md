@@ -41,6 +41,10 @@
   history. `ipg mcp --audit-log` records every executed tool call before and
   after it runs and refuses calls it cannot record (`audit_unavailable`).
   `audit.checkpoint` is delegable. 69 operations.
+- Added key rotation statements: `key.rotate` writes `ipg-rotation-v1`, signed
+  by both the previous and the successor key, and `rotation.verify` follows a
+  chain of up to 16 statements from a pinned identity and can write the current
+  public identity. Rotation is not revocation. 71 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

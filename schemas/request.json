@@ -182,6 +182,20 @@
       ],
       "type": "string"
     },
+    "RotationReason": {
+      "oneOf": [
+        {
+          "const": "scheduled",
+          "description": "Planned replacement.",
+          "type": "string"
+        },
+        {
+          "const": "upgraded",
+          "description": "Replaced by a stronger suite or custody, such as hardware or post-quantum keys.",
+          "type": "string"
+        }
+      ]
+    },
     "SoftwareIdentity": {
       "description": "Identity suites that have software secret keys.",
       "oneOf": [
@@ -512,6 +526,117 @@
         "output",
         "expected_fingerprint",
         "reason"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "expected_next_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "key": {
+          "description": "The current (previous) identity's key.",
+          "type": "string"
+        },
+        "next_key": {
+          "description": "The successor's key; it countersigns to prove possession.",
+          "type": "string"
+        },
+        "next_passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "const": "key.rotate",
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "passphrase_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/RotationReason"
+        }
+      },
+      "required": [
+        "operation",
+        "key",
+        "expected_fingerprint",
+        "next_key",
+        "expected_next_fingerprint",
+        "reason",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "expected_fingerprint": {
+          "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+          "maxLength": 96,
+          "minLength": 64,
+          "not": {
+            "pattern": "[^0-9a-f]"
+          },
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+          "type": "string"
+        },
+        "inputs": {
+          "description": "ipg-rotation-v1 statements in order from the pinned identity.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array"
+        },
+        "operation": {
+          "const": "rotation.verify",
+          "type": "string"
+        },
+        "output": {
+          "description": "Write the final successor's public identity here.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signer": {
+          "description": "Public identity file of the pinned starting identity.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "inputs",
+        "signer",
+        "expected_fingerprint"
       ],
       "type": "object"
     },

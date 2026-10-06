@@ -273,6 +273,12 @@ Provenance statements are standard DSSE envelopes holding canonical in-toto v1
 statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
 [PROVENANCE.md](PROVENANCE.md).
 
+## Rotation: ipg-rotation-v1
+
+A statement in which an identity names its successor's complete public identity,
+signed by both keys, with a reason and host time. See
+[LIFECYCLE.md](LIFECYCLE.md#rotation-ipg-rotation-v1).
+
 ## Audit log: ipg-audit-v1
 
 An append-only, newline-delimited log of RFC 8785 canonical lines: a header with

@@ -35,6 +35,7 @@ mod pkcs11;
 pub mod provenance;
 pub mod provider;
 pub mod reconciliation;
+pub mod rotation;
 pub mod secrets;
 pub mod stream;
 pub mod stream_signature;
@@ -154,6 +155,36 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
         reason: RevocationReason,
+    },
+    #[serde(rename = "key.rotate")]
+    KeyRotate {
+        /// The current (previous) identity's key.
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// The successor's key; it countersigns to prove possession.
+        next_key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        next_passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_next_fingerprint: String,
+        reason: rotation::RotationReason,
+        output: String,
+    },
+    #[serde(rename = "rotation.verify")]
+    RotationVerify {
+        /// ipg-rotation-v1 statements in order from the pinned identity.
+        #[schemars(schema_with = "crate::contract::rotation_chain")]
+        inputs: Vec<String>,
+        /// Public identity file of the pinned starting identity.
+        signer: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// Write the final successor's public identity here.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output: Option<String>,
     },
     #[serde(rename = "revocation.verify")]
     RevocationVerify {
@@ -923,6 +954,17 @@ pub enum Outcome {
         authority: delegation::Authority,
         authenticated: bool,
     },
+    RotationVerified {
+        previous: String,
+        /// The final successor's fingerprint.
+        current: String,
+        /// Every successor in order.
+        chain: Vec<String>,
+        reasons: Vec<rotation::RotationReason>,
+        authenticated: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+    },
     AuditAppended {
         path: String,
         seq: u64,
@@ -1127,6 +1169,8 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::KeyRotate { .. } => "key.rotate",
+            Self::RotationVerify { .. } => "rotation.verify",
             Self::AuditInit { .. } => "audit.init",
             Self::AuditAppend { .. } => "audit.append",
             Self::AuditCheckpoint { .. } => "audit.checkpoint",
@@ -1304,7 +1348,8 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
             }
             Ok(())
         }
-        Request::OpenpgpDecrypt { .. }
+        Request::KeyRotate { .. }
+        | Request::OpenpgpDecrypt { .. }
         | Request::OpenpgpSign { .. }
         | Request::OpenpgpKeyExport { .. }
         | Request::OpenpgpMessageVerify { key: Some(_), .. } => Err(Error::new(
@@ -1436,7 +1481,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"rotation":ipg_json::schema_for!(rotation::Rotation),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -2044,6 +2089,64 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
                 delegation,
+            })
+        }
+        Request::KeyRotate {
+            key,
+            passphrase_file,
+            expected_fingerprint,
+            next_key,
+            next_passphrase_file,
+            expected_next_fingerprint,
+            reason,
+            output,
+        } => {
+            require_absent(&output)?;
+            let (old, new) = (load_key(&key)?, load_key(&next_key)?);
+            old.public().pin(&expected_fingerprint)?;
+            new.public().pin(&expected_next_fingerprint)?;
+            let next_credential = credential(next_passphrase_file)?;
+            let credential = credential(passphrase_file)?;
+            let previous = provider::open(&old, credential.as_deref().map(Vec::as_slice), host)?;
+            let next = provider::open(&new, next_credential.as_deref().map(Vec::as_slice), host)?;
+            let rotation = rotation::rotate(&*previous, &*next, reason, delegation::now()?)?;
+            Ok(with_custody(
+                save(
+                    output,
+                    &rotation,
+                    "rotation",
+                    Some(new.public().fingerprint.clone()),
+                )?,
+                previous.custody(),
+            ))
+        }
+        Request::RotationVerify {
+            inputs,
+            signer,
+            expected_fingerprint,
+            output,
+        } => {
+            if inputs.is_empty() || inputs.len() > rotation::MAX_CHAIN {
+                return Err(Error::new(
+                    "invalid_request",
+                    "A rotation chain needs 1..16 statements",
+                ));
+            }
+            let start: PublicKey = load(&signer)?;
+            let chain: Vec<rotation::Rotation> =
+                inputs.iter().map(|i| load(i)).collect::<Result<_>>()?;
+            let successors = rotation::follow(&start, &expected_fingerprint, &chain)?;
+            let current = successors.last().expect("non-empty chain").clone();
+            if let Some(output) = &output {
+                write_new(output, &ipg_json::to_vec_pretty(&current)?)?;
+            }
+            Ok(Outcome::RotationVerified {
+                previous: start.fingerprint,
+                current: current.fingerprint,
+                chain: successors.into_iter().map(|p| p.fingerprint).collect(),
+                reasons: chain.iter().map(|r| r.reason).collect(),
+                authenticated: true,
+                path: output,
             })
         }
         Request::AuditInit { output } => {

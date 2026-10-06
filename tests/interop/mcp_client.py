@@ -167,11 +167,15 @@ async def exercise(executable, directory):
     # session so each stays under the per-session rate limit.
     async with connect() as client:
         checked = CheckedClient(client, (await client.list_tools()).tools)
+        successor = await checked.call("key.generate", {"output": path("successor"), "passphrase_file": path("pass")})
         Path(path("document.json")).write_text('{"b": [1.0, 2], "a": "x"}')
         Path(path("reordered.json")).write_text('{"a":"x","b":[1,2e0]}')
         await checked.call("json.sign", {"input": path("document.json"), "output": path("json-signature"), "key": path("key"), "passphrase_file": path("pass")})
         json_verified = await checked.call("json.verify", {"input": path("reordered.json"), "signature": path("json-signature"), "signer": path("public"), "expected_fingerprint": fingerprint})
         assert json_verified["valid"] is True
+        await checked.call("key.rotate", {"key": path("key"), "passphrase_file": path("pass"), "expected_fingerprint": fingerprint, "next_key": path("successor"), "next_passphrase_file": path("pass"), "expected_next_fingerprint": successor["fingerprint"], "reason": "upgraded", "output": path("rotation")})
+        rotated = await checked.call("rotation.verify", {"inputs": [path("rotation")], "signer": path("public"), "expected_fingerprint": fingerprint})
+        assert rotated["current"] == successor["fingerprint"]
         await checked.call("audit.init", {"output": path("audit-log")})
         Path(path("audit-event")).write_text('{"agent": "mcp", "step": 1}')
         appended = await checked.call("audit.append", {"log": path("audit-log"), "event": path("audit-event")})
@@ -187,7 +191,7 @@ async def exercise(executable, directory):
         attested = await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("message")}], "action": "relay"})
         assert attested["verified_subjects"] == ["message"] and attested["statement"]["agent"] == fingerprint
         await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("agent-message")}]}, error="authentication_failed")
-        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("statement", "dsse_envelope")]:
+        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("rotation", "rotation"), ("statement", "dsse_envelope")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))

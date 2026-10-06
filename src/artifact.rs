@@ -132,6 +132,12 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-rotation-v1" => {
+            let value: crate::rotation::Rotation = ipg_json::from_slice(data)?;
+            value.validate()?;
+            // The claimed successor; authenticated only by rotation.verify.
+            Some(value.next.fingerprint)
+        }
         "ipg-audit-checkpoint-v1" => {
             let value: crate::audit::Checkpoint = ipg_json::from_slice(data)?;
             value.validate()?;

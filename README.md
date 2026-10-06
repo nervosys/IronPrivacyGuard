@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 69 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 71 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -125,7 +125,7 @@ For a persistent process, use `ipg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `ipg mcp`. It exposes all 69 operations as tools named
+For MCP clients, use `ipg mcp`. It exposes all 71 operations as tools named
 `ipg_discover`, `ipg_knowledge`, `ipg_knowledge_search`, `ipg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -171,6 +171,7 @@ ipg knowledge search --query "openpgp"
 | Sign structured JSON that survives re-serialization | `json.canonicalize`, `json.sign`, `json.verify` |
 | Record verifiable provenance of agent actions | `provenance.attest`, `provenance.verify` |
 | Require m-of-n approvals before an agent acts | `approval.sign`, `quorum.verify` |
+| Rotate an identity to a successor key | `key.rotate`, `rotation.verify` |
 | Keep a tamper-evident audit log of agent activity | `audit.init`, `audit.append`, `audit.checkpoint`, `audit.verify`; `ipg mcp --audit-log` |
 | Delegate scoped authority to agents | `grant.issue`, `grant.verify`, then `verify` or `stream.verify` with `delegation` |
 | Identify native artifacts | `inspect` |
@@ -502,6 +503,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |
 | `src/jcs.rs`, `src/json_signature.rs` | RFC 8785 canonicalization and ipg-json-signature-v1 |
+| `src/rotation.rs` | ipg-rotation-v1 statements and chain following |
 | `src/audit.rs` | ipg-audit-v1 hash-chained logs, locking appends and signed checkpoints |
 | `src/approval.rs` | ipg-approval-v1 approvals and m-of-n quorum checks |
 | `src/provenance.rs` | DSSE in-toto statements with the IPG agent-action predicate |
@@ -521,6 +523,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/security.rs` | Security regressions, workflow and protocol tests |
 | `tests/lifecycle.rs` | Rewrapping, certificate tampering, signature separation, CLI lifecycle |
 | `tests/messages.rs` | Message binding, replay, tampering, attached delegation and host-pinned grants |
+| `tests/rotation.rs` | Rotation chains, countersignatures, ordering, cycles and delegated refusal |
 | `tests/audit.rs` | Chain tampering, truncation, rewritten history, locking and MCP call recording |
 | `tests/quorum.rs` | Distinct approvers, content and action binding, revocation, expiry and host pinning |
 | `tests/provenance.rs` | JSON re-serialization, provenance binding, tampering, delegation and host pinning |

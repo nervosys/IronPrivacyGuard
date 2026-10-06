@@ -96,6 +96,18 @@
     "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
   },
   {
+    "id": "rotate-identity",
+    "label": "Rotate an identity to a successor key",
+    "keywords": ["rotation", "rotate", "key rollover", "successor", "key update", "rekey", "migrate key"],
+    "goals": ["identity-policy"],
+    "support": "implemented",
+    "operations": ["key.generate", "key.rotate", "rotation.verify", "trust.add"],
+    "prerequisites": ["Both the current and the successor private keys", "Relying parties hold a pinned fingerprint of an identity earlier in the chain"],
+    "limitations": ["Not revocation: the previous key stays valid until revoked or expired", "Proves nothing if the previous key was compromised; revoke instead", "Chains of at most 16 statements"],
+    "guidance": "Generate the successor, run key.rotate with both keys and publish the statement. Relying parties run rotation.verify from their pinned fingerprint, check trust snapshots for revocations, then pin the new fingerprint with trust.add. Revoke the old key once peers have moved.",
+    "sources": ["https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final"]
+  },
+  {
     "id": "tamper-evident-audit",
     "label": "Keep a tamper-evident audit log of agent activity",
     "keywords": ["audit", "audit log", "tamper-evident", "hash chain", "append-only", "transparency", "forensics", "accountability"],

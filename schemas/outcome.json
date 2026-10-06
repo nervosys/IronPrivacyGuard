@@ -753,6 +753,20 @@
       ],
       "type": "string"
     },
+    "RotationReason": {
+      "oneOf": [
+        {
+          "const": "scheduled",
+          "description": "Planned replacement.",
+          "type": "string"
+        },
+        {
+          "const": "upgraded",
+          "description": "Replaced by a stronger suite or custody, such as hardware or post-quantum keys.",
+          "type": "string"
+        }
+      ]
+    },
     "State": {
       "description": "The verified state of a log.",
       "properties": {
@@ -1454,6 +1468,52 @@
       "required": [
         "kind",
         "authority",
+        "authenticated"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "chain": {
+          "description": "Every successor in order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current": {
+          "description": "The final successor's fingerprint.",
+          "type": "string"
+        },
+        "kind": {
+          "const": "rotation_verified",
+          "type": "string"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous": {
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "$ref": "#/$defs/RotationReason"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "previous",
+        "current",
+        "chain",
+        "reasons",
         "authenticated"
       ],
       "type": "object"

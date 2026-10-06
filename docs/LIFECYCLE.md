@@ -79,3 +79,37 @@ remain necessary after retirement; the certificate does not destroy that ability
 
 Identity validity uses separate signed certificates and pinned v2 trust snapshots.
 See [TRUST.md](TRUST.md) for issuance, import, narrowing and clock enforcement.
+
+## Rotation: ipg-rotation-v1
+
+`key.rotate` has the current identity name a successor. Both keys sign one
+statement, so the successor proves it holds its private key:
+
+```json
+{"format":"ipg-rotation-v1","previous":"<fingerprint>","next":{<successor public identity>},
+ "reason":"scheduled","time":1767225600,
+ "previous_algorithm":"ed25519","previous_signature":"<hex>",
+ "next_algorithm":"ed25519","next_signature":"<hex>"}
+```
+
+`reason` is `scheduled` or `upgraded`, for example a move to hardware custody or
+a post-quantum suite. Each signature uses its own key's suite, over:
+
+```text
+frame("IPG rotation v1", previous, next.format, next.encryption_key,
+      next.signing_key, next.fingerprint, reason, u64 time,
+      previous_algorithm, next_algorithm)
+```
+
+`rotation.verify` follows 1..16 statements in order from a pinned identity.
+Each statement must continue from the current identity, carry both valid
+signatures, never return to an earlier identity, and not run backwards in time.
+It reports every successor and can write the final public identity to `output`,
+ready to pin.
+
+A rotation is not revocation. The previous key remains valid until it is
+revoked or expires, so revoke it once peers have moved. A rotation signed by a
+compromised key proves nothing: revoke compromised keys with `key.revoke`, and
+check every identity in a chain against a trust snapshot before relying on it.
+Rotation needs both private keys and is refused in sessions confined by a
+pinned delegation grant.
