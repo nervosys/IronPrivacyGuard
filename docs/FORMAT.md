@@ -265,6 +265,14 @@ optional channel binding, and an `ipg-envelope-v1` carrying the signature, an
 optional attached grant and the content. The signed framing, opening checks and
 replay markers are specified in [MESSAGES.md](MESSAGES.md).
 
+## JSON signature: ipg-json-signature-v1
+
+A detached signature over the signer fingerprint and the SHA-384 of a JSON
+document's RFC 8785 canonical form, so re-serialization does not break it.
+Provenance statements are standard DSSE envelopes holding canonical in-toto v1
+statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
+[PROVENANCE.md](PROVENANCE.md).
+
 ## Delegation grant: ipg-grant-v1
 
 A chain of 1..8 signed links from a root principal to an acting identity. Each

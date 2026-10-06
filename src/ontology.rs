@@ -266,6 +266,61 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "json.canonicalize",
+        "Write the RFC 8785 canonical form of a strict I-JSON document and report its SHA-384",
+        &["JsonDocument"],
+        &["CanonicalJson"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "json.sign",
+        "Sign the SHA-384 of a JSON document's RFC 8785 canonical form, so re-serialization does not break the signature",
+        &["JsonDocument", "SecretKey", "Passphrase"],
+        &["JsonSignature"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "json.verify",
+        "Verify a JSON signature against a pinned signer over the document's canonical form, optionally requiring a delegation grant",
+        &[
+            "JsonDocument",
+            "JsonSignature",
+            "PublicKey",
+            "Fingerprint",
+            "Grant",
+        ],
+        &["Verification"],
+        &["read_file"],
+    ),
+    (
+        "provenance.attest",
+        "Sign an in-toto v1 statement in a DSSE envelope recording the artifacts an agent produced and consumed, its declared action, purpose, parameters and the host time",
+        &[
+            "ProvenanceArtifact",
+            "ProvenanceAction",
+            "GrantPurpose",
+            "JsonDocument",
+            "SecretKey",
+            "Passphrase",
+        ],
+        &["ProvenanceStatement"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "provenance.verify",
+        "Authenticate a DSSE provenance statement from a pinned signer and check named artifact files against their recorded digests",
+        &[
+            "ProvenanceStatement",
+            "ProvenanceArtifact",
+            "ProvenanceAction",
+            "PublicKey",
+            "Fingerprint",
+            "Grant",
+        ],
+        &["ProvenanceVerification"],
+        &["read_file"],
+    ),
+    (
         "hash",
         "Compute a SHA-256 content digest",
         &["Plaintext"],
@@ -491,6 +546,8 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "grant.issue",
+    "json.sign",
+    "provenance.attest",
     "message.open",
     "message.seal",
     "key.public",
@@ -561,6 +618,27 @@ pub fn operation(id: &str) -> Value {
             "delegation-attenuation",
             "delegation-not-authorization",
             "host-clock",
+        ],
+        "json.canonicalize" => vec!["canonical-json", "no-clobber"],
+        "json.sign" => vec!["canonical-json", "secret-channel", "no-clobber"],
+        "json.verify" => vec![
+            "identity-pin",
+            "canonical-json",
+            "delegation-attenuation",
+            "delegation-not-authorization",
+        ],
+        "provenance.attest" => vec![
+            "canonical-json",
+            "provenance-claims",
+            "host-clock",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "provenance.verify" => vec![
+            "identity-pin",
+            "provenance-claims",
+            "delegation-attenuation",
+            "delegation-not-authorization",
         ],
         "key.generate" | "key.public" | "sign" | "stream.sign" => {
             vec!["secret-channel", "no-clobber"]
@@ -741,6 +819,10 @@ pub fn operation(id: &str) -> Value {
             | "grant.verify"
             | "message.seal"
             | "message.open"
+            | "json.sign"
+            | "json.verify"
+            | "provenance.attest"
+            | "provenance.verify"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -778,7 +860,11 @@ pub fn operation(id: &str) -> Value {
         }
         "grant.issue" => vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"],
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
-        "grant.verify" => vec!["ed25519", "sha2-384"],
+        "grant.verify" | "json.verify" | "provenance.verify" => vec!["ed25519", "sha2-384"],
+        "json.sign" | "provenance.attest" => {
+            vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"]
+        }
+        "json.canonicalize" => vec!["sha2-384"],
         "message.seal" => vec![
             "x25519",
             "hkdf-sha2-256",
@@ -840,7 +926,8 @@ pub fn operation(id: &str) -> Value {
         "key.generate" | "key.rewrap" => &["ml-kem-768", "ml-dsa-65"],
         "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
         | "revocation.verify" | "validity.verify" | "grant.issue" | "grant.verify"
-        | "trust.add" | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
+        | "json.sign" | "json.verify" | "provenance.attest" | "provenance.verify" | "trust.add"
+        | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
         | "trust.compare" | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
         _ => &[],
     };
@@ -859,6 +946,10 @@ pub fn operation(id: &str) -> Value {
             | "stream.verify"
             | "message.seal"
             | "message.open"
+            | "json.sign"
+            | "json.verify"
+            | "provenance.attest"
+            | "provenance.verify"
     );
     if matches!(*id, "stream.sign" | "stream.verify") && !algorithms.contains(&"sha2-384") {
         algorithms.push("sha2-384");
@@ -1210,6 +1301,41 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "JsonDocument",
+            "Strict I-JSON (RFC 7493): UTF-8, no duplicate member names, no lone surrogates and integers within plus or minus 2^53; untrusted until a signature over it verifies",
+            "untrusted",
+        ),
+        (
+            "CanonicalJson",
+            "RFC 8785 JSON Canonicalization Scheme bytes: sorted members, no whitespace, ECMAScript numbers and minimal string escapes",
+            "public",
+        ),
+        (
+            "JsonSignature",
+            "An ipg-json-signature-v1 detached signature over the signer fingerprint and the SHA-384 of a document's RFC 8785 canonical form",
+            "public",
+        ),
+        (
+            "ProvenanceArtifact",
+            "A named file whose SHA-384 is recorded in a statement as a subject (produced) or material (consumed)",
+            "public",
+        ),
+        (
+            "ProvenanceAction",
+            "Agent-declared action label of 1..64 ASCII characters, such as build, deploy or review; a claim, not evidence that the action happened",
+            "untrusted",
+        ),
+        (
+            "ProvenanceStatement",
+            "A DSSE envelope (payloadType application/vnd.in-toto+json) holding a canonical in-toto Statement v1 with the IPG agent-action predicate, signed over the DSSE pre-authentication encoding",
+            "public",
+        ),
+        (
+            "ProvenanceVerification",
+            "Authenticated statement content (agent, action, purpose, recording time, subjects, materials, parameters, statement digest) and the subjects whose files matched",
+            "public",
+        ),
+        (
             "Message",
             "An ipg-message-v1 agent message: a signed header (sender, recipient, message ID, conversation, created, expires, channel binding) and an envelope sealing the signature, optional grant and content",
             "ciphertext",
@@ -1236,7 +1362,7 @@ pub fn export() -> Value {
         ),
         (
             "DelegableOperation",
-            "Closed vocabulary of private-key operations a grant may delegate: decrypt, sign, stream.decrypt, stream.sign",
+            "Closed vocabulary of private-key operations a grant may delegate: decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
             "public",
         ),
         (
@@ -1381,6 +1507,14 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "canonical-json",
+            "JSON is signed through its RFC 8785 canonical form. Inputs must be strict I-JSON: duplicate names, lone surrogates, non-finite numbers and integers beyond plus or minus 2^53 are refused rather than silently rounded. Whitespace, member order and number spelling never change a signature.",
+        ),
+        (
+            "provenance-claims",
+            "A verified provenance statement proves which pinned identity signed which artifact digests, action, purpose and parameters at its own recorded host time. It does not prove the action happened as described, that the materials were the only inputs, or that the agent was authorized; combine it with delegation, trust snapshots and independent checks.",
         ),
         (
             "host-clock",
@@ -1668,6 +1802,11 @@ pub fn export() -> Value {
             "delegate-signing",
             vec!["grant.issue", "grant.verify", "sign", "verify"],
         ),
+        ("sign-structured-data", vec!["json.sign", "json.verify"]),
+        (
+            "attest-agent-action",
+            vec!["provenance.attest", "inspect", "provenance.verify"],
+        ),
         ("create-identity", vec!["key.generate", "key.public"]),
         (
             "create-hardware-identity",
@@ -1728,5 +1867,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.37.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.38.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

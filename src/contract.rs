@@ -293,6 +293,36 @@ pub fn time_end(_: &mut SchemaGenerator) -> Schema {
 }
 fixed!(grant_format, crate::delegation::FORMAT);
 fixed!(message_format, crate::message::FORMAT);
+fixed!(json_signature_format, crate::json_signature::FORMAT);
+fixed!(canonicalization, crate::json_signature::CANONICALIZATION);
+fixed!(intoto_payload_type, crate::provenance::PAYLOAD_TYPE);
+pub fn base64_text(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "pattern":"^[A-Za-z0-9+/]*={0,2}$", "contentEncoding":"base64"})
+}
+pub fn dsse_signatures(generator: &mut SchemaGenerator) -> Schema {
+    let item = generator.subschema_for::<crate::provenance::EnvelopeSignature>();
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::provenance::MAX_SIGNATURES, "items":item})
+}
+pub fn provenance_action(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":1, "maxLength":crate::provenance::MAX_ACTION_BYTES,
+        "pattern":"^[A-Za-z0-9._:/-]+$", "description":"Declared action, such as build, deploy or review."})
+}
+pub fn optional_provenance_action(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":["string","null"], "minLength":1, "maxLength":crate::provenance::MAX_ACTION_BYTES,
+        "pattern":"^[A-Za-z0-9._:/-]+$"})
+}
+pub fn artifact_name(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "minLength":1, "maxLength":crate::provenance::MAX_NAME_BYTES,
+        "pattern":"^[^\\u0000-\\u001f\\u007f-\\u009f]+$", "description":"Name recorded in the statement; unique within subjects or materials."})
+}
+pub fn provenance_subjects(generator: &mut SchemaGenerator) -> Schema {
+    let item = generator.subschema_for::<crate::ProvenanceArtifact>();
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::provenance::MAX_ARTIFACTS, "items":item})
+}
+pub fn provenance_materials(generator: &mut SchemaGenerator) -> Schema {
+    let item = generator.subschema_for::<crate::ProvenanceArtifact>();
+    json_schema!({"type":"array", "maxItems":crate::provenance::MAX_ARTIFACTS, "items":item})
+}
 pub fn message_lifetime(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"integer", "minimum":1, "maximum":crate::message::MAX_LIFETIME,
         "description":"Seconds from the host clock until the message expires."})

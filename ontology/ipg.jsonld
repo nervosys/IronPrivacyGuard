@@ -336,6 +336,48 @@
       "sensitivity": "public"
     },
     {
+      "@id": "ipg:JsonDocument",
+      "@type": "ipg:Entity",
+      "description": "Strict I-JSON (RFC 7493): UTF-8, no duplicate member names, no lone surrogates and integers within plus or minus 2^53; untrusted until a signature over it verifies",
+      "sensitivity": "untrusted"
+    },
+    {
+      "@id": "ipg:CanonicalJson",
+      "@type": "ipg:Entity",
+      "description": "RFC 8785 JSON Canonicalization Scheme bytes: sorted members, no whitespace, ECMAScript numbers and minimal string escapes",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:JsonSignature",
+      "@type": "ipg:Entity",
+      "description": "An ipg-json-signature-v1 detached signature over the signer fingerprint and the SHA-384 of a document's RFC 8785 canonical form",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:ProvenanceArtifact",
+      "@type": "ipg:Entity",
+      "description": "A named file whose SHA-384 is recorded in a statement as a subject (produced) or material (consumed)",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:ProvenanceAction",
+      "@type": "ipg:Entity",
+      "description": "Agent-declared action label of 1..64 ASCII characters, such as build, deploy or review; a claim, not evidence that the action happened",
+      "sensitivity": "untrusted"
+    },
+    {
+      "@id": "ipg:ProvenanceStatement",
+      "@type": "ipg:Entity",
+      "description": "A DSSE envelope (payloadType application/vnd.in-toto+json) holding a canonical in-toto Statement v1 with the IPG agent-action predicate, signed over the DSSE pre-authentication encoding",
+      "sensitivity": "public"
+    },
+    {
+      "@id": "ipg:ProvenanceVerification",
+      "@type": "ipg:Entity",
+      "description": "Authenticated statement content (agent, action, purpose, recording time, subjects, materials, parameters, statement digest) and the subjects whose files matched",
+      "sensitivity": "public"
+    },
+    {
       "@id": "ipg:Message",
       "@type": "ipg:Entity",
       "description": "An ipg-message-v1 agent message: a signed header (sender, recipient, message ID, conversation, created, expires, channel binding) and an envelope sealing the signature, optional grant and content",
@@ -368,7 +410,7 @@
     {
       "@id": "ipg:DelegableOperation",
       "@type": "ipg:Entity",
-      "description": "Closed vocabulary of private-key operations a grant may delegate: decrypt, sign, stream.decrypt, stream.sign",
+      "description": "Closed vocabulary of private-key operations a grant may delegate: decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
       "sensitivity": "public"
     },
     {
@@ -2493,6 +2535,376 @@
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
+      "@id": "ipg:operation/json.canonicalize",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/canonical-json",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Write the RFC 8785 canonical form of a strict I-JSON document and report its SHA-384",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "json.canonicalize",
+      "inputs": [
+        "ipg:JsonDocument"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_json_canonicalize",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:CanonicalJson"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "json.canonicalize"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/json.sign",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/canonical-json",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Sign the SHA-384 of a JSON document's RFC 8785 canonical form, so re-serialization does not break the signature",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "json.sign",
+      "inputs": [
+        "ipg:JsonDocument",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_json_sign",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:JsonSignature"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "json.sign"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/json.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/canonical-json",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Verify a JSON signature against a pinned signer over the document's canonical form, optionally requiring a delegation grant",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "json.verify",
+      "inputs": [
+        "ipg:JsonDocument",
+        "ipg:JsonSignature",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:Grant"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_json_verify",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:Verification"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "json.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/provenance.attest",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/canonical-json",
+        "ipg:constraint/provenance-claims",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Sign an in-toto v1 statement in a DSSE envelope recording the artifacts an agent produced and consumed, its declared action, purpose, parameters and the host time",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "provenance.attest",
+      "inputs": [
+        "ipg:ProvenanceArtifact",
+        "ipg:ProvenanceAction",
+        "ipg:GrantPurpose",
+        "ipg:JsonDocument",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_provenance_attest",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:ProvenanceStatement"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "provenance.attest"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/provenance.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/provenance-claims",
+        "ipg:constraint/delegation-attenuation",
+        "ipg:constraint/delegation-not-authorization",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Authenticate a DSSE provenance statement from a pinned signer and check named artifact files against their recorded digests",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "provenance.verify",
+      "inputs": [
+        "ipg:ProvenanceStatement",
+        "ipg:ProvenanceArtifact",
+        "ipg:ProvenanceAction",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:Grant"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_provenance_verify",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:ProvenanceVerification"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "provenance.verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
       "@id": "ipg:operation/hash",
       "@type": "ipg:Operation",
       "algorithms": [
@@ -4246,6 +4658,18 @@
       "severity": "critical"
     },
     {
+      "@id": "ipg:constraint/canonical-json",
+      "@type": "ipg:Constraint",
+      "requirement": "JSON is signed through its RFC 8785 canonical form. Inputs must be strict I-JSON: duplicate names, lone surrogates, non-finite numbers and integers beyond plus or minus 2^53 are refused rather than silently rounded. Whitespace, member order and number spelling never change a signature.",
+      "severity": "critical"
+    },
+    {
+      "@id": "ipg:constraint/provenance-claims",
+      "@type": "ipg:Constraint",
+      "requirement": "A verified provenance statement proves which pinned identity signed which artifact digests, action, purpose and parameters at its own recorded host time. It does not prove the action happened as described, that the materials were the only inputs, or that the agent was authorized; combine it with delegation, trust snapshots and independent checks.",
+      "severity": "critical"
+    },
+    {
       "@id": "ipg:constraint/host-clock",
       "@type": "ipg:Constraint",
       "requirement": "Time-bounded evidence is evaluated at the host clock; caller-supplied times never authorize actions.",
@@ -4797,6 +5221,37 @@
           },
           {
             "@id": "ipg:operation/verify"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "ipg:workflow/sign-structured-data",
+      "@type": "ipg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "ipg:operation/json.sign"
+          },
+          {
+            "@id": "ipg:operation/json.verify"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "ipg:workflow/attest-agent-action",
+      "@type": "ipg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "ipg:operation/provenance.attest"
+          },
+          {
+            "@id": "ipg:operation/inspect"
+          },
+          {
+            "@id": "ipg:operation/provenance.verify"
           }
         ]
       }
@@ -5427,6 +5882,90 @@
       ]
     },
     {
+      "@id": "ipg:application/sign-structured-data",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/content-authenticity"
+      ],
+      "guidance": "Sign the document an agent produced or a tool call it will make, and verify with the signer pinned before acting on it. Whitespace, member order and number spelling may change in transit without breaking the signature; any change in meaning does. Add a delegation requirement when the signer acts for a principal.",
+      "id": "sign-structured-data",
+      "keywords": [
+        "json",
+        "jcs",
+        "rfc 8785",
+        "canonical",
+        "canonicalization",
+        "structured data",
+        "tool call",
+        "agent output",
+        "api payload"
+      ],
+      "label": "Sign structured JSON so it survives re-serialization",
+      "limitations": [
+        "Input must be strict I-JSON: duplicate names, lone surrogates and integers beyond plus or minus 2^53 are refused",
+        "Documents are file-based and at most 32 MiB",
+        "Signatures are detached; the document travels separately"
+      ],
+      "prerequisites": [
+        "A signer identity",
+        "Relying parties hold the signer's public identity and an independently trusted fingerprint"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc8785",
+        "https://www.rfc-editor.org/rfc/rfc7493"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/json.canonicalize",
+        "ipg:operation/json.sign",
+        "ipg:operation/json.verify"
+      ]
+    },
+    {
+      "@id": "ipg:application/agent-action-provenance",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/content-authenticity",
+        "ipg:goal/provenance"
+      ],
+      "guidance": "Attest each consequential action with the outputs as subjects, the inputs as materials, a short action label and the grant's purpose. Verifiers pin the agent, check every artifact they will use, require the expected action, and add a delegation requirement so only authorized agents' statements count.",
+      "id": "agent-action-provenance",
+      "keywords": [
+        "provenance",
+        "in-toto",
+        "dsse",
+        "supply chain",
+        "slsa",
+        "agent action",
+        "build",
+        "produced",
+        "materials"
+      ],
+      "label": "Record verifiable provenance of agent actions",
+      "limitations": [
+        "A statement is the agent's signed claim, not proof the action happened as described",
+        "Digests are SHA-384 only; other algorithms in foreign statements are ignored",
+        "Ed25519 and ECDSA P-384 envelopes verify with standard DSSE tooling; composite post-quantum signatures need IPG",
+        "At most 64 subjects and 64 materials"
+      ],
+      "prerequisites": [
+        "The acting agent's identity",
+        "Relying parties hold the agent's public identity and an independently trusted fingerprint",
+        "The artifact files to check against the statement"
+      ],
+      "sources": [
+        "https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md",
+        "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md",
+        "https://slsa.dev/spec/v1.0/"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/provenance.attest",
+        "ipg:operation/provenance.verify",
+        "ipg:operation/inspect"
+      ]
+    },
+    {
       "@id": "ipg:application/delegate-agent-authority",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -6024,6 +6563,11 @@
       "label": "protocol-interoperability"
     },
     {
+      "@id": "ipg:goal/provenance",
+      "@type": "ipg:SecurityGoal",
+      "label": "provenance"
+    },
+    {
       "@id": "ipg:goal/quantum-resistant-authenticity",
       "@type": "ipg:SecurityGoal",
       "label": "quantum-resistant-authenticity"
@@ -6056,5 +6600,5 @@
   ],
   "@id": "ipg:ontology",
   "scope": "Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.37.0"
+  "version": "1.38.0"
 }

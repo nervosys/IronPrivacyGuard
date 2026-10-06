@@ -18,6 +18,8 @@ pub mod files;
 pub mod fuzz_support;
 pub mod hex;
 pub mod inline;
+pub mod jcs;
+pub mod json_signature;
 #[cfg(feature = "kms")]
 mod kms;
 pub mod knowledge;
@@ -28,6 +30,7 @@ pub mod ontology;
 pub mod openpgp;
 #[cfg(feature = "pkcs11")]
 mod pkcs11;
+pub mod provenance;
 pub mod provider;
 pub mod reconciliation;
 pub mod secrets;
@@ -259,6 +262,70 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         delegation: Option<MessageDelegation>,
         policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "json.canonicalize")]
+    JsonCanonicalize { input: String, output: String },
+    #[serde(rename = "json.sign")]
+    JsonSign {
+        input: String,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "json.verify")]
+    JsonVerify {
+        input: String,
+        signature: String,
+        signer: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        policy: Option<TrustPolicy>,
+        /// Require the signer to hold a valid delegation grant permitting `json.sign`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegation: Option<DelegationRequirement>,
+    },
+    #[serde(rename = "provenance.attest")]
+    ProvenanceAttest {
+        /// Artifacts the action produced.
+        #[schemars(schema_with = "crate::contract::provenance_subjects")]
+        subjects: Vec<ProvenanceArtifact>,
+        /// Artifacts the action consumed.
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::provenance_materials")]
+        materials: Vec<ProvenanceArtifact>,
+        #[schemars(schema_with = "crate::contract::provenance_action")]
+        action: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_grant_purpose")]
+        purpose: Option<String>,
+        /// File holding a JSON object of action parameters, at most 64 KiB.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parameters: Option<String>,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "provenance.verify")]
+    ProvenanceVerify {
+        input: String,
+        signer: String,
+        #[schemars(schema_with = "crate::contract::fingerprint")]
+        expected_fingerprint: String,
+        /// Artifacts that must match subjects of the same name.
+        #[schemars(schema_with = "crate::contract::provenance_subjects")]
+        subjects: Vec<ProvenanceArtifact>,
+        /// Require this declared action.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_provenance_action")]
+        action: Option<String>,
+        policy: Option<TrustPolicy>,
+        /// Require the signer to hold a valid delegation grant permitting `provenance.attest`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delegation: Option<DelegationRequirement>,
     },
     #[serde(rename = "encrypt")]
     Encrypt {
@@ -652,6 +719,15 @@ pub struct DelegationRequirement {
     pub purpose: Option<String>,
 }
 
+/// A named artifact file for provenance statements.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ProvenanceArtifact {
+    #[schemars(schema_with = "crate::contract::artifact_name")]
+    pub name: String,
+    pub input: String,
+}
+
 /// A pinned root whose delegation the message's attached grant must prove.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -760,6 +836,23 @@ pub enum Outcome {
     GrantVerified {
         authority: delegation::Authority,
         authenticated: bool,
+    },
+    Canonicalized {
+        path: String,
+        bytes: u64,
+        /// SHA-384 of the canonical bytes, as ipg-json-signature-v1 signs.
+        digest: String,
+    },
+    ProvenanceVerified {
+        valid: bool,
+        fingerprint: String,
+        statement: provenance::Attested,
+        /// Subjects whose files matched their recorded digests.
+        verified_subjects: Vec<String>,
+        policy_digest: Option<String>,
+        policy_checked_at: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        delegation: Option<delegation::Authority>,
     },
     MessageSealed {
         path: String,
@@ -919,6 +1012,11 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::JsonCanonicalize { .. } => "json.canonicalize",
+            Self::JsonSign { .. } => "json.sign",
+            Self::JsonVerify { .. } => "json.verify",
+            Self::ProvenanceAttest { .. } => "provenance.attest",
+            Self::ProvenanceVerify { .. } => "provenance.verify",
             Self::Encrypt { .. } => "encrypt",
             Self::Decrypt { .. } => "decrypt",
             Self::Sign { .. } => "sign",
@@ -1037,7 +1135,6 @@ fn save<T: Serialize>(
         custody: None,
     })
 }
-/// Report custody only for token-backed private-key operations.
 /// Whether any request string is inline data or a returned-output target.
 fn uses_inline(value: &Value) -> bool {
     match value {
@@ -1064,6 +1161,8 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         Request::StreamDecrypt { key, .. } => subject(key, Some("stream.decrypt")),
         Request::MessageSeal { key, .. } => subject(key, Some("message.seal")),
         Request::MessageOpen { key, .. } => subject(key, Some("message.open")),
+        Request::JsonSign { key, .. } => subject(key, Some("json.sign")),
+        Request::ProvenanceAttest { key, .. } => subject(key, Some("provenance.attest")),
         Request::KeyPublic { key, .. }
         | Request::KeyRewrap { key, .. }
         | Request::KeyRevoke { key, .. }
@@ -1119,6 +1218,7 @@ fn delegated(
     .map(Some)
 }
 
+/// Report custody only for token-backed private-key operations.
 fn with_custody(mut outcome: Outcome, key: Custody) -> Outcome {
     if let Outcome::Artifact { custody, .. } = &mut outcome {
         *custody = (key != Custody::Software).then_some(key);
@@ -1213,7 +1313,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -1818,6 +1918,186 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
+                policy_checked_at: digest.as_ref().map(|e| e.checked_at),
+                policy_digest: digest.map(|e| e.digest),
+                delegation,
+            })
+        }
+        Request::JsonCanonicalize { input, output } => {
+            let canonical = json_signature::canonical(&read(&input)?)?;
+            write_new(&output, &canonical)?;
+            Ok(Outcome::Canonicalized {
+                path: output,
+                bytes: canonical.len() as u64,
+                digest: crate::hex::encode(ic_hash::Sha384::digest(&canonical)),
+            })
+        }
+        Request::JsonSign {
+            input,
+            output,
+            key,
+            passphrase_file,
+            policy,
+        } => {
+            require_absent(&output)?;
+            let key = load_key(&key)?;
+            let digest = trust::enforce(policy.as_ref(), key.public())?;
+            let credential = credential(passphrase_file)?;
+            let data = read(&input)?;
+            let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
+            let signature = json_signature::sign(&*identity, &data)?;
+            Ok(with_custody(
+                with_policy(
+                    save(
+                        output,
+                        &signature,
+                        "json_signature",
+                        Some(key.public().fingerprint.clone()),
+                    )?,
+                    digest,
+                ),
+                identity.custody(),
+            ))
+        }
+        Request::JsonVerify {
+            input,
+            signature,
+            signer,
+            expected_fingerprint,
+            policy,
+            delegation,
+        } => {
+            let public: PublicKey = load(&signer)?;
+            public.pin(&expected_fingerprint)?;
+            let digest = trust::enforce(policy.as_ref(), &public)?;
+            json_signature::verify(
+                &public,
+                &expected_fingerprint,
+                &load(&signature)?,
+                &read(&input)?,
+            )?;
+            let delegation = delegated(delegation.as_ref(), &public, "json.sign")?;
+            Ok(Outcome::Verified {
+                valid: true,
+                fingerprint: public.fingerprint,
+                policy_checked_at: digest.as_ref().map(|e| e.checked_at),
+                policy_digest: digest.map(|e| e.digest),
+                delegation,
+            })
+        }
+        Request::ProvenanceAttest {
+            subjects,
+            materials,
+            action,
+            purpose,
+            parameters,
+            output,
+            key,
+            passphrase_file,
+            policy,
+        } => {
+            require_absent(&output)?;
+            provenance::check_action(&action)?;
+            let key = load_key(&key)?;
+            let digest = trust::enforce(policy.as_ref(), key.public())?;
+            let hash = |list: Vec<ProvenanceArtifact>| -> Result<Vec<provenance::Artifact>> {
+                list.into_iter()
+                    .map(|a| {
+                        provenance::check_name(&a.name)?;
+                        Ok(provenance::Artifact {
+                            sha384: provenance::digest(&mut inline::open(&a.input)?)?,
+                            name: a.name,
+                        })
+                    })
+                    .collect()
+            };
+            let parameters = parameters
+                .map(|path| -> Result<Value> {
+                    let bytes =
+                        read_limited(inline::open(&path)?, provenance::MAX_PARAMETERS_BYTES)?;
+                    ipg_json::from_slice(&bytes)
+                        .map_err(|_| Error::new("invalid_format", "Parameters are not strict JSON"))
+                })
+                .transpose()?;
+            let (subjects, materials) = (hash(subjects)?, hash(materials)?);
+            let statement = provenance::statement(
+                &key.public().fingerprint,
+                provenance::Action {
+                    subjects: &subjects,
+                    materials: &materials,
+                    action: &action,
+                    purpose: purpose.as_deref(),
+                    parameters,
+                    recorded_at: delegation::now()?,
+                },
+            )?;
+            let credential = credential(passphrase_file)?;
+            let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
+            let envelope = provenance::attest(&*identity, &statement)?;
+            Ok(with_custody(
+                with_policy(
+                    save(
+                        output,
+                        &envelope,
+                        "dsse_envelope",
+                        Some(key.public().fingerprint.clone()),
+                    )?,
+                    digest,
+                ),
+                identity.custody(),
+            ))
+        }
+        Request::ProvenanceVerify {
+            input,
+            signer,
+            expected_fingerprint,
+            subjects,
+            action,
+            policy,
+            delegation,
+        } => {
+            if subjects.is_empty() {
+                return Err(Error::new(
+                    "invalid_request",
+                    "Provenance verification needs at least one subject file",
+                ));
+            }
+            let public: PublicKey = load(&signer)?;
+            public.pin(&expected_fingerprint)?;
+            let digest = trust::enforce(policy.as_ref(), &public)?;
+            let (statement, recorded) =
+                provenance::verify(&public, &expected_fingerprint, &load(&input)?)?;
+            if action.as_ref().is_some_and(|a| *a != statement.action) {
+                return Err(Error::new(
+                    "policy_mismatch",
+                    "The statement records a different action",
+                ));
+            }
+            let mut verified_subjects = Vec::with_capacity(subjects.len());
+            for subject in subjects {
+                let entry = recorded
+                    .iter()
+                    .find(|a| a.name == subject.name)
+                    .ok_or_else(|| {
+                        Error::new(
+                            "policy_mismatch",
+                            "The statement does not name this subject",
+                        )
+                    })?;
+                if provenance::digest(&mut inline::open(&subject.input)?)? != entry.sha384 {
+                    return Err(Error::new(
+                        "authentication_failed",
+                        "Subject content does not match the statement",
+                    ));
+                }
+                verified_subjects.push(subject.name);
+            }
+            let delegation = delegated(delegation.as_ref(), &public, "provenance.attest")?;
+            Ok(Outcome::ProvenanceVerified {
+                valid: true,
+                fingerprint: public.fingerprint,
+                statement,
+                verified_subjects,
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
                 delegation,

@@ -62,6 +62,62 @@
       ],
       "type": "object"
     },
+    "Attested": {
+      "description": "The authenticated content of an agent-action statement.",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "materials": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "parameters": {
+          "anyOf": [
+            true,
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "purpose": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recorded_at": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "statement_digest": {
+          "description": "SHA-384 of the signed payload bytes.",
+          "type": "string"
+        },
+        "subjects": {
+          "description": "Every subject recorded in the statement.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "agent",
+        "action",
+        "recorded_at",
+        "subjects",
+        "materials",
+        "statement_digest"
+      ],
+      "type": "object"
+    },
     "Authority": {
       "description": "The authority a verified chain confers on its final subject.",
       "properties": {
@@ -1328,6 +1384,89 @@
                 "kind",
                 "authority",
                 "authenticated"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "bytes": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "digest": {
+                  "description": "SHA-384 of the canonical bytes, as ipg-json-signature-v1 signs.",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "canonicalized",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "bytes",
+                "digest"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "delegation": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Authority"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fingerprint": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "provenance_verified",
+                  "type": "string"
+                },
+                "policy_checked_at": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "policy_digest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "statement": {
+                  "$ref": "#/$defs/Attested"
+                },
+                "valid": {
+                  "type": "boolean"
+                },
+                "verified_subjects": {
+                  "description": "Subjects whose files matched their recorded digests.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "kind",
+                "valid",
+                "fingerprint",
+                "statement",
+                "verified_subjects"
               ],
               "type": "object"
             },

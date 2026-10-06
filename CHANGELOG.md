@@ -21,6 +21,14 @@
   Passphrase and PIN files refuse inline data, streaming outputs require files,
   and `ipg mcp --inline-data deny` disables both forms. Control messages are now
   bounded at 2 MiB instead of 64 KiB.
+- Added RFC 8785 canonical JSON signatures and agent provenance:
+  `json.canonicalize`, `json.sign` and `json.verify` (`ipg-json-signature-v1`
+  over the SHA-384 of the canonical form; strict I-JSON input), and
+  `provenance.attest` and `provenance.verify`, which write and check standard
+  DSSE envelopes with in-toto v1 statements, SHA-384 subject and material
+  digests and an IPG agent-action predicate. `json.sign` and
+  `provenance.attest` are delegable. Independent Python/PyCA checks cover
+  canonicalization over random documents and both directions. 63 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

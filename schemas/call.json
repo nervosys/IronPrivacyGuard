@@ -89,6 +89,27 @@
       ],
       "type": "object"
     },
+    "ProvenanceArtifact": {
+      "additionalProperties": false,
+      "description": "A named artifact file for provenance statements.",
+      "properties": {
+        "input": {
+          "type": "string"
+        },
+        "name": {
+          "description": "Name recorded in the statement; unique within subjects or materials.",
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "input"
+      ],
+      "type": "object"
+    },
     "Recipient": {
       "additionalProperties": false,
       "description": "An encryption recipient: a certificate file and its independently trusted\nprimary-key fingerprint.",
@@ -463,15 +484,17 @@
               "items": {
                 "enum": [
                   "decrypt",
+                  "json.sign",
                   "message.open",
                   "message.seal",
+                  "provenance.attest",
                   "sign",
                   "stream.decrypt",
                   "stream.sign"
                 ],
                 "type": "string"
               },
-              "maxItems": 6,
+              "maxItems": 8,
               "minItems": 1,
               "type": "array",
               "uniqueItems": true
@@ -557,8 +580,10 @@
               "description": "Require this delegable operation.",
               "enum": [
                 "decrypt",
+                "json.sign",
                 "message.open",
                 "message.seal",
+                "provenance.attest",
                 "sign",
                 "stream.decrypt",
                 "stream.sign",
@@ -777,6 +802,278 @@
             "key",
             "sender",
             "expected_sender_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "json.canonicalize",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "json.sign",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "output",
+            "key"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "delegation": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DelegationRequirement"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Require the signer to hold a valid delegation grant permitting `json.sign`."
+            },
+            "expected_fingerprint": {
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "maxLength": 96,
+              "minLength": 64,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "json.verify",
+              "type": "string"
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "signature": {
+              "type": "string"
+            },
+            "signer": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "signature",
+            "signer",
+            "expected_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "description": "Declared action, such as build, deploy or review.",
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._:/-]+$",
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "materials": {
+              "default": [],
+              "description": "Artifacts the action consumed.",
+              "items": {
+                "$ref": "#/$defs/ProvenanceArtifact"
+              },
+              "maxItems": 64,
+              "type": "array"
+            },
+            "operation": {
+              "const": "provenance.attest",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "parameters": {
+              "description": "File holding a JSON object of action parameters, at most 64 KiB.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "passphrase_file": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "purpose": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9._:/-]+$",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "subjects": {
+              "description": "Artifacts the action produced.",
+              "items": {
+                "$ref": "#/$defs/ProvenanceArtifact"
+              },
+              "maxItems": 64,
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "operation",
+            "subjects",
+            "action",
+            "output",
+            "key"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "description": "Require this declared action.",
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._:/-]+$",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "delegation": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DelegationRequirement"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Require the signer to hold a valid delegation grant permitting `provenance.attest`."
+            },
+            "expected_fingerprint": {
+              "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+              "maxLength": 96,
+              "minLength": 64,
+              "not": {
+                "pattern": "[^0-9a-f]"
+              },
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": "string"
+            },
+            "input": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "provenance.verify",
+              "type": "string"
+            },
+            "policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TrustPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "signer": {
+              "type": "string"
+            },
+            "subjects": {
+              "description": "Artifacts that must match subjects of the same name.",
+              "items": {
+                "$ref": "#/$defs/ProvenanceArtifact"
+              },
+              "maxItems": 64,
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "signer",
+            "expected_fingerprint",
+            "subjects"
           ],
           "type": "object"
         },

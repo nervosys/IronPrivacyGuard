@@ -416,7 +416,11 @@ impl Server {
                     | Request::Sign { policy, .. }
                     | Request::Verify { policy, .. }
                     | Request::MessageSeal { policy, .. }
-                    | Request::MessageOpen { policy, .. } => Some(policy),
+                    | Request::MessageOpen { policy, .. }
+                    | Request::JsonSign { policy, .. }
+                    | Request::JsonVerify { policy, .. }
+                    | Request::ProvenanceAttest { policy, .. }
+                    | Request::ProvenanceVerify { policy, .. } => Some(policy),
                     _ => None,
                 };
                 if let Some(target) = target {

@@ -25,8 +25,10 @@ pub const MAX_PURPOSE_BYTES: usize = 64;
 /// Operations that use an identity's private key and can therefore be delegated.
 pub const DELEGABLE: &[&str] = &[
     "decrypt",
+    "json.sign",
     "message.open",
     "message.seal",
+    "provenance.attest",
     "sign",
     "stream.decrypt",
     "stream.sign",
@@ -103,7 +105,7 @@ fn denied(message: &str) -> Error {
 fn sorted_unique(values: &[String]) -> bool {
     values.windows(2).all(|w| w[0] < w[1])
 }
-fn purpose_valid(purpose: &str) -> bool {
+pub(crate) fn purpose_valid(purpose: &str) -> bool {
     !purpose.is_empty()
         && purpose.len() <= MAX_PURPOSE_BYTES
         && purpose

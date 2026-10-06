@@ -8,6 +8,9 @@ use crate::{
 };
 use ipg_json::Deserialize;
 
+/// Reported format of an in-toto DSSE envelope.
+pub const DSSE_FORMAT: &str = "dsse-v1+in-toto";
+
 pub struct Metadata {
     pub format: String,
     pub fingerprint: Option<String>,
@@ -24,10 +27,24 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
     // original bytes. Routing through Value would discard duplicate members.
     #[derive(Deserialize)]
     struct Header {
-        format: String,
+        #[serde(default)]
+        format: Option<String>,
     }
     let header: Header = ipg_json::from_slice(data)?;
-    let fingerprint = match header.format.as_str() {
+    let Some(format) = header.format else {
+        // DSSE envelopes carry no format member.
+        let value: crate::provenance::Envelope = ipg_json::from_slice(data)?;
+        value.validate()?;
+        // The claimed signer; authenticated only by provenance.verify.
+        let signer = &value.signatures[0].keyid;
+        return Ok(Metadata {
+            format: DSSE_FORMAT.into(),
+            fingerprint: crate::crypto::check_fingerprint(signer)
+                .is_ok()
+                .then(|| signer.clone()),
+        });
+    };
+    let fingerprint = match format.as_str() {
         "ipg-public-v1"
         | "ipg-public-p384-v1"
         | "ipg-public-hybrid-v1"
@@ -104,6 +121,11 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-json-signature-v1" => {
+            let value: crate::json_signature::Signature = ipg_json::from_slice(data)?;
+            value.validate()?;
+            Some(value.signer)
+        }
         "ipg-message-v1" => {
             let value: crate::message::Message = ipg_json::from_slice(data)?;
             value.validate()?;
@@ -141,7 +163,7 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
         _ => return Err(Error::new("invalid_format", "Unsupported artifact format")),
     };
     Ok(Metadata {
-        format: header.format,
+        format,
         fingerprint,
     })
 }

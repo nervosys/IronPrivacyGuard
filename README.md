@@ -10,7 +10,7 @@ machine-readable contracts, JSON Schema, and a JSON-LD ontology. Agents can use
 the embedded cryptography knowledgebase to find tools by application, then
 validate and plan requests before execution.
 
-The CLI exposes 58 operations through direct commands, JSON calls, NDJSON streams,
+The CLI exposes 63 operations through direct commands, JSON calls, NDJSON streams,
 and MCP stdio. It includes password-protected identities, hybrid post-quantum
 encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS KMS, detached
 signatures, signed revocation and validity certificates, and pinned immutable trust
@@ -125,7 +125,7 @@ For a persistent process, use `ipg serve`: one Call per newline, one response pe
 newline, in order. Request IDs are echoed. This is a native NDJSON protocol, not
 MCP or JSON-RPC. See [the protocol](docs/PROTOCOL.md).
 
-For MCP clients, use `ipg mcp`. It exposes all 58 operations as tools named
+For MCP clients, use `ipg mcp`. It exposes all 63 operations as tools named
 `ipg_discover`, `ipg_knowledge`, `ipg_knowledge_search`, `ipg_key_generate`, and so on, with generated schemas.
 The host can restrict tools and pin mandatory policy at startup:
 
@@ -168,6 +168,8 @@ ipg knowledge search --query "openpgp"
 | Protect private identities | `key.generate`, `key.public`, `key.rewrap` |
 | Manage trust and lifecycle | `trust.*`, `key.revoke`, `key.validity`, certificate verification |
 | Authenticated, confidential messages between agents | `message.seal`, `message.open` |
+| Sign structured JSON that survives re-serialization | `json.canonicalize`, `json.sign`, `json.verify` |
+| Record verifiable provenance of agent actions | `provenance.attest`, `provenance.verify` |
 | Delegate scoped authority to agents | `grant.issue`, `grant.verify`, then `verify` or `stream.verify` with `delegation` |
 | Identify native artifacts | `inspect` |
 | Hardware key custody (PKCS#11 tokens, HSMs, TPM 2.0) | `hardware.*` or `tpm.*`, then any key operation with the key file |
@@ -374,6 +376,17 @@ value) and an optional attached delegation grant. `message.open` authenticates
 all of it from a pinned sender before releasing content, and with a replay
 directory refuses a second open of the same message. See [agent messages](docs/MESSAGES.md).
 
+## Structured signatures and provenance
+
+`json.sign` signs the RFC 8785 canonical form of a JSON document, so
+`json.verify` accepts the same data with different whitespace, member order or
+number spelling and refuses any change in meaning. `provenance.attest` signs an
+in-toto v1 statement in a standard DSSE envelope. The statement records the
+files an agent produced and consumed (by SHA-384), its declared action, purpose
+and parameters. `provenance.verify` checks it against a pinned agent and the
+actual files. Both can require a delegation grant. See
+[structured signatures and provenance](docs/PROVENANCE.md).
+
 ## Any-size detached signatures
 
 Any-size detached native signatures use a separate `ipg-stream-signature-v1`
@@ -473,6 +486,8 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA/prehash-ECDSA (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |
+| `src/jcs.rs`, `src/json_signature.rs` | RFC 8785 canonicalization and ipg-json-signature-v1 |
+| `src/provenance.rs` | DSSE in-toto statements with the IPG agent-action predicate |
 | `src/delegation.rs` | ipg-grant-v1 delegation chains: issue, attenuation, verification and host pinning |
 | `src/trust.rs` | Immutable snapshots, digest pins, revocation and expiry policy |
 | `src/reconciliation.rs` | Pinned snapshot comparison and conservative merging |
@@ -489,6 +504,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/security.rs` | Security regressions, workflow and protocol tests |
 | `tests/lifecycle.rs` | Rewrapping, certificate tampering, signature separation, CLI lifecycle |
 | `tests/messages.rs` | Message binding, replay, tampering, attached delegation and host-pinned grants |
+| `tests/provenance.rs` | JSON re-serialization, provenance binding, tampering, delegation and host pinning |
 | `tests/delegation.rs` | Grant issue, attenuation, verification requirements, expiry and host-pinned sessions |
 | `tests/trust.rs` | Policy enforcement, snapshot tampering, monotonic revocation, publication |
 | `tests/mcp.rs` | MCP subprocess sessions, schemas, allowlists, mandatory policy, rate limits |

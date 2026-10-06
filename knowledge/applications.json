@@ -72,6 +72,30 @@
     "sources": ["https://datatracker.ietf.org/doc/html/rfc9266", "https://datatracker.ietf.org/doc/html/rfc8446#section-7.5"]
   },
   {
+    "id": "sign-structured-data",
+    "label": "Sign structured JSON so it survives re-serialization",
+    "keywords": ["json", "jcs", "rfc 8785", "canonical", "canonicalization", "structured data", "tool call", "agent output", "api payload"],
+    "goals": ["content-authenticity"],
+    "support": "implemented",
+    "operations": ["json.canonicalize", "json.sign", "json.verify"],
+    "prerequisites": ["A signer identity", "Relying parties hold the signer's public identity and an independently trusted fingerprint"],
+    "limitations": ["Input must be strict I-JSON: duplicate names, lone surrogates and integers beyond plus or minus 2^53 are refused", "Documents are file-based and at most 32 MiB", "Signatures are detached; the document travels separately"],
+    "guidance": "Sign the document an agent produced or a tool call it will make, and verify with the signer pinned before acting on it. Whitespace, member order and number spelling may change in transit without breaking the signature; any change in meaning does. Add a delegation requirement when the signer acts for a principal.",
+    "sources": ["https://www.rfc-editor.org/rfc/rfc8785", "https://www.rfc-editor.org/rfc/rfc7493"]
+  },
+  {
+    "id": "agent-action-provenance",
+    "label": "Record verifiable provenance of agent actions",
+    "keywords": ["provenance", "in-toto", "dsse", "supply chain", "slsa", "agent action", "build", "produced", "materials"],
+    "goals": ["content-authenticity", "provenance"],
+    "support": "implemented",
+    "operations": ["provenance.attest", "provenance.verify", "inspect"],
+    "prerequisites": ["The acting agent's identity", "Relying parties hold the agent's public identity and an independently trusted fingerprint", "The artifact files to check against the statement"],
+    "limitations": ["A statement is the agent's signed claim, not proof the action happened as described", "Digests are SHA-384 only; other algorithms in foreign statements are ignored", "Ed25519 and ECDSA P-384 envelopes verify with standard DSSE tooling; composite post-quantum signatures need IPG", "At most 64 subjects and 64 materials"],
+    "guidance": "Attest each consequential action with the outputs as subjects, the inputs as materials, a short action label and the grant's purpose. Verifiers pin the agent, check every artifact they will use, require the expected action, and add a delegation requirement so only authorized agents' statements count.",
+    "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
+  },
+  {
     "id": "delegate-agent-authority",
     "label": "Delegate scoped signing or decryption authority to an agent",
     "keywords": ["delegation", "delegate", "agent", "multi-agent", "on behalf", "capability", "least privilege", "scoped authority"],
