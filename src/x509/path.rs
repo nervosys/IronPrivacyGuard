@@ -666,6 +666,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rfc822_constraints_match_mailboxes_hosts_and_subdomains() {
+        assert_eq!(mailbox(b"a@example.com", b"a@EXAMPLE.com"), Some(true));
+        assert_eq!(mailbox(b"b@example.com", b"a@example.com"), Some(false));
+        assert_eq!(mailbox(b"a@example.com", b"example.com"), Some(true));
+        assert_eq!(mailbox(b"a@mail.example.com", b"example.com"), Some(false));
+        assert_eq!(mailbox(b"a@mail.example.com", b".example.com"), Some(true));
+        assert_eq!(mailbox(b"a@example.com", b".example.com"), Some(false));
+        assert_eq!(mailbox(b"no-at-sign", b"example.com"), None);
+    }
+
+    #[test]
     fn malformed_constraint_bases_are_rejected_even_without_matching_names() {
         for encoded in [
             b"\x82\x01.".as_slice(),

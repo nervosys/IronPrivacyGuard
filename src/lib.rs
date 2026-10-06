@@ -1890,13 +1890,39 @@ pub fn schemas() -> Value {
 }
 
 pub fn execute(request: Request) -> Result<Outcome> {
-    execute_with(request, &Host::default())
+    let host = Host {
+        fips: std::env::var("IPG_ALGORITHM_POLICY").is_ok_and(|v| v == "fips"),
+        ..Host::default()
+    };
+    execute_with(request, &host)
+}
+
+/// Operations whose mechanisms are never FIPS-approved, whatever the keys.
+fn fips_refused(operation: &str) -> Option<&'static str> {
+    if operation.starts_with("openpgp.") {
+        Some("OpenPGP (legacy ciphers, Argon2/S2K, Curve25519 and SHA-1 MDC paths)")
+    } else if operation.starts_with("mls.") {
+        Some("MLS (X25519 HPKE and Ed25519 suites only)")
+    } else if operation.starts_with("backup.") {
+        Some("Shamir backup shares (not a FIPS function)")
+    } else {
+        None
+    }
 }
 
 /// Execute under host policy. Callers never choose the host policy per request.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
     let _keys = KeyCallScope::begin();
     let _paths = files::PathScope::install(host.paths.clone());
+    let _fips = crypto::FipsScope::install(host.fips);
+    if host.fips
+        && let Some(what) = fips_refused(request.operation())
+    {
+        return Err(Error::new(
+            "policy_mismatch",
+            format!("The host allows only FIPS-approved algorithms; {what} is not approved"),
+        ));
+    }
     if host.deny_inline && uses_inline(&ipg_json::to_value(&request)?) {
         return Err(inline::refused());
     }

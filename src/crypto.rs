@@ -346,6 +346,54 @@ impl Signature {
     }
 }
 
+thread_local! {
+    /// Whether the current call runs under the host's FIPS-approved-only policy.
+    static FIPS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Installs the host's algorithm policy for one call, restoring it on drop.
+pub(crate) struct FipsScope(bool);
+impl FipsScope {
+    pub(crate) fn install(on: bool) -> Self {
+        Self(FIPS.with(|f| f.replace(on)))
+    }
+}
+impl Drop for FipsScope {
+    fn drop(&mut self) {
+        FIPS.with(|f| f.set(self.0));
+    }
+}
+
+pub(crate) fn fips() -> bool {
+    FIPS.with(std::cell::Cell::get)
+}
+
+fn not_approved(what: &str) -> Error {
+    Error::new(
+        "policy_mismatch",
+        format!("The host allows only FIPS-approved algorithms; {what} is not approved"),
+    )
+}
+
+/// Under the FIPS policy only P-384 suites (ECDH/ECDSA P-384, AES-256-GCM,
+/// SHA-384, and ML-KEM-768/ML-DSA-65 in the composite suite) are usable.
+pub(crate) fn require_approved(suite: Suite) -> Result<()> {
+    if fips() && !matches!(suite, Suite::P384 | Suite::P384MlDsa) {
+        return Err(not_approved(
+            "this identity's suite (X25519, Ed25519 or ChaCha20-Poly1305)",
+        ));
+    }
+    Ok(())
+}
+
+/// Refuse a non-approved mechanism under the FIPS policy.
+pub(crate) fn require_fips_allows(what: &str) -> Result<()> {
+    if fips() {
+        return Err(not_approved(what));
+    }
+    Ok(())
+}
+
 pub fn bytes<const N: usize>(s: &str) -> Result<[u8; N]> {
     let mut out = [0; N];
     out.copy_from_slice(&hex_exact(s, N)?);
@@ -670,6 +718,7 @@ pub(crate) fn verify_message(
     signature: &str,
 ) -> Result<()> {
     let suite = public.suite()?;
+    require_approved(suite)?;
     if algorithm != suite.signature_algorithm() {
         return Err(Error::new(
             "invalid_format",
@@ -738,6 +787,7 @@ pub(crate) fn verify_message(
 /// Self-verification detects provider faults and token objects that no longer
 /// match the pinned identity before any signature leaves the process.
 pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<String> {
+    require_approved(key.public().suite()?)?;
     let public = key.public();
     let suite = public.suite()?;
     let failure = || {
@@ -764,6 +814,7 @@ pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<Stri
 }
 
 pub(crate) fn password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
+    require_fips_allows("passphrase protection (Argon2id with ChaCha20-Poly1305)")?;
     if !(16..=4096).contains(&password.len()) {
         return Err(Error::new(
             "invalid_request",
@@ -968,6 +1019,7 @@ fn open(
 /// Fresh ephemeral key pair for the recipient suite. A random P-384 scalar outside
 /// [1, n) is rejected by IronCrypto and redrawn; that occurs with negligible odds.
 pub(crate) fn ephemeral(suite: Suite) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+    require_approved(suite)?;
     match suite {
         Suite::Curve25519 | Suite::Hybrid => {
             let secret = random::<32>()?;
@@ -991,6 +1043,7 @@ pub(crate) fn ephemeral(suite: Suite) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
     }
 }
 fn ephemeral_agree(suite: Suite, secret: &[u8], peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    require_approved(suite)?;
     let mut shared = Zeroizing::new(vec![
         0;
         if matches!(suite, Suite::P384 | Suite::P384MlDsa) {
@@ -1009,6 +1062,7 @@ fn ephemeral_agree(suite: Suite, secret: &[u8], peer: &[u8]) -> Result<Zeroizing
 /// envelopes encapsulate to the recipient's ML-KEM key and agree with its X25519 key;
 /// the combined secret is `ss_ML-KEM || ss_X25519`.
 fn encapsulate(suite: Suite, recipient: &[u8]) -> Result<(Vec<u8>, Zeroizing<Vec<u8>>)> {
+    require_approved(suite)?;
     let (kem_key, classical) = match suite {
         Suite::Hybrid => recipient.split_at(ENCAPS_KEY_LEN),
         _ => (&[][..], recipient),
@@ -1061,6 +1115,7 @@ pub fn encrypt(p: &PublicKey, expected: &str, input: &[u8]) -> Result<Envelope> 
 /// Check everything that needs no private key, so bad input fails before any
 /// passphrase work or token login.
 pub(crate) fn check_envelope(public: &PublicKey, e: &Envelope) -> Result<Suite> {
+    require_approved(public.suite()?)?;
     e.validate()?;
     public.pin(&e.recipient)?;
     let suite = public.suite()?.envelope();

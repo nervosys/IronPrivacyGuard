@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Security: fixed every finding of the 2026-10 audit
+  ([SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)): authorization (delegation
+  purposes, chain revocation, MLS custody and grants), host path confinement
+  (`--root`, `--secrets-dir`), a reserved MCP audit log, faithful approval
+  prompts, an authenticate-first HTTP transport with deadlines, strict
+  canonical-JSON integers, staged multi-output publication, OpenPGP and X.509
+  hardening, wiped secret buffers and redacted KMS errors. Added `audit.repair`
+  (82 operations) and the `--algorithm-policy fips` host mode.
 - Added scoped, chained delegation grants (`ipg-grant-v1`) for agents and
   multi-agent systems: `grant.issue` and `grant.verify`, an optional `delegation`
   requirement on `verify` and `stream.verify`, and MCP host pinning with

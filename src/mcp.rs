@@ -96,6 +96,18 @@ impl Config {
                         }
                     }
                 }
+                "--algorithm-policy" => {
+                    config.host.fips = match pair[1].as_str() {
+                        "fips" => true,
+                        "any" => false,
+                        _ => {
+                            return Err(Error::new(
+                                "invalid_request",
+                                "Algorithm policy must be fips or any",
+                            ));
+                        }
+                    }
+                }
                 _ => return Err(Error::new("invalid_request", "Unknown MCP startup flag")),
             }
         }
@@ -704,7 +716,8 @@ impl Server {
                 | Request::QuorumVerify { policy, .. }
                 | Request::JsonVerify { policy, .. }
                 | Request::ProvenanceAttest { policy, .. }
-                | Request::ProvenanceVerify { policy, .. } => Some(policy),
+                | Request::ProvenanceVerify { policy, .. }
+                | Request::RotationVerify { policy, .. } => Some(policy),
                 _ => None,
             };
             if let Some(target) = target {

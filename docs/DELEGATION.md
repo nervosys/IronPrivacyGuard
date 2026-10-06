@@ -50,6 +50,12 @@ not-yet-valid or expired identity refuses the chain. Identities absent from the
 snapshot pass, so intermediates need not be enrolled, but their revocations are
 always honored.
 
+Signatures carry no trusted time, so a delegated signature is judged at the
+verifier's clock: a signature made before the grant's window
+opened verifies as delegated whenever the verifier checks inside the window. Where the time of signing matters, bind it
+separately, for example with a provenance statement, a signed audit checkpoint
+or an RFC 3161 timestamp, and keep grant windows short.
+
 A successful `verify` with `delegation` adds a `delegation` object to the result:
 root, subject, operations, purposes, window, remaining depth, link count and the
 host time of the check. Without `delegation`, results are unchanged.

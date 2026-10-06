@@ -576,3 +576,48 @@ fn audit_logs_report_regressions_repair_tails_and_respect_foreign_locks() {
     );
     assert!(std::path::Path::new(&format!("{fixed}.lock")).exists());
 }
+
+/// FIPS: the approved-only host policy refuses non-approved mechanisms.
+#[test]
+fn fips_host_policy_refuses_non_approved_algorithms() {
+    let f = Fixture::new();
+    let agent = f.identity("agent");
+    let fips = Host {
+        fips: true,
+        ..Host::default()
+    };
+    let refused = |request: Value| run(request, &fips).unwrap_err();
+    // Software keys are sealed with Argon2id and ChaCha20-Poly1305.
+    assert_eq!(
+        refused(json!({"operation":"key.generate","output":f.path("new"),
+            "passphrase_file":f.path("pass")})),
+        "policy_mismatch"
+    );
+    // Curve25519 recipients use X25519 and ChaCha20-Poly1305.
+    assert_eq!(
+        refused(
+            json!({"operation":"encrypt","input":f.path("doc"),"output":f.path("doc.ipg"),
+            "recipient":f.path("agent.public"),"expected_fingerprint":agent,"policy":null})
+        ),
+        "policy_mismatch"
+    );
+    assert_eq!(
+        refused(
+            json!({"operation":"backup.split","input":f.path("doc"),"threshold":2,
+            "outputs":[f.path("s1"), f.path("s2")]})
+        ),
+        "policy_mismatch"
+    );
+    assert_eq!(
+        refused(json!({"operation":"mls.status","state":f.path("state"),
+            "state_passphrase_file":f.path("state-pass")})),
+        "policy_mismatch"
+    );
+    // Approved digests still work, and the policy ends with the call.
+    run(json!({"operation":"hash","input":f.path("doc")}), &fips).unwrap();
+    call(
+        json!({"operation":"encrypt","input":f.path("doc"),"output":f.path("doc.ipg"),
+        "recipient":f.path("agent.public"),"expected_fingerprint":agent,"policy":null}),
+    )
+    .unwrap();
+}

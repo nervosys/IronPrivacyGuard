@@ -192,6 +192,13 @@ lost, the output may already exist. Inspect it or choose another path; do not
 automatically delete outputs. IPG has no durable request log or transaction across
 multiple operations. Each artifact is independently published.
 
+Outputs are written to a temporary file in the destination directory, synced,
+then published without replacing anything. A crash before publication can
+leave a hidden temporary file (mode 0600 on Unix) that may hold plaintext or
+secrets; remove leftovers once no writer is running. On Windows, temporary and
+output files inherit the destination directory's ACLs, so keep secrets and
+outputs in directories readable only by their owner.
+
 The orchestrator must authorize all requested paths and operations. Running
 `serve` grants access to the process identity's files; it is not a sandbox or
 an authorization server. The ontology communicates constraints but cannot

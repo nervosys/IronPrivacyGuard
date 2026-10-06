@@ -97,7 +97,13 @@ once:
 - **Order:** state is saved before the message is written. A failed write can
   lose that message but never reuses a ratchet key.
 - **Backups:** don't keep copies of old state files. They hold the secrets
-  forward secrecy is meant to erase.
+  forward secrecy is meant to erase. Restoring an old state also rolls the
+  ratchet back: the random 4-byte reuse guard makes nonce reuse unlikely, but
+  sending from a restored state is still unsafe.
+- **Crashes:** state is written to a 0600 temporary file next to the state and
+  renamed into place, and the directory is synced on Unix. A crash before the
+  rename can leave a `<state>.tmp-*` file holding sealed secrets; delete it
+  once no writer is running.
 
 ## Delivery
 

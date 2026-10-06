@@ -103,9 +103,11 @@ operation IDs are advertised and accepted. The list is fixed for the session;
 tool arguments cannot expand it. `plan` describes nested requests but never
 executes them, even if the nested operation is excluded by the allowlist.
 
-A startup policy is injected into encrypt, stream.encrypt, sign, stream.sign,
-verify and stream.verify requests. Omitted or
-null caller policy is replaced by the host policy; an explicitly different path
+A startup policy is injected into every operation that takes one: `encrypt`,
+`stream.encrypt`, `sign`, `stream.sign`, `verify`, `stream.verify`,
+`message.seal`, `message.open`, `json.sign`, `json.verify`, `approval.sign`,
+`quorum.verify`, `provenance.attest`, `provenance.verify`, `mls.commit` and
+`rotation.verify`. Omitted or null caller policy is replaced by the host policy; an explicitly different path
 or digest fails with `policy_mismatch`. Matching policy is allowed. Comparison is
 exact, not filesystem alias resolution. The host's digest is fixed for the
 session; the snapshot is checked again for each governed operation. Tools may
@@ -137,6 +139,28 @@ These controls confine IPG's own file access; they are not OS isolation.
 Configure the process identity and tool allowlist in the host too. Pinned policy
 applies to every policy-governed operation; it does not disable decryption or
 private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
+
+### Algorithm policy
+
+`--algorithm-policy fips` allows only FIPS-approved algorithms for the session
+(`any`, the default, allows all). Calls are then refused with `policy_mismatch`
+when they would use:
+
+- software keys or any passphrase-sealed file, which use Argon2id and
+  ChaCha20-Poly1305;
+- Curve25519 or `ipg-public-hybrid-v1` identities (X25519, Ed25519,
+  ChaCha20-Poly1305), as signer, recipient or verifier;
+- MLS, Shamir backups (`backup.*`) or OpenPGP (`openpgp.*`).
+
+What remains is P-384 identities (`ipg-public-p384-v1` and the composite
+`ipg-public-p384-mldsa65-v1`) with ECDH/ECDSA P-384, AES-256-GCM, SHA-384,
+ML-KEM-768 and ML-DSA-65, plus hashing and the other approved digests. Pair it
+with `--key-custody hardware` or `non-exportable` so private keys stay in
+PKCS#11, TPM or KMS modules. The direct CLI honors `IPG_ALGORITHM_POLICY=fips`.
+
+This restricts algorithms; it does not make IPG a validated module. IronCrypto
+is not CMVP-validated, so FIPS 140-3 still requires validated hardware or KMS
+for key operations (see [SECURITY_AUDIT.md](SECURITY_AUDIT.md#nist-fips-assessment)).
 
 ### Inline data
 
