@@ -14,6 +14,7 @@ import tempfile
 
 from jsonschema import Draft202012Validator
 from mcp import Client, MCPError, StdioServerParameters
+from mcp import types as mcp_types
 
 
 class CheckedClient:
@@ -50,8 +51,8 @@ async def exercise(executable, directory):
     def path(name):
         return str(directory / name)
 
-    def connect(*args, mode="auto"):
-        return Client(StdioServerParameters(command=str(executable), args=["mcp", *args]), mode=mode)
+    def connect(*args, mode="auto", **options):
+        return Client(StdioServerParameters(command=str(executable), args=["mcp", *args]), mode=mode, **options)
 
     password = os.urandom(32)
     Path(path("pass")).write_bytes(password)
@@ -195,6 +196,21 @@ async def exercise(executable, directory):
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))
+        summary["calls"] += checked.calls
+
+    # Human approval: the SDK's elicitation callback stands in for a person.
+    prompts = []
+
+    async def elicit(context, params):
+        prompts.append(params.message)
+        return mcp_types.ElicitResult(action="accept", content={"approve": len(prompts) == 1})
+
+    async with connect("--require-approval", "trust.init", elicitation_callback=elicit) as client:
+        checked = CheckedClient(client, (await client.list_tools()).tools)
+        await checked.call("trust.init", {"output": path("approved-store")})
+        await checked.call("trust.init", {"output": path("declined-store")}, error="approval_declined")
+        assert Path(path("approved-store")).exists() and not Path(path("declined-store")).exists()
+        assert len(prompts) == 2 and "ipg_trust_init" in prompts[0]
         summary["calls"] += checked.calls
 
     allowed = "encrypt,sign,verify,stream.encrypt,stream.sign,stream.verify,plan"

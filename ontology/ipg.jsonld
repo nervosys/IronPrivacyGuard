@@ -5708,6 +5708,14 @@
       "retryable": false
     },
     {
+      "@id": "ipg:error/approval_declined",
+      "@type": "ipg:Error",
+      "code": "approval_declined",
+      "exit_code": 3,
+      "recovery": "The MCP host requires a person to approve this tool, and the call was declined, dismissed or cancelled; nothing was executed. Do not retry without new instructions from a person.",
+      "retryable": false
+    },
+    {
       "@id": "ipg:error/audit_unavailable",
       "@type": "ipg:Error",
       "code": "audit_unavailable",

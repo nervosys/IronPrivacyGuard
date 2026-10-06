@@ -4,7 +4,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "knowledge",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -13,6 +14,9 @@
         "readOnlyHint": true
       },
       "description": "Read the centralized cryptography application knowledgebase and selection ontology. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -5500,7 +5504,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "knowledge.search",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -5509,6 +5514,9 @@
         "readOnlyHint": true
       },
       "description": "Find application guidance by keywords or application ID; advisory only, no execution. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -11004,7 +11012,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "request.validate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -11013,6 +11022,9 @@
         "readOnlyHint": true
       },
       "description": "Preflight candidate Request JSON without execution, filesystem access or authentication. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -16504,7 +16516,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.compare",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -16513,6 +16526,9 @@
         "readOnlyHint": true
       },
       "description": "Compare two pinned snapshots without approving or publishing either. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -22010,7 +22026,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.merge",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -22019,6 +22036,9 @@
         "readOnlyHint": false
       },
       "description": "Reconcile two pinned snapshots, retaining revocations and nested validity restrictions. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -27520,7 +27540,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.validity",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -27529,6 +27550,9 @@
         "readOnlyHint": false
       },
       "description": "Sign an identity validity window in Unix seconds. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -33058,7 +33082,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "validity.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -33067,6 +33092,9 @@
         "readOnlyHint": true
       },
       "description": "Authenticate a validity certificate without applying policy. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -38575,7 +38603,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.validity",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -38584,6 +38613,9 @@
         "readOnlyHint": false
       },
       "description": "Import or narrow signed validity into a new snapshot. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -44107,7 +44139,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.evaluate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -44116,6 +44149,9 @@
         "readOnlyHint": true
       },
       "description": "Advisory evaluation at an explicit Unix time; never authorizes operations. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -49637,7 +49673,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.init",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -49646,6 +49683,9 @@
         "readOnlyHint": false
       },
       "description": "Create an empty immutable trust snapshot. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -55139,7 +55179,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.add",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -55148,6 +55189,9 @@
         "readOnlyHint": false
       },
       "description": "Enroll a pinned identity into a new trust snapshot. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -60671,7 +60715,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.revoke",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -60680,6 +60725,9 @@
         "readOnlyHint": false
       },
       "description": "Retain a verified revocation in a new trust snapshot. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -66203,7 +66251,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "trust.status",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -66212,6 +66261,9 @@
         "readOnlyHint": true
       },
       "description": "Report enrollment and revocation in the pinned snapshot. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -71727,7 +71779,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "discover",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -71736,6 +71789,9 @@
         "readOnlyHint": true
       },
       "description": "Discover capabilities and contracts. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -77223,7 +77279,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "schema",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -77232,6 +77289,9 @@
         "readOnlyHint": true
       },
       "description": "Get request, result and artifact JSON Schemas. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -82719,7 +82779,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "ontology",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -82728,6 +82789,9 @@
         "readOnlyHint": true
       },
       "description": "Get the complete IPG JSON-LD graph. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -88215,7 +88279,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "algorithms",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -88224,6 +88289,9 @@
         "readOnlyHint": true
       },
       "description": "Get the upstream IronCrypto algorithm ontology. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -93711,7 +93779,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "plan",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -93720,6 +93789,9 @@
         "readOnlyHint": true
       },
       "description": "Describe a request without accessing files. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -99213,7 +99285,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.generate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -99222,6 +99295,9 @@
         "readOnlyHint": false
       },
       "description": "Generate independent encryption and signing keys. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -104730,7 +104806,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.public",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -104739,6 +104816,9 @@
         "readOnlyHint": false
       },
       "description": "Unlock and export the public identity. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -110243,7 +110323,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "encrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -110252,6 +110333,9 @@
         "readOnlyHint": false
       },
       "description": "Encrypt for one explicitly pinned recipient. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -115774,7 +115858,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.rewrap",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -115783,6 +115868,9 @@
         "readOnlyHint": false
       },
       "description": "Protect the same identity with a new passphrase in a new file. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -121299,7 +121387,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.revoke",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -121308,6 +121397,9 @@
         "readOnlyHint": false
       },
       "description": "Create a signed self-revocation certificate for the entire identity. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -126827,7 +126919,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "revocation.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -126836,6 +126929,9 @@
         "readOnlyHint": true
       },
       "description": "Authenticate a self-revocation certificate without applying policy. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -132344,7 +132440,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "grant.issue",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -132353,6 +132450,9 @@
         "readOnlyHint": false
       },
       "description": "Sign a scoped, time-bounded delegation grant to a pinned subject identity, optionally re-delegating within the issuer's own grant. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -137948,7 +138048,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "message.seal",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -137957,6 +138058,9 @@
         "readOnlyHint": false
       },
       "description": "Sign and encrypt content to one pinned recipient, binding sender, recipient, message ID, conversation, lifetime, optional channel binding and an optional attached grant. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -143525,7 +143629,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "message.open",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -143534,6 +143639,9 @@
         "readOnlyHint": false
       },
       "description": "Authenticate a message from a pinned sender before releasing content, checking lifetime, conversation, channel binding, optional delegation and an exclusive replay marker. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -149106,7 +149214,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "grant.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -149115,6 +149224,9 @@
         "readOnlyHint": true
       },
       "description": "Authenticate a delegation chain from a pinned root at the host clock and report the authority it confers. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -154664,7 +154776,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "decrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -154673,6 +154786,9 @@
         "readOnlyHint": false
       },
       "description": "Authenticate before releasing plaintext. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -160181,7 +160297,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "sign",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -160190,6 +160307,9 @@
         "readOnlyHint": false
       },
       "description": "Create a domain-separated detached signature. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -165708,7 +165828,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -165717,6 +165838,9 @@
         "readOnlyHint": true
       },
       "description": "Verify exact bytes against a pinned signer, optionally requiring a delegation grant. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -171250,7 +171374,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "key.rotate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -171259,6 +171384,9 @@
         "readOnlyHint": false
       },
       "description": "Have the current identity name its successor, with both keys signing one statement so the successor proves possession. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -176800,7 +176928,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "rotation.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -176809,6 +176938,9 @@
         "readOnlyHint": false
       },
       "description": "Follow a chain of rotation statements from a pinned identity and report, and optionally write, the current successor. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -182331,7 +182463,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "audit.init",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -182340,6 +182473,9 @@
         "readOnlyHint": false
       },
       "description": "Create an empty ipg-audit-v1 log with a random log ID. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -187833,7 +187969,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "audit.append",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -187842,6 +187979,9 @@
         "readOnlyHint": true
       },
       "description": "Verify a log's hash chain and append one JSON event with the host time, under an exclusive lock file. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -193341,7 +193481,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "audit.checkpoint",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -193350,6 +193491,9 @@
         "readOnlyHint": false
       },
       "description": "Sign a log's current size and head hash so later truncation or rewriting is detectable. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -198857,7 +199001,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "audit.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -198866,6 +199011,9 @@
         "readOnlyHint": true
       },
       "description": "Verify a log's hash chain and that each signed checkpoint from a pinned signer is a prefix of it. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -204384,7 +204532,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "approval.sign",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -204393,6 +204542,9 @@
         "readOnlyHint": false
       },
       "description": "Approve specific content (exact bytes or canonical JSON) for one action with a short-lived, nonce-bearing signature. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -209931,7 +210083,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "quorum.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -209940,6 +210093,9 @@
         "readOnlyHint": true
       },
       "description": "Require m distinct valid, unexpired approvals of the same content and action from n pinned approvers at the host clock. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -215483,7 +215639,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "json.canonicalize",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -215492,6 +215649,9 @@
         "readOnlyHint": false
       },
       "description": "Write the RFC 8785 canonical form of a strict I-JSON document and report its SHA-384. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -220989,7 +221149,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "json.sign",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -220998,6 +221159,9 @@
         "readOnlyHint": false
       },
       "description": "Sign the SHA-384 of a JSON document's RFC 8785 canonical form, so re-serialization does not break the signature. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -226515,7 +226679,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "json.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -226524,6 +226689,9 @@
         "readOnlyHint": true
       },
       "description": "Verify a JSON signature against a pinned signer over the document's canonical form, optionally requiring a delegation grant. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -232057,7 +232225,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "provenance.attest",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -232066,6 +232235,9 @@
         "readOnlyHint": false
       },
       "description": "Sign an in-toto v1 statement in a DSSE envelope recording the artifacts an agent produced and consumed, its declared action, purpose, parameters and the host time. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -237622,7 +237794,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "provenance.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -237631,6 +237804,9 @@
         "readOnlyHint": true
       },
       "description": "Authenticate a DSSE provenance statement from a pinned signer and check named artifact files against their recorded digests. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -243180,7 +243356,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "hash",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -243189,6 +243366,9 @@
         "readOnlyHint": true
       },
       "description": "Compute a SHA-256 content digest. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -248682,7 +248862,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "inspect",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -248691,6 +248872,9 @@
         "readOnlyHint": true
       },
       "description": "Validate artifact structure and read metadata without establishing external trust. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -254184,7 +254368,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "hardware.tokens",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -254193,6 +254378,9 @@
         "readOnlyHint": true
       },
       "description": "List tokens behind the host-configured PKCS#11 module and their P-384 mechanism support. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -259680,7 +259868,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "hardware.key.generate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -259689,6 +259878,9 @@
         "readOnlyHint": false
       },
       "description": "Generate non-exportable P-384 encryption and signing key pairs on a token and write a public reference. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -265201,7 +265393,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "hardware.key.bind",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -265210,6 +265403,9 @@
         "readOnlyHint": false
       },
       "description": "Reference existing non-exportable P-384 token keys after proving possession. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -270735,7 +270931,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "kms.key.bind",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -270744,6 +270941,9 @@
         "readOnlyHint": false
       },
       "description": "Adopt two existing AWS KMS ECC_NIST_P384 keys, plus an optional ML_DSA_65 key for composite post-quantum signatures, as an identity after proving possession. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -276279,7 +276479,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.info",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -276288,6 +276489,9 @@
         "readOnlyHint": true
       },
       "description": "Report the host TPM's identification, P-384 support and owner-hierarchy readiness. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -281775,7 +281979,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.key.generate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -281784,6 +281989,9 @@
         "readOnlyHint": false
       },
       "description": "Create non-exportable P-384 encryption and signing keys in the host TPM and write the key file. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -287282,7 +287490,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.key.delete",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -287291,6 +287500,9 @@
         "readOnlyHint": false
       },
       "description": "Permanently delete the persisted Windows TPM keys of an ipg-cng-key-v1 identity after checking its PIN. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -292790,7 +293002,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "stream.encrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -292799,6 +293012,9 @@
         "readOnlyHint": false
       },
       "description": "Encrypt a file of any size to 1..64 pinned recipients as an ipg-stream-v1 stream of authenticated 64 KiB chunks. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -298318,7 +298534,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "stream.sign",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -298327,6 +298544,9 @@
         "readOnlyHint": false
       },
       "description": "Sign any-size exact file bytes using a domain-separated SHA-384 commitment and byte count. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -303844,7 +304064,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "stream.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -303853,6 +304074,9 @@
         "readOnlyHint": true
       },
       "description": "Verify an any-size file against an ipg-stream-signature-v1 artifact and pinned signer, optionally requiring a delegation grant. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -309386,7 +309610,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "stream.decrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -309395,6 +309620,9 @@
         "readOnlyHint": false
       },
       "description": "Decrypt an ipg-stream-v1 stream, releasing plaintext only after every chunk authenticates. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -314903,7 +315131,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.attest",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -314912,6 +315141,9 @@
         "readOnlyHint": false
       },
       "description": "Certify an identity's TPM keys with the TPM's attestation key and write evidence for a verifier. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -320415,7 +320647,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.attestation.challenge",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -320424,6 +320657,9 @@
         "readOnlyHint": false
       },
       "description": "Verify TPM key evidence against manufacturer roots and issue a one-time credential challenge to the TPM's endorsement key. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -325951,7 +326187,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.attestation.respond",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -325960,6 +326197,9 @@
         "readOnlyHint": false
       },
       "description": "Release the challenge credential with TPM2_ActivateCredential, proving the attestation and endorsement keys share a TPM. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -331462,7 +331702,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "tpm.attestation.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -331471,6 +331712,9 @@
         "readOnlyHint": true
       },
       "description": "Verify the evidence and the activated credential: the identity's keys are resident, non-exportable keys of a manufacturer-certified TPM. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -336994,7 +337238,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.key.generate",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -337003,6 +337248,9 @@
         "readOnlyHint": false
       },
       "description": "Create a v4 (default) or v6 OpenPGP key (Ed25519 or P-384), sealed under a passphrase; v4 supports existing GnuPG correspondents. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -342516,7 +342764,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.key.import",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -342525,6 +342774,9 @@
         "readOnlyHint": false
       },
       "description": "Import one pinned v4 or v6 Ed25519/Curve25519 or P-384 signing primary and encryption subkey, validating bounded protection and private/public consistency before sealing under an IPG passphrase. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -348044,7 +348296,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.cert.export",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -348053,6 +348306,9 @@
         "readOnlyHint": false
       },
       "description": "Write the ASCII-armored OpenPGP certificate of an IPG-held OpenPGP key. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -353551,7 +353807,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.key.export",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -353560,6 +353817,9 @@
         "readOnlyHint": false
       },
       "description": "Export a pinned IPG-held OpenPGP key as an ASCII-armored transferable secret key, with every secret packet protected by a new passphrase. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -359078,7 +359338,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.cert.inspect",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -359087,6 +359348,9 @@
         "readOnlyHint": true
       },
       "description": "Evaluate an OpenPGP certificate under IPG policy at host time: fingerprints, User IDs, keys, flags, expiry and revocation. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -364581,7 +364845,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.encrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -364590,6 +364855,9 @@
         "readOnlyHint": false
       },
       "description": "Encrypt to 1..32 pinned OpenPGP certificates as an armored AES-256 message (SEIPDv1 for v4, SEIPDv2/OCB for v6; mixed sets refused). Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -370096,7 +370364,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.decrypt",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -370105,6 +370374,9 @@
         "readOnlyHint": false
       },
       "description": "Decrypt an integrity-protected OpenPGP message with an IPG-held OpenPGP key. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -375611,7 +375883,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.sign",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -375620,6 +375893,9 @@
         "readOnlyHint": false
       },
       "description": "Create an armored detached OpenPGP signature with an IPG-held OpenPGP key. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -381125,7 +381401,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": false,
@@ -381134,6 +381411,9 @@
         "readOnlyHint": true
       },
       "description": "Verify a detached OpenPGP signature against a pinned certificate under IPG policy. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {
@@ -386648,7 +386928,8 @@
       "_meta": {
         "ipg/keyCustody": "any",
         "ipg/operation": "openpgp.message.verify",
-        "ipg/requiredPolicy": null
+        "ipg/requiredPolicy": null,
+        "ipg/requiresApproval": false
       },
       "annotations": {
         "destructiveHint": true,
@@ -386657,6 +386938,9 @@
         "readOnlyHint": false
       },
       "description": "Verify one embedded OpenPGP document signature against a pinned certificate, optionally decrypting, and publish authenticated literal bytes. Consult ipg_ontology for constraints and ipg_plan before mutation. Files resolve relative to the server working directory.",
+      "execution": {
+        "taskSupport": "optional"
+      },
       "inputSchema": {
         "$defs": {
           "Algorithm": {

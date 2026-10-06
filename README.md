@@ -394,6 +394,14 @@ one action, for at most seven days. `quorum.verify` proceeds only when at least
 m distinct, pinned approvers have valid approvals, and reports every rejected
 one. See [structured signatures, approvals and provenance](docs/PROVENANCE.md).
 
+## Human approval for MCP tools
+
+`ipg mcp --require-approval sign,decrypt` makes each listed call wait for a
+person, asked through the client's MCP elicitation form. Declined, dismissed or
+cancelled calls never run, and clients that cannot ask a person are refused.
+Tool calls may also be task-augmented (`tasks/get`, `tasks/result`,
+`tasks/cancel`). See [MCP host controls](docs/MCP.md#human-approval).
+
 ## Tamper-evident audit logs
 
 `audit.append` adds JSON events to a hash-chained `ipg-audit-v1` log, so
@@ -529,6 +537,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `tests/provenance.rs` | JSON re-serialization, provenance binding, tampering, delegation and host pinning |
 | `tests/delegation.rs` | Grant issue, attenuation, verification requirements, expiry and host-pinned sessions |
 | `tests/trust.rs` | Policy enforcement, snapshot tampering, monotonic revocation, publication |
+| `tests/mcp_approval.rs` | Human approval by elicitation, cancellation, and task-augmented calls |
 | `tests/mcp.rs` | MCP subprocess sessions, schemas, allowlists, mandatory policy, rate limits |
 | `tests/hardware.rs` | Fail-closed hardware configuration, custody policy, pre-login checks |
 | `tests/pkcs11_live.rs` | Full hardware lifecycle against a real module (opt-in, disposable token) |

@@ -134,6 +134,48 @@ and error code). A call the log cannot record is refused with the retryable
 `audit.checkpoint` from an identity the host does not expose to agents. See
 [audit logs](AUDIT.md).
 
+### Human approval
+
+`--require-approval <operations>` (comma-separated operation IDs) makes each
+listed call wait for a person. The server answers the `tools/call` with a
+form-mode `elicitation/create` request. The request names the tool, the
+operation and its arguments, with long strings such as inline data shortened,
+and asks for one boolean, `approve`. The call runs only when the client returns
+`action: "accept"` with `approve: true`. Decline, dismissal, `approve: false`,
+an error response or cancellation return `approval_declined`, and nothing runs.
+
+Clients that did not declare the `elicitation` capability (form mode) cannot run
+gated tools; those calls fail with `policy_mismatch`. Gated tools carry
+`_meta["ipg/requiresApproval"]: true` in the catalog. At most 16 calls may await
+approval at once. With `--audit-log`, approved calls record
+`"approval":"granted"`, and refusals record a `declined` event.
+
+Approval relies on the MCP client to show the request to a real person. A
+compromised or automated client can approve anything, so for cryptographic
+evidence of approval use `approval.sign` and `quorum.verify`.
+
+### Tasks and cancellation
+
+The server declares `tasks.requests.tools.call` and `tasks.cancel`, and every
+tool has `execution.taskSupport: "optional"`.
+
+- **Ungated task calls** run before the `CreateTaskResult` is returned, so the
+  task is already `completed` or `failed`. `tasks/result` returns the tool
+  result with `io.modelcontextprotocol/related-task` metadata.
+- **Gated task calls** start in `input_required`. `tasks/result` then delivers
+  the approval elicitation, which carries the related-task metadata, and is
+  answered once the person responds.
+- **Limits:** task IDs are 128-bit random values. TTLs are clamped to
+  1 s .. 1 h, and at most 64 tasks are retained.
+- **`tasks/cancel`:** cancels a task awaiting approval and refuses terminal
+  tasks.
+- **Not declared:** `tasks/list`, because a stdio session has no requestor
+  identity to scope it.
+
+`notifications/cancelled` for a call awaiting approval drops it, and a later
+approval is ignored. Calls run synchronously, so cancelling a call that has
+already started has no effect, and its outputs may already be published.
+
 ### Delegated sessions
 
 `--grant`, `--grant-root` and `--expected-grant-root-fingerprint` together pin an
@@ -145,7 +187,7 @@ operations are refused. See [delegation grants](DELEGATION.md#host-pinned-grants
 
 ## Limits and unsupported capabilities
 
-Maximum input frame size is 65,546 bytes including the newline. Oversized frames
+Maximum input frame size is 2 MiB plus the newline. Oversized frames
 produce a JSON-RPC error and close the session. Input is processed sequentially;
 EOF ends the process, with a final non-newline-terminated frame accepted.
 The native `ipg serve` protocol remains separate from MCP.
@@ -156,11 +198,11 @@ no operation executes. The budget resets on the first call after a window ends.
 This is a local resource bound, not a distributed quota; process restart resets
 it. Protocol-only requests are not included in that budget.
 
-No HTTP transport, resources, prompts, sampling, roots enforcement, task execution,
-progress reporting, active cancellation or JSON-RPC batches are implemented.
-Cancellation notifications are ignored; they may arrive after work has completed.
-Hosts can close or terminate the subprocess, but must account for outputs already
-published before termination. Tool IDs are correlation IDs, not durable
+No resources, prompts, sampling, roots enforcement, progress reporting,
+`tasks/list` or JSON-RPC batches are implemented. Cancellation stops only calls
+awaiting approval; work that has started runs to completion. Hosts can close or
+terminate the subprocess, but must account for outputs already published before
+termination. Tool IDs are correlation IDs, not durable
 idempotency keys.
 
 The default catalog is checked in at [schemas/mcp-tools.json](../schemas/mcp-tools.json)

@@ -45,6 +45,14 @@
   by both the previous and the successor key, and `rotation.verify` follows a
   chain of up to 16 statements from a pinned identity and can write the current
   public identity. Rotation is not revocation. 71 operations.
+- Added MCP human approval, cancellation and tasks:
+  - `ipg mcp --require-approval <operations>` asks a person through form
+    elicitation before each listed call and returns `approval_declined` unless
+    they approve. Clients without elicitation are refused.
+  - `notifications/cancelled` drops calls awaiting approval.
+  - Task-augmented `tools/call` with `tasks/get`, `tasks/result` and
+    `tasks/cancel` is supported; gated tasks wait in `input_required`.
+- Corrected the documented MCP frame limit to 2 MiB.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph
