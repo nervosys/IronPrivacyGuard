@@ -15,7 +15,7 @@ use ic_hash::Sha384;
 use ipg_json::{Value, json};
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::time::Duration;
 
 pub const MAX_SESSIONS: usize = 8;
@@ -93,6 +93,25 @@ impl Gate {
         read_body(&mut reader, head)
             .map_err(|e| HttpResponse::error(400, "Bad Request", &e.message))
     }
+}
+
+/// Answer a refused request, then discard what the client is still sending.
+/// Closing with unread data makes the operating system reset the connection,
+/// which can destroy the response before the client reads it.
+fn respond(mut stream: TcpStream, response: &HttpResponse) {
+    let _ = stream.set_write_timeout(Some(REQUEST_DEADLINE));
+    if write_response(&mut stream, response).is_err() {
+        return;
+    }
+    let _ = stream.shutdown(Shutdown::Write);
+    // At most two seconds and one request's worth of bytes, so a trickling
+    // client cannot hold the reader.
+    let mut drain = DeadlineReader {
+        stream: &stream,
+        deadline: std::time::Instant::now() + Duration::from_secs(2),
+    }
+    .take(crate::MAX_REQUEST_BYTES);
+    let _ = std::io::copy(&mut drain, &mut std::io::sink());
 }
 
 fn authorized(headers: &BTreeMap<String, String>, token: &[u8; 48]) -> bool {
@@ -234,7 +253,7 @@ impl HttpServer {
     /// Read connections on a bounded pool of reader threads; requests are then
     /// handled one at a time, in arrival order, until the listener fails.
     pub fn serve(&mut self) -> Result<()> {
-        type Arrival = (TcpStream, std::result::Result<HttpRequest, HttpResponse>);
+        type Arrival = (TcpStream, HttpRequest);
         let (sender, receiver) = std::sync::mpsc::channel::<Arrival>();
         let listener = self.listener.try_clone()?;
         let gate = self.gate()?;
@@ -252,19 +271,22 @@ impl HttpServer {
                 }
                 let (sender, active) = (sender.clone(), active.clone());
                 std::thread::spawn(move || {
-                    let read = gate.read(&stream);
+                    match gate.read(&stream) {
+                        // Refusals are answered here, so the server never waits on them.
+                        Err(response) => respond(stream, &response),
+                        Ok(request) => {
+                            let _ = sender.send((stream, request));
+                        }
+                    }
                     active.fetch_sub(1, Ordering::SeqCst);
-                    let _ = sender.send((stream, read));
                 });
             }
         });
-        for (mut stream, read) in receiver {
-            let response = match read {
-                Ok(request) => self.route(request),
-                Err(response) => response,
-            };
+        for (mut stream, request) in receiver {
+            let response = self.route(request);
             let _ = stream.set_write_timeout(Some(REQUEST_DEADLINE));
             let _ = write_response(&mut stream, &response);
+            let _ = stream.shutdown(Shutdown::Write);
         }
         Ok(())
     }
@@ -273,11 +295,15 @@ impl HttpServer {
     pub fn serve_one(&mut self) -> Result<()> {
         let (mut stream, _) = self.listener.accept()?;
         stream.set_write_timeout(Some(REQUEST_DEADLINE))?;
-        let response = match self.gate()?.read(&stream) {
-            Ok(request) => self.route(request),
-            Err(response) => response,
-        };
-        write_response(&mut stream, &response)
+        match self.gate()?.read(&stream) {
+            Ok(request) => {
+                let response = self.route(request);
+                write_response(&mut stream, &response)?;
+                let _ = stream.shutdown(Shutdown::Write);
+            }
+            Err(response) => respond(stream, &response),
+        }
+        Ok(())
     }
 
     fn route(&mut self, request: HttpRequest) -> HttpResponse {
