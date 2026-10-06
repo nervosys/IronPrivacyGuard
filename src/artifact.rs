@@ -121,6 +121,12 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-approval-v1" => {
+            let value: crate::approval::Approval = ipg_json::from_slice(data)?;
+            value.validate()?;
+            // The claimed approver; authenticated only by quorum.verify.
+            Some(value.signer)
+        }
         "ipg-json-signature-v1" => {
             let value: crate::json_signature::Signature = ipg_json::from_slice(data)?;
             value.validate()?;

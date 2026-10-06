@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 /// Native JSON value, serialization traits, derives, and schema API used by IPG.
 pub use ipg_json as json;
+pub mod approval;
 pub mod artifact;
 pub mod attest;
 mod base64;
@@ -261,6 +262,39 @@ pub enum Request {
         /// Require the message's attached grant to delegate `message.seal` from a pinned root.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         delegation: Option<MessageDelegation>,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "approval.sign")]
+    ApprovalSign {
+        /// The content being approved, such as a plan or release.
+        input: String,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+        #[schemars(schema_with = "crate::contract::provenance_action")]
+        action: String,
+        /// bytes (default) or rfc8785 for JSON approved in any serialization.
+        #[serde(default)]
+        content: approval::Content,
+        #[schemars(schema_with = "crate::contract::approval_lifetime")]
+        lifetime: u64,
+        policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "quorum.verify")]
+    QuorumVerify {
+        input: String,
+        #[schemars(schema_with = "crate::contract::approval_files")]
+        approvals: Vec<String>,
+        #[schemars(schema_with = "crate::contract::approvers")]
+        approvers: Vec<Approver>,
+        #[schemars(schema_with = "crate::contract::threshold")]
+        threshold: usize,
+        #[schemars(schema_with = "crate::contract::provenance_action")]
+        action: String,
+        #[serde(default)]
+        content: approval::Content,
+        /// Applied to every approver; ineligible approvers' approvals do not count.
         policy: Option<TrustPolicy>,
     },
     #[serde(rename = "json.canonicalize")]
@@ -719,6 +753,27 @@ pub struct DelegationRequirement {
     pub purpose: Option<String>,
 }
 
+/// A pinned approver: a public identity file and its independently trusted fingerprint.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Approver {
+    pub public: String,
+    #[schemars(schema_with = "crate::contract::fingerprint")]
+    pub expected_fingerprint: String,
+}
+
+/// An approval that did not count toward a quorum, and why.
+#[derive(Clone, Debug, Serialize, JsonSchema)]
+pub struct RejectedApproval {
+    /// Position in the request's approvals list.
+    pub index: usize,
+    /// The claimed signer, when the file parsed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signer: Option<String>,
+    /// IPG error code for the rejection.
+    pub code: String,
+}
+
 /// A named artifact file for provenance statements.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -836,6 +891,20 @@ pub enum Outcome {
     GrantVerified {
         authority: delegation::Authority,
         authenticated: bool,
+    },
+    QuorumVerified {
+        met: bool,
+        threshold: usize,
+        approvers: usize,
+        /// Distinct approver fingerprints with valid approvals, sorted.
+        approved: Vec<String>,
+        rejected: Vec<RejectedApproval>,
+        action: String,
+        content: approval::Content,
+        /// SHA-384 of the approved content as the content mode defines it.
+        digest: String,
+        checked_at: u64,
+        policy_digest: Option<String>,
     },
     Canonicalized {
         path: String,
@@ -1012,6 +1081,8 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::ApprovalSign { .. } => "approval.sign",
+            Self::QuorumVerify { .. } => "quorum.verify",
             Self::JsonCanonicalize { .. } => "json.canonicalize",
             Self::JsonSign { .. } => "json.sign",
             Self::JsonVerify { .. } => "json.verify",
@@ -1162,6 +1233,7 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         Request::MessageSeal { key, .. } => subject(key, Some("message.seal")),
         Request::MessageOpen { key, .. } => subject(key, Some("message.open")),
         Request::JsonSign { key, .. } => subject(key, Some("json.sign")),
+        Request::ApprovalSign { key, .. } => subject(key, Some("approval.sign")),
         Request::ProvenanceAttest { key, .. } => subject(key, Some("provenance.attest")),
         Request::KeyPublic { key, .. }
         | Request::KeyRewrap { key, .. }
@@ -1313,7 +1385,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -1921,6 +1993,148 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
                 delegation,
+            })
+        }
+        Request::ApprovalSign {
+            input,
+            output,
+            key,
+            passphrase_file,
+            action,
+            content,
+            lifetime,
+            policy,
+        } => {
+            require_absent(&output)?;
+            provenance::check_action(&action)?;
+            let key = load_key(&key)?;
+            let digest = trust::enforce(policy.as_ref(), key.public())?;
+            let data = read(&input)?;
+            let credential = credential(passphrase_file)?;
+            let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
+            let approval = approval::sign(
+                &*identity,
+                &action,
+                content,
+                &data,
+                lifetime,
+                delegation::now()?,
+            )?;
+            Ok(with_custody(
+                with_policy(
+                    save(
+                        output,
+                        &approval,
+                        "approval",
+                        Some(key.public().fingerprint.clone()),
+                    )?,
+                    digest,
+                ),
+                identity.custody(),
+            ))
+        }
+        Request::QuorumVerify {
+            input,
+            approvals,
+            approvers,
+            threshold,
+            action,
+            content,
+            policy,
+        } => {
+            provenance::check_action(&action)?;
+            if approvers.is_empty()
+                || approvers.len() > approval::MAX_APPROVERS
+                || approvals.is_empty()
+                || approvals.len() > approval::MAX_APPROVALS
+                || threshold == 0
+                || threshold > approvers.len()
+            {
+                return Err(Error::new(
+                    "invalid_request",
+                    "Quorum needs 1..32 approvers, 1..64 approvals and 1 <= threshold <= approvers",
+                ));
+            }
+            // Pin every approver first; a wrong pin is a caller error, not a rejection.
+            let mut pinned: Vec<(PublicKey, Result<Option<trust::PolicyEvidence>>)> =
+                Vec::with_capacity(approvers.len());
+            for approver in &approvers {
+                let public: PublicKey = load(&approver.public)?;
+                public.pin(&approver.expected_fingerprint)?;
+                if pinned
+                    .iter()
+                    .any(|(p, _)| p.fingerprint == public.fingerprint)
+                {
+                    return Err(Error::new(
+                        "invalid_request",
+                        "Approver fingerprints must be distinct",
+                    ));
+                }
+                let eligibility = trust::enforce(policy.as_ref(), &public);
+                pinned.push((public, eligibility));
+            }
+            let policy_digest = pinned
+                .iter()
+                .find_map(|(_, e)| e.as_ref().ok().and_then(Option::as_ref))
+                .map(|e| e.digest.clone());
+            let digest = content.digest(&read(&input)?)?;
+            let now = delegation::now()?;
+            let mut approved = std::collections::BTreeSet::new();
+            let mut rejected = Vec::new();
+            for (index, path) in approvals.iter().enumerate() {
+                let mut signer = None;
+                let outcome = (|| -> Result<String> {
+                    let candidate: approval::Approval = load(path)?;
+                    signer = Some(candidate.signer.clone());
+                    let (public, eligibility) = pinned
+                        .iter()
+                        .find(|(p, _)| p.fingerprint == candidate.signer)
+                        .ok_or_else(|| {
+                            Error::new("identity_mismatch", "Signer is not a pinned approver")
+                        })?;
+                    if let Err(error) = eligibility {
+                        return Err(Error::new(error.code, error.message.clone()));
+                    }
+                    approval::check(&candidate, public, &action, content, &digest, now)?;
+                    Ok(candidate.signer)
+                })();
+                match outcome {
+                    Ok(fingerprint) => {
+                        approved.insert(fingerprint);
+                    }
+                    Err(error) => rejected.push(RejectedApproval {
+                        index,
+                        signer,
+                        code: error.code.to_string(),
+                    }),
+                }
+            }
+            if approved.len() < threshold {
+                let reasons: Vec<String> = rejected
+                    .iter()
+                    .map(|r| format!("#{} {}", r.index, r.code))
+                    .collect();
+                return Err(Error::new(
+                    "policy_mismatch",
+                    format!(
+                        "Quorum not met: {} of {} required distinct approvals are valid; rejected: [{}]",
+                        approved.len(),
+                        threshold,
+                        reasons.join(", ")
+                    ),
+                ));
+            }
+            Ok(Outcome::QuorumVerified {
+                met: true,
+                threshold,
+                approvers: approvers.len(),
+                approved: approved.into_iter().collect(),
+                rejected,
+                action,
+                content,
+                digest,
+                checked_at: now,
+                policy_digest,
             })
         }
         Request::JsonCanonicalize { input, output } => {

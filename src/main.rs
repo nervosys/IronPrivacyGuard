@@ -125,6 +125,9 @@ fn parse(args: Vec<String>) -> iron_privacy_guard::error::Result<Request> {
                 | "delegation"
                 | "lifetime"
                 | "subjects"
+                | "approvals"
+                | "approvers"
+                | "threshold"
                 | "materials"
         ) {
             iron_privacy_guard::control_json::parse(pair[1].as_bytes())?
@@ -169,6 +172,8 @@ mod tests {
             json!({"operation":"grant.issue", "key":"secret", "passphrase_file":"pass", "expected_fingerprint":"00".repeat(32), "subject":"agent.public", "expected_subject_fingerprint":"11".repeat(32), "operations":["sign"], "purposes":["release"], "not_before":1, "not_after":2, "delegation_depth":1, "parent":"parent.grant", "output":"grant"}),
             json!({"operation":"grant.verify", "input":"grant", "root":"root.public", "expected_root_fingerprint":"00".repeat(32), "subject_fingerprint":"11".repeat(32), "required_operation":"sign", "purpose":"release"}),
             json!({"operation":"verify", "input":"file", "signature":"signature", "signer":"public", "expected_fingerprint":"00".repeat(32), "policy":policy, "delegation":{"grant":"grant", "root":"root.public", "expected_root_fingerprint":"11".repeat(32), "purpose":"release"}}),
+            json!({"operation":"approval.sign", "input":"plan.json", "output":"plan.approval", "key":"secret", "passphrase_file":"pass", "action":"deploy", "content":"rfc8785", "lifetime":600, "policy":policy}),
+            json!({"operation":"quorum.verify", "input":"plan.json", "approvals":["a.approval", "b.approval"], "approvers":[{"public":"a.public", "expected_fingerprint":"00".repeat(32)}, {"public":"b.public", "expected_fingerprint":"11".repeat(32)}], "threshold":2, "action":"deploy", "content":"bytes", "policy":policy}),
             json!({"operation":"json.sign", "input":"doc.json", "output":"doc.sig", "key":"secret", "passphrase_file":"pass", "policy":policy}),
             json!({"operation":"provenance.attest", "subjects":[{"name":"out.tar", "input":"out.tar"}], "materials":[{"name":"src", "input":"src.tar"}], "action":"build", "purpose":"release", "parameters":"params.json", "output":"statement", "key":"secret", "passphrase_file":"pass", "policy":policy}),
             json!({"operation":"provenance.verify", "input":"statement", "signer":"public", "expected_fingerprint":"00".repeat(32), "subjects":[{"name":"out.tar", "input":"out.tar"}], "action":"build", "policy":policy, "delegation":{"grant":"grant", "root":"root.public", "expected_root_fingerprint":"11".repeat(32)}}),

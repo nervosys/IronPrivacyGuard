@@ -96,6 +96,18 @@
     "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
   },
   {
+    "id": "quorum-approval",
+    "label": "Require m-of-n approvals before an agent acts",
+    "keywords": ["quorum", "threshold", "m-of-n", "multi-party approval", "two-person rule", "human in the loop", "sign-off", "consensus"],
+    "goals": ["content-authenticity", "separation-of-duties"],
+    "support": "implemented",
+    "operations": ["approval.sign", "quorum.verify", "inspect"],
+    "prerequisites": ["Each approver's identity", "The relying party pins every approver's public identity and fingerprint", "All approvers approve the same content in the same content mode and action"],
+    "limitations": ["Approvals last at most seven days and are checked at the verifier's host clock", "Up to 32 approvers and 64 approval files", "An approval can be presented to any verifier until it expires; bind one-time actions to unique content such as a nonce in the plan", "Not threshold cryptography: each approver signs separately"],
+    "guidance": "Have approvers sign the exact plan (rfc8785 for JSON) with a narrow action label and short lifetime. The executing agent runs quorum.verify with the pinned approver set, threshold and a trust snapshot, and proceeds only when it succeeds. Treat rejected approvals as signals to investigate, never as approvals to retry with lower thresholds.",
+    "sources": ["https://csrc.nist.gov/glossary/term/two_person_integrity", "https://www.rfc-editor.org/rfc/rfc8785"]
+  },
+  {
     "id": "delegate-agent-authority",
     "label": "Delegate scoped signing or decryption authority to an agent",
     "keywords": ["delegation", "delegate", "agent", "multi-agent", "on behalf", "capability", "least privilege", "scoped authority"],

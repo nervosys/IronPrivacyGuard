@@ -545,6 +545,21 @@
       ],
       "type": "object"
     },
+    "Content": {
+      "description": "How the approved content is digested.",
+      "oneOf": [
+        {
+          "const": "bytes",
+          "description": "SHA-384 of the exact bytes.",
+          "type": "string"
+        },
+        {
+          "const": "rfc8785",
+          "description": "SHA-384 of the RFC 8785 canonical form of strict I-JSON.",
+          "type": "string"
+        }
+      ]
+    },
     "Custody": {
       "description": "Where a private-key operation ran. Reported only as evidence from this process;\ncounterparties cannot verify it from public artifacts.",
       "oneOf": [
@@ -700,6 +715,33 @@
       "required": [
         "fingerprint",
         "encryption_keys"
+      ],
+      "type": "object"
+    },
+    "RejectedApproval": {
+      "description": "An approval that did not count toward a quorum, and why.",
+      "properties": {
+        "code": {
+          "description": "IPG error code for the rejection.",
+          "type": "string"
+        },
+        "index": {
+          "description": "Position in the request's approvals list.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "signer": {
+          "description": "The claimed signer, when the file parsed.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "code"
       ],
       "type": "object"
     },
@@ -1366,6 +1408,74 @@
         "kind",
         "authority",
         "authenticated"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "approved": {
+          "description": "Distinct approver fingerprints with valid approvals, sorted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "approvers": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "checked_at": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "content": {
+          "$ref": "#/$defs/Content"
+        },
+        "digest": {
+          "description": "SHA-384 of the approved content as the content mode defines it.",
+          "type": "string"
+        },
+        "kind": {
+          "const": "quorum_verified",
+          "type": "string"
+        },
+        "met": {
+          "type": "boolean"
+        },
+        "policy_digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rejected": {
+          "items": {
+            "$ref": "#/$defs/RejectedApproval"
+          },
+          "type": "array"
+        },
+        "threshold": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "met",
+        "threshold",
+        "approvers",
+        "approved",
+        "rejected",
+        "action",
+        "content",
+        "digest",
+        "checked_at"
       ],
       "type": "object"
     },

@@ -418,6 +418,8 @@ impl Server {
                     | Request::MessageSeal { policy, .. }
                     | Request::MessageOpen { policy, .. }
                     | Request::JsonSign { policy, .. }
+                    | Request::ApprovalSign { policy, .. }
+                    | Request::QuorumVerify { policy, .. }
                     | Request::JsonVerify { policy, .. }
                     | Request::ProvenanceAttest { policy, .. }
                     | Request::ProvenanceVerify { policy, .. } => Some(policy),

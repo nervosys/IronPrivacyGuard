@@ -273,6 +273,13 @@ Provenance statements are standard DSSE envelopes holding canonical in-toto v1
 statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
 [PROVENANCE.md](PROVENANCE.md).
 
+## Approval: ipg-approval-v1
+
+A short-lived signature binding an approver to the SHA-384 of specific content
+(exact bytes or RFC 8785 canonical JSON), an action, creation and expiry (at
+most seven days) and a 16-byte nonce. `quorum.verify` counts distinct pinned
+approvers. See [PROVENANCE.md](PROVENANCE.md#quorum-approvals-ipg-approval-v1).
+
 ## Delegation grant: ipg-grant-v1
 
 A chain of 1..8 signed links from a root principal to an acting identity. Each

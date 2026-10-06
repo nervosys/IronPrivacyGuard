@@ -294,6 +294,24 @@ pub fn time_end(_: &mut SchemaGenerator) -> Schema {
 fixed!(grant_format, crate::delegation::FORMAT);
 fixed!(message_format, crate::message::FORMAT);
 fixed!(json_signature_format, crate::json_signature::FORMAT);
+fixed!(approval_format, crate::approval::FORMAT);
+pub fn approval_lifetime(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":1, "maximum":crate::approval::MAX_LIFETIME,
+        "description":"Seconds from the host clock until the approval expires (at most 7 days)."})
+}
+pub fn approvers(generator: &mut SchemaGenerator) -> Schema {
+    let item = generator.subschema_for::<crate::Approver>();
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::approval::MAX_APPROVERS, "items":item,
+        "description":"The pinned approver set (n); fingerprints must be distinct."})
+}
+pub fn approval_files(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":1, "maxItems":crate::approval::MAX_APPROVALS,
+        "items":{"type":"string"}, "description":"ipg-approval-v1 files; order does not matter."})
+}
+pub fn threshold(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":1, "maximum":crate::approval::MAX_APPROVERS,
+        "description":"Distinct valid approvals required (m); at most the number of approvers (checked at runtime)."})
+}
 fixed!(canonicalization, crate::json_signature::CANONICALIZATION);
 fixed!(intoto_payload_type, crate::provenance::PAYLOAD_TYPE);
 pub fn base64_text(_: &mut SchemaGenerator) -> Schema {

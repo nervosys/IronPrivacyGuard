@@ -517,6 +517,48 @@
       ]
     },
     {
+      "@id": "ipg:application/quorum-approval",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/content-authenticity",
+        "ipg:goal/separation-of-duties"
+      ],
+      "guidance": "Have approvers sign the exact plan (rfc8785 for JSON) with a narrow action label and short lifetime. The executing agent runs quorum.verify with the pinned approver set, threshold and a trust snapshot, and proceeds only when it succeeds. Treat rejected approvals as signals to investigate, never as approvals to retry with lower thresholds.",
+      "id": "quorum-approval",
+      "keywords": [
+        "quorum",
+        "threshold",
+        "m-of-n",
+        "multi-party approval",
+        "two-person rule",
+        "human in the loop",
+        "sign-off",
+        "consensus"
+      ],
+      "label": "Require m-of-n approvals before an agent acts",
+      "limitations": [
+        "Approvals last at most seven days and are checked at the verifier's host clock",
+        "Up to 32 approvers and 64 approval files",
+        "An approval can be presented to any verifier until it expires; bind one-time actions to unique content such as a nonce in the plan",
+        "Not threshold cryptography: each approver signs separately"
+      ],
+      "prerequisites": [
+        "Each approver's identity",
+        "The relying party pins every approver's public identity and fingerprint",
+        "All approvers approve the same content in the same content mode and action"
+      ],
+      "sources": [
+        "https://csrc.nist.gov/glossary/term/two_person_integrity",
+        "https://www.rfc-editor.org/rfc/rfc8785"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/approval.sign",
+        "ipg:operation/quorum.verify",
+        "ipg:operation/inspect"
+      ]
+    },
+    {
       "@id": "ipg:application/delegate-agent-authority",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -1132,6 +1174,11 @@
       "@id": "ipg:goal/secret-protection",
       "@type": "ipg:SecurityGoal",
       "label": "secret-protection"
+    },
+    {
+      "@id": "ipg:goal/separation-of-duties",
+      "@type": "ipg:SecurityGoal",
+      "label": "separation-of-duties"
     },
     {
       "@id": "ipg:goal/service-custody",
@@ -3152,6 +3199,167 @@
       "request_schema": {
         "command": "ipg schema",
         "operation_const": "verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/approval.sign",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied",
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/approval-binding",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Approve specific content (exact bytes or canonical JSON) for one action with a short-lived, nonce-bearing signature",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "approval.sign",
+      "inputs": [
+        "ipg:Plaintext",
+        "ipg:JsonDocument",
+        "ipg:ProvenanceAction",
+        "ipg:ApprovalContentMode",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_approval_sign",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:Approval"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "approval.sign"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/quorum.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65",
+        "ic:sha2-256"
+      ],
+      "conditional_effects": [
+        "read pinned trust snapshot when policy is supplied"
+      ],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/approval-binding",
+        "ipg:constraint/quorum-distinct",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/hybrid-post-quantum",
+        "ipg:constraint/snapshot-policy",
+        "ipg:constraint/validity-window"
+      ],
+      "description": "Require m distinct valid, unexpired approvals of the same content and action from n pinned approvers at the host clock",
+      "deterministic": false,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "quorum.verify",
+      "inputs": [
+        "ipg:Plaintext",
+        "ipg:JsonDocument",
+        "ipg:Approval",
+        "ipg:PublicKey",
+        "ipg:Fingerprint",
+        "ipg:QuorumThreshold",
+        "ipg:ProvenanceAction",
+        "ipg:ApprovalContentMode"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_quorum_verify",
+      "optional_inputs": [
+        "ipg:TrustPolicy"
+      ],
+      "outputs": [
+        "ipg:QuorumVerification"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "quorum.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
@@ -5239,5 +5447,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.25.0"
+  "version": "1.26.0"
 }

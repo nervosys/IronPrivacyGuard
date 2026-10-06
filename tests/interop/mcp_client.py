@@ -139,6 +139,10 @@ async def exercise(executable, directory):
         await checked.call("json.sign", {"input": path("document.json"), "output": path("json-signature"), "key": path("key"), "passphrase_file": path("pass")})
         json_verified = await checked.call("json.verify", {"input": path("reordered.json"), "signature": path("json-signature"), "signer": path("public"), "expected_fingerprint": fingerprint})
         assert json_verified["valid"] is True
+        await checked.call("approval.sign", {"input": path("document.json"), "output": path("approval"), "key": path("key"), "passphrase_file": path("pass"), "action": "deploy", "content": "rfc8785", "lifetime": 600})
+        quorum = await checked.call("quorum.verify", {"input": path("reordered.json"), "approvals": [path("approval")], "approvers": [{"public": path("public"), "expected_fingerprint": fingerprint}], "threshold": 1, "action": "deploy", "content": "rfc8785"})
+        assert quorum["met"] is True and quorum["approved"] == [fingerprint]
+        await checked.call("quorum.verify", {"input": path("reordered.json"), "approvals": [path("approval")], "approvers": [{"public": path("public"), "expected_fingerprint": fingerprint}], "threshold": 1, "action": "deploy", "content": "bytes"}, error="policy_mismatch")
         await checked.call("provenance.attest", {"subjects": [{"name": "message", "input": path("message")}], "action": "relay", "output": path("statement"), "key": path("key"), "passphrase_file": path("pass")})
         attested = await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("message")}], "action": "relay"})
         assert attested["verified_subjects"] == ["message"] and attested["statement"]["agent"] == fingerprint
@@ -166,7 +170,7 @@ async def exercise(executable, directory):
         await checked.call("verify", {**verification, "input": path("altered")}, error="authentication_failed")
         await checked.call("stream.verify", {**stream_verification, "input": path("altered")}, error="authentication_failed")
         Draft202012Validator(schemas["formats"]["stream_signature"]).validate(json.loads(Path(path("stream-signature")).read_text()))
-        for filename, schema_name in [("merged", "trust_store"), ("validity", "validity"), ("expired", "trust_store"), ("key", "secret_key"), ("rewrapped", "secret_key"), ("public", "public_key"), ("encrypted", "envelope"), ("signature", "signature"), ("certificate", "revocation"), ("grant", "grant"), ("agent-message", "message"), ("json-signature", "json_signature"), ("statement", "dsse_envelope"), ("empty", "trust_store"), ("active", "trust_store"), ("revoked", "trust_store")]:
+        for filename, schema_name in [("merged", "trust_store"), ("validity", "validity"), ("expired", "trust_store"), ("key", "secret_key"), ("rewrapped", "secret_key"), ("public", "public_key"), ("encrypted", "envelope"), ("signature", "signature"), ("certificate", "revocation"), ("grant", "grant"), ("agent-message", "message"), ("json-signature", "json_signature"), ("approval", "approval"), ("statement", "dsse_envelope"), ("empty", "trust_store"), ("active", "trust_store"), ("revoked", "trust_store")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))

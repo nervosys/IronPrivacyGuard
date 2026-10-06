@@ -29,6 +29,11 @@
   digests and an IPG agent-action predicate. `json.sign` and
   `provenance.attest` are delegable. Independent Python/PyCA checks cover
   canonicalization over random documents and both directions. 63 operations.
+- Added m-of-n quorum approvals: `approval.sign` writes `ipg-approval-v1`
+  (content digest as bytes or RFC 8785 JSON, action, lifetime up to seven days,
+  nonce) and `quorum.verify` requires distinct, valid, unexpired approvals from
+  a pinned approver set, optionally under a trust snapshot, and reports
+  rejections. `approval.sign` is delegable. 65 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph

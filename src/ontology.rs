@@ -266,6 +266,36 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "approval.sign",
+        "Approve specific content (exact bytes or canonical JSON) for one action with a short-lived, nonce-bearing signature",
+        &[
+            "Plaintext",
+            "JsonDocument",
+            "ProvenanceAction",
+            "ApprovalContentMode",
+            "SecretKey",
+            "Passphrase",
+        ],
+        &["Approval"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "quorum.verify",
+        "Require m distinct valid, unexpired approvals of the same content and action from n pinned approvers at the host clock",
+        &[
+            "Plaintext",
+            "JsonDocument",
+            "Approval",
+            "PublicKey",
+            "Fingerprint",
+            "QuorumThreshold",
+            "ProvenanceAction",
+            "ApprovalContentMode",
+        ],
+        &["QuorumVerification"],
+        &["read_file"],
+    ),
+    (
         "json.canonicalize",
         "Write the RFC 8785 canonical form of a strict I-JSON document and report its SHA-384",
         &["JsonDocument"],
@@ -545,6 +575,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
+    "approval.sign",
     "grant.issue",
     "json.sign",
     "provenance.attest",
@@ -617,6 +648,18 @@ pub fn operation(id: &str) -> Value {
             "identity-pin",
             "delegation-attenuation",
             "delegation-not-authorization",
+            "host-clock",
+        ],
+        "approval.sign" => vec![
+            "approval-binding",
+            "host-clock",
+            "secret-channel",
+            "no-clobber",
+        ],
+        "quorum.verify" => vec![
+            "identity-pin",
+            "approval-binding",
+            "quorum-distinct",
             "host-clock",
         ],
         "json.canonicalize" => vec!["canonical-json", "no-clobber"],
@@ -823,6 +866,8 @@ pub fn operation(id: &str) -> Value {
             | "json.verify"
             | "provenance.attest"
             | "provenance.verify"
+            | "approval.sign"
+            | "quorum.verify"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -860,8 +905,10 @@ pub fn operation(id: &str) -> Value {
         }
         "grant.issue" => vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"],
         "verify" | "stream.verify" | "revocation.verify" | "validity.verify" => vec!["ed25519"],
-        "grant.verify" | "json.verify" | "provenance.verify" => vec!["ed25519", "sha2-384"],
-        "json.sign" | "provenance.attest" => {
+        "grant.verify" | "json.verify" | "provenance.verify" | "quorum.verify" => {
+            vec!["ed25519", "sha2-384"]
+        }
+        "json.sign" | "provenance.attest" | "approval.sign" => {
             vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"]
         }
         "json.canonicalize" => vec!["sha2-384"],
@@ -926,9 +973,11 @@ pub fn operation(id: &str) -> Value {
         "key.generate" | "key.rewrap" => &["ml-kem-768", "ml-dsa-65"],
         "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
         | "revocation.verify" | "validity.verify" | "grant.issue" | "grant.verify"
-        | "json.sign" | "json.verify" | "provenance.attest" | "provenance.verify" | "trust.add"
-        | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
-        | "trust.compare" | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
+        | "json.sign" | "json.verify" | "provenance.attest" | "provenance.verify"
+        | "approval.sign" | "quorum.verify" | "trust.add" | "trust.revoke" | "trust.validity"
+        | "trust.status" | "trust.evaluate" | "trust.compare" | "trust.merge" => {
+            &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"]
+        }
         _ => &[],
     };
     for algorithm in p384 {
@@ -950,6 +999,8 @@ pub fn operation(id: &str) -> Value {
             | "json.verify"
             | "provenance.attest"
             | "provenance.verify"
+            | "approval.sign"
+            | "quorum.verify"
     );
     if matches!(*id, "stream.sign" | "stream.verify") && !algorithms.contains(&"sha2-384") {
         algorithms.push("sha2-384");
@@ -1301,6 +1352,26 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "Approval",
+            "An ipg-approval-v1 signature binding an approver to the SHA-384 of specific content, an action, a content mode, creation and expiry (at most 7 days) and a random nonce",
+            "public",
+        ),
+        (
+            "ApprovalContentMode",
+            "How approved content is digested: bytes (exact bytes) or rfc8785 (canonical form of strict I-JSON)",
+            "public",
+        ),
+        (
+            "QuorumThreshold",
+            "The number m of distinct pinned approvers whose valid approvals are required, 1 <= m <= n <= 32",
+            "control",
+        ),
+        (
+            "QuorumVerification",
+            "Distinct approvers with valid approvals, rejected approvals with reasons, the content digest and the host time of the check",
+            "public",
+        ),
+        (
             "JsonDocument",
             "Strict I-JSON (RFC 7493): UTF-8, no duplicate member names, no lone surrogates and integers within plus or minus 2^53; untrusted until a signature over it verifies",
             "untrusted",
@@ -1362,7 +1433,7 @@ pub fn export() -> Value {
         ),
         (
             "DelegableOperation",
-            "Closed vocabulary of private-key operations a grant may delegate: decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
+            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
             "public",
         ),
         (
@@ -1507,6 +1578,14 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "approval-binding",
+            "An approval names one action, one content digest and content mode, and a window of at most seven days checked at the host clock. It cannot be replayed for other content or another action, and each approver counts once however many approvals they sign.",
+        ),
+        (
+            "quorum-distinct",
+            "A quorum counts distinct pinned approvers, never approvals. Unknown signers, ineligible approvers under a trust policy, and invalid, mismatched or expired approvals are reported and not counted. Approvals are evidence for the relying party; they do not execute or authorize host actions by themselves.",
         ),
         (
             "canonical-json",
@@ -1804,6 +1883,10 @@ pub fn export() -> Value {
         ),
         ("sign-structured-data", vec!["json.sign", "json.verify"]),
         (
+            "quorum-approval",
+            vec!["approval.sign", "inspect", "quorum.verify"],
+        ),
+        (
             "attest-agent-action",
             vec!["provenance.attest", "inspect", "provenance.verify"],
         ),
@@ -1867,5 +1950,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.38.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.39.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

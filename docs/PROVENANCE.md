@@ -1,12 +1,15 @@
-# Structured signatures and provenance
+# Structured signatures, approvals and provenance
 
-Agents exchange structured data such as tool calls, plans and results, and need
-a record of what they produced. IPG provides two related formats:
+Agents exchange structured data such as tool calls, plans and results. They need
+approvals before acting and a record of what they produced. IPG provides three
+related formats:
 
 - `ipg-json-signature-v1`: detached signatures over the
   [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical form of a JSON
   document, so whitespace, member order and number spelling can change in
   transit without breaking the signature.
+- `ipg-approval-v1`: short-lived approvals of specific content for one
+  action, verified as an m-of-n quorum of pinned approvers.
 - Provenance statements:
   [in-toto Statement v1](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
   in a [DSSE](https://github.com/secure-systems-lab/dsse/blob/master/protocol.md)
@@ -18,11 +21,14 @@ a record of what they produced. IPG provides two related formats:
 | `json.canonicalize` | Write a document's RFC 8785 canonical bytes and report their SHA-384. |
 | `json.sign` | Sign a document's canonical form. |
 | `json.verify` | Verify a document, in any serialization, against a pinned signer. Optionally require a delegation grant permitting `json.sign`. |
+| `approval.sign` | Approve exact bytes or canonical JSON for one action, for 1 second to 7 days. |
+| `quorum.verify` | Require at least m distinct, valid, unexpired approvals of the same content and action from n pinned approvers. |
 | `provenance.attest` | Sign a statement naming subjects (outputs), materials (inputs), an action, an optional purpose and parameters, and the host time. |
 | `provenance.verify` | Authenticate a statement from a pinned signer and check named files against their recorded digests. Optionally require the action and a delegation grant permitting `provenance.attest`. |
 
-`json.sign` and `provenance.attest` use the private key, so both can be
-delegated with [grants](DELEGATION.md) and are confined by host-pinned grants.
+`json.sign`, `approval.sign` and `provenance.attest` use the private key, so
+they can be delegated with [grants](DELEGATION.md) and are confined by
+host-pinned grants.
 
 ## Canonical JSON
 
@@ -57,6 +63,43 @@ Here `frame(domain, fields...)` is the domain bytes followed by each field as a
 u64 big-endian length and its bytes, and `digest` is the 48 raw bytes.
 Verification pins the signer and authenticates the framed message. It then
 canonicalizes the presented document and compares digests.
+
+## Quorum approvals: ipg-approval-v1
+
+```json
+{"format":"ipg-approval-v1","signer":"<fingerprint>","algorithm":"ed25519",
+ "action":"deploy","content":"rfc8785","digest_algorithm":"sha2-384",
+ "digest":"<SHA-384 of the content>","created":1767225600,"expires":1767226200,
+ "nonce":"<16 random bytes, hex>","signature":"<hex>"}
+```
+
+`content` is `bytes` (the SHA-384 of the exact bytes) or `rfc8785` (the
+SHA-384 of the canonical form, so approvers and executors may serialize a JSON
+plan differently). The approver signs:
+
+```text
+frame("IPG approval v1 " || algorithm, signer, action, content,
+      digest_algorithm, digest, u64 created, u64 expires, nonce)
+```
+
+`quorum.verify` takes the content, 1..64 approval files, 1..32 pinned approvers
+with distinct fingerprints, a threshold 1 <= m <= n, the action and the content
+mode. Each approval is checked independently. It counts only if:
+
+- its signer is a pinned approver who is eligible under the optional trust
+  policy;
+- its signature verifies;
+- its action, content mode and digest match;
+- the host clock is inside its window, allowing 5 minutes for the signer's
+  clock running ahead.
+
+Each approver counts once. The result lists the approving fingerprints and every
+rejected approval with its index and error code. When fewer than m approvers
+count, the call fails with `policy_mismatch` and the rejections in its message.
+
+Approvals are bearer evidence until they expire: anyone holding one can present
+it to any verifier. For one-time actions, put a unique value such as a nonce or
+ticket ID in the approved plan, and have the executor record it as used.
 
 ## Provenance statements
 
