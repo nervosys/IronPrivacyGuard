@@ -35,9 +35,10 @@ proposal types. No supported suite protects groups against quantum attackers.
 Suite 7 is built from FIPS-approved primitives (ECDH and ECDSA P-384,
 HMAC/HKDF-SHA384, AES-256-GCM), but it is not an approved scheme: DHKEM's
 labeled extract step is not an SP 800-56C key derivation, and the MLS key
-schedule is not an approved KDF either. MLS therefore stays refused under
-`--algorithm-policy fips`. Group state is sealed with Argon2id and
-ChaCha20-Poly1305 for every suite.
+schedule is not an approved KDF either. Under `--algorithm-policy fips`, IPG
+allows MLS only in suite 7, with P-384 identities, and seals state with
+approved algorithms (see below); an assessor must accept the HKDF-based
+derivations.
 
 ## Operations
 
@@ -94,8 +95,11 @@ Host controls apply to every MLS operation:
 
 ## State
 
-Group state and KeyPackage secrets are sealed with Argon2id and
-ChaCha20-Poly1305 under `state_passphrase_file`. This should differ from the
+Group state and KeyPackage secrets are sealed under `state_passphrase_file`:
+with Argon2id and ChaCha20-Poly1305 by default (`kdf`
+`argon2id-m65536-t3-p4`), or with PBKDF2-HMAC-SHA-512 at 600,000 iterations and
+AES-256-GCM under the FIPS policy (`pbkdf2-hmac-sha2-512-i600000`). Argon2id
+files cannot be opened under the FIPS policy. This should differ from the
 identity passphrase.
 
 Forward secrecy requires deleting superseded epoch secrets and used message

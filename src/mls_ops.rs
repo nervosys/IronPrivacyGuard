@@ -91,7 +91,7 @@ pub struct KeyPackageFile {
 pub struct SealedFile {
     #[schemars(schema_with = "crate::contract::mls_sealed_format")]
     pub format: String,
-    #[schemars(schema_with = "crate::contract::kdf")]
+    #[schemars(schema_with = "crate::contract::mls_kdf")]
     pub kdf: String,
     #[schemars(schema_with = "crate::contract::hex_bytes::<16>")]
     pub salt: String,
@@ -103,31 +103,60 @@ pub struct SealedFile {
     pub tag: String,
 }
 
+/// Argon2id with ChaCha20-Poly1305: the default sealing.
 const KDF: &str = "argon2id-m65536-t3-p4";
+/// PBKDF2-HMAC-SHA-512 (SP 800-132) with AES-256-GCM: sealing under the
+/// FIPS algorithm policy.
+const APPROVED_KDF: &str = "pbkdf2-hmac-sha2-512-i600000";
 
-fn sealed_aad(format: &str, salt: &[u8], nonce: &[u8]) -> Vec<u8> {
+fn sealed_aad(format: &str, kdf: &str, salt: &[u8], nonce: &[u8]) -> Vec<u8> {
     crypto::frame(
         "IPG MLS sealed v1",
-        &[format.as_bytes(), KDF.as_bytes(), salt, nonce],
+        &[format.as_bytes(), kdf.as_bytes(), salt, nonce],
     )
+}
+
+/// Under the FIPS policy, only suite 7 (ECDH/ECDSA P-384, HKDF-SHA384,
+/// AES-256-GCM) is usable.
+fn require_approved_suite(suite: Suite) -> Result<()> {
+    if crypto::fips() && suite != Suite::P384Aes256GcmSha384P384 {
+        return Err(Error::new(
+            "policy_mismatch",
+            "The host allows only FIPS-approved algorithms; use MLS suite p384-aes256gcm-sha384-p384",
+        ));
+    }
+    Ok(())
 }
 
 fn seal(format: &str, plaintext: &[u8], passphrase: &[u8]) -> Result<SealedFile> {
     use ic_core::traits::Aead;
     let salt = crypto::random::<16>()?;
     let nonce = crypto::random::<12>()?;
-    let key = crypto::password_key(passphrase, salt.as_ref())?;
+    let approved = crypto::fips();
+    let kdf = if approved { APPROVED_KDF } else { KDF };
+    let aad = sealed_aad(format, kdf, salt.as_ref(), nonce.as_ref());
     let mut data = Zeroizing::new(plaintext.to_vec());
     let mut tag = [0; 16];
-    ic_cipher::ChaCha20Poly1305::new(key.as_ref())?.seal_detached(
-        nonce.as_ref(),
-        &sealed_aad(format, salt.as_ref(), nonce.as_ref()),
-        &mut data,
-        &mut tag,
-    )?;
+    if approved {
+        let key = crypto::approved_password_key(passphrase, salt.as_ref())?;
+        ic_cipher::Aes256Gcm::new(key.as_ref())?.seal_detached(
+            nonce.as_ref(),
+            &aad,
+            &mut data,
+            &mut tag,
+        )?;
+    } else {
+        let key = crypto::password_key(passphrase, salt.as_ref())?;
+        ic_cipher::ChaCha20Poly1305::new(key.as_ref())?.seal_detached(
+            nonce.as_ref(),
+            &aad,
+            &mut data,
+            &mut tag,
+        )?;
+    }
     Ok(SealedFile {
         format: format.into(),
-        kdf: KDF.into(),
+        kdf: kdf.into(),
         salt: crate::hex::encode(salt.as_ref()),
         nonce: crate::hex::encode(nonce.as_ref()),
         ciphertext: crate::hex::encode(&data[..]),
@@ -137,7 +166,7 @@ fn seal(format: &str, plaintext: &[u8], passphrase: &[u8]) -> Result<SealedFile>
 
 fn open(file: &SealedFile, format: &str, passphrase: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     use ic_core::traits::Aead;
-    if file.format != format || file.kdf != KDF {
+    if file.format != format || (file.kdf != KDF && file.kdf != APPROVED_KDF) {
         return Err(Error::new(
             "invalid_format",
             "Unexpected sealed MLS file format",
@@ -145,21 +174,23 @@ fn open(file: &SealedFile, format: &str, passphrase: &[u8]) -> Result<Zeroizing<
     }
     let salt = crypto::bytes::<16>(&file.salt)?;
     let nonce = crypto::bytes::<12>(&file.nonce)?;
-    let key = crypto::password_key(passphrase, &salt)?;
+    let tag = crypto::bytes::<16>(&file.tag)?;
+    let aad = sealed_aad(format, &file.kdf, &salt, &nonce);
     let mut data = Zeroizing::new(crate::hex::decode(&file.ciphertext)?);
-    ic_cipher::ChaCha20Poly1305::new(key.as_ref())?
-        .open_detached(
-            &nonce,
-            &sealed_aad(format, &salt, &nonce),
-            &mut data,
-            &crypto::bytes::<16>(&file.tag)?,
+    // Argon2id files cannot be opened under the FIPS policy (password_key refuses).
+    if file.kdf == APPROVED_KDF {
+        let key = crypto::approved_password_key(passphrase, &salt)?;
+        ic_cipher::Aes256Gcm::new(key.as_ref())?.open_detached(&nonce, &aad, &mut data, &tag)
+    } else {
+        let key = crypto::password_key(passphrase, &salt)?;
+        ic_cipher::ChaCha20Poly1305::new(key.as_ref())?.open_detached(&nonce, &aad, &mut data, &tag)
+    }
+    .map_err(|_| {
+        Error::new(
+            "authentication_failed",
+            "Wrong passphrase or altered MLS file",
         )
-        .map_err(|_| {
-            Error::new(
-                "authentication_failed",
-                "Wrong passphrase or altered MLS file",
-            )
-        })?;
+    })?;
     Ok(data)
 }
 
@@ -400,7 +431,9 @@ fn load_state(path: &str, passphrase: &[u8]) -> Result<Group> {
         },
         MAX_STATE_BYTES,
     )?)?;
-    Group::from_state(&open(&sealed, STATE_FORMAT, passphrase)?)
+    let group = Group::from_state(&open(&sealed, STATE_FORMAT, passphrase)?)?;
+    require_approved_suite(group.suite)?;
+    Ok(group)
 }
 
 /// Replace the state file atomically (temporary file, then rename).
@@ -505,6 +538,7 @@ pub fn key_package(
     admit(host, key.public(), "mls.key_package")?;
     let identity = provider::open(&key, credential, host)?;
     let suite = suite.suite();
+    require_approved_suite(suite)?;
     let (kp, secrets, signer) = bound_key_package(&*identity, suite, lifetime)?;
     let reference = group::key_package_ref(suite, &kp);
     let sealed = seal(
@@ -547,6 +581,7 @@ pub fn create(
     admit(host, key.public(), "mls.group.create")?;
     let identity = provider::open(&key, credential, host)?;
     let suite = suite.suite();
+    require_approved_suite(suite)?;
     let (kp, secrets, signer) = bound_key_package(&*identity, suite, MAX_LIFETIME)?;
     let group_id = crypto::random::<32>()?.to_vec();
     let group = Group::create(suite, group_id, &kp, &secrets, &signer, Vec::new())?;
@@ -582,6 +617,7 @@ pub fn join(
     let signer = Zeroizing::new(r.opaque()?.to_vec());
     r.finish()?;
     let suite = Suite::from_id(kp.cipher_suite)?;
+    require_approved_suite(suite)?;
     admit(host, &check_join_binding(suite, &kp)?, "mls.join")?;
     let group = Group::join(&welcome, &kp, &secrets, &signer, None, &PskStore::new())?;
     let report = status(output, &group)?;
@@ -795,4 +831,84 @@ pub fn export(
         epoch: group.epoch(),
         bytes: length as u64,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crypto::test_identity::P384Identity;
+
+    const PASS: &[u8] = b"fips mls test-only state passphrase";
+    const SUITE: Suite = Suite::P384Aes256GcmSha384P384;
+
+    /// Under the FIPS policy, suite 7 groups of P-384 identities work end to
+    /// end and their state is sealed with PBKDF2 and AES-256-GCM.
+    #[test]
+    fn fips_policy_runs_suite_7_groups_with_approved_sealing() {
+        let dir = crate::files::tempdir().unwrap();
+        let path = |name: &str| dir.path().join(name).display().to_string();
+        // Default-sealed state from before cannot be opened under the policy.
+        let legacy = {
+            let alice = P384Identity::new([1; 48], [2; 48]);
+            let (kp, secrets, signer) = bound_key_package(&alice, SUITE, 3600).unwrap();
+            let group =
+                Group::create(SUITE, vec![9; 32], &kp, &secrets, &signer, Vec::new()).unwrap();
+            new_state(&path("legacy"), &group, PASS).unwrap();
+            path("legacy")
+        };
+
+        let _fips = crypto::FipsScope::install(true);
+        assert_eq!(
+            require_approved_suite(Suite::X25519ChaCha20Poly1305Sha256Ed25519)
+                .unwrap_err()
+                .code,
+            "policy_mismatch"
+        );
+        assert_eq!(
+            load_state(&legacy, PASS).err().unwrap().code,
+            "policy_mismatch"
+        );
+
+        let (alice, bob) = (
+            P384Identity::new([1; 48], [2; 48]),
+            P384Identity::new([3; 48], [4; 48]),
+        );
+        let (kp, secrets, signer) = bound_key_package(&alice, SUITE, 3600).unwrap();
+        let mut group =
+            Group::create(SUITE, vec![7; 32], &kp, &secrets, &signer, Vec::new()).unwrap();
+        let (bob_kp, bob_secrets, bob_signer) = bound_key_package(&bob, SUITE, 3600).unwrap();
+        check_join_binding(SUITE, &bob_kp)
+            .unwrap()
+            .pin(&crypto::IdentityKey::public(&bob).fingerprint)
+            .unwrap();
+        let (_, welcome) = group
+            .commit(vec![Proposal::Add(bob_kp.clone())], &PskStore::new())
+            .unwrap();
+        let Some(MlsMessage::Welcome(welcome)) = welcome else {
+            panic!("expected a Welcome");
+        };
+        let mut joined = Group::join(
+            &welcome,
+            &bob_kp,
+            &bob_secrets,
+            &bob_signer,
+            None,
+            &PskStore::new(),
+        )
+        .unwrap();
+
+        // State round-trips through approved sealing.
+        new_state(&path("alice"), &group, PASS).unwrap();
+        let sealed: SealedFile =
+            ipg_json::from_slice(&std::fs::read(path("alice")).unwrap()).unwrap();
+        assert_eq!(sealed.kdf, APPROVED_KDF);
+        let mut group = load_state(&path("alice"), PASS).unwrap();
+        assert!(load_state(&path("alice"), b"a different sixteen-byte pass").is_err());
+
+        let message = group.encrypt(b"approved payload", b"ad").unwrap();
+        match joined.process(&message, &PskStore::new()).unwrap() {
+            Processed::Application { data, .. } => assert_eq!(&data[..], b"approved payload"),
+            _ => panic!("expected application data"),
+        }
+    }
 }

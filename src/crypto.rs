@@ -813,6 +813,23 @@ pub(crate) fn sign_message(key: &dyn IdentityKey, message: &[u8]) -> Result<Stri
     Ok(signature)
 }
 
+/// PBKDF2 iterations for FIPS-policy sealing: IronCrypto's recommended floor.
+pub(crate) const FIPS_PBKDF2_ITERATIONS: u32 = ic_kdf::PBKDF2_MIN_RECOMMENDED_ITERATIONS;
+
+/// The SP 800-132 passphrase key used under the FIPS policy:
+/// PBKDF2-HMAC-SHA-512 with a 16-byte salt.
+pub(crate) fn approved_password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
+    if !(16..=4096).contains(&password.len()) {
+        return Err(Error::new(
+            "invalid_request",
+            "Passphrase must contain 16..4096 bytes",
+        ));
+    }
+    let mut key = Zeroizing::new([0; 32]);
+    ic_kdf::pbkdf2::<ic_mac::HmacSha512>(password, salt, FIPS_PBKDF2_ITERATIONS, key.as_mut())?;
+    Ok(key)
+}
+
 pub(crate) fn password_key(password: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
     require_fips_allows("passphrase protection (Argon2id with ChaCha20-Poly1305)")?;
     if !(16..=4096).contains(&password.len()) {

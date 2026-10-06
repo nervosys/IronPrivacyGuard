@@ -151,5 +151,14 @@
     "ipg_usage": "The MLS cipher suite 7 key schedule, secret tree and labeled expansions",
     "limitations": ["Not a password-hardening function", "No standalone IPG derivation command"],
     "sources": ["https://www.rfc-editor.org/rfc/rfc5869"]
+  },
+  {
+    "@id": "ic:pbkdf2-hmac-sha2-512",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "PBKDF2-HMAC-SHA-512",
+    "role": "Password-based key derivation (SP 800-132)",
+    "ipg_usage": "Seal MLS group state and KeyPackage secrets under the FIPS algorithm policy, at 600,000 iterations with AES-256-GCM",
+    "limitations": ["Not memory-hard: weaker than Argon2id against GPU guessing, so passphrases must be long and random", "Used only under the FIPS algorithm policy"],
+    "sources": ["https://csrc.nist.gov/pubs/sp/800/132/final", "https://www.rfc-editor.org/rfc/rfc8018"]
   }
 ]

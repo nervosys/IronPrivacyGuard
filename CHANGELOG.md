@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The FIPS algorithm policy now allows MLS in suite 7 with P-384 identities.
+  Under the policy, group state and KeyPackage secrets are sealed with
+  PBKDF2-HMAC-SHA-512 (600,000 iterations) and AES-256-GCM, and suites 1 and 3
+  are refused.
 - Moved the exact IronCrypto pins to 0.2.15 and added MLS cipher suite 7
   (`p384-aes256gcm-sha384-p384`): HPKE with DHKEM(P-384, HKDF-SHA384),
   AES-256-GCM, SHA-384 and DER-encoded ECDSA P-384 signatures, verified

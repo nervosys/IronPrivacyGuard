@@ -146,12 +146,18 @@ private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 (`any`, the default, allows all). Calls are then refused with `policy_mismatch`
 when they would use:
 
-- software keys or any passphrase-sealed file, which use Argon2id and
+- software keys or passphrase-sealed files that use Argon2id and
   ChaCha20-Poly1305;
 - Curve25519 or `ipg-public-hybrid-v1` identities (X25519, Ed25519,
   ChaCha20-Poly1305), as signer, recipient or verifier;
-- MLS, including suite 7 (whose derivations are not SP 800-56C KDFs), Shamir
-  backups (`backup.*`) or OpenPGP (`openpgp.*`).
+- MLS suites 1 and 3, Shamir backups (`backup.*`) or OpenPGP (`openpgp.*`).
+
+MLS remains available in suite 7 (`p384-aes256gcm-sha384-p384`), whose
+primitives are all approved, with P-384 identities. Its state and KeyPackage
+secrets are then sealed with PBKDF2-HMAC-SHA-512 (600,000 iterations,
+SP 800-132) and AES-256-GCM. HPKE's DHKEM and the MLS key schedule derive keys
+with HKDF-SHA384 over labeled inputs rather than through an SP 800-56C KDF, so
+an assessor must accept that construction.
 
 What remains is P-384 identities (`ipg-public-p384-v1` and the composite
 `ipg-public-p384-mldsa65-v1`) with ECDH/ECDSA P-384, AES-256-GCM, SHA-384,

@@ -2003,7 +2003,10 @@
         "type": "string"
       },
       "kdf": {
-        "const": "argon2id-m65536-t3-p4",
+        "enum": [
+          "argon2id-m65536-t3-p4",
+          "pbkdf2-hmac-sha2-512-i600000"
+        ],
         "type": "string"
       },
       "nonce": {

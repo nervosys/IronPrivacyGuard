@@ -608,9 +608,11 @@ fn fips_host_policy_refuses_non_approved_algorithms() {
         ),
         "policy_mismatch"
     );
+    // MLS is allowed only in suite 7, with approved identities.
     assert_eq!(
-        refused(json!({"operation":"mls.status","state":f.path("state"),
-            "state_passphrase_file":f.path("state-pass")})),
+        refused(json!({"operation":"mls.group.create","key":f.path("agent"),
+            "passphrase_file":f.path("pass"),"expected_fingerprint":agent,
+            "state_passphrase_file":f.path("state-pass"),"output":f.path("group")})),
         "policy_mismatch"
     );
     // Approved digests still work, and the policy ends with the call.

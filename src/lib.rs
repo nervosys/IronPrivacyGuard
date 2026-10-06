@@ -1901,8 +1901,6 @@ pub fn execute(request: Request) -> Result<Outcome> {
 fn fips_refused(operation: &str) -> Option<&'static str> {
     if operation.starts_with("openpgp.") {
         Some("OpenPGP (legacy ciphers, Argon2/S2K, Curve25519 and SHA-1 MDC paths)")
-    } else if operation.starts_with("mls.") {
-        Some("MLS (its HPKE and key schedule derivations are not SP 800-56C KDFs, in every suite)")
     } else if operation.starts_with("backup.") {
         Some("Shamir backup shares (not a FIPS function)")
     } else {

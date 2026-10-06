@@ -61,10 +61,11 @@ Residual risks, by design or awaiting dependencies:
 
 - **FIPS 140-3** still needs a validated module. `--algorithm-policy fips`
   restricts IPG to approved algorithms but does not validate them.
-- **MLS** stays refused under the FIPS policy. IPG now offers MLS suite 7
-  (`p384-aes256gcm-sha384-p384`, on IronCrypto 0.2.15's DHKEM(P-384)), but its
-  labeled extract step is not an SP 800-56C KDF, so the suite is built from
-  approved primitives rather than being an approved scheme.
+- **MLS** under the FIPS policy is limited to suite 7
+  (`p384-aes256gcm-sha384-p384`, on IronCrypto 0.2.15's DHKEM(P-384)) with
+  P-384 identities and PBKDF2/AES-256-GCM sealed state. Its primitives are
+  approved, but DHKEM's labeled extract and the MLS key schedule are not
+  SP 800-56C KDFs, so an assessor must accept the construction.
 - **Signing time:** signatures carry no trusted time; delegated signatures are
   judged at the verifier's clock (see DELEGATION.md).
 - **Parsed JSON values** holding provider secrets (for example a KMS
@@ -302,9 +303,11 @@ Residual risks, by design or awaiting dependencies:
 
 A FIPS mode would need to:
 1. Refuse non-approved suites and algorithms. Done: `--algorithm-policy fips`
-   (MCP.md) refuses software keys, Curve25519 and hybrid identities, MLS,
-   Shamir backups and OpenPGP.
-2. Seal files with PBKDF2 (SP 800-132) and AES-256-GCM.
+   (MCP.md) refuses software keys, Curve25519 and hybrid identities, MLS
+   suites 1 and 3, Shamir backups and OpenPGP.
+2. Seal files with PBKDF2 (SP 800-132) and AES-256-GCM. Done for MLS state and
+   KeyPackage secrets under the FIPS policy; software identity keys remain
+   Argon2id-sealed and refused.
 3. Use an MLS P-384 suite. IPG supports RFC 9420 suite 7 on IronCrypto 0.2.15,
    but it remains built from approved primitives, not an approved scheme.
 4. Run on a validated module.

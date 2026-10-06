@@ -2671,7 +2671,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
@@ -2756,7 +2757,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [
         "load the host PKCS#11 module and log in to a token when key is a hardware reference",
@@ -2841,7 +2843,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -2916,7 +2919,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -2996,7 +3000,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -3071,7 +3076,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -3149,7 +3155,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -3219,7 +3226,8 @@
         "ic:hkdf-sha2-384",
         "ic:sha2-384",
         "ic:aes-256-gcm",
-        "ic:argon2id"
+        "ic:argon2id",
+        "ic:pbkdf2-hmac-sha2-512"
       ],
       "conditional_effects": [],
       "constraints": [
@@ -7357,6 +7365,21 @@
       "role": "Key derivation from keying material",
       "sources": [
         "https://www.rfc-editor.org/rfc/rfc5869"
+      ]
+    },
+    {
+      "@id": "ic:pbkdf2-hmac-sha2-512",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Seal MLS group state and KeyPackage secrets under the FIPS algorithm policy, at 600,000 iterations with AES-256-GCM",
+      "label": "PBKDF2-HMAC-SHA-512",
+      "limitations": [
+        "Not memory-hard: weaker than Argon2id against GPU guessing, so passphrases must be long and random",
+        "Used only under the FIPS algorithm policy"
+      ],
+      "role": "Password-based key derivation (SP 800-132)",
+      "sources": [
+        "https://csrc.nist.gov/pubs/sp/800/132/final",
+        "https://www.rfc-editor.org/rfc/rfc8018"
       ]
     },
     {

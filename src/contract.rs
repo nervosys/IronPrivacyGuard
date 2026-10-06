@@ -47,6 +47,10 @@ pub fn kms_key_arn(_: &mut SchemaGenerator) -> Schema {
         "pattern":"^arn:(aws|aws-us-gov|aws-cn|aws-iso|aws-iso-b):kms:[a-z0-9-]{1,32}:[0-9]{12}:key/[A-Za-z0-9-]{1,64}$", "not":{"pattern":"[^A-Za-z0-9:/-]"}})
 }
 fixed!(kdf, "argon2id-m65536-t3-p4");
+/// MLS sealed files: Argon2id by default, PBKDF2 under the FIPS policy.
+pub fn mls_kdf(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"string", "enum":["argon2id-m65536-t3-p4", "pbkdf2-hmac-sha2-512-i600000"]})
+}
 fixed!(openpgp_key_format, crate::openpgp::KEY_FORMAT);
 fixed!(evidence_format, "ipg-tpm-evidence-v1");
 fixed!(challenge_format, "ipg-tpm-challenge-v1");

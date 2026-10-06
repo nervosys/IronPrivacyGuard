@@ -1121,6 +1121,7 @@ pub fn operation(id: &str) -> Value {
             "sha2-384",
             "aes-256-gcm",
             "argon2id",
+            "pbkdf2-hmac-sha2-512",
         ],
         "rotation.verify" => vec!["ed25519"],
         "audit.verify" => vec!["ed25519", "sha2-384"],
