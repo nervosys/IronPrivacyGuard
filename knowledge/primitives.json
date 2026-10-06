@@ -106,5 +106,14 @@
     "ipg_usage": "Second half of composite ed25519-mldsa65 signatures and certificates for hybrid identities; hedged signing with a fixed IPG context string",
     "limitations": ["Used only in composite with Ed25519", "Marked experimental in IronCrypto; interoperability checked against PyCA and OpenSSL", "Large signatures (3309 bytes)"],
     "sources": ["https://doi.org/10.6028/NIST.FIPS.204"]
+  },
+  {
+    "@id": "ic:shamir-gf256",
+    "@type": "ipg:CryptographicPrimitive",
+    "label": "Shamir secret sharing over GF(2^8)",
+    "role": "Threshold secret sharing",
+    "ipg_usage": "Splits a random 32-byte ChaCha20-Poly1305 key into k-of-n backup shares; the protected file is sealed under that key so recovery is authenticated",
+    "limitations": ["Shares have no integrity of their own; IPG relies on the AEAD to detect wrong or insufficient shares", "Any k shares recover the key", "Not threshold signing or decryption: the key is reassembled in one place"],
+    "sources": ["https://dl.acm.org/doi/10.1145/359168.359176"]
   }
 ]

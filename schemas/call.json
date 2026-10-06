@@ -439,6 +439,68 @@
         {
           "additionalProperties": false,
           "properties": {
+            "input": {
+              "description": "The file to protect, such as a passphrase-protected secret key; at most 1 MiB.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "backup.split",
+              "type": "string"
+            },
+            "outputs": {
+              "description": "One output path per share (n); hand each to a different custodian.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 16,
+              "minItems": 2,
+              "type": "array"
+            },
+            "threshold": {
+              "description": "Shares needed to recover (k); at most the number of shares (checked at runtime).",
+              "maximum": 16,
+              "minimum": 2,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "operation",
+            "input",
+            "threshold",
+            "outputs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "inputs": {
+              "description": "ipg-share-v1 files of one backup, at least its threshold.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 16,
+              "minItems": 2,
+              "type": "array"
+            },
+            "operation": {
+              "const": "backup.combine",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "inputs",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
             "expected_fingerprint": {
               "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
               "maxLength": 96,

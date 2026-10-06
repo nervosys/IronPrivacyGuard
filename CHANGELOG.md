@@ -45,6 +45,12 @@
   by both the previous and the successor key, and `rotation.verify` follows a
   chain of up to 16 statements from a pinned identity and can write the current
   public identity. Rotation is not revocation. 71 operations.
+- Added threshold backups. `backup.split` seals a file of up to 1 MiB under a
+  fresh key and splits that key into k-of-n `ipg-share-v1` shares with
+  IronCrypto's Shamir sharing (n at most 16). `backup.combine` authenticates
+  the file before writing it, so wrong, altered or insufficient shares fail.
+  Independent Python Shamir and PyCA checks cover both directions.
+  73 operations.
 - Added MCP human approval, cancellation and tasks:
   - `ipg mcp --require-approval <operations>` asks a person through form
     elicitation before each listed call and returns `approval_declined` unless

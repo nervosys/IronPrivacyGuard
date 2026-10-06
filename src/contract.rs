@@ -296,6 +296,19 @@ fixed!(message_format, crate::message::FORMAT);
 fixed!(json_signature_format, crate::json_signature::FORMAT);
 fixed!(approval_format, crate::approval::FORMAT);
 fixed!(rotation_format, crate::rotation::FORMAT);
+fixed!(share_format, crate::backup::FORMAT);
+pub fn share_threshold(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"integer", "minimum":2, "maximum":crate::backup::MAX_SHARES,
+        "description":"Shares needed to recover (k); at most the number of shares (checked at runtime)."})
+}
+pub fn share_outputs(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":2, "maxItems":crate::backup::MAX_SHARES,
+        "items":{"type":"string"}, "description":"One output path per share (n); hand each to a different custodian."})
+}
+pub fn share_inputs(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "minItems":2, "maxItems":crate::backup::MAX_SHARES,
+        "items":{"type":"string"}, "description":"ipg-share-v1 files of one backup, at least its threshold."})
+}
 pub fn rotation_chain(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"array", "minItems":1, "maxItems":crate::rotation::MAX_CHAIN,
         "items":{"type":"string"}, "description":"ipg-rotation-v1 files in order, starting from the pinned identity."})

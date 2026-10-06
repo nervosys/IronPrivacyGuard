@@ -132,6 +132,11 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
             value.validate()?;
             Some(value.signer)
         }
+        "ipg-share-v1" => {
+            let value: crate::backup::ShareFile = ipg_json::from_slice(data)?;
+            value.validate()?;
+            None
+        }
         "ipg-rotation-v1" => {
             let value: crate::rotation::Rotation = ipg_json::from_slice(data)?;
             value.validate()?;

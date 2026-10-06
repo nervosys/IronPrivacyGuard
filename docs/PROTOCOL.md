@@ -104,6 +104,8 @@ content out of an agent's context should deny inline data.
 | message.seal | input, output, key, recipient, expected_recipient_fingerprint, lifetime; optional passphrase_file, conversation, channel_binding, grant, policy |
 | message.open | input, output, key, sender, expected_sender_fingerprint; optional passphrase_file, conversation, channel_binding, replay_directory, delegation, policy |
 | grant.verify | input, root, expected_root_fingerprint; optional subject_fingerprint, required_operation, purpose |
+| backup.split | input, threshold, outputs |
+| backup.combine | inputs, output |
 | key.rotate | key, expected_fingerprint, next_key, expected_next_fingerprint, reason, output; optional passphrase_file, next_passphrase_file |
 | rotation.verify | inputs, signer, expected_fingerprint; optional output |
 | audit.init | output |

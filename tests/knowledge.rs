@@ -9,7 +9,7 @@ fn catalog_links_resolve_and_support_matches_tools() {
     let ids: HashSet<_> = nodes.iter().map(|n| n["@id"].as_str().unwrap()).collect();
     assert_eq!(ids.len(), nodes.len());
     let apps = knowledge::applications();
-    assert_eq!(apps.len(), 25);
+    assert_eq!(apps.len(), 26);
     let mut seen = HashSet::new();
     for app in apps {
         assert!(seen.insert(app.id.clone()));

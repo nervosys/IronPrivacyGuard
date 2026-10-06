@@ -336,6 +336,18 @@
       "sensitivity": "public"
     },
     {
+      "@id": "ipg:BackupShare",
+      "@type": "ipg:Entity",
+      "description": "An ipg-share-v1 file: a random set ID, threshold, share count and index, one Shamir share of a 32-byte key, and the ChaCha20-Poly1305-sealed file shared by every share",
+      "sensitivity": "secret"
+    },
+    {
+      "@id": "ipg:ShareThreshold",
+      "@type": "ipg:Entity",
+      "description": "The number of shares k needed to recover, 2 <= k <= n <= 16",
+      "sensitivity": "control"
+    },
+    {
       "@id": "ipg:Rotation",
       "@type": "ipg:Entity",
       "description": "An ipg-rotation-v1 statement: the previous fingerprint, the successor's complete public identity, a reason (scheduled or upgraded) and host time, signed by both the previous and the successor key",
@@ -2599,6 +2611,123 @@
         "operation_const": "verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/backup.split",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:chacha20-poly1305",
+        "ic:shamir-gf256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/threshold-shares",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/size-bound"
+      ],
+      "description": "Seal a file under a fresh key and split that key into k-of-n Shamir shares, one file per custodian",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "backup.split",
+      "inputs": [
+        "ipg:Plaintext",
+        "ipg:ShareThreshold"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_backup_split",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:BackupShare"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "backup.split"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/backup.combine",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:chacha20-poly1305",
+        "ic:shamir-gf256"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/threshold-shares",
+        "ipg:constraint/authenticate-before-release",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Recover a file from at least k shares of one backup, authenticating it before release",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "backup.combine",
+      "inputs": [
+        "ipg:BackupShare"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_backup_combine",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:Plaintext"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "backup.combine"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
     },
     {
       "@id": "ipg:operation/key.rotate",
@@ -5276,6 +5405,12 @@
       "severity": "critical"
     },
     {
+      "@id": "ipg:constraint/threshold-shares",
+      "@type": "ipg:Constraint",
+      "requirement": "Fewer than the threshold of shares reveal nothing about the sealing key; every share reveals the protected file's length. Recovery authenticates the sealed file, so wrong, altered, mixed or insufficient shares fail instead of producing a wrong file. Split passphrase-protected key files, keep shares with independent custodians, and remember that any k custodians together can recover.",
+      "severity": "critical"
+    },
+    {
       "@id": "ipg:constraint/rotation-not-revocation",
       "@type": "ipg:Constraint",
       "requirement": "A rotation shows that the previous key endorsed a successor that holds its own private key. It does not revoke the previous key, and it proves nothing if the previous key was compromised: revoke compromised keys with key.revoke and check revocation status of every identity in a chain with trust snapshots.",
@@ -5904,6 +6039,26 @@
       }
     },
     {
+      "@id": "ipg:workflow/threshold-backup",
+      "@type": "ipg:Workflow",
+      "steps": {
+        "@list": [
+          {
+            "@id": "ipg:operation/backup.split"
+          },
+          {
+            "@id": "ipg:operation/inspect"
+          },
+          {
+            "@id": "ipg:operation/backup.combine"
+          },
+          {
+            "@id": "ipg:operation/key.public"
+          }
+        ]
+      }
+    },
+    {
       "@id": "ipg:workflow/rotate-identity",
       "@type": "ipg:Workflow",
       "steps": {
@@ -6374,6 +6529,21 @@
       ]
     },
     {
+      "@id": "ic:shamir-gf256",
+      "@type": "ipg:CryptographicPrimitive",
+      "ipg_usage": "Splits a random 32-byte ChaCha20-Poly1305 key into k-of-n backup shares; the protected file is sealed under that key so recovery is authenticated",
+      "label": "Shamir secret sharing over GF(2^8)",
+      "limitations": [
+        "Shares have no integrity of their own; IPG relies on the AEAD to detect wrong or insufficient shares",
+        "Any k shares recover the key",
+        "Not threshold signing or decryption: the key is reassembled in one place"
+      ],
+      "role": "Threshold secret sharing",
+      "sources": [
+        "https://dl.acm.org/doi/10.1145/359168.359176"
+      ]
+    },
+    {
       "@id": "ipg:application/confidential-file-transfer",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -6684,6 +6854,45 @@
         "ipg:operation/provenance.attest",
         "ipg:operation/provenance.verify",
         "ipg:operation/inspect"
+      ]
+    },
+    {
+      "@id": "ipg:application/threshold-backup",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/availability",
+        "ipg:goal/confidentiality"
+      ],
+      "guidance": "Split an already passphrase-protected key file so recovery still needs the passphrase. Give each share to a different custodian or location, record the set ID, and test recovery with backup.combine. Re-split and destroy old shares when custodians change.",
+      "id": "threshold-backup",
+      "keywords": [
+        "backup",
+        "shamir",
+        "secret sharing",
+        "threshold",
+        "k-of-n",
+        "recovery",
+        "escrow",
+        "custodians"
+      ],
+      "label": "Back up a key so k of n custodians can recover it",
+      "limitations": [
+        "Any k custodians together can recover the file",
+        "Every share reveals the protected file's length",
+        "At most 16 shares and 1 MiB per backup",
+        "Shares are not signed: authenticity comes from recovering the sealed file, not from who held a share"
+      ],
+      "prerequisites": [
+        "The file to protect, preferably a passphrase-protected key",
+        "n custodians who store their shares separately"
+      ],
+      "sources": [
+        "https://dl.acm.org/doi/10.1145/359168.359176"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/backup.split",
+        "ipg:operation/backup.combine"
       ]
     },
     {
@@ -7347,6 +7556,11 @@
       "label": "accountability"
     },
     {
+      "@id": "ipg:goal/availability",
+      "@type": "ipg:SecurityGoal",
+      "label": "availability"
+    },
+    {
       "@id": "ipg:goal/channel-security",
       "@type": "ipg:SecurityGoal",
       "label": "channel-security"
@@ -7459,5 +7673,5 @@
   ],
   "@id": "ipg:ontology",
   "scope": "Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia",
-  "version": "1.41.0"
+  "version": "1.42.0"
 }

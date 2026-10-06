@@ -5,6 +5,7 @@ pub mod approval;
 pub mod artifact;
 pub mod attest;
 pub mod audit;
+pub mod backup;
 mod base64;
 pub mod capabilities;
 #[cfg(all(feature = "tpm", windows))]
@@ -156,6 +157,21 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         passphrase_file: Option<String>,
         reason: RevocationReason,
+    },
+    #[serde(rename = "backup.split")]
+    BackupSplit {
+        /// The file to protect, such as a passphrase-protected secret key; at most 1 MiB.
+        input: String,
+        #[schemars(schema_with = "crate::contract::share_threshold")]
+        threshold: u8,
+        #[schemars(schema_with = "crate::contract::share_outputs")]
+        outputs: Vec<String>,
+    },
+    #[serde(rename = "backup.combine")]
+    BackupCombine {
+        #[schemars(schema_with = "crate::contract::share_inputs")]
+        inputs: Vec<String>,
+        output: String,
     },
     #[serde(rename = "key.rotate")]
     KeyRotate {
@@ -955,6 +971,18 @@ pub enum Outcome {
         authority: delegation::Authority,
         authenticated: bool,
     },
+    BackupSplit {
+        set_id: String,
+        threshold: u8,
+        shares: u8,
+        paths: Vec<String>,
+    },
+    BackupCombined {
+        path: String,
+        set_id: String,
+        /// Recovered bytes, authenticated before release.
+        bytes: u64,
+    },
     RotationVerified {
         previous: String,
         /// The final successor's fingerprint.
@@ -1170,6 +1198,8 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::BackupSplit { .. } => "backup.split",
+            Self::BackupCombine { .. } => "backup.combine",
             Self::KeyRotate { .. } => "key.rotate",
             Self::RotationVerify { .. } => "rotation.verify",
             Self::AuditInit { .. } => "audit.init",
@@ -1482,7 +1512,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"rotation":ipg_json::schema_for!(rotation::Rotation),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"rotation":ipg_json::schema_for!(rotation::Rotation),"share":ipg_json::schema_for!(backup::ShareFile),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -2090,6 +2120,53 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
                 delegation,
+            })
+        }
+        Request::BackupSplit {
+            input,
+            threshold,
+            outputs,
+        } => {
+            let count = u8::try_from(outputs.len())
+                .map_err(|_| Error::new("invalid_request", "Too many shares"))?;
+            for output in &outputs {
+                require_absent(output)?;
+            }
+            let mut unique = outputs.clone();
+            unique.sort();
+            unique.dedup();
+            if unique.len() != outputs.len() {
+                return Err(Error::new(
+                    "invalid_request",
+                    "Each share needs its own output",
+                ));
+            }
+            let secret = read(&input)?;
+            let shares = backup::split(&secret, threshold, count)?;
+            let set_id = shares[0].set_id.clone();
+            for (output, share) in outputs.iter().zip(&shares) {
+                write_new(output, &ipg_json::to_vec_pretty(share)?)?;
+            }
+            Ok(Outcome::BackupSplit {
+                set_id,
+                threshold,
+                shares: count,
+                paths: outputs,
+            })
+        }
+        Request::BackupCombine { inputs, output } => {
+            if inputs.len() > usize::from(backup::MAX_SHARES) {
+                return Err(Error::new("invalid_request", "Too many shares"));
+            }
+            require_absent(&output)?;
+            let files: Vec<backup::ShareFile> =
+                inputs.iter().map(|i| load(i)).collect::<Result<_>>()?;
+            let plain = backup::combine(&files)?;
+            write_new(&output, &plain)?;
+            Ok(Outcome::BackupCombined {
+                path: output,
+                set_id: files[0].set_id.clone(),
+                bytes: plain.len() as u64,
             })
         }
         Request::KeyRotate {

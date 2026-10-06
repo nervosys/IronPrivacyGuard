@@ -96,6 +96,18 @@
     "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
   },
   {
+    "id": "threshold-backup",
+    "label": "Back up a key so k of n custodians can recover it",
+    "keywords": ["backup", "shamir", "secret sharing", "threshold", "k-of-n", "recovery", "escrow", "custodians"],
+    "goals": ["availability", "confidentiality"],
+    "support": "implemented",
+    "operations": ["backup.split", "backup.combine"],
+    "prerequisites": ["The file to protect, preferably a passphrase-protected key", "n custodians who store their shares separately"],
+    "limitations": ["Any k custodians together can recover the file", "Every share reveals the protected file's length", "At most 16 shares and 1 MiB per backup", "Shares are not signed: authenticity comes from recovering the sealed file, not from who held a share"],
+    "guidance": "Split an already passphrase-protected key file so recovery still needs the passphrase. Give each share to a different custodian or location, record the set ID, and test recovery with backup.combine. Re-split and destroy old shares when custodians change.",
+    "sources": ["https://dl.acm.org/doi/10.1145/359168.359176"]
+  },
+  {
     "id": "rotate-identity",
     "label": "Rotate an identity to a successor key",
     "keywords": ["rotation", "rotate", "key rollover", "successor", "key update", "rekey", "migrate key"],

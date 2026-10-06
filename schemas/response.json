@@ -1492,6 +1492,68 @@
             },
             {
               "properties": {
+                "kind": {
+                  "const": "backup_split",
+                  "type": "string"
+                },
+                "paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set_id": {
+                  "type": "string"
+                },
+                "shares": {
+                  "format": "uint8",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "threshold": {
+                  "format": "uint8",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "set_id",
+                "threshold",
+                "shares",
+                "paths"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "bytes": {
+                  "description": "Recovered bytes, authenticated before release.",
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "backup_combined",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "set_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "set_id",
+                "bytes"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
                 "authenticated": {
                   "type": "boolean"
                 },

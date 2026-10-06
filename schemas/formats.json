@@ -2708,6 +2708,78 @@
     "title": "SecretKey",
     "type": "object"
   },
+  "share": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "ciphertext": {
+        "description": "The sealed file, identical in every share.",
+        "not": {
+          "pattern": "[^0-9a-fA-F]"
+        },
+        "pattern": "^([0-9a-fA-F]{2})*$",
+        "type": "string"
+      },
+      "format": {
+        "const": "ipg-share-v1",
+        "type": "string"
+      },
+      "index": {
+        "description": "This share's index, 1..=shares.",
+        "format": "uint8",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "key_share": {
+        "maxLength": 64,
+        "minLength": 64,
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "nonce": {
+        "maxLength": 24,
+        "minLength": 24,
+        "pattern": "^[0-9a-f]{24}$",
+        "type": "string"
+      },
+      "set_id": {
+        "description": "Random identifier shared by every share of one split.",
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "shares": {
+        "format": "uint8",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "tag": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "threshold": {
+        "format": "uint8",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "format",
+      "set_id",
+      "threshold",
+      "shares",
+      "index",
+      "key_share",
+      "nonce",
+      "ciphertext",
+      "tag"
+    ],
+    "title": "ShareFile",
+    "type": "object"
+  },
   "signature": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,

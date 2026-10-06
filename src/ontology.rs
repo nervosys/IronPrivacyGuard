@@ -266,6 +266,20 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "backup.split",
+        "Seal a file under a fresh key and split that key into k-of-n Shamir shares, one file per custodian",
+        &["Plaintext", "ShareThreshold"],
+        &["BackupShare"],
+        &["read_file", "create_file"],
+    ),
+    (
+        "backup.combine",
+        "Recover a file from at least k shares of one backup, authenticating it before release",
+        &["BackupShare"],
+        &["Plaintext"],
+        &["read_file", "create_file"],
+    ),
+    (
         "key.rotate",
         "Have the current identity name its successor, with both keys signing one statement so the successor proves possession",
         &["SecretKey", "Passphrase", "Fingerprint"],
@@ -694,6 +708,12 @@ pub fn operation(id: &str) -> Value {
             "delegation-not-authorization",
             "host-clock",
         ],
+        "backup.split" => vec!["threshold-shares", "no-clobber", "size-bound"],
+        "backup.combine" => vec![
+            "threshold-shares",
+            "authenticate-before-release",
+            "no-clobber",
+        ],
         "key.rotate" => vec![
             "identity-pin",
             "rotation-not-revocation",
@@ -969,6 +989,7 @@ pub fn operation(id: &str) -> Value {
         }
         "audit.init" | "audit.append" => vec!["sha2-384"],
         "key.rotate" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
+        "backup.split" | "backup.combine" => vec!["chacha20-poly1305", "shamir-gf256"],
         "rotation.verify" => vec!["ed25519"],
         "audit.verify" => vec!["ed25519", "sha2-384"],
         "json.sign" | "provenance.attest" | "approval.sign" | "audit.checkpoint" => {
@@ -1089,6 +1110,7 @@ pub fn operation(id: &str) -> Value {
                     | "encrypt"
                     | "audit.init"
                     | "audit.append"
+                    | "backup.split"
                     | "key.rewrap"
                     | "hardware.tokens"
                     | "hardware.key.generate"
@@ -1418,6 +1440,16 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "BackupShare",
+            "An ipg-share-v1 file: a random set ID, threshold, share count and index, one Shamir share of a 32-byte key, and the ChaCha20-Poly1305-sealed file shared by every share",
+            "secret",
+        ),
+        (
+            "ShareThreshold",
+            "The number of shares k needed to recover, 2 <= k <= n <= 16",
+            "control",
+        ),
+        (
             "Rotation",
             "An ipg-rotation-v1 statement: the previous fingerprint, the successor's complete public identity, a reason (scheduled or upgraded) and host time, signed by both the previous and the successor key",
             "public",
@@ -1679,6 +1711,10 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "threshold-shares",
+            "Fewer than the threshold of shares reveal nothing about the sealing key; every share reveals the protected file's length. Recovery authenticates the sealed file, so wrong, altered, mixed or insufficient shares fail instead of producing a wrong file. Split passphrase-protected key files, keep shares with independent custodians, and remember that any k custodians together can recover.",
         ),
         (
             "rotation-not-revocation",
@@ -1998,6 +2034,10 @@ pub fn export() -> Value {
         ),
         ("sign-structured-data", vec!["json.sign", "json.verify"]),
         (
+            "threshold-backup",
+            vec!["backup.split", "inspect", "backup.combine", "key.public"],
+        ),
+        (
             "rotate-identity",
             vec!["key.generate", "key.rotate", "rotation.verify", "trust.add"],
         ),
@@ -2078,5 +2118,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.41.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.42.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

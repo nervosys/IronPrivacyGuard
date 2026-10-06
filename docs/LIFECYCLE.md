@@ -113,3 +113,35 @@ compromised key proves nothing: revoke compromised keys with `key.revoke`, and
 check every identity in a chain against a trust snapshot before relying on it.
 Rotation needs both private keys and is refused in sessions confined by a
 pinned delegation grant.
+
+## Threshold backups: ipg-share-v1
+
+`backup.split` protects a file of up to 1 MiB, typically a passphrase-protected
+secret key, so that any k of n custodians can recover it (2 <= k <= n <= 16).
+It works in two steps:
+
+1. It seals the file with ChaCha20-Poly1305 under a fresh random 32-byte key,
+   with associated data `frame("IPG share v1", set_id, u8 threshold, u8 shares)`.
+2. It splits only that key with IronCrypto's Shamir sharing over GF(2^8): the
+   AES field, with share index i evaluated at x = i.
+
+Each output file is one share:
+
+```json
+{"format":"ipg-share-v1","set_id":"<16 random bytes>","threshold":3,"shares":5,
+ "index":2,"key_share":"<32 bytes>","nonce":"<12 bytes>",
+ "ciphertext":"<sealed file>","tag":"<16 bytes>"}
+```
+
+`backup.combine` requires shares from one set (same set ID, parameters and
+sealed file), distinct indices and at least the threshold. It rebuilds the key
+and authenticates the sealed file before writing it.
+
+Shamir shares carry no integrity of their own, so the AEAD is what makes
+recovery safe. Wrong, altered or mixed shares fail with `authentication_failed`
+instead of producing a wrong file. Fewer than k shares reveal nothing about the
+key, but every share reveals the file's length.
+
+Splitting a passphrase-protected key keeps the passphrase as a second factor at
+recovery. Any k custodians together can recover the file. To change custodians,
+re-split and destroy the old shares.

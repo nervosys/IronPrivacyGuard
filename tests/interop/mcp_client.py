@@ -177,6 +177,10 @@ async def exercise(executable, directory):
         await checked.call("key.rotate", {"key": path("key"), "passphrase_file": path("pass"), "expected_fingerprint": fingerprint, "next_key": path("successor"), "next_passphrase_file": path("pass"), "expected_next_fingerprint": successor["fingerprint"], "reason": "upgraded", "output": path("rotation")})
         rotated = await checked.call("rotation.verify", {"inputs": [path("rotation")], "signer": path("public"), "expected_fingerprint": fingerprint})
         assert rotated["current"] == successor["fingerprint"]
+        shares = [path(f"share-{i}") for i in range(3)]
+        await checked.call("backup.split", {"input": path("key"), "threshold": 2, "outputs": shares})
+        await checked.call("backup.combine", {"inputs": [shares[2], shares[0]], "output": path("key-recovered")})
+        assert Path(path("key-recovered")).read_bytes() == Path(path("key")).read_bytes()
         await checked.call("audit.init", {"output": path("audit-log")})
         Path(path("audit-event")).write_text('{"agent": "mcp", "step": 1}')
         appended = await checked.call("audit.append", {"log": path("audit-log"), "event": path("audit-event")})
@@ -192,7 +196,7 @@ async def exercise(executable, directory):
         attested = await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("message")}], "action": "relay"})
         assert attested["verified_subjects"] == ["message"] and attested["statement"]["agent"] == fingerprint
         await checked.call("provenance.verify", {"input": path("statement"), "signer": path("public"), "expected_fingerprint": fingerprint, "subjects": [{"name": "message", "input": path("agent-message")}]}, error="authentication_failed")
-        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("rotation", "rotation"), ("statement", "dsse_envelope")]:
+        for filename, schema_name in [("json-signature", "json_signature"), ("approval", "approval"), ("audit-checkpoint", "audit_checkpoint"), ("rotation", "rotation"), ("share-0", "share"), ("statement", "dsse_envelope")]:
             schema = schemas["formats"][schema_name]
             Draft202012Validator.check_schema(schema)
             Draft202012Validator(schema).validate(json.loads(Path(path(filename)).read_text()))

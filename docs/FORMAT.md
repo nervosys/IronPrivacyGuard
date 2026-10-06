@@ -273,6 +273,12 @@ Provenance statements are standard DSSE envelopes holding canonical in-toto v1
 statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
 [PROVENANCE.md](PROVENANCE.md).
 
+## Backup share: ipg-share-v1
+
+One of n threshold shares of a backup: a Shamir share of a random key, plus the
+file sealed under that key, which every share repeats. See
+[LIFECYCLE.md](LIFECYCLE.md#threshold-backups-ipg-share-v1).
+
 ## Rotation: ipg-rotation-v1
 
 A statement in which an identity names its successor's complete public identity,
