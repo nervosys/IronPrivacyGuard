@@ -16,6 +16,45 @@ fn invalid(message: &str) -> Error {
     Error::new("invalid_format", message)
 }
 
+/// Parse JSON that will be canonicalized. Integer literals that do not fit
+/// 64 bits are refused: the general decoder reads them as doubles, so two
+/// different integers could otherwise share one canonical form.
+pub fn parse(document: &[u8]) -> Result<Value> {
+    let (mut in_string, mut escaped, mut i) = (false, false, 0);
+    while i < document.len() {
+        let b = document[i];
+        if in_string {
+            match (escaped, b) {
+                (true, _) => escaped = false,
+                (false, b'\\') => escaped = true,
+                (false, b'"') => in_string = false,
+                _ => {}
+            }
+            i += 1;
+        } else if b == b'"' {
+            in_string = true;
+            i += 1;
+        } else if b == b'-' || b.is_ascii_digit() {
+            let start = i;
+            while i < document.len()
+                && matches!(document[i], b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9')
+            {
+                i += 1;
+            }
+            let token = std::str::from_utf8(&document[start..i]).unwrap_or("");
+            let integral = !token.contains(['.', 'e', 'E']);
+            if integral && token.parse::<i64>().is_err() && token.parse::<u64>().is_err() {
+                return Err(invalid(
+                    "Integer literals beyond 64 bits cannot be canonicalized exactly (I-JSON)",
+                ));
+            }
+        } else {
+            i += 1;
+        }
+    }
+    ipg_json::from_slice(document).map_err(|_| invalid("Input is not strict I-JSON"))
+}
+
 /// Canonical UTF-8 bytes of a JSON value.
 pub fn canonicalize(value: &Value) -> Result<Vec<u8>> {
     let mut out = String::new();

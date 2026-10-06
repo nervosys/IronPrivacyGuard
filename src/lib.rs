@@ -424,6 +424,13 @@ pub enum Request {
         /// File holding one JSON object, at most 64 KiB.
         event: String,
     },
+    /// Copy the verified entries of a log whose last append was interrupted.
+    #[serde(rename = "audit.repair")]
+    AuditRepair {
+        log: String,
+        /// New file receiving every complete, verified line.
+        output: String,
+    },
     #[serde(rename = "audit.checkpoint")]
     AuditCheckpoint {
         log: String,
@@ -1149,6 +1156,12 @@ pub enum Outcome {
         /// The new head hash; anchor it with audit.checkpoint.
         head: String,
     },
+    AuditRepaired {
+        path: String,
+        log: audit::State,
+        /// Bytes of the interrupted final line that were not copied.
+        dropped_bytes: u64,
+    },
     AuditVerified {
         log: audit::State,
         checkpoints_verified: usize,
@@ -1363,6 +1376,7 @@ impl Request {
             Self::AuditAppend { .. } => "audit.append",
             Self::AuditCheckpoint { .. } => "audit.checkpoint",
             Self::AuditVerify { .. } => "audit.verify",
+            Self::AuditRepair { .. } => "audit.repair",
             Self::ApprovalSign { .. } => "approval.sign",
             Self::QuorumVerify { .. } => "quorum.verify",
             Self::JsonCanonicalize { .. } => "json.canonicalize",
@@ -1501,6 +1515,63 @@ pub fn write_new(path: &str, data: &[u8]) -> Result<()> {
     temp.persist_noclobber(target)?;
     Ok(())
 }
+/// Outputs of one call, written to temporary files and published together, so
+/// a failure leaves none of them behind.
+#[derive(Default)]
+pub(crate) struct Staged {
+    files: Vec<(std::path::PathBuf, files::NamedTempFile)>,
+    inline: Vec<(String, Vec<u8>)>,
+    seen: std::collections::BTreeSet<String>,
+}
+impl Staged {
+    pub(crate) fn add(&mut self, path: &str, data: &[u8]) -> Result<()> {
+        let key = match inline::returned_name(path)? {
+            Some(name) => format!("return:{name}"),
+            None => files::identity(path)?,
+        };
+        if !self.seen.insert(key) {
+            return Err(Error::new(
+                "invalid_request",
+                "Each output needs its own destination",
+            ));
+        }
+        if let Some(name) = inline::returned_name(path)? {
+            inline::require_unused(name)?;
+            self.inline.push((name.to_owned(), data.to_vec()));
+            return Ok(());
+        }
+        require_absent(path)?;
+        let target = Path::new(path);
+        let parent = target
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        let mut temp = files::NamedTempFile::new_in(parent)?;
+        temp.write_all(data)?;
+        temp.as_file().sync_all()?;
+        self.files.push((target.to_path_buf(), temp));
+        Ok(())
+    }
+
+    /// Publish every output; on failure, remove those already published.
+    pub(crate) fn publish(self) -> Result<()> {
+        let mut published: Vec<std::path::PathBuf> = Vec::new();
+        for (target, temp) in self.files {
+            if let Err(error) = temp.persist_noclobber(&target) {
+                for path in &published {
+                    let _ = std::fs::remove_file(path);
+                }
+                return Err(error.into());
+            }
+            published.push(target);
+        }
+        for (name, data) in self.inline {
+            inline::store(&name, &data)?;
+        }
+        Ok(())
+    }
+}
+
 fn save<T: Serialize>(
     path: String,
     value: &T,
@@ -1608,6 +1679,7 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         | Request::AuditInit { .. }
         | Request::AuditAppend { .. }
         | Request::AuditVerify { .. }
+        | Request::AuditRepair { .. }
         | Request::QuorumVerify { .. }
         | Request::JsonCanonicalize { .. }
         | Request::JsonVerify { .. }
@@ -2548,21 +2620,14 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             for output in &outputs {
                 require_absent(output)?;
             }
-            let mut unique = outputs.clone();
-            unique.sort();
-            unique.dedup();
-            if unique.len() != outputs.len() {
-                return Err(Error::new(
-                    "invalid_request",
-                    "Each share needs its own output",
-                ));
-            }
             let secret = read(&input)?;
             let shares = backup::split(&secret, threshold, count)?;
             let set_id = shares[0].set_id.clone();
+            let mut staged = Staged::default();
             for (output, share) in outputs.iter().zip(&shares) {
-                write_new(output, &ipg_json::to_vec_pretty(share)?)?;
+                staged.add(output, &ipg_json::to_vec_pretty(share)?)?;
             }
+            staged.publish()?;
             Ok(Outcome::BackupSplit {
                 set_id,
                 threshold,
@@ -2661,8 +2726,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
         }
         Request::AuditAppend { log, event } => {
             let bytes = read_limited(inline::open(&event)?, audit::MAX_EVENT_BYTES as u64)?;
-            let event: Value = ipg_json::from_slice(&bytes)
-                .map_err(|_| Error::new("invalid_format", "Event is not strict JSON"))?;
+            let event: Value = jcs::parse(&bytes)?;
             // Events of the MCP host's own audit trail cannot be forged by tools.
             if event.get("source").and_then(Value::as_str) == Some("ipg-mcp") {
                 return Err(Error::new(
@@ -2675,6 +2739,23 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 path: log,
                 seq,
                 head,
+            })
+        }
+        Request::AuditRepair { log, output } => {
+            require_absent(&output)?;
+            if inline::is_inline(&log) {
+                return Err(Error::new("invalid_request", "Audit logs must be files"));
+            }
+            let data = read_limited(
+                inline::open(&log)?,
+                audit::MAX_LOG_BYTES + audit::MAX_EVENT_BYTES as u64 + 1024,
+            )?;
+            let (prefix, state, dropped_bytes) = audit::repair(&data)?;
+            write_new(&output, &prefix)?;
+            Ok(Outcome::AuditRepaired {
+                path: output,
+                log: state,
+                dropped_bytes,
             })
         }
         Request::AuditCheckpoint {
@@ -2810,14 +2891,15 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             for approver in &approvers {
                 let public: PublicKey = load(&approver.public)?;
                 public.pin(&approver.expected_fingerprint)?;
-                if pinned
-                    .iter()
-                    .any(|(p, _)| p.fingerprint == public.fingerprint)
-                {
-                    return Err(Error::new(
-                        "invalid_request",
-                        "Approver fingerprints must be distinct",
-                    ));
+                let key = public.signing_key_bytes()?;
+                for (other, _) in &pinned {
+                    if other.fingerprint == public.fingerprint || other.signing_key_bytes()? == key
+                    {
+                        return Err(Error::new(
+                            "invalid_request",
+                            "Approvers must be distinct identities with distinct signing keys",
+                        ));
+                    }
                 }
                 let eligibility = trust::enforce(policy.as_ref(), &public);
                 pinned.push((public, eligibility));

@@ -81,6 +81,9 @@ pub struct State {
     pub last_time: Option<u64>,
     /// Bytes of the log, all of which verified.
     pub bytes: u64,
+    /// Entries whose time is earlier than their predecessor's: the host clock
+    /// went backwards, or entries were written by hosts with different clocks.
+    pub time_regressions: u64,
 }
 
 fn read_line(input: &mut impl BufRead, line: &mut Vec<u8>) -> Result<bool> {
@@ -138,6 +141,7 @@ pub fn scan(
     }
     let mut bytes = line.len() as u64 + 1;
     let (mut size, mut first_time, mut last_time) = (0u64, None, None);
+    let mut time_regressions = 0;
     while read_line(input, &mut line)? {
         bytes += line.len() as u64 + 1;
         if bytes > MAX_LOG_BYTES {
@@ -158,6 +162,9 @@ pub fn scan(
         }
         head = hash;
         first_time.get_or_insert(entry.time);
+        if last_time.is_some_and(|t| entry.time < t) {
+            time_regressions += 1;
+        }
         last_time = Some(entry.time);
         if wanted.contains(&size) {
             heads.insert(size, entry.hash);
@@ -171,6 +178,7 @@ pub fn scan(
             first_time,
             last_time,
             bytes,
+            time_regressions,
         },
         heads,
     ))
@@ -187,11 +195,14 @@ pub fn create() -> Result<Vec<u8>> {
     Ok(line)
 }
 
-/// Removes the lock file when the append finishes or fails.
-struct Lock(std::path::PathBuf);
+/// Removes the lock file when the append finishes or fails, unless another
+/// writer has replaced it since.
+struct Lock(std::path::PathBuf, [u8; 16]);
 impl Drop for Lock {
     fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
+        if std::fs::read(&self.0).is_ok_and(|held| held == self.1) {
+            let _ = std::fs::remove_file(&self.0);
+        }
     }
 }
 
@@ -213,7 +224,8 @@ pub fn append(path: &str, event: &Value, now: u64) -> Result<(u64, String)> {
         return Err(Error::new("limit_exceeded", "Audit event exceeds 64 KiB"));
     }
     let lock_path = std::path::PathBuf::from(format!("{path}.lock"));
-    std::fs::OpenOptions::new()
+    let token = *crypto::random::<16>()?;
+    let mut lock = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(&lock_path)
@@ -227,11 +239,14 @@ pub fn append(path: &str, event: &Value, now: u64) -> Result<(u64, String)> {
                 e.into()
             }
         })?;
-    let _lock = Lock(lock_path);
-    let (state, _) = scan(
-        &mut std::io::BufReader::new(std::fs::File::open(path)?),
-        &BTreeSet::new(),
-    )?;
+    let _lock = Lock(lock_path, token);
+    lock.write_all(&token)?;
+    // One handle verifies and extends the log, so the file checked is the file written.
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .append(true)
+        .open(path)?;
+    let (state, _) = scan(&mut std::io::BufReader::new(&file), &BTreeSet::new())?;
     let prev = crypto::bytes::<48>(&state.head)?;
     let seq = state.size + 1;
     let hash = crate::hex::encode(entry_hash(&prev, seq, now, &canonical));
@@ -244,10 +259,34 @@ pub fn append(path: &str, event: &Value, now: u64) -> Result<(u64, String)> {
             "Audit log would exceed 1 GiB; start a new log",
         ));
     }
-    let mut file = std::fs::OpenOptions::new().append(true).open(path)?;
-    file.write_all(&line)?;
+    if file.metadata()?.len() != state.bytes {
+        return Err(Error::new(
+            "already_exists",
+            "The audit log changed while it was being verified; retry",
+        ));
+    }
+    (&file).write_all(&line)?;
     file.sync_all()?;
     Ok((seq, hash))
+}
+
+/// The verified prefix of a log whose last append was interrupted, its state,
+/// and the number of bytes of the partial final line that were dropped.
+pub fn repair(data: &[u8]) -> Result<(Vec<u8>, State, u64)> {
+    let end = data
+        .iter()
+        .rposition(|&b| b == b'\n')
+        .map(|i| i + 1)
+        .ok_or_else(|| invalid("Audit log has no complete header line"))?;
+    if end == data.len() {
+        return Err(Error::new(
+            "invalid_request",
+            "Audit log ends with a complete line; there is no interrupted append to repair",
+        ));
+    }
+    let prefix = &data[..end];
+    let (state, _) = scan(&mut &prefix[..], &BTreeSet::new())?;
+    Ok((prefix.to_vec(), state, (data.len() - end) as u64))
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

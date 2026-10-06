@@ -264,6 +264,28 @@ impl SecretTree {
     }
 }
 
+impl SecretTree {
+    /// Whether a decoded tree matches its group: suite, size, node indices and
+    /// secret lengths.
+    pub fn consistent(&self, suite: Suite, n_leaves: u32) -> bool {
+        let width = u64::from(self.n_leaves) * 2 - 1;
+        self.suite == suite
+            && self.n_leaves >= n_leaves
+            && self
+                .nodes
+                .iter()
+                .all(|(node, secret)| u64::from(*node) < width && secret.len() == NH)
+            && self.ratchets.iter().all(|((leaf, _), ratchet)| {
+                *leaf < self.n_leaves
+                    && ratchet.secret.len() == NH
+                    && ratchet.skipped.len() <= MAX_SKIPPED
+                    && ratchet.skipped.values().all(|k| {
+                        k.key.len() == suite.key_len() && k.nonce.len() == super::suite::NONCE_LEN
+                    })
+            })
+    }
+}
+
 /// Key and nonce protecting `SenderData`, from a ciphertext sample.
 pub fn sender_data_key_nonce(
     suite: Suite,

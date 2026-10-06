@@ -8,6 +8,7 @@ detection of truncation and rewritten history.
 | --- | --- |
 | `audit.init` | Create an empty log with a random 16-byte log ID. Never replaces a file. |
 | `audit.append` | Verify the whole chain, then append one JSON object event with the host time, under an exclusive `<log>.lock`. |
+| `audit.repair` | Copy the verified entries of a log whose last append was interrupted to a new file, dropping only the partial final line. |
 | `audit.checkpoint` | Sign the log ID, current size, head hash and host time. |
 | `audit.verify` | Verify the chain, and that each checkpoint from a pinned signer is a prefix of the log. |
 
@@ -94,6 +95,9 @@ An empty log's checkpoint has size 0 and the genesis head.
   shorter or divergent log fails with `authentication_failed`. The result's
   `unanchored_entries` counts entries after the latest checkpoint, which are
   not yet protected.
+- **Clock:** entries carry the host time. `time_regressions` counts entries
+  older than their predecessor, which means the clock went backwards or hosts
+  with different clocks wrote the log.
 - **Attribution:** anyone who can write the file can append. Events are
   claims, so attribute them with checkpoints, signed provenance or message
   signatures as needed.
@@ -104,7 +108,20 @@ so the log holder cannot rewrite them too.
 
 ## Locking
 
-`audit.append` creates `<log>.lock` exclusively, and removes it when the append
-finishes or fails. A concurrent writer receives `already_exists` and should
-retry. A crash can leave a stale lock. Remove it only after confirming that no
-writer is running.
+`audit.append` creates `<log>.lock` exclusively and writes a random token into
+it. When the append finishes or fails, it removes the lock only if the lock
+still holds its token, so it never removes another writer's lock. A concurrent
+writer receives `already_exists` and should retry. One file handle verifies and
+extends the log, and the append is refused if the file changed in between.
+
+A crash can leave a stale lock. Remove it only after confirming that no writer
+is running.
+
+## Interrupted appends
+
+An append interrupted mid-write leaves a partial final line, and the log then
+refuses further appends. `audit.repair --log <log> --output <new>` verifies every
+complete line and writes them to a new file, reporting `dropped_bytes`. Review
+the original, then replace it with the repaired copy. Repair refuses a log that
+ends cleanly, and never hides tampering: any invalid complete line fails as in
+`audit.verify`.

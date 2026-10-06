@@ -10,7 +10,7 @@ use crate::{
 };
 use ic_core::traits::Digest;
 use ic_hash::Sha384;
-use ipg_json::{Deserialize, JsonSchema, Serialize, Value};
+use ipg_json::{Deserialize, JsonSchema, Serialize};
 
 pub const FORMAT: &str = "ipg-json-signature-v1";
 pub const CANONICALIZATION: &str = "rfc8785";
@@ -71,9 +71,7 @@ impl Signature {
 
 /// Parse strict JSON and return its canonical bytes.
 pub fn canonical(document: &[u8]) -> Result<Vec<u8>> {
-    let value: Value = ipg_json::from_slice(document)
-        .map_err(|_| Error::new("invalid_format", "Input is not strict I-JSON"))?;
-    crate::jcs::canonicalize(&value)
+    crate::jcs::canonicalize(&crate::jcs::parse(document)?)
 }
 
 fn digest(canonical: &[u8]) -> String {

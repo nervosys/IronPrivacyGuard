@@ -1568,6 +1568,29 @@
     },
     {
       "additionalProperties": false,
+      "description": "Copy the verified entries of a log whose last append was interrupted.",
+      "properties": {
+        "log": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "audit.repair",
+          "type": "string"
+        },
+        "output": {
+          "description": "New file receiving every complete, verified line.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "log",
+        "output"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
       "properties": {
         "key": {
           "type": "string"

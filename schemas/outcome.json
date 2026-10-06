@@ -882,13 +882,20 @@
           "format": "uint64",
           "minimum": 0,
           "type": "integer"
+        },
+        "time_regressions": {
+          "description": "Entries whose time is earlier than their predecessor's: the host clock\nwent backwards, or entries were written by hosts with different clocks.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "required": [
         "log_id",
         "size",
         "head",
-        "bytes"
+        "bytes",
+        "time_regressions"
       ],
       "type": "object"
     },
@@ -1884,6 +1891,33 @@
         "path",
         "seq",
         "head"
+      ],
+      "type": "object"
+    },
+    {
+      "properties": {
+        "dropped_bytes": {
+          "description": "Bytes of the interrupted final line that were not copied.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "const": "audit_repaired",
+          "type": "string"
+        },
+        "log": {
+          "$ref": "#/$defs/State"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "log",
+        "dropped_bytes"
       ],
       "type": "object"
     },

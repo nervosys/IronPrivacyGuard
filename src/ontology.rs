@@ -387,6 +387,13 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file", "append_file", "create_lock_file"],
     ),
     (
+        "audit.repair",
+        "Copy the verified entries of a log whose last append was interrupted to a new log, dropping the partial final line",
+        &["AuditLog"],
+        &["AuditLog"],
+        &["read_file", "create_file"],
+    ),
+    (
         "audit.checkpoint",
         "Sign a log's current size and head hash so later truncation or rewriting is detectable",
         &["AuditLog", "SecretKey", "Passphrase"],
@@ -832,6 +839,7 @@ pub fn operation(id: &str) -> Value {
         "audit.append" => vec!["hash-chain", "host-clock", "size-bound"],
         "audit.checkpoint" => vec!["hash-chain", "secret-channel", "no-clobber"],
         "audit.verify" => vec!["identity-pin", "hash-chain", "checkpoint-anchoring"],
+        "audit.repair" => vec!["hash-chain", "no-clobber"],
         "approval.sign" => vec![
             "approval-binding",
             "host-clock",
@@ -1094,7 +1102,7 @@ pub fn operation(id: &str) -> Value {
         "grant.verify" | "json.verify" | "provenance.verify" | "quorum.verify" => {
             vec!["ed25519", "sha2-384"]
         }
-        "audit.init" | "audit.append" => vec!["sha2-384"],
+        "audit.init" | "audit.append" | "audit.repair" => vec!["sha2-384"],
         "key.rotate" => vec!["ed25519", "argon2id", "chacha20-poly1305"],
         "backup.split" | "backup.combine" => vec!["chacha20-poly1305", "shamir-gf256"],
         "mls.key_package" | "mls.group.create" | "mls.join" | "mls.commit" | "mls.encrypt"
@@ -2224,6 +2232,7 @@ pub fn export() -> Value {
             vec![
                 "audit.init",
                 "audit.append",
+                "audit.repair",
                 "audit.checkpoint",
                 "audit.verify",
             ],

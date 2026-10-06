@@ -128,7 +128,9 @@ It works in two steps:
 2. It splits only that key with IronCrypto's Shamir sharing over GF(2^8): the
    AES field, with share index i evaluated at x = i.
 
-Each output file is one share:
+Each output file is one share. Outputs are written to temporary files first and
+published together, so a failure leaves no partial set; two spellings of one
+path are refused as duplicates.
 
 ```json
 {"format":"ipg-share-v1","set_id":"<16 random bytes>","threshold":3,"shares":5,

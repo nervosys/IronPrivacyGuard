@@ -1417,7 +1417,7 @@ impl Group {
             .vector(|r| Ok((r.opaque()?.to_vec(), Zeroizing::new(r.opaque()?.to_vec()))))?
             .into_iter()
             .collect();
-        let resumption = r
+        let resumption: BTreeMap<u64, Zeroizing<Vec<u8>>> = r
             .vector(|r| Ok((r.u64()?, Zeroizing::new(r.opaque()?.to_vec()))))?
             .into_iter()
             .collect();
@@ -1428,6 +1428,28 @@ impl Group {
         };
         r.finish()?;
         if context.suite != suite || tree.root_hash(suite) != context.tree_hash {
+            return Err(Error::new("invalid_format", "MLS state is inconsistent"));
+        }
+        let hashes = [&interim_transcript_hash, &confirmation_tag];
+        let sized = leaf < tree.n_leaves()
+            && signature_private.len() == 32
+            && hashes.iter().all(|h| h.len() == super::suite::NH)
+            && [
+                &keys.init_secret,
+                &keys.sender_data_secret,
+                &keys.exporter_secret,
+                &keys.membership_key,
+                &keys.epoch_authenticator,
+                &keys.resumption_psk,
+            ]
+            .iter()
+            .all(|k| k.len() == super::suite::NH)
+            && resumption.values().all(|k| k.len() == super::suite::NH)
+            && pending
+                .iter()
+                .all(|p| p.reference.len() == super::suite::NH)
+            && secret_tree.consistent(suite, tree.n_leaves());
+        if !sized {
             return Err(Error::new("invalid_format", "MLS state is inconsistent"));
         }
         private.prune(&tree);

@@ -26,7 +26,7 @@ async def exercise(url, token, directory):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = (await session.list_tools()).tools
-                assert len(tools) == 81
+                assert len(tools) == 82
                 for tool in tools:
                     Draft202012Validator.check_schema(tool.input_schema)
                 document = Path(directory) / "document"

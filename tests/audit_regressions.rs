@@ -464,3 +464,115 @@ fn hosts_can_force_replay_protection_for_messages() {
         "policy_mismatch"
     );
 }
+
+/// L3: integers that do not fit 64 bits are refused rather than rounded.
+#[test]
+fn oversized_integers_cannot_collide_in_canonical_form() {
+    let f = Fixture::new();
+    for (name, body) in [
+        ("a.json", "{\"n\":18446744073709551617}"),
+        ("b.json", "{\"n\":18446744073709551616}"),
+    ] {
+        fs::write(f.path(name), body).unwrap();
+        assert_eq!(
+            call(json!({"operation":"json.canonicalize","input":f.path(name),
+                "output":f.path(&format!("{name}.out"))}))
+            .unwrap_err(),
+            "invalid_format"
+        );
+    }
+}
+
+/// L8: one call's outputs are checked as files, not strings, and published together.
+#[test]
+fn multi_output_operations_dedup_paths_and_publish_together() {
+    let f = Fixture::new();
+    fs::write(f.path("secret"), b"backup secret").unwrap();
+    fs::create_dir(f.path("sub")).unwrap();
+    let alias = format!(
+        "{}{}..{}share-1",
+        f.path("sub"),
+        std::path::MAIN_SEPARATOR,
+        std::path::MAIN_SEPARATOR
+    );
+    assert_eq!(
+        call(
+            json!({"operation":"backup.split","input":f.path("secret"),"threshold":2,
+            "outputs":[f.path("share-1"), alias, f.path("share-3")]})
+        )
+        .unwrap_err(),
+        "invalid_request"
+    );
+    for share in ["share-1", "share-3"] {
+        assert!(!std::path::Path::new(&f.path(share)).exists());
+    }
+    call(
+        json!({"operation":"backup.split","input":f.path("secret"),"threshold":2,
+        "outputs":[f.path("share-1"), f.path("share-2"), f.path("share-3")]}),
+    )
+    .unwrap();
+}
+
+/// Info: a failing signature listed first does not hide a valid one from the same signer.
+#[test]
+fn dsse_verification_tries_every_signature_of_the_signer() {
+    let f = Fixture::new();
+    let agent = f.identity("agent");
+    call(
+        json!({"operation":"provenance.attest","subjects":[{"name":"doc","input":f.path("doc")}],
+        "action":"build","output":f.path("env"),"key":f.path("agent"),
+        "passphrase_file":f.path("pass"),"policy":null}),
+    )
+    .unwrap();
+    let mut envelope: Value = ipg_json::from_slice(&fs::read(f.path("env")).unwrap()).unwrap();
+    let good = envelope["signatures"][0].clone();
+    let mut bad = good.clone();
+    let mut sig = bad["sig"].as_str().unwrap().to_owned();
+    let flipped = if sig.starts_with('A') { "B" } else { "A" };
+    sig.replace_range(0..1, flipped);
+    bad["sig"] = json!(sig);
+    envelope["signatures"] = json!([bad, good]);
+    fs::write(f.path("env2"), ipg_json::to_vec(&envelope).unwrap()).unwrap();
+    call(json!({"operation":"provenance.verify","input":f.path("env2"),"signer":f.path("agent.public"),
+        "expected_fingerprint":agent,"subjects":[{"name":"doc","input":f.path("doc")}],"policy":null}))
+    .unwrap();
+}
+
+/// Info: interrupted appends can be repaired, clock regressions are reported,
+/// and an append never removes another writer's lock.
+#[test]
+fn audit_logs_report_regressions_repair_tails_and_respect_foreign_locks() {
+    let f = Fixture::new();
+    let log = f.path("log");
+    call(json!({"operation":"audit.init","output":log})).unwrap();
+    fs::write(f.path("event"), br#"{"step":1}"#).unwrap();
+    call(json!({"operation":"audit.append","log":log,"event":f.path("event")})).unwrap();
+    assert_eq!(
+        call(json!({"operation":"audit.repair","log":log,"output":f.path("fixed")})).unwrap_err(),
+        "invalid_request"
+    );
+    let mut bytes = fs::read(&log).unwrap();
+    bytes.extend_from_slice(br#"{"event":{"#);
+    fs::write(&log, &bytes).unwrap();
+    assert_eq!(
+        call(json!({"operation":"audit.append","log":log,"event":f.path("event")})).unwrap_err(),
+        "invalid_format"
+    );
+    let repaired =
+        call(json!({"operation":"audit.repair","log":log,"output":f.path("fixed")})).unwrap();
+    assert_eq!(repaired["log"]["size"], 1);
+    assert_eq!(repaired["dropped_bytes"], 10);
+    assert_eq!(repaired["log"]["time_regressions"], 0);
+    let fixed = f.path("fixed");
+    call(json!({"operation":"audit.append","log":fixed,"event":f.path("event")})).unwrap();
+    let verified = call(json!({"operation":"audit.verify","log":fixed})).unwrap();
+    assert_eq!(verified["log"]["size"], 2);
+
+    // Another writer's lock stays in place.
+    fs::write(format!("{fixed}.lock"), b"held by another writer").unwrap();
+    assert_eq!(
+        call(json!({"operation":"audit.append","log":fixed,"event":f.path("event")})).unwrap_err(),
+        "already_exists"
+    );
+    assert!(std::path::Path::new(&format!("{fixed}.lock")).exists());
+}

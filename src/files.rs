@@ -219,6 +219,11 @@ fn inside(path: &Path, dir: &Path) -> bool {
 }
 
 /// Check a tool-supplied path against the active host policy, if any.
+/// A key under which two spellings of one file compare equal.
+pub fn identity(path: &str) -> io::Result<String> {
+    Ok(comparable(&resolve(Path::new(path))?))
+}
+
 pub fn guard(path: &str, access: Access) -> crate::error::Result<()> {
     let denied = |message: &str| crate::error::Error::new("policy_mismatch", message.to_owned());
     ACTIVE.with(|active| {

@@ -409,16 +409,25 @@ fn save_state(path: &str, group: &Group, passphrase: &[u8]) -> Result<()> {
     ));
     {
         use std::io::Write;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temp)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        let mut file = options.open(&temp)?;
         file.write_all(&bytes)?;
         file.sync_all()?;
     }
     std::fs::rename(&temp, target).inspect_err(|_| {
         let _ = std::fs::remove_file(&temp);
     })?;
+    #[cfg(unix)]
+    {
+        let parent = target
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        std::fs::File::open(parent)?.sync_all()?;
+    }
     Ok(())
 }
 
@@ -498,7 +507,8 @@ pub fn key_package(
         &encode_kp_secrets(&kp, &secrets, &signer),
         state_passphrase,
     )?;
-    write_new(secrets_output, &ipg_json::to_vec_pretty(&sealed)?)?;
+    let mut staged = crate::Staged::default();
+    staged.add(secrets_output, &ipg_json::to_vec_pretty(&sealed)?)?;
     let file = KeyPackageFile {
         format: KEY_PACKAGE_FORMAT.into(),
         fingerprint: key.public().fingerprint.clone(),
@@ -506,7 +516,8 @@ pub fn key_package(
         reference: crate::hex::encode(&reference),
         key_package: crate::hex::encode(MlsMessage::KeyPackage(kp).to_bytes()),
     };
-    write_new(&output, &ipg_json::to_vec_pretty(&file)?)?;
+    staged.add(&output, &ipg_json::to_vec_pretty(&file)?)?;
+    staged.publish()?;
     Ok(crate::Outcome::MlsKeyPackage {
         path: output,
         secrets_path: secrets_output.into(),
@@ -604,6 +615,9 @@ pub fn commit(
     crate::require_absent(output)?;
     if let Some(w) = welcome_output {
         crate::require_absent(w)?;
+        if crate::files::identity(output)? == crate::files::identity(w)? {
+            return Err(invalid("The commit and the Welcome need their own outputs"));
+        }
     }
     let _lock = StateLock::acquire(state)?;
     let mut group = load_state(state, state_passphrase)?;
@@ -632,11 +646,13 @@ pub fn commit(
         proposals.push(Proposal::Remove(leaf));
     }
     let (message, welcome) = group.commit(proposals, &PskStore::new())?;
-    save_state(state, &group, state_passphrase)?;
-    write_new(output, &message.to_bytes())?;
+    let mut staged = crate::Staged::default();
+    staged.add(output, &message.to_bytes())?;
     if let (Some(path), Some(welcome)) = (welcome_output, welcome) {
-        write_new(path, &welcome.to_bytes())?;
+        staged.add(path, &welcome.to_bytes())?;
     }
+    save_state(state, &group, state_passphrase)?;
+    staged.publish()?;
     Ok(crate::Outcome::MlsCommitted {
         commit: output.into(),
         welcome: welcome_output.map(String::from),

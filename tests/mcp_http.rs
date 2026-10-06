@@ -177,7 +177,7 @@ fn http_transport_authenticates_and_scopes_sessions() {
     );
     assert_eq!(
         listed.json()["result"]["tools"].as_array().unwrap().len(),
-        81
+        82
     );
     let file = dir.path().join("data").display().to_string();
     std::fs::write(&file, b"over http").unwrap();

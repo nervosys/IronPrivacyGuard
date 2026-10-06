@@ -34,8 +34,10 @@ host-pinned grants.
 
 Input must be strict [I-JSON](https://www.rfc-editor.org/rfc/rfc7493): UTF-8,
 no duplicate member names, no lone surrogates and finite numbers. Integers
-beyond plus or minus 2^53 are refused rather than rounded, because rounding would
-let two different documents share one canonical form. Canonicalization then:
+beyond plus or minus 2^53, and integer literals too large for 64 bits, are
+refused rather than rounded, because rounding would let two different documents
+share one canonical form. Numbers written with a fraction or exponent are
+doubles, as RFC 8785 specifies. Canonicalization then:
 
 - sorts object members by their UTF-16 code units;
 - removes insignificant whitespace;
@@ -83,7 +85,7 @@ frame("IPG approval v1 " || algorithm, signer, action, content,
 ```
 
 `quorum.verify` takes the content, 1..64 approval files, 1..32 pinned approvers
-with distinct fingerprints, a threshold 1 <= m <= n, the action and the content
+with distinct fingerprints and distinct signing keys, a threshold 1 <= m <= n, the action and the content
 mode. Each approval is checked independently. It counts only if:
 
 - its signer is a pinned approver who is eligible under the optional trust
@@ -93,7 +95,10 @@ mode. Each approval is checked independently. It counts only if:
 - the host clock is inside its window, allowing 5 minutes for the signer's
   clock running ahead.
 
-Each approver counts once. The result lists the approving fingerprints and every
+Each approver counts once. An approval stays valid until it expires (at most
+7 days), so it can be presented again for the same content and action within
+that window; keep approvals single-use where that matters, for example by
+recording consumed nonces. The result lists the approving fingerprints and every
 rejected approval with its index and error code. When fewer than m approvers
 count, the call fails with `policy_mismatch` and the rejections in its message.
 
@@ -125,7 +130,8 @@ The signature covers the DSSE pre-authentication encoding,
 `"DSSEv1" SP len(payloadType) SP payloadType SP len(payload) SP payload`, signed
 directly with the identity's suite. Ed25519 envelopes therefore verify with
 standard DSSE tooling given the 32-byte public key. ECDSA P-384 signatures are
-fixed-width `r || s` over SHA-384, low-s normalized. Composite post-quantum
+fixed-width `r || s` over SHA-384, low-s normalized. They are not DER-encoded,
+so tooling that expects DER signatures must convert them first. Composite post-quantum
 signatures are the Ed25519 or ECDSA half followed by ML-DSA-65, both over the
 same bytes, and need IPG or an implementation of the composite.
 
@@ -139,9 +145,10 @@ Limits:
 
 Verification:
 
-1. Selects the signature whose `keyid` is the pinned fingerprint. Other
+1. Selects the signatures whose `keyid` is the pinned fingerprint. Other
    signatures are ignored.
-2. Authenticates it over the PAE.
+2. Authenticates them over the PAE; one valid signature suffices, so an invalid
+   entry listed first cannot block verification.
 3. Requires the in-toto v1 statement type and the IPG predicate type.
 4. Requires the predicate's agent to be the signer.
 5. Checks each requested file against the subject of the same name. At least

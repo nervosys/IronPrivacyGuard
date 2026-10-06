@@ -283,25 +283,27 @@ pub fn verify(
 ) -> Result<(Attested, Vec<Artifact>)> {
     public.pin(expected)?;
     envelope.validate()?;
-    let entry = envelope
+    let payload = crate::base64::decode(&envelope.payload)?;
+    let algorithm = public.suite()?.signature_algorithm();
+    let message = pae(&envelope.payload_type, &payload);
+    // A bad signature listed first must not hide a good one from the same signer.
+    let mut outcome = Err(Error::new(
+        "identity_mismatch",
+        "No envelope signature names the pinned signer",
+    ));
+    for entry in envelope
         .signatures
         .iter()
-        .find(|s| s.keyid == public.fingerprint)
-        .ok_or_else(|| {
-            Error::new(
-                "identity_mismatch",
-                "No envelope signature names the pinned signer",
-            )
-        })?;
-    let payload = crate::base64::decode(&envelope.payload)?;
-    let signature = crate::hex::encode(crate::base64::decode(&entry.sig)?);
-    let algorithm = public.suite()?.signature_algorithm();
-    crypto::verify_message(
-        public,
-        algorithm,
-        &pae(&envelope.payload_type, &payload),
-        &signature,
-    )?;
+        .filter(|s| s.keyid == public.fingerprint)
+    {
+        outcome = crate::base64::decode(&entry.sig).and_then(|sig| {
+            crypto::verify_message(public, algorithm, &message, &crate::hex::encode(sig))
+        });
+        if outcome.is_ok() {
+            break;
+        }
+    }
+    outcome?;
     // Authenticated from here on.
     let statement: Value =
         ipg_json::from_slice(&payload).map_err(|_| invalid("Statement is not strict JSON"))?;

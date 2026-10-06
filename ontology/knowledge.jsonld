@@ -4375,6 +4375,62 @@
       "retry": "Safe to retry if inputs are unchanged."
     },
     {
+      "@id": "ipg:operation/audit.repair",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/hash-chain",
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Copy the verified entries of a log whose last append was interrupted to a new log, dropping the partial final line",
+      "deterministic": true,
+      "effects": [
+        "read_file",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "audit.repair",
+      "inputs": [
+        "ipg:AuditLog"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_audit_repair",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:AuditLog"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "audit.repair"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
       "@id": "ipg:operation/audit.checkpoint",
       "@type": "ipg:Operation",
       "algorithms": [
