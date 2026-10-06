@@ -325,3 +325,43 @@ pub fn mcp(data: &[u8]) {
         assert!(response.get("error").is_some());
     }
 }
+
+/// RFC 9420 decoders: every accepted encoding re-encodes exactly, and ratchet
+/// tree checks reject malformed trees without panicking.
+pub fn mls_messages(data: &[u8]) {
+    use iron_privacy_guard::mls::{
+        messages::{
+            Codec, Commit, GroupSecrets, MlsMessage, Proposal, RatchetTreeNodes, UpdatePath,
+        },
+        suite::Suite,
+        tree::RatchetTree,
+    };
+    fn roundtrip<T: Codec>(data: &[u8]) -> Option<T> {
+        let value = T::from_bytes(data).ok()?;
+        assert_eq!(value.to_bytes(), data, "MLS encodings are canonical");
+        Some(value)
+    }
+    if data.len() > 65_536 {
+        return;
+    }
+    roundtrip::<MlsMessage>(data);
+    roundtrip::<Proposal>(data);
+    roundtrip::<Commit>(data);
+    roundtrip::<GroupSecrets>(data);
+    roundtrip::<UpdatePath>(data);
+    if let Some(nodes) = roundtrip::<RatchetTreeNodes>(data)
+        && let Ok(tree) = RatchetTree::from_nodes(nodes)
+    {
+        assert_eq!(RatchetTree::from_nodes(tree.to_nodes()).unwrap(), tree);
+        // Validation cost grows with the tree; bound it for the fuzzer.
+        if tree.n_leaves() <= 64 {
+            let suite = Suite::X25519ChaCha20Poly1305Sha256Ed25519;
+            let _ = tree.root_hash(suite);
+            let _ = tree.verify_parent_hashes(suite);
+            let _ = tree.verify_leaves(suite, b"fuzz");
+            for leaf in 0..tree.n_leaves() {
+                let _ = tree.filtered_direct_path(leaf);
+            }
+        }
+    }
+}

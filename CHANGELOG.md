@@ -56,6 +56,8 @@
     the passive-client scenarios;
   - fix found during development: message keys are consumed only after a
     message is fully accepted.
+  - fuzzing: a new `mls_messages` fuzz target covers the RFC 9420 decoders
+    and ratchet-tree validation.
 
   81 operations.
 - Added threshold backups. `backup.split` seals a file of up to 1 MiB under a

@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [requests, framing, artifacts, mcp, stream_headers, tpm_structures, openpgp_packets]
+        target: [requests, framing, artifacts, mcp, stream_headers, tpm_structures, openpgp_packets, mls_messages]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly

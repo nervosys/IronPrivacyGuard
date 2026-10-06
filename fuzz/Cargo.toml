@@ -70,3 +70,10 @@ path = "fuzz_targets/mcp.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "mls_messages"
+path = "fuzz_targets/mls_messages.rs"
+test = false
+doc = false
+bench = false

@@ -12,6 +12,7 @@ in the unpublished `fuzz/` package, with a separate lockfile.
 | `mcp` | New and ready JSON-RPC sessions, whole messages and up to 16 NDJSON steps | Responses are valid JSON-RPC; only planning is callable; filesystem tools remain disabled |
 | `stream_headers` | Binary magic and length framing, strict canonical JSON, recipient validation, fragmented reads | Accepted headers preserve exact canonical bytes, consume only the declared header and behave identically with 1-byte and 7-byte reads |
 | `tpm_structures` | TPM public areas, key certifications and RSASSA-SHA256 signatures | Accepted public areas marshal to identical bytes; names have the declared digest width; sized buffers round-trip; trailing bytes are rejected |
+| `mls_messages` | RFC 9420 MLSMessage, Proposal, Commit, GroupSecrets, UpdatePath and ratchet trees | Accepted encodings re-encode to identical bytes; ratchet trees round-trip, and tree hashing, parent-hash and leaf validation and filtered paths never panic on trees of up to 64 leaves |
 | `openpgp_packets` | v4/v6 public certificates, detached signatures, unencrypted embedded signatures and framed certificate/document/signature pairs | Certificate policy survives serialization; wrong pins and changed content fail; accepted signatures survive serialization; verified signers are eligible |
 
 Fuzz bytes never reach arbitrary filesystem execution. Native requests are decoded
@@ -132,7 +133,7 @@ New-Item -ItemType Directory -Force fuzz/corpus/requests
 cargo +nightly fuzz run --target-dir target/fuzz requests fuzz/corpus/requests fuzz/seeds/requests -- -runs=10000 -max_total_time=45 -max_len=65537 -timeout=10 -rss_limit_mb=2048
 ```
 
-Repeat with `framing`, `artifacts`, `mcp`, `stream_headers`, `tpm_structures` and
+Repeat with `framing`, `artifacts`, `mcp`, `stream_headers`, `tpm_structures`, `mls_messages` and
 `openpgp_packets`.
 For stream-header campaigns use `-max_len=1048588` to reach the entire header
 boundary. For OpenPGP campaigns generate the large-certificate seeds first and
@@ -450,3 +451,12 @@ ciphers, with two v5 GnuPG seeds added, executed 127,478 inputs in 301 seconds
 (PRNG seed 1206025284, 741 MiB peak RSS) under the same settings, without
 crashes, oracle failures or sanitizer findings. The BZip2 decoder also has
 20,000 deterministic mutations in its stable unit tests.
+
+### MLS decoders
+
+`mls_messages` was added with the MLS work. Its seeds come from the MLS working
+group's message and tree-validation vectors. A local Windows MSVC
+AddressSanitizer run completed 3,592,271 executions in 181 seconds (coverage
+2,837, features 7,021, corpus 961 inputs) with no failures. CI runs it with the
+other targets.
+

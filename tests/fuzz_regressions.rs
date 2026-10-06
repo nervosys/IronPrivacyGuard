@@ -209,6 +209,7 @@ fn checked_in_fuzz_seeds_and_deterministic_mutations() {
         ("artifacts", harness::artifacts as Oracle),
         ("mcp", harness::mcp as Oracle),
         ("stream_headers", harness::stream_headers as Oracle),
+        ("mls_messages", harness::mls_messages as Oracle),
         #[cfg(feature = "fuzzing")]
         ("tpm_structures", harness::tpm_structures as Oracle),
         #[cfg(all(feature = "fuzzing", feature = "openpgp-native"))]
