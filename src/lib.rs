@@ -1423,14 +1423,35 @@ impl Request {
     }
 }
 
-pub fn read_limited(reader: impl Read, limit: u64) -> Result<Zeroizing<Vec<u8>>> {
+pub fn read_limited(mut reader: impl Read, limit: u64) -> Result<Zeroizing<Vec<u8>>> {
+    // Grown by copying into wiped buffers, never by reallocation, because
+    // inputs are often keys, passphrases or plaintext.
     let mut data = Zeroizing::new(Vec::new());
-    reader.take(limit + 1).read_to_end(&mut data)?;
-    if data.len() as u64 > limit {
-        return Err(Error::new(
-            "limit_exceeded",
-            "Input exceeds documented size limit",
-        ));
+    let mut chunk = Zeroizing::new([0u8; 8192]);
+    loop {
+        let n = match reader.read(&mut chunk[..]) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e.into()),
+        };
+        if (data.len() + n) as u64 > limit {
+            return Err(Error::new(
+                "limit_exceeded",
+                "Input exceeds documented size limit",
+            ));
+        }
+        if data.capacity() - data.len() < n {
+            let size = (data.len() + n)
+                .max(data.capacity() * 2)
+                .max(8192)
+                .min(usize::try_from(limit).unwrap_or(usize::MAX))
+                .max(data.len() + n);
+            let mut grown = Zeroizing::new(Vec::with_capacity(size));
+            grown.extend_from_slice(&data);
+            data = grown;
+        }
+        data.extend_from_slice(&chunk[..n]);
     }
     Ok(data)
 }

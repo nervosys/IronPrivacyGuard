@@ -43,7 +43,7 @@ fn open_provider() -> Result<Provider> {
 /// Usage authorization bound to the PIN; fixed at the SHA-256 digest size.
 fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
     Zeroizing::new(
-        Sha256::digest(&crypto::frame("IPG CNG authorization v1", &[pin]))
+        Sha256::digest(&Zeroizing::new(crypto::frame("IPG CNG authorization v1", &[pin]))[..])
             .as_ref()
             .to_vec(),
     )
@@ -92,7 +92,7 @@ impl IdentityKey for CngIdentity {
             .import_public(Algorithm::EcdhP384, peer)
             .map_err(map)?;
         Ok(Zeroizing::new(
-            self.encryption.agree_raw(&imported).map_err(map)?,
+            self.encryption.agree_raw(&imported).map_err(map)?.take(),
         ))
     }
 }

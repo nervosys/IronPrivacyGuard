@@ -50,7 +50,7 @@ fn connection() -> Result<Tpm> {
 /// Key authorization bound to the PIN; the same derivation as the Linux backend.
 pub(crate) fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
     Zeroizing::new(
-        Sha384::digest(&crypto::frame("IPG TPM authorization v1", &[pin]))
+        Sha384::digest(&Zeroizing::new(crypto::frame("IPG TPM authorization v1", &[pin]))[..])
             .as_ref()
             .to_vec(),
     )

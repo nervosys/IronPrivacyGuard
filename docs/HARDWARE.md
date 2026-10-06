@@ -285,7 +285,8 @@ restricted to loopback and the ECS/EKS agent addresses); then the EC2 instance p
 through IMDSv2 only (`AWS_EC2_METADATA_DISABLED=true` skips it). `IPG_KMS_FIPS=1` also
 selects FIPS STS endpoints. `IPG_KMS_FIPS=1` selects the
 `kms-fips` endpoints. `IPG_KMS_ENDPOINT` overrides the endpoint for local tests and
-allows plain HTTP only on loopback.
+allows plain HTTP only on loopback. Endpoint overrides accept bracketed IPv6
+literals such as `http://[::1]:4566`.
 
 What IPG checks: exact key ARNs only (aliases are refused because they can be
 repointed); both keys in the stated region and partition; `ECC_NIST_P384` and the
@@ -296,7 +297,9 @@ to the pinned identity and self-verified signatures.
 Custody is reported as `service`. Every private-key operation is a network call
 that AWS bills and logs in CloudTrail, and it fails when AWS is unreachable.
 `DeriveSharedSecret` returns the per-envelope ECDH secret to IPG, as the PKCS#11 and
-TPM providers do. KMS error codes map onto IPG's: access or signature errors to
+TPM providers do. AWS error text is returned without ARNs, 12-digit account IDs or control
+characters, and bounded to 300 characters. Responses, which carry shared
+secrets and credentials, stay in buffers that are wiped after use. KMS error codes map onto IPG's: access or signature errors to
 `authentication_failed`, missing keys to `hardware_not_found`, disabled keys to
 `policy_mismatch`, and throttling or AWS internal errors to retryable
 `provider_error`.

@@ -1015,7 +1015,8 @@ fn encapsulate(suite: Suite, recipient: &[u8]) -> Result<(Vec<u8>, Zeroizing<Vec
     };
     let (secret, public) = ephemeral(suite)?;
     let mut ephemeral_key = Vec::with_capacity(suite.ephemeral_len());
-    let mut shared = Zeroizing::new(Vec::new());
+    // Sized up front: growing would leave the ML-KEM secret in freed memory.
+    let mut shared = Zeroizing::new(Vec::with_capacity(SHARED_SECRET_LEN + 64));
     if suite == Suite::Hybrid {
         let kem_key: &[u8; ENCAPS_KEY_LEN] = kem_key.try_into().expect("split length");
         MlKem768::validate_encapsulation_key(kem_key)?;

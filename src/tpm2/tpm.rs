@@ -146,7 +146,8 @@ impl Tpm {
                 "Multiple HMAC sessions are unsupported",
             ));
         }
-        let mut parameters = parameters.to_vec();
+        // Parameters can hold auth values or sensitive data before encryption.
+        let mut parameters = Zeroizing::new(parameters.to_vec());
         // Per-session caller nonces and attributes for this command.
         let mut nonces: Vec<Vec<u8>> = Vec::new();
         let mut attributes: Vec<u8> = Vec::new();
@@ -484,11 +485,13 @@ impl Tpm {
         auth_value: &[u8],
         template: &[u8],
     ) -> Result<(Vec<u8>, Public)> {
-        let mut sensitive = Writer::default();
+        // Sized up front so the auth value is never left behind by reallocation.
+        let mut sensitive = Writer(Vec::with_capacity(auth_value.len() + 4));
         sensitive.tpm2b(auth_value)?;
         sensitive.u16(0);
-        let mut p = Writer::default();
-        p.tpm2b(&sensitive.finish())?;
+        let sensitive = Zeroizing::new(sensitive.finish());
+        let mut p = Writer(Vec::with_capacity(sensitive.len() + template.len() + 16));
+        p.tpm2b(&sensitive)?;
         p.tpm2b(template)?;
         p.u16(0).u32(0);
         let response = self.execute(

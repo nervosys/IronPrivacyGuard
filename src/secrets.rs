@@ -36,6 +36,11 @@ impl Zeroize for String {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Zeroizing<T: Zeroize>(T);
+impl<T: Zeroize + Default> Default for Zeroizing<T> {
+    fn default() -> Self {
+        Self(T::default())
+    }
+}
 impl<T: Zeroize> Zeroizing<T> {
     pub fn new(value: T) -> Self {
         Self(value)

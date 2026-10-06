@@ -12,34 +12,43 @@ pub fn malformed(what: &str) -> Error {
     Error::new("invalid_format", format!("Malformed MLS encoding: {what}"))
 }
 
+/// An encoder whose buffer is wiped when it grows or is dropped, since it
+/// serializes group secrets.
 #[derive(Default)]
 pub struct Writer {
-    pub bytes: Vec<u8>,
+    bytes: crate::secrets::Zeroizing<Vec<u8>>,
 }
 
 impl Writer {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn u8(&mut self, v: u8) -> &mut Self {
-        self.bytes.push(v);
-        self
-    }
-    pub fn u16(&mut self, v: u16) -> &mut Self {
-        self.bytes.extend_from_slice(&v.to_be_bytes());
-        self
-    }
-    pub fn u32(&mut self, v: u32) -> &mut Self {
-        self.bytes.extend_from_slice(&v.to_be_bytes());
-        self
-    }
-    pub fn u64(&mut self, v: u64) -> &mut Self {
-        self.bytes.extend_from_slice(&v.to_be_bytes());
-        self
-    }
-    pub fn raw(&mut self, v: &[u8]) -> &mut Self {
+    fn put(&mut self, v: &[u8]) -> &mut Self {
+        if self.bytes.capacity() - self.bytes.len() < v.len() {
+            let size = (self.bytes.len() + v.len())
+                .max(self.bytes.capacity() * 2)
+                .max(64);
+            let mut grown = crate::secrets::Zeroizing::new(Vec::with_capacity(size));
+            grown.extend_from_slice(&self.bytes);
+            self.bytes = grown;
+        }
         self.bytes.extend_from_slice(v);
         self
+    }
+    pub fn u8(&mut self, v: u8) -> &mut Self {
+        self.put(&[v])
+    }
+    pub fn u16(&mut self, v: u16) -> &mut Self {
+        self.put(&v.to_be_bytes())
+    }
+    pub fn u32(&mut self, v: u32) -> &mut Self {
+        self.put(&v.to_be_bytes())
+    }
+    pub fn u64(&mut self, v: u64) -> &mut Self {
+        self.put(&v.to_be_bytes())
+    }
+    pub fn raw(&mut self, v: &[u8]) -> &mut Self {
+        self.put(v)
     }
     pub fn varint(&mut self, n: usize) -> &mut Self {
         match n {
@@ -72,8 +81,9 @@ impl Writer {
             }
         }
     }
-    pub fn finish(self) -> Vec<u8> {
-        self.bytes
+    /// The encoding; its buffer moves out without a copy.
+    pub fn finish(mut self) -> Vec<u8> {
+        std::mem::take(&mut *self.bytes)
     }
 }
 

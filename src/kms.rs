@@ -16,7 +16,7 @@ use ic_hash::Sha256;
 use ic_mac::HmacSha256;
 use ipg_json::{Value, json};
 use std::{
-    io::{Read, Write},
+    io::Write,
     net::TcpStream,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -258,11 +258,9 @@ fn sso_credentials() -> Result<Option<Credentials>> {
         Some(url) => {
             let (endpoint, _) = if url.starts_with("https://") {
                 let authority = url.trim_start_matches("https://").trim_end_matches('/');
-                let (host, port) = authority
-                    .rsplit_once(':')
-                    .map_or((authority.to_string(), 443), |(h, p)| {
-                        (h.to_string(), p.parse().unwrap_or(443))
-                    });
+                let (host, port) = split_authority(authority, 443).ok_or_else(|| {
+                    Error::new("invalid_request", "AWS_ENDPOINT_URL_SSO is not a valid URL")
+                })?;
                 (
                     Endpoint {
                         tls: true,
@@ -291,11 +289,7 @@ fn sso_credentials() -> Result<Option<Credentials>> {
             port: 443,
         },
     };
-    let host = if (endpoint.tls && endpoint.port == 443) || (!endpoint.tls && endpoint.port == 80) {
-        endpoint.host.clone()
-    } else {
-        format!("{}:{}", endpoint.host, endpoint.port)
-    };
+    let host = endpoint.authority();
     let request = Zeroizing::new(
         format!(
             "GET /federation/credentials?account_id={}&role_name={} HTTP/1.1\r\nhost: {host}\r\nx-amz-sso_bearer_token: {}\r\nconnection: close\r\n\r\n",
@@ -358,19 +352,7 @@ fn http_url(url: &str) -> Option<(Endpoint, String)> {
     let (authority, path) = rest
         .split_once('/')
         .map_or((rest, "/".to_string()), |(a, p)| (a, format!("/{p}")));
-    let (host, port) = if let Some(host) = authority.strip_prefix('[') {
-        let (host, rest) = host.split_once(']')?;
-        (
-            host.to_string(),
-            rest.strip_prefix(':')
-                .map_or(Some(80), |p| p.parse().ok())?,
-        )
-    } else {
-        match authority.rsplit_once(':') {
-            Some((host, port)) => (host.to_string(), port.parse().ok()?),
-            None => (authority.to_string(), 80),
-        }
-    };
+    let (host, port) = split_authority(authority, 80)?;
     Some((
         Endpoint {
             tls: false,
@@ -457,11 +439,11 @@ fn instance_credentials() -> Result<Option<Credentials>> {
     ) else {
         return Ok(None);
     };
-    let token = Zeroizing::new(String::from_utf8(token).map_err(|_| unavailable())?);
+    let token = Zeroizing::new(String::from_utf8(token.to_vec()).map_err(|_| unavailable())?);
     let headers = [("x-aws-ec2-metadata-token", token.as_str())];
     let path = "/latest/meta-data/iam/security-credentials/";
     let (status, roles) = http(&endpoint, "GET", path, &headers, timeout)?;
-    let role = String::from_utf8(roles).unwrap_or_default();
+    let role = String::from_utf8(roles.to_vec()).unwrap_or_default();
     let role = role.lines().next().unwrap_or("").trim();
     if status != 200
         || role.is_empty()
@@ -493,7 +475,7 @@ fn http(
     path: &str,
     headers: &[(&str, &str)],
     timeout: Duration,
-) -> Result<(u16, Vec<u8>)> {
+) -> Result<(u16, Zeroizing<Vec<u8>>)> {
     let host = if endpoint.host.contains(':') {
         format!("[{}]:{}", endpoint.host, endpoint.port)
     } else {
@@ -585,8 +567,44 @@ pub(crate) fn amz_date(unix: u64) -> String {
 
 struct Endpoint {
     tls: bool,
+    /// Without brackets, even for IPv6 literals.
     host: String,
     port: u16,
+}
+impl Endpoint {
+    /// The Host header: IPv6 literals in brackets, default ports omitted.
+    fn authority(&self) -> String {
+        let host = if self.host.contains(':') {
+            format!("[{}]", self.host)
+        } else {
+            self.host.clone()
+        };
+        if (self.tls && self.port == 443) || (!self.tls && self.port == 80) {
+            host
+        } else {
+            format!("{host}:{}", self.port)
+        }
+    }
+}
+
+/// Split `host`, `host:port`, `[v6]` or `[v6]:port`; the host loses its brackets.
+fn split_authority(authority: &str, default_port: u16) -> Option<(String, u16)> {
+    let (host, port) = if let Some(rest) = authority.strip_prefix('[') {
+        let (host, rest) = rest.split_once(']')?;
+        let port = match rest.strip_prefix(':') {
+            Some(p) => p.parse().ok()?,
+            None if rest.is_empty() => default_port,
+            None => return None,
+        };
+        (host, port)
+    } else {
+        match authority.rsplit_once(':') {
+            Some((host, port)) if !host.contains(':') => (host, port.parse().ok()?),
+            Some(_) => return None,
+            None => (authority, default_port),
+        }
+    };
+    (!host.is_empty()).then(|| (host.to_string(), port))
 }
 /// The regional (or FIPS) endpoint, unless the host overrides it. Overrides without
 /// TLS are accepted only for loopback test services.
@@ -614,11 +632,9 @@ fn endpoint(service: &str, region: &str, partition: &str) -> Result<Endpoint> {
             return Err(invalid());
         };
         let authority = rest.trim_end_matches('/');
-        let (host, port) = match authority.rsplit_once(':') {
-            Some((host, port)) => (host.to_string(), port.parse().map_err(|_| invalid())?),
-            None => (authority.to_string(), if tls { 443 } else { 80 }),
-        };
-        if !tls && !matches!(host.as_str(), "localhost" | "127.0.0.1" | "[::1]") {
+        let (host, port) =
+            split_authority(authority, if tls { 443 } else { 80 }).ok_or_else(invalid)?;
+        if !tls && !matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1") {
             return Err(Error::new(
                 "provider_unavailable",
                 "Plain-HTTP AWS endpoints are allowed only on loopback",
@@ -693,11 +709,7 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
         form(&token)
     ));
     let endpoint = endpoint("sts", region, partition)?;
-    let host = if (endpoint.tls && endpoint.port == 443) || (!endpoint.tls && endpoint.port == 80) {
-        endpoint.host.clone()
-    } else {
-        format!("{}:{}", endpoint.host, endpoint.port)
-    };
+    let host = endpoint.authority();
     let mut wire = Zeroizing::new(
         format!(
             "POST / HTTP/1.1\r\nhost: {host}\r\ncontent-type: application/x-www-form-urlencoded\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
@@ -716,7 +728,10 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
             } else {
                 "provider_error"
             },
-            format!("STS {status} {code}: web identity was not accepted"),
+            format!(
+                "STS {status} {}: web identity was not accepted",
+                redact(&code, 64)
+            ),
         ));
     }
     let field = |tag| xml_text(&xml, tag).filter(|v| !v.is_empty());
@@ -728,7 +743,7 @@ fn web_identity_credentials(region: &str, partition: &str) -> Result<Option<Cred
     }))
 }
 
-fn transport(endpoint: &Endpoint, request: &[u8]) -> Result<Vec<u8>> {
+fn transport(endpoint: &Endpoint, request: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     exchange(endpoint, request, Duration::from_secs(30))
 }
 
@@ -761,7 +776,7 @@ fn tls_error(error: Error) -> Error {
     }
 }
 
-fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Vec<u8>> {
+fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Zeroizing<Vec<u8>>> {
     use std::net::ToSocketAddrs;
     let network = network_error;
     let host = endpoint.host.trim_matches(['[', ']']);
@@ -780,19 +795,22 @@ fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Ve
         client.write_all(request).map_err(tls_error)?;
         // The client wipes its buffer on any failure and requires an
         // authenticated close_notify, so truncated responses are never parsed.
-        let body = client
+        client
             .read_to_end(MAX_RESPONSE_BYTES as usize)
-            .map_err(tls_error)?;
-        body.to_vec()
+            .map_err(tls_error)?
     } else {
-        let mut response = Vec::new();
         let mut stream = socket;
         stream.write_all(request).map_err(network)?;
-        (&mut stream)
-            .take(MAX_RESPONSE_BYTES + 1)
-            .read_to_end(&mut response)
-            .map_err(network)?;
-        response
+        match crate::read_limited(&mut stream, MAX_RESPONSE_BYTES) {
+            Ok(response) => response,
+            Err(error) if error.code == "limit_exceeded" => {
+                return Err(Error::new(
+                    "provider_error",
+                    "KMS response exceeds size limit",
+                ));
+            }
+            Err(error) => return Err(network(std::io::Error::other(error.message))),
+        }
     };
     if response.len() as u64 > MAX_RESPONSE_BYTES {
         return Err(Error::new(
@@ -804,14 +822,14 @@ fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Ve
 }
 
 /// Split an HTTP/1.1 response into status and body, decoding chunked transfer.
-fn parse_response(raw: &[u8]) -> Result<(u16, Vec<u8>)> {
+fn parse_response(raw: &[u8]) -> Result<(u16, Zeroizing<Vec<u8>>)> {
     let malformed = || Error::new("provider_error", "Malformed KMS HTTP response");
     let split = raw
         .windows(4)
         .position(|w| w == b"\r\n\r\n")
         .ok_or_else(malformed)?;
     let head = std::str::from_utf8(&raw[..split]).map_err(|_| malformed())?;
-    let mut body = raw[split + 4..].to_vec();
+    let mut body = Zeroizing::new(raw[split + 4..].to_vec());
     let mut lines = head.split("\r\n");
     let status: u16 = lines
         .next()
@@ -823,7 +841,8 @@ fn parse_response(raw: &[u8]) -> Result<(u16, Vec<u8>)> {
         l.starts_with("transfer-encoding:") && l.contains("chunked")
     });
     if chunked {
-        let (mut decoded, mut rest) = (Vec::new(), &body[..]);
+        // Sized up front: decoded data never exceeds the chunked body.
+        let (mut decoded, mut rest) = (Zeroizing::new(Vec::with_capacity(body.len())), &body[..]);
         loop {
             let end = rest
                 .windows(2)
@@ -852,6 +871,27 @@ pub(crate) fn unbase64(text: &str) -> Result<Vec<u8>> {
         .map_err(|_| Error::new("provider_error", "Invalid base64 in KMS response"))
 }
 
+/// Provider text made safe to return to an agent: ARNs and 12-digit account
+/// IDs are redacted, control characters dropped, and the length bounded.
+fn redact(text: &str, limit: usize) -> String {
+    let mut out = Vec::new();
+    for word in text.split(' ') {
+        let digits = word.chars().filter(char::is_ascii_digit).count();
+        out.push(if word.contains("arn:") {
+            "[arn]"
+        } else if digits >= 12 {
+            "[id]"
+        } else {
+            word
+        });
+    }
+    out.join(" ")
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(limit)
+        .collect()
+}
+
 fn kms_error(status: u16, body: &[u8]) -> Error {
     let parsed: Value = ipg_json::from_slice(body).unwrap_or(Value::Null);
     let kind = parsed["__type"]
@@ -860,14 +900,17 @@ fn kms_error(status: u16, body: &[u8]) -> Error {
         .rsplit('#')
         .next()
         .unwrap_or("")
-        .to_string();
-    let message = parsed["message"]
-        .as_str()
-        .or(parsed["Message"].as_str())
-        .unwrap_or("")
         .chars()
-        .take(300)
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '.')
+        .take(64)
         .collect::<String>();
+    let message = redact(
+        parsed["message"]
+            .as_str()
+            .or(parsed["Message"].as_str())
+            .unwrap_or(""),
+        300,
+    );
     let detail = format!("KMS {status} {kind}: {message}");
     let (code, retryable) = match kind.as_str() {
         "AccessDeniedException"
@@ -911,12 +954,7 @@ impl Client {
             .map_err(|_| Error::new("clock_unavailable", "Host clock precedes Unix epoch"))?
             .as_secs();
         let date = amz_date(now);
-        let host =
-            if (endpoint.tls && endpoint.port == 443) || (!endpoint.tls && endpoint.port == 80) {
-                endpoint.host.clone()
-            } else {
-                format!("{}:{}", endpoint.host, endpoint.port)
-            };
+        let host = endpoint.authority();
         let target = format!("TrentService.{action}");
         let mut headers = vec![
             ("content-type", "application/x-amz-json-1.1"),
@@ -1318,9 +1356,10 @@ mod tests {
     #[test]
     fn chunked_and_plain_responses_parse() {
         let plain = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}";
-        assert_eq!(parse_response(plain).unwrap(), (200, b"{}".to_vec()));
+        let parsed = |raw: &[u8]| parse_response(raw).map(|(s, b)| (s, b.to_vec()));
+        assert_eq!(parsed(plain).unwrap(), (200, b"{}".to_vec()));
         let chunked = b"HTTP/1.1 400 Bad\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n";
-        assert_eq!(parse_response(chunked).unwrap(), (400, b"{}".to_vec()));
+        assert_eq!(parsed(chunked).unwrap(), (400, b"{}".to_vec()));
         assert!(parse_response(b"garbage").is_err());
     }
 }

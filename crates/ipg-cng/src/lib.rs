@@ -159,6 +159,23 @@ impl Algorithm {
 pub struct Provider(Handle);
 
 /// A persisted or imported key.
+/// Secret bytes wiped when dropped, unless taken.
+pub struct SecretBytes(Vec<u8>);
+impl SecretBytes {
+    /// Move the bytes out without copying; the caller becomes responsible for wiping them.
+    pub fn take(mut self) -> Vec<u8> {
+        std::mem::take(&mut self.0)
+    }
+}
+impl Drop for SecretBytes {
+    fn drop(&mut self) {
+        for byte in self.0.iter_mut() {
+            // SAFETY: `byte` is a valid, exclusive reference into the buffer.
+            unsafe { std::ptr::write_volatile(byte, 0) };
+        }
+    }
+}
+
 pub struct Key {
     handle: Handle,
 }
@@ -680,7 +697,9 @@ impl Key {
 
     /// ECDH with an imported peer key; returns the raw shared secret (the x-coordinate,
     /// big-endian). CNG returns raw secrets little-endian, so the bytes are reversed.
-    pub fn agree_raw(&self, peer: &Key) -> Result<Vec<u8>> {
+    /// The raw shared secret; it is wiped on every error path, and the caller
+    /// takes ownership of the one buffer with [`SecretBytes::take`].
+    pub fn agree_raw(&self, peer: &Key) -> Result<SecretBytes> {
         let mut secret = 0;
         // SAFETY: both handles are live keys; `secret` is a valid out pointer.
         let status = unsafe {
@@ -694,7 +713,7 @@ impl Key {
         check("NCryptSecretAgreement", status)?;
         let secret = Handle(secret);
         let kdf = wide(RAW_SECRET);
-        let mut output = vec![0u8; P384_FIELD];
+        let mut output = SecretBytes(vec![0u8; P384_FIELD]);
         let mut size = 0u32;
         // SAFETY: `output` has room for a P-384 secret; `size` receives the length.
         let status = unsafe {
@@ -702,8 +721,8 @@ impl Key {
                 secret.0,
                 kdf.as_ptr(),
                 null(),
-                output.as_mut_ptr(),
-                output.len() as u32,
+                output.0.as_mut_ptr(),
+                output.0.len() as u32,
                 &mut size,
                 0,
             )
@@ -715,7 +734,7 @@ impl Key {
                 status: status::NOT_SUPPORTED,
             });
         }
-        output.reverse();
+        output.0.reverse();
         Ok(output)
     }
 }
