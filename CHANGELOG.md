@@ -80,6 +80,9 @@
   - JSON responses without SSE, so `--require-approval` is refused at startup.
 
   Verified with the official Python SDK's streamable HTTP client.
+- Moved the exact IronCrypto pins to 0.2.12. MLS now derives HPKE node keys
+  with `ic_hpke::KeyPair::derive` and stores HPKE private keys as their
+  derivation seeds, which retires IPG's temporary DeriveKeyPair.
 - Moved the exact IronCrypto pins to 0.2.11 and added `ic-hpke`. OpenPGP ECDSA
   over non-native digests now uses IronCrypto's `verify_prehash`, and public
   points are validated by IronCrypto's ECDH. This removes IPG's first-party

@@ -195,7 +195,7 @@ impl Suite {
         kem_output: &[u8],
         ciphertext: &[u8],
     ) -> Result<Zeroizing<Vec<u8>>> {
-        let pair = ic_hpke::KeyPair::from_private(private)?;
+        let pair = hpke_pair(private)?;
         let mut context = ic_hpke::setup_receiver(
             kem_output,
             &pair,
@@ -208,11 +208,15 @@ impl Suite {
             .map_err(|_| crypto_failure())
     }
 
-    /// HPKE `DeriveKeyPair` for DHKEM(X25519): (private, public).
+    /// HPKE `DeriveKeyPair` for DHKEM(X25519): (encoded private key, public key).
+    ///
+    /// The private key is kept as its derivation seed (see `hpke_pair`), so it
+    /// never has to be exported from IronCrypto's key type.
     pub fn derive_key_pair(self, ikm: &[u8]) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
-        let private = derive_x25519_private(ikm)?;
-        let pair = ic_hpke::KeyPair::from_private(&private)?;
-        Ok((private, pair.public().to_vec()))
+        let pair = ic_hpke::KeyPair::derive(ikm)?;
+        let mut encoded = Zeroizing::new(vec![SEED_PRIVATE]);
+        encoded.extend_from_slice(ikm);
+        Ok((encoded, pair.public().to_vec()))
     }
 
     pub fn seal(self, key: &[u8], nonce: &[u8], aad: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
@@ -255,26 +259,24 @@ impl Suite {
     }
 }
 
-/// RFC 9180 section 7.1.3 DeriveKeyPair for DHKEM(X25519, HKDF-SHA256).
-///
-/// Temporary: IronCrypto is adding `ic_hpke::KeyPair::derive` (expected in
-/// 0.2.12); replace this function with it then. It is HPKE's labeled HKDF
-/// encoding over IronCrypto's HKDF, checked against RFC 9180 appendix A.1.1.
-fn derive_x25519_private(ikm: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-    const SUITE_ID: &[u8] = b"KEM\x00\x20";
-    let mut labeled_ikm = b"HPKE-v1".to_vec();
-    labeled_ikm.extend_from_slice(SUITE_ID);
-    labeled_ikm.extend_from_slice(b"dkp_prk");
-    labeled_ikm.extend_from_slice(ikm);
-    let mut prk = Zeroizing::new(vec![0; NH]);
-    Hkdf::<HmacSha256>::extract(&[], &labeled_ikm, &mut prk)?;
-    let mut info = 32u16.to_be_bytes().to_vec();
-    info.extend_from_slice(b"HPKE-v1");
-    info.extend_from_slice(SUITE_ID);
-    info.extend_from_slice(b"sk");
-    let mut private = Zeroizing::new(vec![0; KEM_KEY_LEN]);
-    Hkdf::<HmacSha256>::expand(&prk, &info, &mut private)?;
-    Ok(private)
+const RAW_PRIVATE: u8 = 0;
+const SEED_PRIVATE: u8 = 1;
+
+/// Encode a raw 32-byte X25519 private key, such as one received in test vectors.
+pub fn raw_private(private: &[u8]) -> Zeroizing<Vec<u8>> {
+    let mut encoded = Zeroizing::new(vec![RAW_PRIVATE]);
+    encoded.extend_from_slice(private);
+    encoded
+}
+
+/// The HPKE key pair for an encoded private key: a raw key or a
+/// `DeriveKeyPair` seed.
+pub fn hpke_pair(encoded: &[u8]) -> Result<ic_hpke::KeyPair> {
+    match encoded.split_first() {
+        Some((&RAW_PRIVATE, private)) => Ok(ic_hpke::KeyPair::from_private(private)?),
+        Some((&SEED_PRIVATE, seed)) => Ok(ic_hpke::KeyPair::derive(seed)?),
+        _ => Err(Error::new("invalid_format", "Malformed MLS private key")),
+    }
 }
 
 #[cfg(test)]
@@ -285,25 +287,6 @@ mod tests {
 
     fn h(v: &Value) -> Vec<u8> {
         unhex(v.as_str().unwrap()).unwrap()
-    }
-
-    #[test]
-    fn rfc9180_derive_key_pair() {
-        for (ikm, sk) in [
-            (
-                "7268600d403fce431561aef583ee1613527cff655c1343f29812e66706df3234",
-                "52c4a758a802cd8b936eceea314432798d5baf2d7e9235dc084ab1b9cfa2f736",
-            ),
-            (
-                "6db9df30aa07dd42ee5e8181afdb977e538f5e1fec8a06223f33f7013e525037",
-                "4612c550263fc8ad58375df3f557aac531d26850903e55a9f23f21d8534e8ac8",
-            ),
-        ] {
-            assert_eq!(
-                &derive_x25519_private(&unhex(ikm).unwrap()).unwrap()[..],
-                &unhex(sk).unwrap()[..]
-            );
-        }
     }
 
     #[test]
@@ -374,7 +357,7 @@ mod tests {
             let (label, context) = (x["label"].as_str().unwrap(), h(&x["context"]));
             let plain = suite
                 .decrypt_with_label(
-                    &h(&x["priv"]),
+                    &raw_private(&h(&x["priv"])),
                     label,
                     &context,
                     &h(&x["kem_output"]),
@@ -386,12 +369,12 @@ mod tests {
                 .encrypt_with_label(&h(&x["pub"]), label, &context, &h(&x["plaintext"]))
                 .unwrap();
             let again = suite
-                .decrypt_with_label(&h(&x["priv"]), label, &context, &kem, &ct)
+                .decrypt_with_label(&raw_private(&h(&x["priv"])), label, &context, &kem, &ct)
                 .unwrap();
             assert_eq!(&again[..], &h(&x["plaintext"])[..]);
             assert!(
                 suite
-                    .decrypt_with_label(&h(&x["priv"]), "other", &context, &kem, &ct)
+                    .decrypt_with_label(&raw_private(&h(&x["priv"])), "other", &context, &kem, &ct)
                     .is_err()
             );
         }

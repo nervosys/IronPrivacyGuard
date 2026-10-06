@@ -1485,8 +1485,8 @@ mod tests {
             };
             let suite = Suite::from_id(kp.cipher_suite).unwrap();
             let secrets = KeyPackageSecrets {
-                init_private: Zeroizing::new(h(&v["init_priv"])),
-                encryption_private: Zeroizing::new(h(&v["encryption_priv"])),
+                init_private: crate::mls::suite::raw_private(&h(&v["init_priv"])),
+                encryption_private: crate::mls::suite::raw_private(&h(&v["encryption_priv"])),
             };
             let signature_private = h(&v["signature_priv"]);
             assert_eq!(

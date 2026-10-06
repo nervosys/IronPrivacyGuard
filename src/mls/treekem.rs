@@ -36,7 +36,7 @@ impl TreePrivate {
     /// Keep only keys for nodes still holding the matching public key.
     pub fn prune(&mut self, tree: &RatchetTree) {
         self.keys.retain(|node, private| {
-            let public = ic_hpke::KeyPair::from_private(private)
+            let public = super::suite::hpke_pair(private)
                 .map(|pair| pair.public().to_vec())
                 .ok();
             tree.public_key(*node).is_some() && tree.public_key(*node).map(<[u8]>::to_vec) == public
@@ -333,7 +333,10 @@ mod tests {
             let mut privates: BTreeMap<u32, (TreePrivate, Vec<u8>)> = BTreeMap::new();
             for leaf in v["leaves_private"].as_array().unwrap() {
                 let index = leaf["index"].as_u64().unwrap() as u32;
-                let mut p = TreePrivate::new(index, Zeroizing::new(h(&leaf["encryption_priv"])));
+                let mut p = TreePrivate::new(
+                    index,
+                    crate::mls::suite::raw_private(&h(&leaf["encryption_priv"])),
+                );
                 for ps in leaf["path_secrets"].as_array().unwrap() {
                     let node = ps["node"].as_u64().unwrap() as u32;
                     let (private, public) = node_keys(suite, &h(&ps["path_secret"])).unwrap();
