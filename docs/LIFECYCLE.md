@@ -107,6 +107,9 @@ signatures, never return to an earlier identity, and not run backwards in time.
 It reports every successor and can write the final public identity to `output`,
 ready to pin.
 
+With a trust `policy`, `rotation.verify` also refuses the chain if the snapshot
+revokes or time-bounds any identity in it.
+
 A rotation is not revocation. The previous key remains valid until it is
 revoked or expires, so revoke it once peers have moved. A rotation signed by a
 compromised key proves nothing: revoke compromised keys with `key.revoke`, and

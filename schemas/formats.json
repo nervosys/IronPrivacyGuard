@@ -860,8 +860,14 @@
                 "json.sign",
                 "message.open",
                 "message.seal",
+                "mls.commit",
+                "mls.encrypt",
+                "mls.export",
                 "mls.group.create",
+                "mls.join",
                 "mls.key_package",
+                "mls.process",
+                "mls.status",
                 "provenance.attest",
                 "sign",
                 "stream.decrypt",
@@ -869,7 +875,7 @@
               ],
               "type": "string"
             },
-            "maxItems": 12,
+            "maxItems": 18,
             "minItems": 1,
             "type": "array",
             "uniqueItems": true

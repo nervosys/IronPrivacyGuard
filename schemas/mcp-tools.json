@@ -882,6 +882,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -987,8 +998,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -996,7 +1013,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -1087,8 +1104,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -7175,6 +7198,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -7280,8 +7314,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -7289,7 +7329,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -7380,8 +7420,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -13476,6 +13522,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -13581,8 +13638,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -13590,7 +13653,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -13681,8 +13744,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -19773,6 +19842,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -19878,8 +19958,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -19887,7 +19973,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -19978,8 +20064,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -26076,6 +26168,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -26181,8 +26284,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -26190,7 +26299,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -26281,8 +26390,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -32383,6 +32498,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -32488,8 +32614,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -32497,7 +32629,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -32588,8 +32720,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -38718,6 +38856,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -38823,8 +38972,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -38832,7 +38987,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -38923,8 +39078,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -45032,6 +45193,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -45137,8 +45309,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -45146,7 +45324,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -45237,8 +45415,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -51361,6 +51545,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -51466,8 +51661,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -51475,7 +51676,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -51566,8 +51767,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -57688,6 +57895,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -57793,8 +58011,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -57802,7 +58026,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -57893,8 +58117,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -63987,6 +64217,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -64092,8 +64333,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -64101,7 +64348,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -64192,8 +64439,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -70316,6 +70569,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -70421,8 +70685,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -70430,7 +70700,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -70521,8 +70791,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -76645,6 +76921,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -76750,8 +77037,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -76759,7 +77052,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -76850,8 +77143,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -82966,6 +83265,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -83071,8 +83381,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -83080,7 +83396,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -83171,8 +83487,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -89259,6 +89581,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -89364,8 +89697,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -89373,7 +89712,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -89464,8 +89803,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -95552,6 +95897,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -95657,8 +96013,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -95666,7 +96028,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -95757,8 +96119,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -101845,6 +102213,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -101950,8 +102329,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -101959,7 +102344,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -102050,8 +102435,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -108138,6 +108529,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -108243,8 +108645,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -108252,7 +108660,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -108343,8 +108751,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -114437,6 +114851,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -114542,8 +114967,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -114551,7 +114982,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -114642,8 +115073,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -120751,6 +121188,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -120856,8 +121304,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -120865,7 +121319,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -120956,8 +121410,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -127061,6 +127521,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -127166,8 +127637,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -127175,7 +127652,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -127266,8 +127743,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -133389,6 +133872,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -133494,8 +133988,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -133503,7 +134003,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -133594,8 +134094,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -139711,6 +140217,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -139816,8 +140333,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -139825,7 +140348,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -139916,8 +140439,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -146036,6 +146565,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -146141,8 +146681,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -146150,7 +146696,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -146241,8 +146787,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -152350,6 +152902,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -152455,8 +153018,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -152464,7 +153033,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -152555,8 +153124,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -155024,8 +155599,14 @@
                 "json.sign",
                 "message.open",
                 "message.seal",
+                "mls.commit",
+                "mls.encrypt",
+                "mls.export",
                 "mls.group.create",
+                "mls.join",
                 "mls.key_package",
+                "mls.process",
+                "mls.status",
                 "provenance.attest",
                 "sign",
                 "stream.decrypt",
@@ -155033,7 +155614,7 @@
               ],
               "type": "string"
             },
-            "maxItems": 12,
+            "maxItems": 18,
             "minItems": 1,
             "type": "array",
             "uniqueItems": true
@@ -158753,6 +159334,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -158858,8 +159450,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -158867,7 +159465,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -158958,8 +159556,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -165127,6 +165731,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -165232,8 +165847,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -165241,7 +165862,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -165332,8 +165953,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -171505,6 +172132,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -171610,8 +172248,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -171619,7 +172263,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -171710,8 +172354,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -174158,8 +174808,14 @@
               "json.sign",
               "message.open",
               "message.seal",
+              "mls.commit",
+              "mls.encrypt",
+              "mls.export",
               "mls.group.create",
+              "mls.join",
               "mls.key_package",
+              "mls.process",
+              "mls.status",
               "provenance.attest",
               "sign",
               "stream.decrypt",
@@ -177862,6 +178518,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -177967,8 +178634,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -177976,7 +178649,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -178067,8 +178740,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -184176,6 +184855,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -184281,8 +184971,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -184290,7 +184986,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -184381,8 +185077,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -190500,6 +191202,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -190605,8 +191318,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -190614,7 +191333,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -190705,8 +191424,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -196839,6 +197564,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -196944,8 +197680,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -196953,7 +197695,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -197044,8 +197786,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -203189,6 +203937,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -203294,8 +204053,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -203303,7 +204068,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -203394,8 +204159,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -209525,6 +210296,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -209630,8 +210412,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -209639,7 +210427,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -209730,8 +210518,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -215837,6 +216631,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -215942,8 +216747,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -215951,7 +216762,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -216042,8 +216853,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -222182,6 +222999,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -222287,8 +223115,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -222296,7 +223130,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -222387,8 +223221,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -228500,6 +229340,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -228605,8 +229456,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -228614,7 +229471,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -228705,8 +229562,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -234814,6 +235677,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -234919,8 +235793,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -234928,7 +235808,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -235019,8 +235899,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -241117,6 +242003,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -241222,8 +242119,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -241231,7 +242134,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -241322,8 +242225,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -247442,6 +248351,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -247547,8 +248467,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -247556,7 +248482,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -247647,8 +248573,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -253759,6 +254691,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -253864,8 +254807,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -253873,7 +254822,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -253964,8 +254913,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -260068,6 +261023,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -260173,8 +261139,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -260182,7 +261154,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -260273,8 +261245,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -266415,6 +267393,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -266520,8 +267509,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -266529,7 +267524,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -266620,8 +267615,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -269061,6 +270062,17 @@
               "string",
               "null"
             ]
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TrustPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
           },
           "signer": {
             "description": "Public identity file of the pinned starting identity.",
@@ -272743,6 +273755,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -272848,8 +273871,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -272857,7 +273886,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -272948,8 +273977,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -279042,6 +280077,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -279147,8 +280193,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -279156,7 +280208,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -279247,8 +280299,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -285347,6 +286405,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -285452,8 +286521,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -285461,7 +286536,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -285552,8 +286627,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -291660,6 +292741,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -291765,8 +292857,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -291774,7 +292872,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -291865,8 +292963,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -297984,6 +299088,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -298089,8 +299204,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -298098,7 +299219,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -298189,8 +299310,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -304328,6 +305455,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -304433,8 +305571,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -304442,7 +305586,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -304533,8 +305677,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -310677,6 +311827,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -310782,8 +311943,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -310791,7 +311958,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -310882,8 +312049,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -316980,6 +318153,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -317085,8 +318269,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -317094,7 +318284,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -317185,8 +318375,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -323303,6 +324499,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -323408,8 +324615,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -323417,7 +324630,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -323508,8 +324721,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -329642,6 +330861,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -329747,8 +330977,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -329756,7 +330992,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -329847,8 +331083,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -336004,6 +337246,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -336109,8 +337362,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -336118,7 +337377,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -336209,8 +337468,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -342359,6 +343624,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -342464,8 +343740,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -342473,7 +343755,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -342564,8 +343846,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -348658,6 +349946,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -348763,8 +350062,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -348772,7 +350077,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -348863,8 +350168,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -354957,6 +356268,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -355062,8 +356384,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -355071,7 +356399,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -355162,8 +356490,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -361250,6 +362584,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -361355,8 +362700,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -361364,7 +362715,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -361455,8 +362806,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -367568,6 +368925,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -367673,8 +369041,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -367682,7 +369056,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -367773,8 +369147,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -373899,6 +375279,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -374004,8 +375395,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -374013,7 +375410,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -374104,8 +375501,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -380240,6 +381643,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -380345,8 +381759,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -380354,7 +381774,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -380445,8 +381865,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -386533,6 +387959,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -386638,8 +388075,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -386647,7 +388090,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -386738,8 +388181,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -392837,6 +394286,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -392942,8 +394402,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -392951,7 +394417,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -393042,8 +394508,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -399142,6 +400614,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -399247,8 +400730,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -399256,7 +400745,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -399347,8 +400836,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -405467,6 +406962,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -405572,8 +407078,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -405581,7 +407093,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -405672,8 +407184,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -411790,6 +413308,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -411895,8 +413424,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -411904,7 +413439,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -411995,8 +413530,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -418129,6 +419670,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -418234,8 +419786,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -418243,7 +419801,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -418334,8 +419892,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -424443,6 +426007,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -424548,8 +426123,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -424557,7 +426138,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -424648,8 +426229,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -430752,6 +432339,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -430857,8 +432455,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -430866,7 +432470,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -430957,8 +432561,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -437085,6 +438695,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -437190,8 +438811,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -437199,7 +438826,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -437290,8 +438917,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -443393,6 +445026,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -443498,8 +445142,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -443507,7 +445157,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -443598,8 +445248,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -449722,6 +451378,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -449827,8 +451494,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -449836,7 +451509,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -449927,8 +451600,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -456041,6 +457720,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -456146,8 +457836,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -456155,7 +457851,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -456246,8 +457942,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -462366,6 +464068,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -462471,8 +464184,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -462480,7 +464199,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -462571,8 +464290,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -468670,6 +470395,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -468775,8 +470511,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -468784,7 +470526,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -468875,8 +470617,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -474994,6 +476742,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -475099,8 +476858,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -475108,7 +476873,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -475199,8 +476964,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -481294,6 +483065,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -481399,8 +483181,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -481408,7 +483196,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -481499,8 +483287,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -487606,6 +489400,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -487711,8 +489516,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -487720,7 +489531,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -487811,8 +489622,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -493918,6 +495735,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -494023,8 +495851,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -494032,7 +495866,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -494123,8 +495957,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -500229,6 +502069,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -500334,8 +502185,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -500343,7 +502200,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -500434,8 +502291,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",
@@ -506549,6 +508412,17 @@
                       "null"
                     ]
                   },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TrustPolicy"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Refuse the chain if the snapshot revokes or time-bounds any identity in it."
+                  },
                   "signer": {
                     "description": "Public identity file of the pinned starting identity.",
                     "type": "string"
@@ -506654,8 +508528,14 @@
                         "json.sign",
                         "message.open",
                         "message.seal",
+                        "mls.commit",
+                        "mls.encrypt",
+                        "mls.export",
                         "mls.group.create",
+                        "mls.join",
                         "mls.key_package",
+                        "mls.process",
+                        "mls.status",
                         "provenance.attest",
                         "sign",
                         "stream.decrypt",
@@ -506663,7 +508543,7 @@
                       ],
                       "type": "string"
                     },
-                    "maxItems": 12,
+                    "maxItems": 18,
                     "minItems": 1,
                     "type": "array",
                     "uniqueItems": true
@@ -506754,8 +508634,14 @@
                       "json.sign",
                       "message.open",
                       "message.seal",
+                      "mls.commit",
+                      "mls.encrypt",
+                      "mls.export",
                       "mls.group.create",
+                      "mls.join",
                       "mls.key_package",
+                      "mls.process",
+                      "mls.status",
                       "provenance.attest",
                       "sign",
                       "stream.decrypt",

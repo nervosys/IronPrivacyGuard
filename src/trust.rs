@@ -260,6 +260,33 @@ pub struct PolicyEvidence {
     pub checked_at: u64,
 }
 
+/// Refuse an identity that a pinned snapshot revokes or time-bounds at the host
+/// clock. Identities absent from the snapshot pass: delegation and rotation
+/// intermediates need not be enrolled, but a revocation recorded for them is
+/// always honored.
+pub fn not_denied(policy: Option<&TrustPolicy>, fingerprint: &str) -> Result<()> {
+    let Some(policy) = policy else {
+        return Ok(());
+    };
+    let store = load(policy)?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| Error::new("clock_unavailable", "Host clock precedes Unix epoch"))?
+        .as_secs();
+    let code = match store.evaluate(fingerprint, now) {
+        Ok(Eligibility::Permitted) => return Ok(()),
+        Err(error) if error.code == "key_not_trusted" => return Ok(()),
+        Err(error) => return Err(error),
+        Ok(Eligibility::Revoked) => "key_revoked",
+        Ok(Eligibility::NotYetValid) => "key_not_yet_valid",
+        Ok(Eligibility::Expired) => "key_expired",
+    };
+    Err(Error::new(
+        code,
+        "Pinned trust snapshot denies an identity in this chain at the host clock time",
+    ))
+}
+
 /// Host-clock policy check. Caller-provided historical times never authorize operations.
 pub fn enforce(policy: Option<&TrustPolicy>, public: &PublicKey) -> Result<Option<PolicyEvidence>> {
     let Some(policy) = policy else {

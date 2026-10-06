@@ -325,7 +325,7 @@ pub fn delegated(
         .grant
         .as_ref()
         .ok_or_else(|| Error::new("policy_mismatch", "Message carries no delegation grant"))?;
-    delegation::verify(
+    let authority = delegation::verify(
         grant,
         root,
         expected_root,
@@ -335,7 +335,9 @@ pub fn delegated(
             purpose,
         },
         now,
-    )
+    )?;
+    delegation::require_purpose(&authority, purpose)?;
+    Ok(authority)
 }
 
 #[cfg(test)]

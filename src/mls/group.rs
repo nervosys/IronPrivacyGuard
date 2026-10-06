@@ -196,11 +196,13 @@ pub fn create_key_package(
     signature_private: &[u8],
     not_before: u64,
     not_after: u64,
-    leaf_extensions: Vec<Extension>,
+    leaf_extensions: &dyn Fn(&[u8]) -> Result<Vec<Extension>>,
 ) -> Result<(KeyPackage, KeyPackageSecrets)> {
     let init_seed = crate::crypto::random::<NH>()?;
     let leaf_seed = crate::crypto::random::<NH>()?;
     let (init_private, init_key) = suite.derive_key_pair(init_seed.as_ref())?;
+    // Extensions may commit to the init key, such as an identity binding.
+    let leaf_extensions = leaf_extensions(&init_key)?;
     let (encryption_private, encryption_key) = suite.derive_key_pair(leaf_seed.as_ref())?;
     let mut leaf = LeafNode {
         encryption_key,
@@ -1549,7 +1551,10 @@ mod tests {
     fn member(suite: Suite, name: &str) -> Member {
         let signer = crate::crypto::random::<32>().unwrap().to_vec();
         let (kp, secrets) =
-            create_key_package(suite, name.as_bytes(), &signer, 0, u64::MAX, vec![]).unwrap();
+            create_key_package(suite, name.as_bytes(), &signer, 0, u64::MAX, &|_| {
+                Ok(vec![])
+            })
+            .unwrap();
         Member {
             kp,
             secrets,

@@ -1725,7 +1725,7 @@ pub fn export() -> Value {
         ),
         (
             "DelegableOperation",
-            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, audit.checkpoint, decrypt, json.sign, message.open, message.seal, mls.group.create, mls.key_package, provenance.attest, sign, stream.decrypt, stream.sign",
+            "Closed vocabulary of operations a grant may delegate: approval.sign, audit.checkpoint, decrypt, json.sign, message.open, message.seal, mls.commit, mls.encrypt, mls.export, mls.group.create, mls.join, mls.key_package, mls.process, mls.status, provenance.attest, sign, stream.decrypt, stream.sign",
             "public",
         ),
         (

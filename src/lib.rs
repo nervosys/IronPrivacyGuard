@@ -301,6 +301,9 @@ pub enum Request {
         /// Write the final successor's public identity here.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         output: Option<String>,
+        /// Refuse the chain if the snapshot revokes or time-bounds any identity in it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        policy: Option<TrustPolicy>,
     },
     #[serde(rename = "revocation.verify")]
     RevocationVerify {
@@ -1437,8 +1440,35 @@ fn password(path: &str) -> Result<Zeroizing<Vec<u8>>> {
 fn credential(path: Option<String>) -> Result<Option<Zeroizing<Vec<u8>>>> {
     path.map(|path| password(&path)).transpose()
 }
+thread_local! {
+    /// Key-file bytes read during the current call, so the bytes `confine`
+    /// checked are the bytes the handler uses (no swap between the two reads).
+    static KEY_FILES: std::cell::RefCell<std::collections::BTreeMap<String, Zeroizing<Vec<u8>>>> =
+        const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
+}
+
+/// Clears the per-call key cache when a call begins and ends.
+struct KeyCallScope;
+impl KeyCallScope {
+    fn begin() -> Self {
+        KEY_FILES.with(|cache| cache.borrow_mut().clear());
+        Self
+    }
+}
+impl Drop for KeyCallScope {
+    fn drop(&mut self) {
+        KEY_FILES.with(|cache| cache.borrow_mut().clear());
+    }
+}
+
 fn load_key(path: &str) -> Result<KeyFile> {
-    KeyFile::parse(&read(path)?)
+    if let Some(bytes) = KEY_FILES.with(|cache| cache.borrow().get(path).cloned()) {
+        return KeyFile::parse(&bytes);
+    }
+    let bytes = read(path)?;
+    let key = KeyFile::parse(&bytes)?;
+    KEY_FILES.with(|cache| cache.borrow_mut().insert(path.to_owned(), bytes));
+    Ok(key)
 }
 fn software_secret(key: KeyFile) -> Result<crypto::SecretKey> {
     match key {
@@ -1543,34 +1573,125 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
             "policy_mismatch",
             "A pinned grant confines private-key use to its native IPG subject",
         )),
-        _ => Ok(()),
+        // MLS state operations check the bound identity once the state is open.
+        Request::MlsJoin { .. }
+        | Request::MlsCommit { .. }
+        | Request::MlsEncrypt { .. }
+        | Request::MlsProcess { .. }
+        | Request::MlsStatus { .. }
+        | Request::MlsExport { .. } => Ok(()),
+        // No private key, or the key is checked above: nothing to confine.
+        Request::OpenpgpMessageVerify { key: None, .. }
+        | Request::Algorithms {}
+        | Request::Discover {}
+        | Request::HardwareTokens {}
+        | Request::Knowledge {}
+        | Request::Ontology {}
+        | Request::Schema {}
+        | Request::TpmInfo {}
+        | Request::Validate { .. }
+        | Request::TrustCompare { .. }
+        | Request::TrustMerge { .. }
+        | Request::ValidityVerify { .. }
+        | Request::TrustValidity { .. }
+        | Request::TrustEvaluate { .. }
+        | Request::KnowledgeSearch { .. }
+        | Request::Plan { .. }
+        | Request::KeyGenerate { .. }
+        | Request::RevocationVerify { .. }
+        | Request::GrantVerify { .. }
+        | Request::BackupSplit { .. }
+        | Request::BackupCombine { .. }
+        | Request::RotationVerify { .. }
+        | Request::AuditInit { .. }
+        | Request::AuditAppend { .. }
+        | Request::AuditVerify { .. }
+        | Request::QuorumVerify { .. }
+        | Request::JsonCanonicalize { .. }
+        | Request::JsonVerify { .. }
+        | Request::ProvenanceVerify { .. }
+        | Request::Encrypt { .. }
+        | Request::Verify { .. }
+        | Request::Hash { .. }
+        | Request::Inspect { .. }
+        | Request::TrustInit { .. }
+        | Request::TrustAdd { .. }
+        | Request::TrustRevoke { .. }
+        | Request::TrustStatus { .. }
+        | Request::HardwareKeyGenerate { .. }
+        | Request::HardwareKeyBind { .. }
+        | Request::KmsKeyBind { .. }
+        | Request::TpmKeyGenerate { .. }
+        | Request::StreamEncrypt { .. }
+        | Request::StreamVerify { .. }
+        | Request::TpmAttestationChallenge { .. }
+        | Request::TpmAttestationRespond { .. }
+        | Request::TpmAttestationVerify { .. }
+        | Request::OpenpgpKeyGenerate { .. }
+        | Request::OpenpgpKeyImport { .. }
+        | Request::OpenpgpCertExport { .. }
+        | Request::OpenpgpCertInspect { .. }
+        | Request::OpenpgpEncrypt { .. }
+        | Request::OpenpgpVerify { .. } => Ok(()),
     }
 }
 
 /// Check a signer's delegation chain at the host clock, after signature checks.
+///
+/// `signed_purpose` is a purpose the signed artifact itself records, such as a
+/// provenance statement's; it must match any requested purpose and be granted.
+/// A chain that restricts purposes requires a purpose, and with a trust policy
+/// no identity in the chain may be revoked or out of its validity window.
 fn delegated(
     requirement: Option<&DelegationRequirement>,
     signer: &PublicKey,
     operation: &str,
+    policy: Option<&TrustPolicy>,
+    signed_purpose: Option<&str>,
 ) -> Result<Option<delegation::Authority>> {
     let Some(requirement) = requirement else {
         return Ok(None);
+    };
+    let purpose = match (signed_purpose, requirement.purpose.as_deref()) {
+        (Some(signed), Some(requested)) if signed != requested => {
+            return Err(Error::new(
+                "policy_mismatch",
+                "The signed purpose differs from the purpose the verifier requires",
+            ));
+        }
+        (Some(signed), _) => Some(signed),
+        (None, requested) => requested,
     };
     let grant: delegation::Grant = load(&requirement.grant)?;
     let root: PublicKey = load(&requirement.root)?;
     let need = delegation::Need {
         subject: Some(&signer.fingerprint),
         operation: Some(operation),
-        purpose: requirement.purpose.as_deref(),
+        purpose,
     };
-    delegation::verify(
+    let authority = delegation::verify(
         &grant,
         &root,
         &requirement.expected_root_fingerprint,
         need,
         delegation::now()?,
-    )
-    .map(Some)
+    )?;
+    delegation::require_purpose(&authority, purpose)?;
+    chain_not_denied(policy, &root, &grant)?;
+    Ok(Some(authority))
+}
+
+/// Honor revocations recorded for any identity in a delegation chain.
+fn chain_not_denied(
+    policy: Option<&TrustPolicy>,
+    root: &PublicKey,
+    grant: &delegation::Grant,
+) -> Result<()> {
+    trust::not_denied(policy, &root.fingerprint)?;
+    for link in &grant.links {
+        trust::not_denied(policy, &link.subject.fingerprint)?;
+    }
+    Ok(())
 }
 
 /// Report custody only for token-backed private-key operations.
@@ -1678,10 +1799,11 @@ pub fn execute(request: Request) -> Result<Outcome> {
 
 /// Execute under host policy. Callers never choose the host policy per request.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
-    confine(&request, host)?;
+    let _keys = KeyCallScope::begin();
     if host.deny_inline && uses_inline(&ipg_json::to_value(&request)?) {
         return Err(inline::refused());
     }
+    confine(&request, host)?;
     match request {
         Request::Validate { request } => Ok(Outcome::RequestValidation {
             validation: validation::validate(request),
@@ -2060,14 +2182,21 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             )?;
             let opened = message::open(&*identity, &sender, &sealed)?;
             let authority = match &required {
-                Some(required) => Some(message::delegated(
-                    &opened,
-                    &sender,
-                    &load(&required.root)?,
-                    &required.expected_root_fingerprint,
-                    required.purpose.as_deref(),
-                    now,
-                )?),
+                Some(required) => {
+                    let root: PublicKey = load(&required.root)?;
+                    let authority = message::delegated(
+                        &opened,
+                        &sender,
+                        &root,
+                        &required.expected_root_fingerprint,
+                        required.purpose.as_deref(),
+                        now,
+                    )?;
+                    if let Some(grant) = &opened.grant {
+                        chain_not_denied(policy.as_ref(), &root, grant)?;
+                    }
+                    Some(authority)
+                }
                 None => None,
             };
             // The replay marker is the commit point: plaintext is released only
@@ -2243,7 +2372,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &load(&signature)?,
                 &mut inline::open(&input)?,
             )?;
-            let delegation = delegated(delegation.as_ref(), &public, "stream.sign")?;
+            let delegation = delegated(
+                delegation.as_ref(),
+                &public,
+                "stream.sign",
+                policy.as_ref(),
+                None,
+            )?;
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
@@ -2269,7 +2404,8 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &load(&signature)?,
                 &read(&input)?,
             )?;
-            let delegation = delegated(delegation.as_ref(), &public, "sign")?;
+            let delegation =
+                delegated(delegation.as_ref(), &public, "sign", policy.as_ref(), None)?;
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
@@ -2332,6 +2468,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             &key_package_secrets,
             &password(&state_passphrase_file)?,
             &output,
+            host,
         ),
         Request::MlsCommit {
             state,
@@ -2349,6 +2486,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             &output,
             welcome_output.as_deref(),
             policy.as_ref(),
+            host,
         ),
         Request::MlsEncrypt {
             state,
@@ -2362,6 +2500,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             &input,
             &output,
             authenticated_data.as_deref(),
+            host,
         ),
         Request::MlsProcess {
             state,
@@ -2373,11 +2512,12 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             &password(&state_passphrase_file)?,
             &input,
             output.as_deref(),
+            host,
         ),
         Request::MlsStatus {
             state,
             state_passphrase_file,
-        } => mls_ops::group_status(&state, &password(&state_passphrase_file)?),
+        } => mls_ops::group_status(&state, &password(&state_passphrase_file)?, host),
         Request::MlsExport {
             state,
             state_passphrase_file,
@@ -2392,6 +2532,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             context.as_deref(),
             length,
             &output,
+            host,
         ),
         Request::BackupSplit {
             input,
@@ -2474,6 +2615,7 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             signer,
             expected_fingerprint,
             output,
+            policy,
         } => {
             if inputs.is_empty() || inputs.len() > rotation::MAX_CHAIN {
                 return Err(Error::new(
@@ -2485,6 +2627,10 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let chain: Vec<rotation::Rotation> =
                 inputs.iter().map(|i| load(i)).collect::<Result<_>>()?;
             let successors = rotation::follow(&start, &expected_fingerprint, &chain)?;
+            trust::not_denied(policy.as_ref(), &start.fingerprint)?;
+            for successor in &successors {
+                trust::not_denied(policy.as_ref(), &successor.fingerprint)?;
+            }
             let current = successors.last().expect("non-empty chain").clone();
             if let Some(output) = &output {
                 write_new(output, &ipg_json::to_vec_pretty(&current)?)?;
@@ -2782,7 +2928,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 &load(&signature)?,
                 &read(&input)?,
             )?;
-            let delegation = delegated(delegation.as_ref(), &public, "json.sign")?;
+            let delegation = delegated(
+                delegation.as_ref(),
+                &public,
+                "json.sign",
+                policy.as_ref(),
+                None,
+            )?;
             Ok(Outcome::Verified {
                 valid: true,
                 fingerprint: public.fingerprint,
@@ -2898,7 +3050,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 }
                 verified_subjects.push(subject.name);
             }
-            let delegation = delegated(delegation.as_ref(), &public, "provenance.attest")?;
+            let delegation = delegated(
+                delegation.as_ref(),
+                &public,
+                "provenance.attest",
+                policy.as_ref(),
+                statement.purpose.as_deref(),
+            )?;
             Ok(Outcome::ProvenanceVerified {
                 valid: true,
                 fingerprint: public.fingerprint,

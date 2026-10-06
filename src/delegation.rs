@@ -30,8 +30,14 @@ pub const DELEGABLE: &[&str] = &[
     "json.sign",
     "message.open",
     "message.seal",
+    "mls.commit",
+    "mls.encrypt",
+    "mls.export",
     "mls.group.create",
+    "mls.join",
     "mls.key_package",
+    "mls.process",
+    "mls.status",
     "provenance.attest",
     "sign",
     "stream.decrypt",
@@ -411,6 +417,17 @@ pub fn verify(
         links: grant.links.len(),
         checked_at: at,
     })
+}
+
+/// Relying parties must name a purpose when a chain restricts purposes;
+/// omitting it would otherwise accept the grant for any purpose.
+pub fn require_purpose(authority: &Authority, purpose: Option<&str>) -> Result<()> {
+    if !authority.purposes.is_empty() && purpose.is_none() {
+        return Err(denied(
+            "This grant restricts purposes; the verifier must name the purpose it accepts",
+        ));
+    }
+    Ok(())
 }
 
 /// Host Unix time; caller-supplied times never authorize delegated actions.

@@ -51,8 +51,16 @@ identity extension (type `0xF1B0`) with the member's IPG public identity and
 that identity's signature over:
 
 ```text
-frame("IPG MLS identity v1", fingerprint, u16 cipher_suite, mls_signature_key)
+frame("IPG MLS identity v2", fingerprint, u16 cipher_suite, mls_signature_key,
+      init_key, u64 not_after)
 ```
+
+The binding is issued for one KeyPackage: it names that KeyPackage's init key
+and expires with it. Adding or joining requires the init key to match and the
+host clock to be before `not_after`. A stolen MLS signing key therefore cannot
+mint new KeyPackages for the identity, and an old KeyPackage cannot be used once
+it expires. Members already in a group keep their binding; it authenticates the
+identity that joined.
 
 The basic credential names the same fingerprint. Any IPG identity can join a
 group this way: software, hybrid post-quantum, PKCS#11, TPM or KMS. Only the
@@ -63,8 +71,15 @@ status reports. `mls.commit` adds a member only when its binding verifies and it
 fingerprint matches the pin. It can also apply a trust snapshot to new members.
 Senders of application data are reported by IPG fingerprint.
 
-`mls.key_package` and `mls.group.create` use the IPG private key, so they are
-delegable and confined by host-pinned grants.
+Host controls apply to every MLS operation:
+
+- **Custody:** MLS signing and HPKE keys are software keys, so hosts started
+  with `--key-custody hardware` or `non-exportable` refuse all MLS operations.
+- **Delegation:** every MLS operation is delegable (`mls.key_package`,
+  `mls.group.create`, `mls.join`, `mls.commit`, `mls.encrypt`, `mls.process`,
+  `mls.status`, `mls.export`). Under a host-pinned grant, each is checked
+  against the member's bound identity once the state is opened, so a confined
+  agent cannot act in a group after its grant expires or for another identity.
 
 ## State
 

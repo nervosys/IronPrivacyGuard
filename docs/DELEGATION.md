@@ -38,6 +38,18 @@ ipg verify --input release.tar --signature release.sig.json --signer worker.publ
   --delegation '{"grant":"worker.grant.json","root":"root.public.json","expected_root_fingerprint":"<root>","purpose":"release"}'
 ```
 
+Relying parties must name a purpose when the chain restricts purposes: a
+`delegation` requirement without `purpose` is refused (`policy_mismatch`) for
+such chains rather than accepted for any purpose. When a signed artifact
+records its own purpose (provenance statements), that purpose must be granted
+and must equal any purpose the verifier names.
+
+When the verifying call carries a trust `policy`, every identity in the chain
+(the root and each link's subject) is checked against the snapshot: a revoked,
+not-yet-valid or expired identity refuses the chain. Identities absent from the
+snapshot pass, so intermediates need not be enrolled, but their revocations are
+always honored.
+
 A successful `verify` with `delegation` adds a `delegation` object to the result:
 root, subject, operations, purposes, window, remaining depth, link count and the
 host time of the check. Without `delegation`, results are unchanged.
@@ -49,8 +61,10 @@ Each link must:
 - be signed by the previous link's subject (the first by the pinned root);
 - carry the subject's complete public identity, whose fingerprint must verify;
 - name a sorted, unique, non-empty subset of the parent's operations, drawn from
-  `approval.sign`, `audit.checkpoint`, `decrypt`, `json.sign`, `message.open`, `message.seal`, `mls.group.create`,
-  `mls.key_package`, `provenance.attest`,
+  `approval.sign`, `audit.checkpoint`, `decrypt`, `json.sign`,
+  `message.open`, `message.seal`, the MLS operations (`mls.commit`,
+  `mls.encrypt`, `mls.export`, `mls.group.create`, `mls.join`,
+  `mls.key_package`, `mls.process`, `mls.status`), `provenance.attest`,
   `sign`, `stream.decrypt` and `stream.sign`;
 - name a sorted subset of the parent's purposes when the parent restricts them
   (an empty list means no purpose restriction);

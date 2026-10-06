@@ -158,15 +158,34 @@ fn open(file: &SealedFile, format: &str, passphrase: &[u8]) -> Result<Zeroizing<
     Ok(data)
 }
 
-fn binding_message(fingerprint: &str, suite: Suite, signature_key: &[u8]) -> Vec<u8> {
+/// The binding commits to one KeyPackage (its init key) and its expiry, so a
+/// stolen MLS signing key cannot mint further KeyPackages for the identity.
+fn binding_message(
+    fingerprint: &str,
+    suite: Suite,
+    signature_key: &[u8],
+    init_key: &[u8],
+    not_after: u64,
+) -> Vec<u8> {
     crypto::frame(
-        "IPG MLS identity v1",
+        "IPG MLS identity v2",
         &[
             fingerprint.as_bytes(),
             &suite.id().to_be_bytes(),
             signature_key,
+            init_key,
+            &not_after.to_be_bytes(),
         ],
     )
+}
+
+/// What a verified identity binding establishes.
+pub struct Bound {
+    pub public: PublicKey,
+    /// The KeyPackage init key the binding was issued for.
+    pub init_key: Vec<u8>,
+    /// The binding (and its KeyPackage) may not be used to join after this time.
+    pub not_after: u64,
 }
 
 /// The identity extension for a new MLS signature key, signed by `identity`.
@@ -174,16 +193,26 @@ fn binding(
     identity: &dyn crypto::IdentityKey,
     suite: Suite,
     signature_key: &[u8],
+    init_key: &[u8],
+    not_after: u64,
 ) -> Result<Extension> {
     let public = identity.public();
     let signature = crypto::sign_message(
         identity,
-        &binding_message(&public.fingerprint, suite, signature_key),
+        &binding_message(
+            &public.fingerprint,
+            suite,
+            signature_key,
+            init_key,
+            not_after,
+        ),
     )?;
     let mut w = Writer::new();
     w.opaque(&ipg_json::to_vec(public)?)
         .opaque(public.suite()?.signature_algorithm().as_bytes())
-        .opaque(&crate::hex::decode(&signature)?);
+        .opaque(&crate::hex::decode(&signature)?)
+        .opaque(init_key)
+        .u64(not_after);
     Ok(Extension {
         extension_type: EXT_IPG_IDENTITY,
         data: w.finish(),
@@ -191,7 +220,7 @@ fn binding(
 }
 
 /// Verify a leaf's identity binding; returns the member's IPG public identity.
-pub fn verify_binding(suite: Suite, leaf: &crate::mls::messages::LeafNode) -> Result<PublicKey> {
+pub fn verify_binding(suite: Suite, leaf: &crate::mls::messages::LeafNode) -> Result<Bound> {
     let ext = leaf
         .extensions
         .iter()
@@ -203,6 +232,8 @@ pub fn verify_binding(suite: Suite, leaf: &crate::mls::messages::LeafNode) -> Re
     let algorithm =
         String::from_utf8(r.opaque()?.to_vec()).map_err(|_| unbound("malformed algorithm"))?;
     let signature = crate::hex::encode(r.opaque()?);
+    let init_key = r.opaque()?.to_vec();
+    let not_after = r.u64()?;
     r.finish()?;
     public.validate()?;
     if leaf.credential != Credential::Basic(public.fingerprint.as_bytes().to_vec()) {
@@ -211,11 +242,61 @@ pub fn verify_binding(suite: Suite, leaf: &crate::mls::messages::LeafNode) -> Re
     crypto::verify_message(
         &public,
         &algorithm,
-        &binding_message(&public.fingerprint, suite, &leaf.signature_key),
+        &binding_message(
+            &public.fingerprint,
+            suite,
+            &leaf.signature_key,
+            &init_key,
+            not_after,
+        ),
         &signature,
     )
     .map_err(|_| unbound("binding signature does not verify"))?;
-    Ok(public)
+    Ok(Bound {
+        public,
+        init_key,
+        not_after,
+    })
+}
+
+/// MLS signing and HPKE keys are software keys, so hosts requiring hardware or
+/// non-exportable custody refuse MLS; a pinned grant confines MLS to its
+/// subject and granted operations, checked against the member's bound identity.
+fn admit(host: &Host, identity: &PublicKey, operation: &str) -> Result<()> {
+    if host.custody != provider::CustodyPolicy::Any {
+        return Err(Error::new(
+            "policy_mismatch",
+            "MLS group keys are software keys; the host requires hardware or non-exportable custody",
+        ));
+    }
+    if let Some(pinned) = &host.delegation {
+        pinned.check(Some(identity), Some(operation))?;
+    }
+    Ok(())
+}
+
+/// The bound IPG identity of this member.
+fn own_identity(group: &Group) -> Result<PublicKey> {
+    let leaf = group
+        .tree
+        .leaf(group.own_leaf())
+        .ok_or_else(|| Error::new("policy_mismatch", "This member is no longer in the group"))?;
+    Ok(verify_binding(group.suite, leaf)?.public)
+}
+
+/// A KeyPackage binding valid for joining now: issued for this KeyPackage and unexpired.
+fn check_join_binding(suite: Suite, kp: &KeyPackage) -> Result<PublicKey> {
+    let bound = verify_binding(suite, &kp.leaf_node)?;
+    if bound.init_key != kp.init_key {
+        return Err(unbound("binding was issued for another KeyPackage"));
+    }
+    if crate::delegation::now()? >= bound.not_after {
+        return Err(Error::new(
+            "key_expired",
+            "The KeyPackage identity binding has expired",
+        ));
+    }
+    Ok(bound.public)
 }
 
 /// Fingerprints of every member, failing if any leaf lacks a valid binding.
@@ -228,7 +309,7 @@ fn members(group: &Group) -> Result<Vec<MlsMember>> {
             let node = group.tree.leaf(leaf).expect("member");
             Ok(MlsMember {
                 leaf,
-                fingerprint: verify_binding(group.suite, node)?.fingerprint,
+                fingerprint: verify_binding(group.suite, node)?.public.fingerprint,
             })
         })
         .collect()
@@ -353,15 +434,23 @@ fn bound_key_package(
     }
     let signer = Zeroizing::new(crypto::random::<32>()?.to_vec());
     let signature_key = suite.signature_public(&signer)?;
-    let extension = binding(identity, suite, &signature_key)?;
     let now = crate::delegation::now()?;
+    let not_after = now.saturating_add(lifetime);
     let (kp, secrets) = group::create_key_package(
         suite,
         identity.public().fingerprint.as_bytes(),
         &signer,
         now.saturating_sub(60),
-        now.saturating_add(lifetime),
-        vec![extension],
+        not_after,
+        &|init_key| {
+            Ok(vec![binding(
+                identity,
+                suite,
+                &signature_key,
+                init_key,
+                not_after,
+            )?])
+        },
     )?;
     Ok((kp, secrets, signer))
 }
@@ -395,6 +484,7 @@ pub fn key_package(
     crate::require_absent(secrets_output)?;
     let key = crate::load_key(key)?;
     key.public().pin(expected_fingerprint)?;
+    admit(host, key.public(), "mls.key_package")?;
     let identity = provider::open(&key, credential, host)?;
     let suite = suite.suite();
     let (kp, secrets, signer) = bound_key_package(&*identity, suite, lifetime)?;
@@ -434,6 +524,7 @@ pub fn create(
     crate::require_absent(output)?;
     let key = crate::load_key(key)?;
     key.public().pin(expected_fingerprint)?;
+    admit(host, key.public(), "mls.group.create")?;
     let identity = provider::open(&key, credential, host)?;
     let suite = suite.suite();
     let (kp, secrets, signer) = bound_key_package(&*identity, suite, MAX_LIFETIME)?;
@@ -454,6 +545,7 @@ pub fn join(
     key_package_secrets: &str,
     state_passphrase: &[u8],
     output: &str,
+    host: &Host,
 ) -> Result<crate::Outcome> {
     crate::require_absent(output)?;
     let MlsMessage::Welcome(welcome) = read_message(welcome)? else {
@@ -469,6 +561,8 @@ pub fn join(
     };
     let signer = Zeroizing::new(r.opaque()?.to_vec());
     r.finish()?;
+    let suite = Suite::from_id(kp.cipher_suite)?;
+    admit(host, &check_join_binding(suite, &kp)?, "mls.join")?;
     let group = Group::join(&welcome, &kp, &secrets, &signer, None, &PskStore::new())?;
     let report = status(output, &group)?;
     new_state(output, &group, state_passphrase)?;
@@ -493,6 +587,7 @@ pub fn commit(
     output: &str,
     welcome_output: Option<&str>,
     policy: Option<&crate::trust::TrustPolicy>,
+    host: &Host,
 ) -> Result<crate::Outcome> {
     if add.len() + remove.len() > MAX_MEMBERS_PER_COMMIT {
         return Err(invalid("At most 64 adds and removes per commit"));
@@ -508,6 +603,7 @@ pub fn commit(
     }
     let _lock = StateLock::acquire(state)?;
     let mut group = load_state(state, state_passphrase)?;
+    admit(host, &own_identity(&group)?, "mls.commit")?;
     let mut proposals = Vec::new();
     for member in add {
         let file: KeyPackageFile = crate::load(&member.key_package)?;
@@ -517,7 +613,7 @@ pub fn commit(
             return Err(Error::new("invalid_format", "Not an MLS KeyPackage"));
         };
         group::validate_key_package(group.suite, &kp)?;
-        let public = verify_binding(group.suite, &kp.leaf_node)?;
+        let public = check_join_binding(group.suite, &kp)?;
         public.pin(&member.expected_fingerprint)?;
         crate::trust::enforce(policy, &public)?;
         proposals.push(Proposal::Add(kp));
@@ -550,11 +646,13 @@ pub fn encrypt(
     input: &str,
     output: &str,
     authenticated_data: Option<&str>,
+    host: &Host,
 ) -> Result<crate::Outcome> {
     crate::require_absent(output)?;
     let data = crate::read(input)?;
     let _lock = StateLock::acquire(state)?;
     let mut group = load_state(state, state_passphrase)?;
+    admit(host, &own_identity(&group)?, "mls.encrypt")?;
     let message = group.encrypt(&data, authenticated_data.unwrap_or_default().as_bytes())?;
     // The advanced ratchet is saved first, so a key is never used twice.
     save_state(state, &group, state_passphrase)?;
@@ -571,6 +669,7 @@ pub fn process(
     state_passphrase: &[u8],
     input: &str,
     output: Option<&str>,
+    host: &Host,
 ) -> Result<crate::Outcome> {
     if let Some(o) = output {
         crate::require_absent(o)?;
@@ -578,6 +677,7 @@ pub fn process(
     let message = read_message(input)?;
     let _lock = StateLock::acquire(state)?;
     let mut group = load_state(state, state_passphrase)?;
+    admit(host, &own_identity(&group)?, "mls.process")?;
     let is_application = matches!(&message, MlsMessage::Private(p) if p.content_type == crate::mls::messages::CONTENT_APPLICATION);
     if is_application && output.is_none() {
         return Err(invalid(
@@ -602,7 +702,7 @@ pub fn process(
             let fingerprint = group
                 .tree
                 .leaf(sender)
-                .map(|leaf| verify_binding(group.suite, leaf).map(|p| p.fingerprint))
+                .map(|leaf| verify_binding(group.suite, leaf).map(|b| b.public.fingerprint))
                 .transpose()?;
             (
                 "application",
@@ -634,8 +734,11 @@ pub fn process(
     })
 }
 
-pub fn group_status(state: &str, state_passphrase: &[u8]) -> Result<crate::Outcome> {
+pub fn group_status(state: &str, state_passphrase: &[u8], host: &Host) -> Result<crate::Outcome> {
     let group = load_state(state, state_passphrase)?;
+    if !group.removed {
+        admit(host, &own_identity(&group)?, "mls.status")?;
+    }
     Ok(crate::Outcome::MlsGroup {
         status: status(state, &group)?,
     })
@@ -648,12 +751,14 @@ pub fn export(
     context: Option<&str>,
     length: usize,
     output: &str,
+    host: &Host,
 ) -> Result<crate::Outcome> {
     if !(1..=64).contains(&length) || label.is_empty() || label.len() > 255 {
         return Err(invalid("Export 1..64 bytes under a 1..255 byte label"));
     }
     crate::require_absent(output)?;
     let group = load_state(state, state_passphrase)?;
+    admit(host, &own_identity(&group)?, "mls.export")?;
     let secret = group.export(
         label.as_bytes(),
         context.unwrap_or_default().as_bytes(),
