@@ -9,4 +9,6 @@ pub mod key_schedule;
 pub mod messages;
 pub mod secret_tree;
 pub mod suite;
+pub mod tree;
 pub mod tree_math;
+pub mod treekem;
