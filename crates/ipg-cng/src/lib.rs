@@ -781,7 +781,7 @@ mod tests {
             let device = ecdh.agree_raw(&imported).unwrap();
             let mut software = [0u8; 48];
             EcdhP384::agree(&scalar, &ecdh.public_point().unwrap(), &mut software).unwrap();
-            assert_eq!(device, software.to_vec(), "raw ECDH must match software");
+            assert_eq!(device.take(), software.to_vec(), "raw ECDH must match software");
             // Reopen with the right and a wrong authorization.
             let reopened = provider.open_key(&ecdsa_name, &auth).unwrap();
             reopened.sign_digest(digest.as_ref()).unwrap();
