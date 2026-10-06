@@ -88,6 +88,7 @@ pub fn open(path: &str) -> Result<Input> {
             "return: names an output, not an input",
         ));
     }
+    crate::files::guard(path, crate::files::Access::Read)?;
     Ok(Input::File(File::open(path)?))
 }
 

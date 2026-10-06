@@ -31,6 +31,8 @@ pub struct Config {
     pub host: Host,
     /// ipg-audit-v1 log recording every executed tool call.
     pub audit_log: Option<String>,
+    /// Replay directory injected into every `message.open`.
+    pub replay_directory: Option<String>,
     /// Operations that run only after a person approves each call.
     pub approval: Option<BTreeSet<String>>,
 }
@@ -41,6 +43,7 @@ impl Config {
         let mut digest = None;
         let (mut grant, mut grant_root, mut grant_root_fingerprint) = (None, None, None);
         let mut seen = BTreeSet::new();
+        let (mut root, mut secrets, mut protected) = (None, None, Vec::new());
         let (pairs, remainder) = args.as_chunks::<2>();
         for pair in pairs {
             if !seen.insert(&pair[0]) {
@@ -63,6 +66,11 @@ impl Config {
                 }
                 "--grant" => grant = Some(pair[1].clone()),
                 "--audit-log" => config.audit_log = Some(pair[1].clone()),
+                "--root" => root = Some(pair[1].clone()),
+                "--secrets-dir" => secrets = Some(pair[1].clone()),
+                "--replay-directory" => config.replay_directory = Some(pair[1].clone()),
+                // Set by mcp-http for its bearer token file.
+                "--protect-path" => protected.push(pair[1].clone()),
                 "--require-approval" => {
                     config.approval = Some(pair[1].split(',').map(String::from).collect());
                 }
@@ -123,6 +131,22 @@ impl Config {
                     "grant, grant-root and expected-grant-root-fingerprint are required together",
                 ));
             }
+        }
+        let mut paths = if root.is_some() || secrets.is_some() {
+            crate::files::PathPolicy::new(root.as_deref(), secrets.as_deref())?
+        } else {
+            crate::files::PathPolicy::default()
+        };
+        // Tools may never touch the host's audit log, its lock, or reserved paths.
+        if let Some(log) = &config.audit_log {
+            paths.protect(log)?;
+            paths.protect(&format!("{log}.lock"))?;
+        }
+        for path in &protected {
+            paths.protect(path)?;
+        }
+        if paths != crate::files::PathPolicy::default() {
+            config.host.paths = Some(paths);
         }
         config.validate()?;
         Ok(config)
@@ -606,6 +630,21 @@ impl Server {
     fn prepare(&self, arguments: Value) -> Result<Request> {
         let mut request = ipg_json::from_value::<Request>(arguments)
             .map_err(|_| Error::new("invalid_request", "Arguments do not match the tool schema"))?;
+        if let (
+            Some(required),
+            Request::MessageOpen {
+                replay_directory, ..
+            },
+        ) = (&self.config.replay_directory, &mut request)
+        {
+            if replay_directory.as_ref().is_some_and(|d| d != required) {
+                return Err(Error::new(
+                    "policy_mismatch",
+                    "Tool replay_directory cannot override the host's replay directory",
+                ));
+            }
+            *replay_directory = Some(required.clone());
+        }
         if let Some(required) = &self.config.policy {
             let target = match &mut request {
                 Request::Encrypt { policy, .. }

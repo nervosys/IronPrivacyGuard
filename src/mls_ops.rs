@@ -362,6 +362,7 @@ impl StateLock {
         if inline::is_inline(state) {
             return Err(invalid("MLS state must be a file"));
         }
+        crate::files::guard(state, crate::files::Access::Write)?;
         let path = PathBuf::from(format!("{state}.lock"));
         std::fs::OpenOptions::new()
             .write(true)
@@ -388,7 +389,10 @@ impl Drop for StateLock {
 
 fn load_state(path: &str, passphrase: &[u8]) -> Result<Group> {
     let sealed: SealedFile = ipg_json::from_slice(&crate::read_limited(
-        std::fs::File::open(path)?,
+        {
+            crate::files::guard(path, crate::files::Access::Read)?;
+            std::fs::File::open(path)?
+        },
         MAX_STATE_BYTES,
     )?)?;
     Group::from_state(&open(&sealed, STATE_FORMAT, passphrase)?)

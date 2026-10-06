@@ -207,6 +207,7 @@ pub fn append(path: &str, event: &Value, now: u64) -> Result<(u64, String)> {
             "Audit events must be JSON objects",
         ));
     }
+    crate::files::guard(path, crate::files::Access::Write)?;
     let canonical = crate::jcs::canonicalize(event)?;
     if canonical.len() > MAX_EVENT_BYTES {
         return Err(Error::new("limit_exceeded", "Audit event exceeds 64 KiB"));

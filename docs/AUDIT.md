@@ -27,6 +27,10 @@ grants.
 Arguments are recorded only as the SHA-384 of their canonical form, because
 inline data may carry plaintext. The log must exist and verify at startup.
 
+Tools cannot read, append to or create the host log or `<log>.lock`, and
+`audit.append` refuses events whose `source` is `ipg-mcp`. Host events therefore
+cannot be forged or blocked through tools.
+
 If the request record cannot be written, the call is refused with
 `audit_unavailable` (retryable) and nothing runs. If the result record cannot be
 written, the call returns `audit_unavailable` and the message says the operation

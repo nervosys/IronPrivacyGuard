@@ -283,3 +283,184 @@ fn mls_operations_respect_custody_grants_and_binding_expiry() {
     );
     assert_eq!(added.unwrap_err(), "key_expired");
 }
+
+fn mcp_session(flags: &[String]) -> iron_privacy_guard::mcp::Server {
+    let mut server = iron_privacy_guard::mcp::Server::new(
+        iron_privacy_guard::mcp::Config::parse(flags).unwrap(),
+    )
+    .unwrap();
+    for message in [
+        json!({"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25",
+            "capabilities":{},"clientInfo":{"name":"t","version":"1"}}}),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+    ] {
+        server.handle(&ipg_json::to_vec(&message).unwrap());
+    }
+    server
+}
+fn tool(server: &mut iron_privacy_guard::mcp::Server, name: &str, arguments: Value) -> Value {
+    let reply = server
+        .handle(
+            &ipg_json::to_vec(&json!({"jsonrpc":"2.0","id":1,"method":"tools/call",
+            "params":{"name":name,"arguments":arguments}}))
+            .unwrap(),
+        )
+        .unwrap();
+    reply["result"]["structuredContent"].clone()
+}
+fn code(result: &Value) -> &str {
+    result["error"]["code"].as_str().unwrap_or("ok")
+}
+
+/// M1, M2, I5: host path confinement, a reserved audit log and an injected replay directory.
+#[test]
+fn hosts_confine_paths_protect_secrets_and_reserve_the_audit_log() {
+    let f = Fixture::new();
+    let work = f.path("work");
+    let secrets = f.path("secrets");
+    fs::create_dir(&work).unwrap();
+    fs::create_dir(&secrets).unwrap();
+    fs::write(format!("{secrets}/pass"), PASS).unwrap();
+    fs::write(format!("{work}/data"), b"data").unwrap();
+    let log = format!("{work}/host.log");
+    call(json!({"operation":"audit.init","output":log})).unwrap();
+    let flags: Vec<String> = [
+        "--root",
+        &work,
+        "--secrets-dir",
+        &secrets,
+        "--audit-log",
+        &log,
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    let mut server = mcp_session(&flags);
+    let w = |name: &str| format!("{work}/{name}");
+    let pass = format!("{secrets}/pass");
+
+    // The secret channel works; reading secrets as data does not.
+    let made = tool(
+        &mut server,
+        "ipg_key_generate",
+        json!({"output":w("key"),"passphrase_file":pass}),
+    );
+    assert_eq!(code(&made), "ok", "{made}");
+    for (name, args) in [
+        (
+            "ipg_backup_split",
+            json!({"input":pass,"threshold":2,"outputs":[w("s1"), w("s2")]}),
+        ),
+        ("ipg_hash", json!({"input":pass})),
+        (
+            "ipg_json_canonicalize",
+            json!({"input":pass,"output":w("c")}),
+        ),
+    ] {
+        assert_eq!(
+            code(&tool(&mut server, name, args)),
+            "policy_mismatch",
+            "{name}"
+        );
+    }
+    // Passphrases outside the secrets directory, and paths outside the root, are refused.
+    fs::write(w("loose-pass"), PASS).unwrap();
+    let loose = tool(
+        &mut server,
+        "ipg_key_generate",
+        json!({"output":w("key2"),"passphrase_file":w("loose-pass")}),
+    );
+    assert_eq!(code(&loose), "policy_mismatch");
+    let escape = format!("{work}/../escaped");
+    assert_eq!(
+        code(&tool(
+            &mut server,
+            "ipg_trust_init",
+            json!({"output":escape})
+        )),
+        "policy_mismatch"
+    );
+    assert_eq!(
+        code(&tool(
+            &mut server,
+            "ipg_hash",
+            json!({"input":f.path("doc")})
+        )),
+        "policy_mismatch"
+    );
+    assert_eq!(
+        code(&tool(&mut server, "ipg_hash", json!({"input":w("data")}))),
+        "ok"
+    );
+
+    // The host audit log and its lock are reserved; ipg-mcp events cannot be forged.
+    fs::write(w("benign"), br#"{"note":"agent"}"#).unwrap();
+    fs::write(
+        w("event"),
+        br#"{"source":"ipg-mcp","phase":"result","ok":true}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        code(&tool(
+            &mut server,
+            "ipg_audit_append",
+            json!({"log":log,"event":w("benign")})
+        )),
+        "policy_mismatch"
+    );
+    assert_eq!(
+        code(&tool(
+            &mut server,
+            "ipg_trust_init",
+            json!({"output":format!("{log}.lock")})
+        )),
+        "policy_mismatch"
+    );
+    call(json!({"operation":"audit.init","output":w("own.log")})).unwrap();
+    assert_eq!(
+        code(&tool(
+            &mut server,
+            "ipg_audit_append",
+            json!({"log":w("own.log"),"event":w("event")})
+        )),
+        "invalid_request"
+    );
+    let verified = call(json!({"operation":"audit.verify","log":log})).unwrap();
+    assert!(
+        verified["log"]["size"].as_u64().unwrap() >= 2,
+        "host events still recorded"
+    );
+}
+
+/// I5: a host replay directory applies even when the caller omits it.
+#[test]
+fn hosts_can_force_replay_protection_for_messages() {
+    let f = Fixture::new();
+    let (alice, bob) = (f.identity("alice"), f.identity("bob"));
+    fs::create_dir(f.path("replay")).unwrap();
+    call(json!({"operation":"message.seal","input":f.path("doc"),"output":f.path("msg"),"key":f.path("alice"),
+        "passphrase_file":f.path("pass"),"recipient":f.path("bob.public"),"expected_recipient_fingerprint":bob,
+        "lifetime":300,"policy":null}))
+    .unwrap();
+    let flags: Vec<String> = ["--replay-directory", &f.path("replay")]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let mut server = mcp_session(&flags);
+    let open = |server: &mut iron_privacy_guard::mcp::Server,
+                output: &str,
+                replay: Option<String>| {
+        let mut args = json!({"input":f.path("msg"),"output":f.path(output),"key":f.path("bob"),
+            "passphrase_file":f.path("pass"),"sender":f.path("alice.public"),"expected_sender_fingerprint":alice});
+        if let Some(replay) = replay {
+            args["replay_directory"] = json!(replay);
+        }
+        tool(server, "ipg_message_open", args)
+    };
+    assert_eq!(code(&open(&mut server, "out1", None)), "ok");
+    assert_eq!(code(&open(&mut server, "out2", None)), "replay_detected");
+    assert_eq!(
+        code(&open(&mut server, "out3", Some(f.path("elsewhere")))),
+        "policy_mismatch"
+    );
+}

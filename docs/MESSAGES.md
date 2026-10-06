@@ -71,6 +71,8 @@ second open of the same message, from any process sharing the directory, fails
 with `replay_detected` (exit 3, never retryable). Markers record the expiry time;
 because lifetimes are at most one day, markers older than a day can be deleted.
 Without `replay_directory`, replay is not checked and `replay_recorded` is false.
+MCP hosts can make replay protection mandatory with `ipg mcp --replay-directory
+<dir>`, which is injected into every `message.open`.
 
 ## Channel binding
 

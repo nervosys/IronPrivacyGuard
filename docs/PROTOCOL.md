@@ -81,8 +81,9 @@ Agents can avoid temporary files for small payloads:
  "output":"return:signature","key":"agent.json","passphrase_file":"agent-pass.bin"}}
 ```
 
-Passphrase and PIN files never accept inline data, so secrets stay in protected
-files. Streaming outputs (`stream.encrypt`, `stream.decrypt`) must be files. A
+Passphrase and PIN files never accept inline data, so secrets never travel in
+requests. A secret file can still be read as ordinary data by a caller that
+names its path as an input; MCP hosts prevent that with `--secrets-dir`. Streaming outputs (`stream.encrypt`, `stream.decrypt`) must be files. A
 returned name may be used once per call, like an existing file. Failed calls
 return nothing. Control messages are bounded at 2 MiB to leave room for inline
 data. MCP hosts can refuse both forms with `ipg mcp --inline-data deny`.

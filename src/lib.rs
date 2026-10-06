@@ -1434,6 +1434,7 @@ fn password(path: &str) -> Result<Zeroizing<Vec<u8>>> {
             "Passphrases and PINs must come from protected files, not inline data",
         ));
     }
+    files::guard(path, files::Access::Secret)?;
     read_limited(File::open(path)?, 4096)
 }
 /// Read an optional credential file; the provider decides whether the key needs one.
@@ -1488,6 +1489,7 @@ pub fn write_new(path: &str, data: &[u8]) -> Result<()> {
     if let Some(name) = inline::returned_name(path)? {
         return inline::store(name, data);
     }
+    files::guard(path, files::Access::Write)?;
     let target = Path::new(path);
     let parent = target
         .parent()
@@ -1731,6 +1733,7 @@ pub(crate) fn require_absent(path: &str) -> Result<()> {
     if let Some(name) = inline::returned_name(path)? {
         return inline::require_unused(name);
     }
+    files::guard(path, files::Access::Write)?;
     if Path::new(path).exists() {
         return Err(Error::new(
             "already_exists",
@@ -1800,6 +1803,7 @@ pub fn execute(request: Request) -> Result<Outcome> {
 /// Execute under host policy. Callers never choose the host policy per request.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
     let _keys = KeyCallScope::begin();
+    let _paths = files::PathScope::install(host.paths.clone());
     if host.deny_inline && uses_inline(&ipg_json::to_value(&request)?) {
         return Err(inline::refused());
     }
@@ -2659,6 +2663,13 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
             let bytes = read_limited(inline::open(&event)?, audit::MAX_EVENT_BYTES as u64)?;
             let event: Value = ipg_json::from_slice(&bytes)
                 .map_err(|_| Error::new("invalid_format", "Event is not strict JSON"))?;
+            // Events of the MCP host's own audit trail cannot be forged by tools.
+            if event.get("source").and_then(Value::as_str) == Some("ipg-mcp") {
+                return Err(Error::new(
+                    "invalid_request",
+                    "The ipg-mcp event source is reserved for the MCP host",
+                ));
+            }
             let (seq, head) = audit::append(&log, &event, delegation::now()?)?;
             Ok(Outcome::AuditAppended {
                 path: log,

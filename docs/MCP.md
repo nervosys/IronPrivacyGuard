@@ -112,9 +112,30 @@ session; the snapshot is checked again for each governed operation. Tools may
 write new trust snapshots if allowed, but cannot adopt a new server pin. Restart
 with an externally approved new digest to change policy.
 
-These controls are not filesystem isolation. Configure the process identity,
-allowed directories, available passphrase files, and tool allowlist in the host.
-Pinning policy governs only encrypt/sign/verify; it does not disable decryption or
+### Path controls
+
+Tools name their own paths, so without path controls an agent can read any file
+the process can read and write new files anywhere it can write. That includes
+passphrase files read as ordinary data (for example with `backup.split` or
+`hash`). Three flags confine this:
+
+- `--root <dir>`: every tool path must resolve inside `dir`. Paths are made
+  absolute, `..` is applied lexically and existing prefixes are canonicalized,
+  so symlinks cannot escape.
+- `--secrets-dir <dir>`: passphrase and PIN files must be in `dir`, and no
+  other tool input or output may touch it. Secrets are then readable only
+  through the secret channel. The directory may lie outside the root.
+- `--replay-directory <dir>`: injected into every `message.open`, so
+  replayed messages are always refused. A tool cannot name a different
+  directory.
+
+With `--audit-log`, the log and `<log>.lock` are reserved: tools can neither
+read, append to nor create them. `mcp-http` reserves its bearer token file the
+same way. Comparisons ignore case on Windows.
+
+These controls confine IPG's own file access; they are not OS isolation.
+Configure the process identity and tool allowlist in the host too. Pinned policy
+applies to every policy-governed operation; it does not disable decryption or
 private-key lifecycle operations. See [SECURITY.md](../SECURITY.md).
 
 ### Inline data

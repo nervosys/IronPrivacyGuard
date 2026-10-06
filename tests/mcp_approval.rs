@@ -144,10 +144,17 @@ fn gated_tools_wait_for_a_person_and_fail_closed() {
     );
     assert!(s.answer(&elicitation, approve(true)).is_none());
     assert!(!s.exists("cancelled"));
-    // Ungated tools run immediately.
+    // Ungated tools run immediately; the host audit log itself is reserved.
+    std::fs::write(s.path("data"), b"data").unwrap();
     let hashed = s.send(json!({"jsonrpc":"2.0","id":16,"method":"tools/call",
-        "params":{"name":"ipg_hash","arguments":{"input":log}}}));
+        "params":{"name":"ipg_hash","arguments":{"input":s.path("data")}}}));
     assert_eq!(hashed.unwrap()["result"]["isError"], false);
+    let reserved = s.send(json!({"jsonrpc":"2.0","id":17,"method":"tools/call",
+        "params":{"name":"ipg_hash","arguments":{"input":log}}}));
+    assert_eq!(
+        reserved.unwrap()["result"]["structuredContent"]["error"]["code"],
+        "policy_mismatch"
+    );
 
     let events: Vec<Value> = std::fs::read_to_string(&log)
         .unwrap()

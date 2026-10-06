@@ -104,6 +104,165 @@ pub fn tempdir() -> io::Result<TempDir> {
     ))
 }
 
+/// Host-configured limits on the paths tool calls may use.
+///
+/// Installed for the duration of one call by `crate::execute_with`. Paths are
+/// resolved against the current directory, `.` and `..` are applied
+/// lexically, and the longest existing prefix is canonicalized, so symlinks
+/// cannot escape the root. On Windows comparisons ignore case, as the
+/// filesystem does.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PathPolicy {
+    /// Every path must resolve inside this directory.
+    pub root: Option<PathBuf>,
+    /// Passphrase and PIN files must be here, and only the secret channel may read it.
+    pub secrets: Option<PathBuf>,
+    /// Exact paths tools may never read or write (the host audit log, its
+    /// lock, the HTTP bearer token).
+    pub protected: Vec<PathBuf>,
+}
+
+/// How a path is about to be used.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Access {
+    Read,
+    Write,
+    /// A passphrase or PIN file.
+    Secret,
+}
+
+thread_local! {
+    static ACTIVE: std::cell::RefCell<Option<PathPolicy>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Installs a policy for one call and restores the previous one when dropped.
+pub struct PathScope(Option<PathPolicy>);
+impl PathScope {
+    pub fn install(policy: Option<PathPolicy>) -> Self {
+        Self(ACTIVE.with(|active| active.replace(policy)))
+    }
+}
+impl Drop for PathScope {
+    fn drop(&mut self) {
+        let previous = self.0.take();
+        ACTIVE.with(|active| active.replace(previous));
+    }
+}
+
+impl PathPolicy {
+    /// Canonicalize configured directories once, when the host starts.
+    pub fn new(root: Option<&str>, secrets: Option<&str>) -> io::Result<Self> {
+        let canonical = |p: Option<&str>| p.map(fs::canonicalize).transpose();
+        Ok(Self {
+            root: canonical(root)?,
+            secrets: canonical(secrets)?,
+            protected: Vec::new(),
+        })
+    }
+    /// Reserve an exact path for the host.
+    pub fn protect(&mut self, path: &str) -> io::Result<()> {
+        self.protected.push(resolve(Path::new(path))?);
+        Ok(())
+    }
+}
+
+/// Absolute, lexically normalized path with its longest existing prefix canonicalized.
+pub fn resolve(path: &Path) -> io::Result<PathBuf> {
+    use std::path::Component;
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    let mut lexical = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                lexical.pop();
+            }
+            other => lexical.push(other.as_os_str()),
+        }
+    }
+    let mut existing = lexical;
+    let mut tail = Vec::new();
+    while !existing.exists() {
+        match (existing.file_name(), existing.parent()) {
+            (Some(name), Some(parent)) => {
+                tail.push(name.to_os_string());
+                existing = parent.to_path_buf();
+            }
+            _ => break,
+        }
+    }
+    let mut resolved = fs::canonicalize(&existing).unwrap_or(existing);
+    for name in tail.into_iter().rev() {
+        resolved.push(name);
+    }
+    Ok(resolved)
+}
+
+fn comparable(path: &Path) -> String {
+    let text = path.to_string_lossy().into_owned();
+    if cfg!(windows) {
+        text.to_lowercase()
+    } else {
+        text
+    }
+}
+fn inside(path: &Path, dir: &Path) -> bool {
+    let (path, dir) = (comparable(path), comparable(dir));
+    path == dir
+        || path
+            .strip_prefix(&dir)
+            .is_some_and(|rest| rest.starts_with(std::path::MAIN_SEPARATOR))
+}
+
+/// Check a tool-supplied path against the active host policy, if any.
+pub fn guard(path: &str, access: Access) -> crate::error::Result<()> {
+    let denied = |message: &str| crate::error::Error::new("policy_mismatch", message.to_owned());
+    ACTIVE.with(|active| {
+        let active = active.borrow();
+        let Some(policy) = active.as_ref() else {
+            return Ok(());
+        };
+        let resolved = resolve(Path::new(path))?;
+        // The host's secrets directory may lie outside the root.
+        let host_secret = access == Access::Secret
+            && policy
+                .secrets
+                .as_ref()
+                .is_some_and(|d| inside(&resolved, d));
+        if let Some(root) = &policy.root
+            && !host_secret
+            && !inside(&resolved, root)
+        {
+            return Err(denied("Path is outside the host root"));
+        }
+        if let Some(secrets) = &policy.secrets {
+            let in_secrets = inside(&resolved, secrets);
+            if access == Access::Secret && !in_secrets {
+                return Err(denied(
+                    "Passphrase and PIN files must be in the host secrets directory",
+                ));
+            }
+            if access != Access::Secret && in_secrets {
+                return Err(denied(
+                    "The host secrets directory is readable only as passphrase or PIN files",
+                ));
+            }
+        }
+        if policy
+            .protected
+            .iter()
+            .any(|p| comparable(p) == comparable(&resolved))
+        {
+            return Err(denied("Path is reserved by the host"));
+        }
+        Ok(())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

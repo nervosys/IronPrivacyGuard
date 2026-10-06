@@ -111,6 +111,9 @@ impl HttpServer {
         if token.len() < 32 {
             return Err(invalid("The bearer token must be at least 32 bytes"));
         }
+        // The bearer token is never readable through tools.
+        mcp_args.push("--protect-path".into());
+        mcp_args.push(token_file.clone());
         let config = Config::parse(&mcp_args)?;
         if config.approval.is_some() {
             return Err(Error::new(
