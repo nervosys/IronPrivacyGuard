@@ -127,6 +127,18 @@ fn trees(bits: &mut Bits<'_>, fixed: bool) -> Result<(Tree, Tree)> {
     }
     Ok((Tree::new(&all[..hlit])?, Tree::new(&all[hlit..])?))
 }
+/// Make room for `extra` more bytes, moving into a new buffer so the old one
+/// is wiped instead of being freed by reallocation.
+fn reserve(out: &mut Zeroizing<Vec<u8>>, extra: usize, limit: usize) {
+    if out.capacity() - out.len() < extra {
+        let room = limit.saturating_sub(out.len()).max(extra);
+        let grow = out.capacity().max(4096).max(extra).min(room);
+        let mut grown = Zeroizing::new(Vec::with_capacity(out.len() + grow));
+        grown.extend_from_slice(&out[..]);
+        *out = grown;
+    }
+}
+
 fn raw(data: &[u8], limit: usize) -> Result<Zeroizing<Vec<u8>>> {
     const LENGTH: [usize; 29] = [
         3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115,
@@ -161,6 +173,7 @@ fn raw(data: &[u8], limit: usize) -> Result<Zeroizing<Vec<u8>>> {
                 if n > limit.saturating_sub(out.len()) {
                     return Err(limit_error());
                 }
+                reserve(&mut out, n, limit);
                 for _ in 0..n {
                     out.push(bits.read(8)? as u8);
                 }
@@ -174,6 +187,7 @@ fn raw(data: &[u8], limit: usize) -> Result<Zeroizing<Vec<u8>>> {
                             if out.len() == limit {
                                 return Err(limit_error());
                             }
+                            reserve(&mut out, 1, limit);
                             out.push(sym as u8);
                         }
                         256 => break,
@@ -192,6 +206,7 @@ fn raw(data: &[u8], limit: usize) -> Result<Zeroizing<Vec<u8>>> {
                             if n > limit.saturating_sub(out.len()) {
                                 return Err(limit_error());
                             }
+                            reserve(&mut out, n, limit);
                             for _ in 0..n {
                                 let b = out[out.len() - distance];
                                 out.push(b);

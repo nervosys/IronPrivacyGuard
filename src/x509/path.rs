@@ -51,6 +51,50 @@ fn general_name<'a>(reader: &mut Reader<'a>, constraint: bool) -> Result<General
     Ok(GeneralName { tag, value })
 }
 
+/// pkcs-9 emailAddress (1.2.840.113549.1.9.1).
+const EMAIL_ADDRESS: &[u8] = &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01];
+
+/// emailAddress values in a subject DN, which name constraints on rfc822Name
+/// also govern (RFC 5280 section 4.2.1.10).
+fn subject_emails(subject: &[u8]) -> Result<Vec<&[u8]>> {
+    let mut outer = Reader::new(subject);
+    let mut name = der(outer.sequence())?;
+    let mut emails = Vec::new();
+    while !name.is_empty() {
+        let mut set = der(name.expect_nested(0x31))?;
+        while !set.is_empty() {
+            let mut pair = der(set.sequence())?;
+            if oid(&mut pair)? == EMAIL_ADDRESS {
+                let tag = pair.peek_tag().ok_or_else(malformed)?;
+                let value = der(pair.expect(tag))?;
+                if !value.is_ascii() || value.contains(&0) {
+                    return Err(malformed());
+                }
+                emails.push(value);
+            }
+        }
+    }
+    Ok(emails)
+}
+
+/// rfc822Name matching: a mailbox, all mailboxes at one host, or (with a
+/// leading dot) all mailboxes at any subdomain.
+fn mailbox(name: &[u8], constraint: &[u8]) -> Option<bool> {
+    let at = name.iter().rposition(|&b| b == b'@')?;
+    let (local, host) = (&name[..at], &name[at + 1..]);
+    if local.is_empty() || !valid_domain(host) {
+        return None;
+    }
+    if let Some(c) = constraint.iter().rposition(|&b| b == b'@') {
+        let (c_local, c_host) = (&constraint[..c], &constraint[c + 1..]);
+        return Some(local == c_local && host.eq_ignore_ascii_case(c_host));
+    }
+    if constraint.starts_with(b".") {
+        return domain(host, constraint);
+    }
+    valid_domain(constraint).then(|| host.eq_ignore_ascii_case(constraint))
+}
+
 struct Policy<'a> {
     ca: bool,
     path_length: Option<u64>,
@@ -114,6 +158,12 @@ impl<'a> Policy<'a> {
             permitted: Vec::new(),
             excluded: Vec::new(),
         };
+        for email in subject_emails(certificate.subject)? {
+            policy.names.push(GeneralName {
+                tag: 0x81,
+                value: email,
+            });
+        }
         let mut critical_san = false;
         for extension in &certificate.extensions {
             let mut outer = Reader::new(extension.value);
@@ -257,6 +307,7 @@ fn contiguous_mask(mask: &[u8]) -> bool {
 fn matches(name: &GeneralName<'_>, constraint: &GeneralName<'_>) -> Option<bool> {
     match name.tag {
         0x82 => domain(name.value, constraint.value),
+        0x81 => mailbox(name.value, constraint.value),
         0x87 => {
             let width = constraint.value.len() / 2;
             if name.value.len() != width {

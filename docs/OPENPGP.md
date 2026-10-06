@@ -208,6 +208,11 @@ When decrypting, IPG:
   SEIPDv1 for v4 keys and SEIPDv2 EAX, OCB or GCM for v6 keys, and decrypt-only
   legacy ciphers with SEIPDv1;
 - refuses legacy messages without integrity protection (SED packets);
+- requires AES (7, 8 or 9) in v3 session-key packets for X25519 and X448
+  recipients, as RFC 9580 specifies;
+- evaluates the SEIPDv1 quick check, MDC marker and MDC together without
+  branching, so timing reveals nothing about the quick check (the
+  CVE-2005-0366 oracle class);
 - releases plaintext only after the integrity check passes;
 - accepts one compression layer (ZIP, ZLIB or BZip2, with every BZip2 block and
   stream CRC verified) and bounds the decompressed output at 16 MiB;
@@ -217,6 +222,18 @@ When decrypting, IPG:
   an embedded signature, or exchange detached signatures and use `openpgp.verify`.
 
 Plaintext is limited to 16 MiB in both directions.
+
+When an encrypted message's signature carries hashed Intended Recipient
+Fingerprint subpackets, `openpgp.message.verify` requires one to name the
+decrypting key or its primary key; otherwise the message was forwarded from
+another conversation and fails with `identity_mismatch`.
+
+Signature subpackets are trusted only from the hashed area. A critical bit on
+an unknown unhashed subpacket is ignored, because anyone can set it without
+breaking the signature. v4 key packets longer than 65535 bytes, which v4
+fingerprint framing cannot represent, are refused. RSA encrypt-only keys
+(algorithm 2) are never used to sign and RSA sign-only keys (algorithm 3) are
+never used to encrypt.
 
 For signed messages, `openpgp.message.verify` accepts exactly one binary or text
 document signature over literal content, optionally after decryption and one

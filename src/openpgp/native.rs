@@ -101,6 +101,9 @@ impl Key {
         if !matches!(version, 4..=6) {
             return Err(unsupported());
         }
+        if version == 4 && data.len() > 0xffff {
+            return Err(invalid("A v4 key packet cannot exceed 65535 bytes"));
+        }
         let created = r.u32()? as u64;
         let alg = r.byte()?;
         let mut material = if version != 4 {
@@ -262,7 +265,11 @@ impl Key {
                     && self.integers[1].len() <= 8
                     && self.integers[1].last().is_some_and(|e| e & 1 == 1)
                     && self.integers[1] != [1];
-                (format!("rsa-{bits}"), usable, usable)
+                (
+                    format!("rsa-{bits}"),
+                    usable && self.alg != 2,
+                    usable && self.alg != 3,
+                )
             }
             19 => (curve("ecdsa"), self.nist().is_some(), false),
             22 if self.ed448_legacy() => ("ed448".into(), true, false),
@@ -325,6 +332,8 @@ struct Sig {
     issuer: Option<Vec<u8>>,
     issuer_id: Option<Vec<u8>>,
     back: Option<Vec<u8>>,
+    /// Hashed Intended Recipient Fingerprint subpackets (version and fingerprint).
+    recipients: Vec<Vec<u8>>,
     understood: bool,
     /// LibrePGP v5 document signatures also hash the literal packet's format,
     /// file name and date; detached signatures hash six zero octets instead.
@@ -377,6 +386,7 @@ impl Sig {
             issuer: None,
             issuer_id: None,
             back: None,
+            recipients: Vec::new(),
             understood: true,
             literal: vec![0; 6],
         };
@@ -391,10 +401,13 @@ impl Sig {
                 let mut p = Reader::new(r.take(len)?);
                 let tag = p.byte()?;
                 let typ = tag & 127;
-                if tag & 128 != 0
+                // Unhashed subpackets are unauthenticated hints: anyone could set
+                // their critical bit, so it never cancels a signature.
+                if trusted
+                    && tag & 128 != 0
                     && !matches!(
                         typ,
-                        2 | 3 | 9 | 11 | 16 | 21 | 22 | 25 | 27 | 30 | 32 | 33 | 34 | 39
+                        2 | 3 | 9 | 11 | 16 | 21 | 22 | 25 | 27 | 30 | 32 | 33 | 34 | 35 | 39
                     )
                 {
                     s.understood = false;
@@ -413,6 +426,14 @@ impl Sig {
                             }
                         }
                         27 if !p.data.is_empty() => s.flags = p.data[0],
+                        35 => {
+                            let v = p.byte()?;
+                            if (v == 4 && p.data.len() == 20) || (v == 6 && p.data.len() == 32) {
+                                s.recipients.push(p.data.to_vec());
+                            } else {
+                                s.understood = false;
+                            }
+                        }
                         32 => s.back = Some(p.data.to_vec()),
                         33 => {
                             let v = p.byte()?;
@@ -1686,6 +1707,9 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Sessio
     let mut cipher = None;
     if v == 3 && key.alg != 18 {
         cipher = Some(field.byte()?);
+        if matches!(key.alg, 25 | 26) && !matches!(cipher, Some(7..=9)) {
+            return Err(unsupported());
+        }
     }
     let kek = wrapping_key(key, agreement, scalar, ephemeral, false)?;
     let mut raw = key_wrap(&kek, field.data, true)?;
@@ -1792,10 +1816,12 @@ fn open_message(session: &Session, version: u8, body: &[u8]) -> Result<Zeroizing
             return Err(auth());
         }
         let n = data.len();
-        if !ic_core::ct::verify(&data[block - 2..block], &data[block..block + 2])
-            || data[n - 22..n - 20] != [0xd3, 0x14]
-            || !ic_core::ct::verify(&Sha1::digest(&data[..n - 20]), &data[n - 20..])
-        {
+        // All three checks always run and combine without branching, so timing
+        // reveals nothing about the quick check (CVE-2005-0366 class).
+        let quick = ic_core::ct::verify(&data[block - 2..block], &data[block..block + 2]);
+        let marker = ic_core::ct::verify(&data[n - 22..n - 20], &[0xd3, 0x14]);
+        let mdc = ic_core::ct::verify(&Sha1::digest(&data[..n - 20]), &data[n - 20..]);
+        if !(quick & marker & mdc) {
             return Err(auth());
         }
         Ok(Zeroizing::new(data[block + 2..n - 22].to_vec()))
@@ -1808,7 +1834,7 @@ fn open_message(session: &Session, version: u8, body: &[u8]) -> Result<Zeroizing
         let (mode, size) = (header[2], 1usize << (header[3] + 6));
         let mut info = vec![0xd2];
         info.extend_from_slice(&header[..4]);
-        let mut out = Zeroizing::new(Vec::new());
+        let mut out = Zeroizing::new(Vec::with_capacity(body.len().min(MESSAGE_LIMIT)));
         let mut index = 0u64;
         for chunk in body[36..body.len() - 16].chunks(size + 16) {
             if chunk.len() <= 16 {
@@ -1937,6 +1963,19 @@ fn decrypt_packets(
     password: &[u8],
     packets: &[Packet],
 ) -> Result<Zeroizing<Vec<u8>>> {
+    decrypt_for(key, password, packets).map(|(plain, _)| plain)
+}
+
+/// Fingerprints of the keys a message was decrypted for.
+type Fingerprints = Vec<Vec<u8>>;
+
+/// Decrypt, also returning the fingerprints of the recipient certificate's
+/// primary key and the decrypting key.
+fn decrypt_for(
+    key: &KeyFile,
+    password: &[u8],
+    packets: &[Packet],
+) -> Result<(Zeroizing<Vec<u8>>, Fingerprints)> {
     if packets.len() < 2
         || packets.last().map(|p| p.tag) != Some(18)
         || packets[..packets.len() - 1].iter().any(|p| p.tag != 1)
@@ -1956,7 +1995,12 @@ fn decrypt_packets(
             .filter(|(k, _)| !k.signing())
         {
             if let Ok(Some(session)) = unwrap_session(key, scalar, &p.body) {
-                return open_message(&session, key.version, &packets.last().unwrap().body);
+                let plain = open_message(&session, key.version, &packets.last().unwrap().body)?;
+                let mut recipients = vec![key.fingerprint.clone()];
+                if let Some(primary) = secret.cert.keys.first() {
+                    recipients.push(primary.fingerprint.clone());
+                }
+                return Ok((plain, recipients));
             }
         }
     }
@@ -2033,6 +2077,7 @@ pub(crate) fn verify_message(
     cert.pin(expected)?;
     let data = unarmor(message, "MESSAGE", MESSAGE_LIMIT)?;
     let packets = message_packets(&data)?;
+    let mut decrypted_for = None;
     let packets = if packets.first().is_some_and(|p| p.tag == 1) {
         let (key, password) = recipient.ok_or_else(|| {
             Error::new(
@@ -2040,7 +2085,9 @@ pub(crate) fn verify_message(
                 "Encrypted message requires a key and passphrase",
             )
         })?;
-        content_packets(&decrypt_packets(key, password, &packets)?)?
+        let (plain, recipients) = decrypt_for(key, password, &packets)?;
+        decrypted_for = Some(recipients);
+        content_packets(&plain)?
     } else {
         if recipient.is_some() {
             return Err(Error::new(
@@ -2060,6 +2107,14 @@ pub(crate) fn verify_message(
         &packets[0]
     };
     let mut sig = Sig::parse(&signature.body)?;
+    // A signature naming its intended recipients was not meant for anyone else
+    // (surreptitious forwarding). Checked after authentication below.
+    let forwarded = match &decrypted_for {
+        Some(ours) if !sig.recipients.is_empty() => {
+            !sig.recipients.iter().any(|r| ours.contains(r))
+        }
+        _ => false,
+    };
     // The literal packet is second in both accepted layouts.
     let header = &packets[1].body;
     sig.literal = header[..2 + header[1] as usize + 4].to_vec();
@@ -2105,6 +2160,12 @@ pub(crate) fn verify_message(
         one.finish()?;
     }
     let verification = verify_signature(&cert, &sig, &plaintext, now()?)?;
+    if forwarded {
+        return Err(Error::new(
+            "identity_mismatch",
+            "The signature names other intended recipients; the message was forwarded",
+        ));
+    }
     Ok(VerifiedMessage {
         plaintext,
         verification,
