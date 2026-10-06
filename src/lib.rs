@@ -4,6 +4,7 @@ pub use ipg_json as json;
 pub mod approval;
 pub mod artifact;
 pub mod attest;
+pub mod audit;
 mod base64;
 pub mod capabilities;
 #[cfg(all(feature = "tpm", windows))]
@@ -263,6 +264,36 @@ pub enum Request {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         delegation: Option<MessageDelegation>,
         policy: Option<TrustPolicy>,
+    },
+    #[serde(rename = "audit.init")]
+    AuditInit { output: String },
+    #[serde(rename = "audit.append")]
+    AuditAppend {
+        /// An existing ipg-audit-v1 file; appended in place under `<log>.lock`.
+        log: String,
+        /// File holding one JSON object, at most 64 KiB.
+        event: String,
+    },
+    #[serde(rename = "audit.checkpoint")]
+    AuditCheckpoint {
+        log: String,
+        output: String,
+        key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        passphrase_file: Option<String>,
+    },
+    #[serde(rename = "audit.verify")]
+    AuditVerify {
+        log: String,
+        #[serde(default)]
+        #[schemars(schema_with = "crate::contract::checkpoint_files")]
+        checkpoints: Vec<String>,
+        /// Public identity file of the checkpoint signer; required with checkpoints.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        signer: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(schema_with = "crate::contract::optional_fingerprint")]
+        expected_fingerprint: Option<String>,
     },
     #[serde(rename = "approval.sign")]
     ApprovalSign {
@@ -892,6 +923,21 @@ pub enum Outcome {
         authority: delegation::Authority,
         authenticated: bool,
     },
+    AuditAppended {
+        path: String,
+        seq: u64,
+        /// The new head hash; anchor it with audit.checkpoint.
+        head: String,
+    },
+    AuditVerified {
+        log: audit::State,
+        checkpoints_verified: usize,
+        latest_checkpoint_size: Option<u64>,
+        /// Entries after the latest checkpoint, which a checkpoint does not yet protect from truncation.
+        unanchored_entries: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        signer: Option<String>,
+    },
     QuorumVerified {
         met: bool,
         threshold: usize,
@@ -1081,6 +1127,10 @@ impl Request {
             Self::GrantVerify { .. } => "grant.verify",
             Self::MessageSeal { .. } => "message.seal",
             Self::MessageOpen { .. } => "message.open",
+            Self::AuditInit { .. } => "audit.init",
+            Self::AuditAppend { .. } => "audit.append",
+            Self::AuditCheckpoint { .. } => "audit.checkpoint",
+            Self::AuditVerify { .. } => "audit.verify",
             Self::ApprovalSign { .. } => "approval.sign",
             Self::QuorumVerify { .. } => "quorum.verify",
             Self::JsonCanonicalize { .. } => "json.canonicalize",
@@ -1234,6 +1284,7 @@ fn confine(request: &Request, host: &Host) -> Result<()> {
         Request::MessageOpen { key, .. } => subject(key, Some("message.open")),
         Request::JsonSign { key, .. } => subject(key, Some("json.sign")),
         Request::ApprovalSign { key, .. } => subject(key, Some("approval.sign")),
+        Request::AuditCheckpoint { key, .. } => subject(key, Some("audit.checkpoint")),
         Request::ProvenanceAttest { key, .. } => subject(key, Some("provenance.attest")),
         Request::KeyPublic { key, .. }
         | Request::KeyRewrap { key, .. }
@@ -1385,7 +1436,7 @@ pub fn schemas() -> Value {
         "formats":{"grant":ipg_json::schema_for!(delegation::Grant),"message":ipg_json::schema_for!(message::Message),"public_key":ipg_json::schema_for!(PublicKey),"secret_key":ipg_json::schema_for!(SecretKey),
         "envelope":ipg_json::schema_for!(Envelope),"signature":ipg_json::schema_for!(Signature),
         "validity":ipg_json::schema_for!(Validity),"revocation":ipg_json::schema_for!(Revocation),"trust_store":ipg_json::schema_for!(TrustStore),
-        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
+        "hardware_key":ipg_json::schema_for!(provider::HardwareKey),"tpm_key":ipg_json::schema_for!(provider::TpmKey),"kms_key":ipg_json::schema_for!(provider::KmsKey),"cng_key":ipg_json::schema_for!(provider::CngKey),"openpgp_key":ipg_json::schema_for!(openpgp::KeyFile),"tpm_evidence":ipg_json::schema_for!(attest::Evidence),"tpm_challenge":ipg_json::schema_for!(attest::Challenge),"tpm_challenge_secret":ipg_json::schema_for!(attest::ChallengeSecret),"tpm_response":ipg_json::schema_for!(attest::AttestationResponse),"stream_header":ipg_json::schema_for!(stream::Header),"stream_signature":ipg_json::schema_for!(stream_signature::Signature),"json_signature":ipg_json::schema_for!(json_signature::Signature),"approval":ipg_json::schema_for!(approval::Approval),"audit_header":ipg_json::schema_for!(audit::Header),"audit_entry":ipg_json::schema_for!(audit::Entry),"audit_checkpoint":ipg_json::schema_for!(audit::Checkpoint),"dsse_envelope":ipg_json::schema_for!(provenance::Envelope),
         "knowledge_application":ipg_json::schema_for!(knowledge::Application)}})
 }
 
@@ -1993,6 +2044,95 @@ pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
                 policy_checked_at: digest.as_ref().map(|e| e.checked_at),
                 policy_digest: digest.map(|e| e.digest),
                 delegation,
+            })
+        }
+        Request::AuditInit { output } => {
+            write_new(&output, &audit::create()?)?;
+            Ok(Outcome::Artifact {
+                path: output,
+                artifact_type: "audit_log".into(),
+                fingerprint: None,
+                policy_digest: None,
+                policy_checked_at: None,
+                custody: None,
+            })
+        }
+        Request::AuditAppend { log, event } => {
+            let bytes = read_limited(inline::open(&event)?, audit::MAX_EVENT_BYTES as u64)?;
+            let event: Value = ipg_json::from_slice(&bytes)
+                .map_err(|_| Error::new("invalid_format", "Event is not strict JSON"))?;
+            let (seq, head) = audit::append(&log, &event, delegation::now()?)?;
+            Ok(Outcome::AuditAppended {
+                path: log,
+                seq,
+                head,
+            })
+        }
+        Request::AuditCheckpoint {
+            log,
+            output,
+            key,
+            passphrase_file,
+        } => {
+            require_absent(&output)?;
+            let key = load_key(&key)?;
+            let (state, _) = audit::scan(
+                &mut std::io::BufReader::new(inline::open(&log)?),
+                &Default::default(),
+            )?;
+            let credential = credential(passphrase_file)?;
+            let identity = provider::open(&key, credential.as_deref().map(Vec::as_slice), host)?;
+            let checkpoint = audit::checkpoint(&*identity, &state, delegation::now()?)?;
+            Ok(with_custody(
+                save(
+                    output,
+                    &checkpoint,
+                    "audit_checkpoint",
+                    Some(key.public().fingerprint.clone()),
+                )?,
+                identity.custody(),
+            ))
+        }
+        Request::AuditVerify {
+            log,
+            checkpoints,
+            signer,
+            expected_fingerprint,
+        } => {
+            if checkpoints.len() > audit::MAX_CHECKPOINTS {
+                return Err(Error::new(
+                    "invalid_request",
+                    "At most 64 checkpoints per verification",
+                ));
+            }
+            let checkpoints: Vec<audit::Checkpoint> =
+                checkpoints.iter().map(|c| load(c)).collect::<Result<_>>()?;
+            let signer = match (signer, expected_fingerprint) {
+                (Some(signer), Some(expected)) => {
+                    let public: PublicKey = load(&signer)?;
+                    public.pin(&expected)?;
+                    audit::authenticate(&public, &checkpoints)?;
+                    Some(public.fingerprint)
+                }
+                (None, None) if checkpoints.is_empty() => None,
+                _ => {
+                    return Err(Error::new(
+                        "invalid_request",
+                        "Checkpoints require signer and expected_fingerprint together",
+                    ));
+                }
+            };
+            let wanted = checkpoints.iter().map(|c| c.size).collect();
+            let (state, heads) =
+                audit::scan(&mut std::io::BufReader::new(inline::open(&log)?), &wanted)?;
+            audit::consistent(&state, &heads, &checkpoints)?;
+            let latest = checkpoints.iter().map(|c| c.size).max();
+            Ok(Outcome::AuditVerified {
+                checkpoints_verified: checkpoints.len(),
+                latest_checkpoint_size: latest,
+                unanchored_entries: state.size - latest.unwrap_or(0),
+                signer,
+                log: state,
             })
         }
         Request::ApprovalSign {

@@ -124,6 +124,16 @@ Tools accept `data:...;base64,` inputs and `return:<name>` outputs (see
 appear in `structuredContent.returned`. `--inline-data deny` refuses both forms
 for the session, for hosts that want every payload to stay in files.
 
+### Audit logging
+
+`--audit-log <log>` records each tool call that reaches execution in an existing
+`ipg-audit-v1` log: a `request` event before it runs (operation, tool, a call ID
+and the SHA-384 of the canonical arguments) and a `result` event after it (ok
+and error code). A call the log cannot record is refused with the retryable
+`audit_unavailable` error before it runs. Checkpoint the log with
+`audit.checkpoint` from an identity the host does not expose to agents. See
+[audit logs](AUDIT.md).
+
 ### Delegated sessions
 
 `--grant`, `--grant-root` and `--expected-grant-root-fingerprint` together pin an
@@ -164,7 +174,7 @@ The release binary has been exercised on Windows with the
 [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) 2.2.0 and
 `jsonschema` 4.26.0. The suite uses real stdio subprocesses in both automatic and
 legacy negotiation modes, negotiating IPG's `2025-11-25` protocol. It lists all
-65 tools, validates advertised schemas and returned envelopes, checks generated
+69 tools, validates advertised schemas and returned envelopes, checks generated
 artifact schemas, preflights valid and invalid candidates, reconciles trust branches, and exercises active, revoked and
 expired host policy. Unknown tools,
 invalid arguments, altered signatures, backdating attempts and forbidden policy overrides are also

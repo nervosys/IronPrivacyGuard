@@ -266,6 +266,34 @@ pub const OPERATIONS: &[OperationDefinition] = &[
         &["read_file"],
     ),
     (
+        "audit.init",
+        "Create an empty ipg-audit-v1 log with a random log ID",
+        &[],
+        &["AuditLog"],
+        &["create_file"],
+    ),
+    (
+        "audit.append",
+        "Verify a log's hash chain and append one JSON event with the host time, under an exclusive lock file",
+        &["AuditLog", "AuditEvent"],
+        &["AuditHead"],
+        &["read_file", "append_file", "create_lock_file"],
+    ),
+    (
+        "audit.checkpoint",
+        "Sign a log's current size and head hash so later truncation or rewriting is detectable",
+        &["AuditLog", "SecretKey", "Passphrase"],
+        &["AuditCheckpoint"],
+        &["read_file", "read_passphrase", "create_file"],
+    ),
+    (
+        "audit.verify",
+        "Verify a log's hash chain and that each signed checkpoint from a pinned signer is a prefix of it",
+        &["AuditLog", "AuditCheckpoint", "PublicKey", "Fingerprint"],
+        &["AuditVerification"],
+        &["read_file"],
+    ),
+    (
         "approval.sign",
         "Approve specific content (exact bytes or canonical JSON) for one action with a short-lived, nonce-bearing signature",
         &[
@@ -576,6 +604,7 @@ pub const OPERATIONS: &[OperationDefinition] = &[
 /// Operations whose `key` input may be a software secret or a hardware reference.
 pub const KEY_PROVIDER_OPERATIONS: &[&str] = &[
     "approval.sign",
+    "audit.checkpoint",
     "grant.issue",
     "json.sign",
     "provenance.attest",
@@ -650,6 +679,10 @@ pub fn operation(id: &str) -> Value {
             "delegation-not-authorization",
             "host-clock",
         ],
+        "audit.init" => vec!["no-clobber"],
+        "audit.append" => vec!["hash-chain", "host-clock", "size-bound"],
+        "audit.checkpoint" => vec!["hash-chain", "secret-channel", "no-clobber"],
+        "audit.verify" => vec!["identity-pin", "hash-chain", "checkpoint-anchoring"],
         "approval.sign" => vec![
             "approval-binding",
             "host-clock",
@@ -868,6 +901,8 @@ pub fn operation(id: &str) -> Value {
             | "provenance.verify"
             | "approval.sign"
             | "quorum.verify"
+            | "audit.checkpoint"
+            | "audit.verify"
     ) {
         constraints.push("hybrid-post-quantum");
     }
@@ -908,7 +943,9 @@ pub fn operation(id: &str) -> Value {
         "grant.verify" | "json.verify" | "provenance.verify" | "quorum.verify" => {
             vec!["ed25519", "sha2-384"]
         }
-        "json.sign" | "provenance.attest" | "approval.sign" => {
+        "audit.init" | "audit.append" => vec!["sha2-384"],
+        "audit.verify" => vec!["ed25519", "sha2-384"],
+        "json.sign" | "provenance.attest" | "approval.sign" | "audit.checkpoint" => {
             vec!["ed25519", "argon2id", "chacha20-poly1305", "sha2-384"]
         }
         "json.canonicalize" => vec!["sha2-384"],
@@ -974,10 +1011,9 @@ pub fn operation(id: &str) -> Value {
         "sign" | "verify" | "stream.sign" | "stream.verify" | "key.revoke" | "key.validity"
         | "revocation.verify" | "validity.verify" | "grant.issue" | "grant.verify"
         | "json.sign" | "json.verify" | "provenance.attest" | "provenance.verify"
-        | "approval.sign" | "quorum.verify" | "trust.add" | "trust.revoke" | "trust.validity"
-        | "trust.status" | "trust.evaluate" | "trust.compare" | "trust.merge" => {
-            &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"]
-        }
+        | "approval.sign" | "quorum.verify" | "audit.checkpoint" | "audit.verify" | "trust.add"
+        | "trust.revoke" | "trust.validity" | "trust.status" | "trust.evaluate"
+        | "trust.compare" | "trust.merge" => &["ecdsa-p384-sha384", "sha2-384", "ml-dsa-65"],
         _ => &[],
     };
     for algorithm in p384 {
@@ -1023,6 +1059,8 @@ pub fn operation(id: &str) -> Value {
                 *id,
                 "key.generate"
                     | "encrypt"
+                    | "audit.init"
+                    | "audit.append"
                     | "key.rewrap"
                     | "hardware.tokens"
                     | "hardware.key.generate"
@@ -1081,7 +1119,7 @@ pub fn discover() -> Value {
         "operation_availability":OPERATIONS.iter().map(|o|crate::capabilities::operation(o.0)).collect::<Vec<_>>(),
         "knowledge_safety":crate::knowledge::safety_contract(),
         "protocol":"ipg/1", "status":"experimental", "interaction":"noninteractive", "control_json":"unique decoded object member names at every depth; duplicates fail before dispatch",
-        "transports":[{"command":"ipg <operation> --field value", "format":"one JSON response"},{"command":"ipg call", "format":"one Call JSON on stdin"},{"command":"ipg serve", "format":"Call NDJSON on stdin; one response per line"},{"command":"ipg mcp", "format":"MCP JSON-RPC on newline-delimited stdio", "protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"startup_flags":["--allow","--trust-store","--expected-store-digest","--key-custody"],"tool_calls_per_minute":crate::mcp::MAX_CALLS_PER_MINUTE}],
+        "transports":[{"command":"ipg <operation> --field value", "format":"one JSON response"},{"command":"ipg call", "format":"one Call JSON on stdin"},{"command":"ipg serve", "format":"Call NDJSON on stdin; one response per line"},{"command":"ipg mcp", "format":"MCP JSON-RPC on newline-delimited stdio", "protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"startup_flags":["--allow","--trust-store","--expected-store-digest","--key-custody","--inline-data","--grant","--grant-root","--expected-grant-root-fingerprint","--audit-log"],"tool_calls_per_minute":crate::mcp::MAX_CALLS_PER_MINUTE}],
         "operations":OPERATIONS.iter().map(|o|operation(o.0)).collect::<Vec<_>>(),
         "knowledgebase":{"catalog":"knowledge","search":"knowledge.search","version":crate::knowledge::VERSION,"selection":"advisory; check prerequisites and limitations; unsupported applications have no executable tools"},
         "inline":{"inputs":"Any input path field may instead be data:[<media type>];base64,<data>, at most 1 MiB decoded","outputs":"Any non-streaming output field may be return:<name> (1..32 of a-z, 0-9, _ or -); the response then carries returned.<name> as base64, at most 1 MiB per call","refused":["passphrase and PIN files","streaming outputs"],"host_control":"ipg mcp --inline-data deny refuses both forms","max_bytes":crate::inline::MAX_INLINE_BYTES},
@@ -1352,6 +1390,31 @@ pub fn export() -> Value {
             "public",
         ),
         (
+            "AuditLog",
+            "An ipg-audit-v1 log: newline-delimited RFC 8785 JSON, a header with a random log ID, then hash-chained entries (seq, host time, previous hash, event, hash)",
+            "public",
+        ),
+        (
+            "AuditEvent",
+            "Caller-supplied JSON object of at most 64 KiB; anyone who can write the log can append, so events are claims until anchored and attributed",
+            "untrusted",
+        ),
+        (
+            "AuditHead",
+            "Sequence number and SHA-384 head hash after an append",
+            "public",
+        ),
+        (
+            "AuditCheckpoint",
+            "An ipg-audit-checkpoint-v1 signature over a log ID, size, head hash and host time",
+            "public",
+        ),
+        (
+            "AuditVerification",
+            "Verified log size, head, time range, checkpoints checked, the latest anchored size and the number of unanchored entries after it",
+            "public",
+        ),
+        (
             "Approval",
             "An ipg-approval-v1 signature binding an approver to the SHA-384 of specific content, an action, a content mode, creation and expiry (at most 7 days) and a random nonce",
             "public",
@@ -1433,7 +1496,7 @@ pub fn export() -> Value {
         ),
         (
             "DelegableOperation",
-            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
+            "Closed vocabulary of private-key operations a grant may delegate: approval.sign, audit.checkpoint, decrypt, json.sign, message.open, message.seal, provenance.attest, sign, stream.decrypt, stream.sign",
             "public",
         ),
         (
@@ -1553,7 +1616,7 @@ pub fn export() -> Value {
         ),
         (
             "mcp-host-boundary",
-            "MCP startup configuration is host-controlled. Allowlist decisions are enforced at dispatch. Pinned policy applies only to encrypt, sign and verify. --key-custody hardware refuses every software private-key operation. The process still has its OS identity's filesystem and token access; the host must authorize paths, PIN files and secret access.",
+            "MCP startup configuration is host-controlled. Allowlist decisions are enforced at dispatch. Pinned policy applies to every policy-governed operation. --audit-log records each executed tool call, before and after execution, in an ipg-audit-v1 log, and refuses calls it cannot record. --key-custody hardware refuses every software private-key operation. The process still has its OS identity's filesystem and token access; the host must authorize paths, PIN files and secret access.",
         ),
         (
             "snapshot-policy",
@@ -1578,6 +1641,14 @@ pub fn export() -> Value {
         (
             "replay-marker",
             "With replay_directory, opening creates an exclusive marker named by sender and message ID before releasing content; a second open from any process sharing the directory fails with replay_detected. Without it, replay is not checked. Markers older than one day are safe to delete.",
+        ),
+        (
+            "hash-chain",
+            "Each audit entry hashes its predecessor, sequence number, host time and canonical event, and every line must be canonical. Editing, inserting, deleting or reordering entries breaks the chain. The chain alone cannot reveal truncation of the newest entries or a wholesale rewrite by the log holder.",
+        ),
+        (
+            "checkpoint-anchoring",
+            "A signed checkpoint commits to a log size and head. A log that is shorter than, or diverges from, any checkpoint fails verification. Entries after the latest checkpoint are unanchored; checkpoint often and keep checkpoints somewhere the log holder cannot rewrite.",
         ),
         (
             "approval-binding",
@@ -1847,6 +1918,7 @@ pub fn export() -> Value {
     ] {
         graph.push(json!({"@id":format!("ipg:error/{id}"),"@type":"ipg:Error","code":id,"exit_code":exit,"retryable":false,"recovery":recovery}));
     }
+    graph.push(json!({"@id":"ipg:error/audit_unavailable","@type":"ipg:Error","code":"audit_unavailable","exit_code":5,"retryable":true,"recovery":"The MCP host's audit log could not record the call. If the message says the call was not executed, nothing ran; otherwise the operation finished but its result is unrecorded, so inspect its outputs before retrying. Restore the log (remove a stale <log>.lock only when no writer runs)."}));
     graph.push(json!({"@id":"ipg:error/rate_limited","@type":"ipg:Error","code":"rate_limited","exit_code":5,"retryable":true,"recovery":"Wait until the MCP session's current 60-second window ends before retrying; no operation was executed."}));
     graph.push(json!({"@id":"ipg:transport/mcp","@type":"ipg:McpTransport","protocol_versions":crate::mcp::PROTOCOL_VERSIONS,"constraints":["ipg:constraint/mcp-host-boundary"],"methods":["initialize","notifications/initialized","ping","tools/list","tools/call"],"configuration":["ipg:McpHostPolicy","ipg:ToolAllowlist"]}));
     for (id, steps) in [
@@ -1882,6 +1954,15 @@ pub fn export() -> Value {
             vec!["grant.issue", "grant.verify", "sign", "verify"],
         ),
         ("sign-structured-data", vec!["json.sign", "json.verify"]),
+        (
+            "tamper-evident-audit",
+            vec![
+                "audit.init",
+                "audit.append",
+                "audit.checkpoint",
+                "audit.verify",
+            ],
+        ),
         (
             "quorum-approval",
             vec!["approval.sign", "inspect", "quorum.verify"],
@@ -1950,5 +2031,5 @@ pub fn export() -> Value {
     }
     graph.extend(crate::knowledge::nodes());
     json!({"@context":crate::knowledge::context(),
-        "@id":"ipg:ontology", "version":"1.39.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
+        "@id":"ipg:ontology", "version":"1.40.0", "scope":"Complete implemented IPG surface plus curated application guidance; not an exhaustive cryptography encyclopedia", "@graph":graph})
 }

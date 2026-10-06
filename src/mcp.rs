@@ -22,6 +22,8 @@ pub struct Config {
     pub allowed: Option<BTreeSet<String>>,
     /// Host execution policy, including any hardware key custody requirement.
     pub host: Host,
+    /// ipg-audit-v1 log recording every executed tool call.
+    pub audit_log: Option<String>,
 }
 impl Config {
     pub fn parse(args: &[String]) -> Result<Self> {
@@ -51,6 +53,7 @@ impl Config {
                     }
                 }
                 "--grant" => grant = Some(pair[1].clone()),
+                "--audit-log" => config.audit_log = Some(pair[1].clone()),
                 "--grant-root" => grant_root = Some(pair[1].clone()),
                 "--expected-grant-root-fingerprint" => {
                     grant_root_fingerprint = Some(pair[1].clone())
@@ -126,6 +129,13 @@ impl Config {
         }
         if let Some(policy) = &self.policy {
             trust::load(policy)?;
+        }
+        if let Some(log) = &self.audit_log {
+            // The log must exist and verify before the session starts.
+            crate::audit::scan(
+                &mut std::io::BufReader::new(std::fs::File::open(log)?),
+                &Default::default(),
+            )?;
         }
         Ok(())
     }
@@ -234,6 +244,40 @@ pub fn rpc_error(id: Value, code: i32, message: &str) -> Value {
 fn success(id: Value, result: Value) -> Value {
     json!({"jsonrpc":"2.0","id":id,"result":result})
 }
+fn audit_unavailable(message: String) -> Error {
+    Error {
+        code: "audit_unavailable",
+        message,
+        retryable: true,
+    }
+}
+
+/// Record a tool call before it executes; refuse it when the record fails.
+/// Arguments are recorded only as a SHA-384 digest, since they may carry
+/// inline payloads.
+fn audit_request(log: &str, tool: &str, operation: &str, request: &Request) -> Result<String> {
+    let call = crate::crypto::random::<16>()
+        .map(|id| crate::hex::encode(&id[..]))
+        .map_err(|e| audit_unavailable(e.message))?;
+    let arguments = ipg_json::to_value(request)
+        .map_err(|_| audit_unavailable("Unserializable request".into()))?;
+    let bytes = crate::jcs::canonicalize(&arguments)
+        .or_else(|_| ipg_json::to_vec(&arguments).map_err(Error::from));
+    let digest = bytes
+        .map(|b| crate::hex::encode(<ic_hash::Sha384 as ic_core::traits::Digest>::digest(&b)))
+        .unwrap_or_default();
+    let event = json!({"source":"ipg-mcp", "phase":"request", "call":call, "tool":tool,
+        "operation":operation, "arguments_sha384":digest});
+    let now = crate::delegation::now()?;
+    crate::audit::append(log, &event, now).map_err(|error| {
+        audit_unavailable(format!(
+            "The call was not executed because the audit log could not record it: {}",
+            error.message
+        ))
+    })?;
+    Ok(call)
+}
+
 fn tool_result(result: Result<crate::Outcome>, returned: &crate::inline::Returned) -> Value {
     let (response, status) = crate::respond_returning(None, result, returned);
     json!({"content":[{"type":"text","text":response.to_string()}],"structuredContent":response,"isError":status != 0})
@@ -438,9 +482,36 @@ impl Server {
             Ok(request)
         });
         let host = &self.config.host;
+        let audit = match (&self.config.audit_log, &result) {
+            (Some(log), Ok(request)) => match audit_request(log, name, operation, request) {
+                Ok(call) => Some((log, call)),
+                Err(error) => return success(id, tool_result(Err(error), &Default::default())),
+            },
+            _ => None,
+        };
         let (result, returned) = crate::inline::collect(!host.deny_inline, || {
             result.and_then(|request| crate::execute_with(request, host))
         });
+        if let Some((log, call)) = audit {
+            let code = result.as_ref().err().map(|e| e.code);
+            let event = json!({"source":"ipg-mcp", "phase":"result", "call":call,
+                "operation":operation, "ok":code.is_none(), "error":code});
+            if let Err(error) =
+                crate::audit::append(log, &event, crate::delegation::now().unwrap_or(0))
+            {
+                return success(
+                    id,
+                    tool_result(
+                        Err(audit_unavailable(format!(
+                            "The operation finished (ok: {}) but its result could not be recorded: {}. Inspect its outputs before retrying.",
+                            code.is_none(),
+                            error.message
+                        ))),
+                        &Default::default(),
+                    ),
+                );
+            }
+        }
         success(id, tool_result(result, &returned))
     }
 }

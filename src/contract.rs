@@ -295,6 +295,15 @@ fixed!(grant_format, crate::delegation::FORMAT);
 fixed!(message_format, crate::message::FORMAT);
 fixed!(json_signature_format, crate::json_signature::FORMAT);
 fixed!(approval_format, crate::approval::FORMAT);
+fixed!(audit_format, crate::audit::FORMAT);
+fixed!(audit_checkpoint_format, crate::audit::CHECKPOINT_FORMAT);
+pub fn audit_event(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"object", "description":"Caller-supplied JSON object, at most 64 KiB in canonical form."})
+}
+pub fn checkpoint_files(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({"type":"array", "maxItems":crate::audit::MAX_CHECKPOINTS,
+        "items":{"type":"string"}, "description":"ipg-audit-checkpoint-v1 files to check against the log."})
+}
 pub fn approval_lifetime(_: &mut SchemaGenerator) -> Schema {
     json_schema!({"type":"integer", "minimum":1, "maximum":crate::approval::MAX_LIFETIME,
         "description":"Seconds from the host clock until the approval expires (at most 7 days)."})

@@ -273,6 +273,13 @@ Provenance statements are standard DSSE envelopes holding canonical in-toto v1
 statements; `inspect` reports them as `dsse-v1+in-toto`. Both are specified in
 [PROVENANCE.md](PROVENANCE.md).
 
+## Audit log: ipg-audit-v1
+
+An append-only, newline-delimited log of RFC 8785 canonical lines: a header with
+a random log ID, then SHA-384 hash-chained entries carrying a sequence number,
+host time and JSON event. `ipg-audit-checkpoint-v1` signs a log's size and head.
+See [AUDIT.md](AUDIT.md).
+
 ## Approval: ipg-approval-v1
 
 A short-lived signature binding an approver to the SHA-384 of specific content

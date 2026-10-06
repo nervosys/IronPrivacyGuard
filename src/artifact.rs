@@ -30,6 +30,17 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
         #[serde(default)]
         format: Option<String>,
     }
+    // Audit logs are newline-delimited; verify the whole chain structurally.
+    let first = data.split(|b| *b == b'\n').next().unwrap_or_default();
+    if ipg_json::from_slice::<crate::audit::Header>(first)
+        .is_ok_and(|h| h.format == crate::audit::FORMAT)
+    {
+        crate::audit::scan(&mut &data[..], &Default::default())?;
+        return Ok(Metadata {
+            format: crate::audit::FORMAT.into(),
+            fingerprint: None,
+        });
+    }
     let header: Header = ipg_json::from_slice(data)?;
     let Some(format) = header.format else {
         // DSSE envelopes carry no format member.
@@ -118,6 +129,11 @@ pub fn inspect(data: &[u8]) -> Result<Metadata> {
         }
         "ipg-stream-signature-v1" => {
             let value: crate::stream_signature::Signature = ipg_json::from_slice(data)?;
+            value.validate()?;
+            Some(value.signer)
+        }
+        "ipg-audit-checkpoint-v1" => {
+            let value: crate::audit::Checkpoint = ipg_json::from_slice(data)?;
             value.validate()?;
             Some(value.signer)
         }

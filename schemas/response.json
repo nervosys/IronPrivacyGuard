@@ -753,6 +753,53 @@
       ],
       "type": "string"
     },
+    "State": {
+      "description": "The verified state of a log.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes of the log, all of which verified.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "first_time": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "head": {
+          "description": "Hash of the last entry, or the genesis hash of an empty log.",
+          "type": "string"
+        },
+        "last_time": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "log_id": {
+          "type": "string"
+        },
+        "size": {
+          "description": "Number of entries.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "log_id",
+        "size",
+        "head",
+        "bytes"
+      ],
+      "type": "object"
+    },
     "TokenBinding": {
       "additionalProperties": false,
       "description": "Token identity copied from PKCS#11 token information, trailing blanks removed.\nEvery field must match before a reference is used.",
@@ -1426,6 +1473,76 @@
                 "kind",
                 "authority",
                 "authenticated"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "head": {
+                  "description": "The new head hash; anchor it with audit.checkpoint.",
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "audit_appended",
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "seq": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "seq",
+                "head"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "checkpoints_verified": {
+                  "format": "uint",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "audit_verified",
+                  "type": "string"
+                },
+                "latest_checkpoint_size": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "log": {
+                  "$ref": "#/$defs/State"
+                },
+                "signer": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "unanchored_entries": {
+                  "description": "Entries after the latest checkpoint, which a checkpoint does not yet protect from truncation.",
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "log",
+                "checkpoints_verified",
+                "unanchored_entries"
               ],
               "type": "object"
             },

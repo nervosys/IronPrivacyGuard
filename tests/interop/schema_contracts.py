@@ -301,6 +301,10 @@ def main():
                                ("approvals", []), ("approvals", ["path"] * 65), ("threshold", 0), ("threshold", 33),
                                ("content", "json")]:
                 check(tool_schema, {**arguments, field: bad}, False)
+        if operation == "audit.verify":
+            check(tool_schema, {**arguments, "checkpoints": ["path"] * 64, "signer": "path", "expected_fingerprint": pin})
+            check(tool_schema, {**arguments, "checkpoints": ["path"] * 65}, False)
+            check(tool_schema, {**arguments, "expected_fingerprint": "AB" * 32}, False)
         if operation == "approval.sign":
             for bad in [0, 604801]:
                 check(tool_schema, {**arguments, "lifetime": bad}, False)

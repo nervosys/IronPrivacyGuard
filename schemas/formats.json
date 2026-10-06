@@ -172,6 +172,209 @@
     "title": "Approval",
     "type": "object"
   },
+  "audit_checkpoint": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{128}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-sha384"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{192}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ed25519-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6746}$"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "algorithm": {
+              "const": "ecdsa-p384-mldsa65"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "signature": {
+              "pattern": "^[0-9a-f]{6810}$"
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "algorithm": {
+        "description": "Must be the signer identity suite's algorithm (checked at runtime).",
+        "enum": [
+          "ed25519",
+          "ecdsa-p384-sha384",
+          "ed25519-mldsa65",
+          "ecdsa-p384-mldsa65"
+        ],
+        "type": "string"
+      },
+      "format": {
+        "const": "ipg-audit-checkpoint-v1",
+        "type": "string"
+      },
+      "head": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "log_id": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      },
+      "signature": {
+        "maxLength": 6810,
+        "minLength": 128,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{128}|[0-9a-f]{192}|[0-9a-f]{6746}|[0-9a-f]{6810})$",
+        "type": "string"
+      },
+      "signer": {
+        "description": "64 hex characters for ipg-public-v1 identities, 96 for P-384, P-384 plus ML-DSA and hybrid identities.",
+        "maxLength": 96,
+        "minLength": 64,
+        "not": {
+          "pattern": "[^0-9a-f]"
+        },
+        "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+        "type": "string"
+      },
+      "size": {
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "time": {
+        "description": "Host time of signing.",
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "format",
+      "log_id",
+      "signer",
+      "algorithm",
+      "size",
+      "head",
+      "time",
+      "signature"
+    ],
+    "title": "Checkpoint",
+    "type": "object"
+  },
+  "audit_entry": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "event": {
+        "description": "Caller-supplied JSON object, at most 64 KiB in canonical form.",
+        "type": "object"
+      },
+      "hash": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "prev": {
+        "maxLength": 96,
+        "minLength": 96,
+        "pattern": "^[0-9a-f]{96}$",
+        "type": "string"
+      },
+      "seq": {
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "time": {
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "seq",
+      "time",
+      "prev",
+      "event",
+      "hash"
+    ],
+    "title": "Entry",
+    "type": "object"
+  },
+  "audit_header": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "format": {
+        "const": "ipg-audit-v1",
+        "type": "string"
+      },
+      "log_id": {
+        "maxLength": 32,
+        "minLength": 32,
+        "pattern": "^[0-9a-f]{32}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "format",
+      "log_id"
+    ],
+    "title": "Header",
+    "type": "object"
+  },
   "cng_key": {
     "$defs": {
       "PublicKey": {
@@ -652,6 +855,7 @@
             "items": {
               "enum": [
                 "approval.sign",
+                "audit.checkpoint",
                 "decrypt",
                 "json.sign",
                 "message.open",
@@ -663,7 +867,7 @@
               ],
               "type": "string"
             },
-            "maxItems": 9,
+            "maxItems": 10,
             "minItems": 1,
             "type": "array",
             "uniqueItems": true

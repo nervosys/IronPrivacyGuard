@@ -523,6 +523,7 @@
               "items": {
                 "enum": [
                   "approval.sign",
+                  "audit.checkpoint",
                   "decrypt",
                   "json.sign",
                   "message.open",
@@ -534,7 +535,7 @@
                 ],
                 "type": "string"
               },
-              "maxItems": 9,
+              "maxItems": 10,
               "minItems": 1,
               "type": "array",
               "uniqueItems": true
@@ -620,6 +621,7 @@
               "description": "Require this delegable operation.",
               "enum": [
                 "approval.sign",
+                "audit.checkpoint",
                 "decrypt",
                 "json.sign",
                 "message.open",
@@ -843,6 +845,119 @@
             "key",
             "sender",
             "expected_sender_fingerprint"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "const": "audit.init",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "output"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "event": {
+              "description": "File holding one JSON object, at most 64 KiB.",
+              "type": "string"
+            },
+            "log": {
+              "description": "An existing ipg-audit-v1 file; appended in place under `<log>.lock`.",
+              "type": "string"
+            },
+            "operation": {
+              "const": "audit.append",
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "log",
+            "event"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "log": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "audit.checkpoint",
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            },
+            "passphrase_file": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "operation",
+            "log",
+            "output",
+            "key"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "checkpoints": {
+              "default": [],
+              "description": "ipg-audit-checkpoint-v1 files to check against the log.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 64,
+              "type": "array"
+            },
+            "expected_fingerprint": {
+              "maxLength": 96,
+              "minLength": 64,
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{96})$",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "log": {
+              "type": "string"
+            },
+            "operation": {
+              "const": "audit.verify",
+              "type": "string"
+            },
+            "signer": {
+              "description": "Public identity file of the checkpoint signer; required with checkpoints.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "operation",
+            "log"
           ],
           "type": "object"
         },

@@ -96,6 +96,18 @@
     "sources": ["https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md", "https://github.com/secure-systems-lab/dsse/blob/master/protocol.md", "https://slsa.dev/spec/v1.0/"]
   },
   {
+    "id": "tamper-evident-audit",
+    "label": "Keep a tamper-evident audit log of agent activity",
+    "keywords": ["audit", "audit log", "tamper-evident", "hash chain", "append-only", "transparency", "forensics", "accountability"],
+    "goals": ["integrity", "accountability"],
+    "support": "implemented",
+    "operations": ["audit.init", "audit.append", "audit.checkpoint", "audit.verify"],
+    "prerequisites": ["A writable log file on the host", "A checkpoint signer identity whose public identity verifiers pin", "Somewhere the log holder cannot rewrite to keep checkpoints"],
+    "limitations": ["Anyone who can write the file can append events; checkpoints attribute history, not individual events", "Entries after the latest checkpoint can be truncated undetectably", "Writers coordinate through a <log>.lock file; a crashed writer leaves it behind", "At most 64 KiB per event and 1 GiB per log"],
+    "guidance": "Start MCP hosts with --audit-log so every tool call is recorded before and after it runs. Checkpoint the log regularly with a separate identity and hand checkpoints to another party or agent. Verify with every checkpoint you hold; treat unanchored_entries as unprotected.",
+    "sources": ["https://www.rfc-editor.org/rfc/rfc9162", "https://www.usenix.org/legacy/event/sec09/tech/full_papers/crosby.pdf"]
+  },
+  {
     "id": "quorum-approval",
     "label": "Require m-of-n approvals before an agent acts",
     "keywords": ["quorum", "threshold", "m-of-n", "multi-party approval", "two-person rule", "human in the loop", "sign-off", "consensus"],

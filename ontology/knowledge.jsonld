@@ -517,6 +517,49 @@
       ]
     },
     {
+      "@id": "ipg:application/tamper-evident-audit",
+      "@type": "ipg:CryptographicApplication",
+      "goals": [
+        "ipg:goal/integrity",
+        "ipg:goal/accountability"
+      ],
+      "guidance": "Start MCP hosts with --audit-log so every tool call is recorded before and after it runs. Checkpoint the log regularly with a separate identity and hand checkpoints to another party or agent. Verify with every checkpoint you hold; treat unanchored_entries as unprotected.",
+      "id": "tamper-evident-audit",
+      "keywords": [
+        "audit",
+        "audit log",
+        "tamper-evident",
+        "hash chain",
+        "append-only",
+        "transparency",
+        "forensics",
+        "accountability"
+      ],
+      "label": "Keep a tamper-evident audit log of agent activity",
+      "limitations": [
+        "Anyone who can write the file can append events; checkpoints attribute history, not individual events",
+        "Entries after the latest checkpoint can be truncated undetectably",
+        "Writers coordinate through a <log>.lock file; a crashed writer leaves it behind",
+        "At most 64 KiB per event and 1 GiB per log"
+      ],
+      "prerequisites": [
+        "A writable log file on the host",
+        "A checkpoint signer identity whose public identity verifiers pin",
+        "Somewhere the log holder cannot rewrite to keep checkpoints"
+      ],
+      "sources": [
+        "https://www.rfc-editor.org/rfc/rfc9162",
+        "https://www.usenix.org/legacy/event/sec09/tech/full_papers/crosby.pdf"
+      ],
+      "support": "implemented",
+      "tools": [
+        "ipg:operation/audit.init",
+        "ipg:operation/audit.append",
+        "ipg:operation/audit.checkpoint",
+        "ipg:operation/audit.verify"
+      ]
+    },
+    {
       "@id": "ipg:application/quorum-approval",
       "@type": "ipg:CryptographicApplication",
       "goals": [
@@ -1091,6 +1134,11 @@
       "tools": []
     },
     {
+      "@id": "ipg:goal/accountability",
+      "@type": "ipg:SecurityGoal",
+      "label": "accountability"
+    },
+    {
       "@id": "ipg:goal/channel-security",
       "@type": "ipg:SecurityGoal",
       "label": "channel-security"
@@ -1139,6 +1187,11 @@
       "@id": "ipg:goal/identity-policy",
       "@type": "ipg:SecurityGoal",
       "label": "identity-policy"
+    },
+    {
+      "@id": "ipg:goal/integrity",
+      "@type": "ipg:SecurityGoal",
+      "label": "integrity"
     },
     {
       "@id": "ipg:goal/password-verification",
@@ -3199,6 +3252,256 @@
       "request_schema": {
         "command": "ipg schema",
         "operation_const": "verify"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/audit.init",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/no-clobber"
+      ],
+      "description": "Create an empty ipg-audit-v1 log with a random log ID",
+      "deterministic": false,
+      "effects": [
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "audit.init",
+      "inputs": [],
+      "key_inputs": [],
+      "mcp_tool": "ipg_audit_init",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:AuditLog"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "audit.init"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/audit.append",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:sha2-384"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/hash-chain",
+        "ipg:constraint/host-clock",
+        "ipg:constraint/size-bound"
+      ],
+      "description": "Verify a log's hash chain and append one JSON event with the host time, under an exclusive lock file",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "append_file",
+        "create_lock_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "audit.append",
+      "inputs": [
+        "ipg:AuditLog",
+        "ipg:AuditEvent"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_audit_append",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:AuditHead"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "audit.append"
+      },
+      "retry": "Safe to retry if inputs are unchanged."
+    },
+    {
+      "@id": "ipg:operation/audit.checkpoint",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:argon2id",
+        "ic:chacha20-poly1305",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [
+        "load the host PKCS#11 module and log in to a token when key is a hardware reference",
+        "open the host TPM and load wrapped keys when key is an ipg-tpm-key-v1 file",
+        "call AWS KMS with host credentials over the network when key is an ipg-kms-key-v1 file"
+      ],
+      "constraints": [
+        "ipg:constraint/hash-chain",
+        "ipg:constraint/secret-channel",
+        "ipg:constraint/no-clobber",
+        "ipg:constraint/key-provider",
+        "ipg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Sign a log's current size and head hash so later truncation or rewriting is detectable",
+      "deterministic": false,
+      "effects": [
+        "read_file",
+        "read_passphrase",
+        "create_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "audit.checkpoint",
+      "inputs": [
+        "ipg:AuditLog",
+        "ipg:SecretKey",
+        "ipg:Passphrase"
+      ],
+      "key_inputs": [
+        "ipg:SecretKey",
+        "ipg:HardwareKeyReference",
+        "ipg:TpmKeyFile",
+        "ipg:KmsKeyFile"
+      ],
+      "mcp_tool": "ipg_audit_checkpoint",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:AuditCheckpoint"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "audit.checkpoint"
+      },
+      "retry": "Do not retry blindly; inspect the destination after an ambiguous transport failure. Existing outputs are never replaced."
+    },
+    {
+      "@id": "ipg:operation/audit.verify",
+      "@type": "ipg:Operation",
+      "algorithms": [
+        "ic:ed25519",
+        "ic:sha2-384",
+        "ic:ecdsa-p384-sha384",
+        "ic:ml-dsa-65"
+      ],
+      "conditional_effects": [],
+      "constraints": [
+        "ipg:constraint/identity-pin",
+        "ipg:constraint/hash-chain",
+        "ipg:constraint/checkpoint-anchoring",
+        "ipg:constraint/hybrid-post-quantum"
+      ],
+      "description": "Verify a log's hash chain and that each signed checkpoint from a pinned signer is a prefix of it",
+      "deterministic": true,
+      "effects": [
+        "read_file"
+      ],
+      "errors": [
+        "invalid_request",
+        "invalid_format",
+        "limit_exceeded",
+        "authentication_failed",
+        "identity_mismatch",
+        "key_not_trusted",
+        "key_revoked",
+        "key_expired",
+        "key_not_yet_valid",
+        "clock_unavailable",
+        "merge_conflict",
+        "policy_mismatch",
+        "replay_detected",
+        "io_error",
+        "already_exists",
+        "entropy_unavailable",
+        "provider_unavailable",
+        "hardware_not_found",
+        "mechanism_unsupported",
+        "provider_error",
+        "pin_locked"
+      ],
+      "id": "audit.verify",
+      "inputs": [
+        "ipg:AuditLog",
+        "ipg:AuditCheckpoint",
+        "ipg:PublicKey",
+        "ipg:Fingerprint"
+      ],
+      "key_inputs": [],
+      "mcp_tool": "ipg_audit_verify",
+      "optional_inputs": [],
+      "outputs": [
+        "ipg:AuditVerification"
+      ],
+      "request_schema": {
+        "command": "ipg schema",
+        "operation_const": "audit.verify"
       },
       "retry": "Safe to retry if inputs are unchanged."
     },
@@ -5447,5 +5750,5 @@
     "meaning": "Primitive availability does not imply IPG protocol support",
     "operation": "algorithms"
   },
-  "version": "1.26.0"
+  "version": "1.27.0"
 }

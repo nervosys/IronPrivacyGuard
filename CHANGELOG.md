@@ -34,6 +34,13 @@
   nonce) and `quorum.verify` requires distinct, valid, unexpired approvals from
   a pinned approver set, optionally under a trust snapshot, and reports
   rejections. `approval.sign` is delegable. 65 operations.
+- Added tamper-evident audit logs: `audit.init`, `audit.append`,
+  `audit.checkpoint` and `audit.verify` over `ipg-audit-v1` (canonical,
+  SHA-384 hash-chained NDJSON with locked appends) and signed
+  `ipg-audit-checkpoint-v1` checkpoints that detect truncation and rewritten
+  history. `ipg mcp --audit-log` records every executed tool call before and
+  after it runs and refuses calls it cannot record (`audit_unavailable`).
+  `audit.checkpoint` is delegable. 69 operations.
 - Moved the exact IronCrypto pins from 0.2.7 to 0.2.10, a compatible release with
   bounded-stack ML-KEM/ML-DSA and non-allocating curve tables (ML-DSA signing is
   slower; outputs are unchanged). This also lets IPG share a dependency graph
