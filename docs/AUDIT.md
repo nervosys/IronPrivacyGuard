@@ -37,6 +37,10 @@ written, the call returns `audit_unavailable` and the message says the operation
 finished. Calls rejected before execution, such as invalid arguments, rate
 limits or disabled tools, are not recorded.
 
+With `--require-approval`, a call a person declines records a `declined` event,
+and a call cancelled while awaiting approval records a `cancelled` event. If
+the `declined` record cannot be written, the call returns `audit_unavailable`.
+
 ## Format
 
 The log is newline-delimited. Every line is the RFC 8785 canonical form of its

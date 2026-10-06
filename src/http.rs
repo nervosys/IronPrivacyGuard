@@ -19,9 +19,14 @@ use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::time::Duration;
 
 pub const MAX_SESSIONS: usize = 8;
+/// Connections being read at once; further connections are closed.
+pub const MAX_READERS: usize = 32;
+/// Sessions idle longer than this are discarded.
+pub const SESSION_IDLE: Duration = Duration::from_secs(30 * 60);
+/// A whole request (headers and body) must arrive within this time.
+pub const REQUEST_DEADLINE: Duration = Duration::from_secs(10);
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_HEADERS: usize = 64;
-const TIMEOUT: Duration = Duration::from_secs(30);
 
 fn invalid(message: &str) -> Error {
     Error::new("invalid_request", message)
@@ -32,7 +37,82 @@ pub struct HttpServer {
     /// SHA-384 of the bearer token; compared digest to digest.
     token: [u8; 48],
     mcp_args: Vec<String>,
-    sessions: BTreeMap<String, Server>,
+    sessions: BTreeMap<String, (Server, std::time::Instant)>,
+    /// One tool-call budget for every session, so new sessions do not reset it.
+    limiter: std::sync::Arc<std::sync::Mutex<crate::mcp::Limiter>>,
+}
+
+/// Checks a connection must pass before its body is read.
+#[derive(Clone, Copy)]
+struct Gate {
+    token: [u8; 48],
+    port: u16,
+}
+
+/// Reads with one overall deadline, so a slow client cannot hold a reader.
+struct DeadlineReader<'a> {
+    stream: &'a TcpStream,
+    deadline: std::time::Instant,
+}
+impl Read for DeadlineReader<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let remaining = self
+            .deadline
+            .checked_duration_since(std::time::Instant::now())
+            .filter(|d| !d.is_zero())
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::TimedOut, "request deadline"))?;
+        self.stream.set_read_timeout(Some(remaining))?;
+        (&*self.stream).read(buf)
+    }
+}
+
+impl Gate {
+    /// Read one request; authentication and Origin are checked before the body.
+    fn read(self, stream: &TcpStream) -> std::result::Result<HttpRequest, HttpResponse> {
+        let mut reader = BufReader::new(DeadlineReader {
+            stream,
+            deadline: std::time::Instant::now() + REQUEST_DEADLINE,
+        });
+        let head = read_head(&mut reader)
+            .map_err(|e| HttpResponse::error(400, "Bad Request", &e.message))?;
+        if head.path != "/mcp" {
+            return Err(HttpResponse::empty(404, "Not Found"));
+        }
+        if let Some(origin) = head.headers.get("origin")
+            && !allowed_origin(origin, self.port)
+        {
+            return Err(HttpResponse::error(
+                403,
+                "Forbidden",
+                "Origin is not a loopback origin",
+            ));
+        }
+        if !authorized(&head.headers, &self.token) {
+            return Err(unauthorized());
+        }
+        read_body(&mut reader, head)
+            .map_err(|e| HttpResponse::error(400, "Bad Request", &e.message))
+    }
+}
+
+fn authorized(headers: &BTreeMap<String, String>, token: &[u8; 48]) -> bool {
+    headers
+        .get("authorization")
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|t| digest(t.trim().as_bytes()))
+        .is_some_and(|d| ic_core::ct::verify(&d, token))
+}
+
+fn unauthorized() -> HttpResponse {
+    let mut response = HttpResponse::error(401, "Unauthorized", "Bearer token required");
+    response.headers.push(("WWW-Authenticate", "Bearer".into()));
+    response
+}
+
+struct Head {
+    method: String,
+    path: String,
+    headers: BTreeMap<String, String>,
 }
 
 struct HttpRequest {
@@ -106,6 +186,16 @@ impl HttpServer {
                 "mcp-http listens on loopback addresses only",
             ));
         }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if std::fs::metadata(&token_file)?.permissions().mode() & 0o077 != 0 {
+                return Err(Error::new(
+                    "policy_mismatch",
+                    "The bearer token file must not be readable by group or others (chmod 600)",
+                ));
+            }
+        }
         let token = crate::read_limited(std::fs::File::open(&token_file)?, 1024)?;
         let token = trim(&token);
         if token.len() < 32 {
@@ -126,6 +216,7 @@ impl HttpServer {
             token: digest(token),
             mcp_args,
             sessions: BTreeMap::new(),
+            limiter: Default::default(),
         })
     }
 
@@ -133,27 +224,58 @@ impl HttpServer {
         Ok(self.listener.local_addr()?)
     }
 
-    /// Serve connections one at a time until the listener fails.
+    fn gate(&self) -> Result<Gate> {
+        Ok(Gate {
+            token: self.token,
+            port: self.local_addr()?.port(),
+        })
+    }
+
+    /// Read connections on a bounded pool of reader threads; requests are then
+    /// handled one at a time, in arrival order, until the listener fails.
     pub fn serve(&mut self) -> Result<()> {
-        loop {
-            let (stream, _) = self.listener.accept()?;
-            // A failing connection never stops the server.
-            let _ = self.connection(stream);
+        type Arrival = (TcpStream, std::result::Result<HttpRequest, HttpResponse>);
+        let (sender, receiver) = std::sync::mpsc::channel::<Arrival>();
+        let listener = self.listener.try_clone()?;
+        let gate = self.gate()?;
+        let active = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        std::thread::spawn(move || {
+            use std::sync::atomic::Ordering;
+            for stream in listener.incoming() {
+                let Ok(stream) = stream else {
+                    std::thread::sleep(Duration::from_millis(50));
+                    continue;
+                };
+                if active.fetch_add(1, Ordering::SeqCst) >= MAX_READERS {
+                    active.fetch_sub(1, Ordering::SeqCst);
+                    continue;
+                }
+                let (sender, active) = (sender.clone(), active.clone());
+                std::thread::spawn(move || {
+                    let read = gate.read(&stream);
+                    active.fetch_sub(1, Ordering::SeqCst);
+                    let _ = sender.send((stream, read));
+                });
+            }
+        });
+        for (mut stream, read) in receiver {
+            let response = match read {
+                Ok(request) => self.route(request),
+                Err(response) => response,
+            };
+            let _ = stream.set_write_timeout(Some(REQUEST_DEADLINE));
+            let _ = write_response(&mut stream, &response);
         }
+        Ok(())
     }
 
     /// Serve exactly one connection; used by tests.
     pub fn serve_one(&mut self) -> Result<()> {
-        let (stream, _) = self.listener.accept()?;
-        self.connection(stream)
-    }
-
-    fn connection(&mut self, mut stream: TcpStream) -> Result<()> {
-        stream.set_read_timeout(Some(TIMEOUT))?;
-        stream.set_write_timeout(Some(TIMEOUT))?;
-        let response = match read_request(&mut BufReader::new(&stream)) {
+        let (mut stream, _) = self.listener.accept()?;
+        stream.set_write_timeout(Some(REQUEST_DEADLINE))?;
+        let response = match self.gate()?.read(&stream) {
             Ok(request) => self.route(request),
-            Err(error) => HttpResponse::error(400, "Bad Request", &error.message),
+            Err(response) => response,
         };
         write_response(&mut stream, &response)
     }
@@ -168,15 +290,8 @@ impl HttpServer {
         {
             return HttpResponse::error(403, "Forbidden", "Origin is not a loopback origin");
         }
-        let presented = request
-            .headers
-            .get("authorization")
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .map(|t| digest(t.trim().as_bytes()));
-        if presented != Some(self.token) {
-            let mut response = HttpResponse::error(401, "Unauthorized", "Bearer token required");
-            response.headers.push(("WWW-Authenticate", "Bearer".into()));
-            return response;
+        if !authorized(&request.headers, &self.token) {
+            return unauthorized();
         }
         if let Some(version) = request.headers.get("mcp-protocol-version")
             && !crate::mcp::PROTOCOL_VERSIONS.contains(&version.as_str())
@@ -222,16 +337,25 @@ impl HttpServer {
         let initialize = ipg_json::from_slice::<Value>(&request.body)
             .ok()
             .is_some_and(|v| v["method"] == "initialize");
+        let now = std::time::Instant::now();
+        self.sessions
+            .retain(|_, (_, used)| now.duration_since(*used) < SESSION_IDLE);
         let (id, server) = match (session, initialize) {
             (None, true) => {
                 if self.sessions.len() >= MAX_SESSIONS {
-                    return HttpResponse::error(
-                        503,
-                        "Service Unavailable",
-                        "Too many sessions; delete one first",
-                    );
+                    let oldest = self
+                        .sessions
+                        .iter()
+                        .min_by_key(|(_, (_, used))| *used)
+                        .map(|(id, _)| id.clone());
+                    if let Some(oldest) = oldest {
+                        self.sessions.remove(&oldest);
+                    }
                 }
-                let server = match Config::parse(&self.mcp_args).and_then(Server::new) {
+                let limiter = self.limiter.clone();
+                let server = match Config::parse(&self.mcp_args)
+                    .and_then(|config| Server::with_limiter(config, limiter))
+                {
                     Ok(server) => server,
                     Err(error) => {
                         return HttpResponse::error(500, "Internal Server Error", &error.message);
@@ -243,10 +367,14 @@ impl HttpServer {
                         return HttpResponse::error(500, "Internal Server Error", &error.message);
                     }
                 };
-                (id.clone(), self.sessions.entry(id).or_insert(server))
+                let entry = self.sessions.entry(id.clone()).or_insert((server, now));
+                (id, &mut entry.0)
             }
             (Some(id), false) => match self.sessions.get_mut(&id) {
-                Some(server) => (id, server),
+                Some((server, used)) => {
+                    *used = now;
+                    (id, server)
+                }
                 None => return HttpResponse::error(404, "Not Found", "Unknown or expired session"),
             },
             (None, false) => {
@@ -297,7 +425,7 @@ fn allowed_origin(origin: &str, port: u16) -> bool {
         .any(|host| origin == format!("http://{host}:{port}"))
 }
 
-fn read_request(input: &mut impl BufRead) -> Result<HttpRequest> {
+fn read_head(input: &mut impl BufRead) -> Result<Head> {
     let mut header_bytes = 0;
     let mut line = String::new();
     let mut next_line = |line: &mut String| -> Result<()> {
@@ -339,15 +467,36 @@ fn read_request(input: &mut impl BufRead) -> Result<HttpRequest> {
         }
     }
     drop(next_line);
+    Ok(Head {
+        method,
+        path,
+        headers,
+    })
+}
+
+fn read_body(input: &mut impl BufRead, head: Head) -> Result<HttpRequest> {
+    let Head {
+        method,
+        path,
+        headers,
+    } = head;
     if headers.contains_key("transfer-encoding") {
         return Err(invalid(
             "Chunked bodies are not supported; send Content-Length",
         ));
     }
     let length: u64 = match headers.get("content-length") {
-        Some(value) => value
-            .parse()
-            .map_err(|_| invalid("Invalid Content-Length"))?,
+        // Digits only: no sign, whitespace or list, which proxies read differently.
+        Some(value)
+            if !value.is_empty()
+                && value.len() <= 19
+                && value.bytes().all(|b| b.is_ascii_digit()) =>
+        {
+            value
+                .parse()
+                .map_err(|_| invalid("Invalid Content-Length"))?
+        }
+        Some(_) => return Err(invalid("Invalid Content-Length")),
         None => 0,
     };
     if length > crate::MAX_REQUEST_BYTES {

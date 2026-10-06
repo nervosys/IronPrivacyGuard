@@ -160,8 +160,15 @@ and error code). A call the log cannot record is refused with the retryable
 `--require-approval <operations>` (comma-separated operation IDs) makes each
 listed call wait for a person. The server answers the `tools/call` with a
 form-mode `elicitation/create` request. The request names the tool, the
-operation and its arguments, with long strings such as inline data shortened,
-and asks for one boolean, `approve`. The call runs only when the client returns
+operation and its arguments, and asks for one boolean, `approve`. The person
+sees each argument in full, with these exceptions:
+
+- `data:` URIs longer than 160 characters are summarized by their first 64
+  characters and length.
+- Control, invisible and bidirectional-override characters (such as U+202E or
+  U+200B) are shown as `\u{XXXX}` escapes.
+- Calls with any other string longer than 1024 characters are refused with
+  `invalid_request` before anyone is asked. The call runs only when the client returns
 `action: "accept"` with `approve: true`. Decline, dismissal, `approve: false`,
 an error response or cancellation return `approval_declined`, and nothing runs.
 
@@ -169,7 +176,14 @@ Clients that did not declare the `elicitation` capability (form mode) cannot run
 gated tools; those calls fail with `policy_mismatch`. Gated tools carry
 `_meta["ipg/requiresApproval"]: true` in the catalog. At most 16 calls may await
 approval at once. With `--audit-log`, approved calls record
-`"approval":"granted"`, and refusals record a `declined` event.
+`"approval":"granted"`, and refusals record a `declined` event. If that record
+cannot be written, the call returns `audit_unavailable` (nothing ran).
+Cancellations of calls awaiting approval record a `cancelled` event.
+
+Elicitation IDs are 128-bit random values. An answer counts only for a prompt
+that was actually delivered: answering a task's prompt before `tasks/result`
+delivered it is ignored. When 16 calls already await approval, a task call
+receives a `failed` task rather than a plain result.
 
 Approval relies on the MCP client to show the request to a real person. A
 compromised or automated client can approve anything, so for cryptographic
@@ -187,7 +201,10 @@ tool has `execution.taskSupport: "optional"`.
   the approval elicitation, which carries the related-task metadata, and is
   answered once the person responds.
 - **Limits:** task IDs are 128-bit random values. TTLs are clamped to
-  1 s .. 1 h, and at most 64 tasks are retained.
+  1 s .. 1 h, and at most 64 tasks are retained. Retained results total at
+  most 16 MiB: the oldest finished tasks are dropped to make room, and a result
+  over 4 MiB is replaced by a `limit_exceeded` error. Call such tools without a
+  task, or write outputs to files.
 - **`tasks/cancel`:** cancels a task awaiting approval and refuses terminal
   tasks.
 - **Not declared:** `tasks/list`, because a stdio session has no requestor
@@ -220,22 +237,29 @@ picks a free port.
 
 - **Exposure:** listeners must be loopback addresses. Every request needs
   `Authorization: Bearer <token>`, where the token file holds at least 32 bytes
-  (surrounding whitespace is ignored). Requests with an `Origin` other than
+  (surrounding whitespace is ignored). On Unix the token file must not be
+  readable by group or others. Requests with an `Origin` other than
   `http://127.0.0.1:<port>`, `http://localhost:<port>` or `http://[::1]:<port>`
   are refused, which blocks DNS rebinding from browsers.
 - **Requests:** `POST /mcp` with `Content-Type: application/json` and an
   `Accept` that includes `application/json`. Bodies are at most 2 MiB with
-  `Content-Length`; chunked bodies are refused. Each connection carries one
-  request.
+  `Content-Length` (digits only); chunked bodies are refused. Each connection
+  carries one request.
+- **Slow clients:** the path, `Origin` and bearer token are checked before the
+  body is read. Each request must arrive within 10 seconds. At most 32
+  connections are read at once, and further connections are closed. Requests
+  are then handled one at a time.
 - **Responses:** JSON, or `202 Accepted` for notifications. There are no SSE
   streams: `GET` returns 405, and so `--require-approval` is refused at startup
   rather than skipped.
 - **Sessions:** `initialize` issues an `Mcp-Session-Id`, which later requests
-  must carry. Unknown sessions get 404, `DELETE /mcp` ends a session, and at
-  most 8 sessions exist at once.
+  must carry. Unknown sessions get 404, and `DELETE /mcp` ends a session.
+  Sessions idle for 30 minutes expire. At most 8 sessions exist at once, and a
+  new `initialize` evicts the least recently used one.
 - **Session state:** each session has its own MCP server with the given host
   flags, so policy, allowlists, custody, delegation, audit logs, inline-data
-  control, rate limits and tasks work as over stdio.
+  control and tasks work as over stdio. The tool-call rate limit is shared by
+  all sessions, so new sessions do not reset it.
 
 Prefer stdio when the host can launch IPG. Any local process that can read the
 token file can use the server.

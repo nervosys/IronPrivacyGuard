@@ -254,3 +254,52 @@ fn tasks_complete_immediately_or_wait_for_approval() {
         "approval_declined"
     );
 }
+
+#[test]
+fn approval_prompts_show_arguments_faithfully() {
+    let mut s = Session::new(&["--require-approval", "trust.init"], true);
+    // Invisible and bidirectional characters are escaped in the prompt.
+    let rlo = char::from_u32(0x202E).unwrap();
+    let name = format!("store{rlo}gpj.exe");
+    let elicitation = s.init_store(1, &name, false);
+    let message = elicitation["params"]["message"].as_str().unwrap();
+    assert!(!message.contains(rlo));
+    assert!(message.contains(&format!("{}u{{202E}}", char::from(92u8))));
+    let id = elicitation["id"].as_str().unwrap().to_owned();
+    assert_eq!(id.len(), "ipg-approval-".len() + 32);
+    assert!(s.answer(&elicitation, approve(false)).is_some());
+    assert!(!s.exists(&name));
+
+    // A value too long to show in full is refused before anyone is asked.
+    let long = "x".repeat(2000);
+    let refused = s.init_store(2, &long, false);
+    assert_eq!(
+        refused["result"]["structuredContent"]["error"]["code"],
+        "invalid_request"
+    );
+    // Elicitation IDs are not predictable from one another.
+    let next = s.init_store(3, "other", false);
+    assert_ne!(next["id"].as_str().unwrap(), id);
+}
+
+#[test]
+fn approvals_are_only_accepted_for_prompts_that_were_sent() {
+    let mut s = Session::new(&["--require-approval", "trust.init"], true);
+    let created = s.init_store(1, "store", true);
+    let task = created["result"]["task"]["taskId"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    // The prompt has not been delivered yet, so guessed answers are ignored.
+    for guess in ["ipg-approval-1", "ipg-approval-2"] {
+        assert!(
+            s.send(json!({"jsonrpc":"2.0","id":guess,"result":approve(true)}))
+                .is_none()
+        );
+    }
+    let status = s
+        .send(json!({"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{"taskId":task}}))
+        .unwrap();
+    assert_eq!(status["result"]["status"], "input_required");
+    assert!(!s.exists("store"));
+}

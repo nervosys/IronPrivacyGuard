@@ -19,6 +19,8 @@ pub const MAX_PENDING: usize = 16;
 /// Retained tasks per session; each is kept at most MAX_TASK_TTL_MS.
 pub const MAX_TASKS: usize = 64;
 pub const MAX_TASK_TTL_MS: u64 = 3_600_000;
+/// Bytes of tool results retained across a session's tasks.
+pub const MAX_TASK_BYTES: usize = 16 * 1024 * 1024;
 const POLL_INTERVAL_MS: u64 = 1000;
 const RELATED_TASK: &str = "io.modelcontextprotocol/related-task";
 
@@ -206,11 +208,38 @@ enum Phase {
     Ready,
 }
 
+/// Tool-call budget per 60-second window; shared by every HTTP session.
+pub struct Limiter {
+    window: Instant,
+    calls: usize,
+}
+impl Default for Limiter {
+    fn default() -> Self {
+        Self {
+            window: Instant::now(),
+            calls: 0,
+        }
+    }
+}
+impl Limiter {
+    /// Count one call; false when the window's budget is spent.
+    fn admit(&mut self) -> bool {
+        if self.window.elapsed() >= Duration::from_secs(60) {
+            self.window = Instant::now();
+            self.calls = 0;
+        }
+        if self.calls >= MAX_CALLS_PER_MINUTE {
+            return false;
+        }
+        self.calls += 1;
+        true
+    }
+}
+
 pub struct Server {
     config: Config,
     phase: Phase,
-    window: Instant,
-    calls: usize,
+    limiter: std::sync::Arc<std::sync::Mutex<Limiter>>,
     /// The client can ask a person (form elicitation).
     elicitation: bool,
     elicitations: u64,
@@ -361,13 +390,22 @@ impl Server {
         Ok(Self {
             config,
             phase: Phase::New,
-            window: Instant::now(),
-            calls: 0,
+            limiter: Default::default(),
             elicitation: false,
             elicitations: 0,
             pending: Default::default(),
             tasks: Default::default(),
         })
+    }
+
+    /// A server whose tool-call budget is shared with other sessions.
+    pub fn with_limiter(
+        config: Config,
+        limiter: std::sync::Arc<std::sync::Mutex<Limiter>>,
+    ) -> Result<Self> {
+        let mut server = Self::new(config)?;
+        server.limiter = limiter;
+        Ok(server)
     }
 
     /// Process one complete JSON-RPC message. Notifications never execute tools.
@@ -537,11 +575,8 @@ impl Server {
         let Some(map) = arguments.as_object_mut() else {
             return rpc_error(id, -32602, "Tool arguments must be an object");
         };
-        if self.window.elapsed() >= Duration::from_secs(60) {
-            self.window = Instant::now();
-            self.calls = 0;
-        }
-        let prepared = if self.calls >= MAX_CALLS_PER_MINUTE {
+        let admitted = self.limiter.lock().map(|mut l| l.admit()).unwrap_or(false);
+        let prepared = if !admitted {
             Err(Error {
                 code: "rate_limited",
                 message:
@@ -550,17 +585,22 @@ impl Server {
                 retryable: true,
             })
         } else if map.contains_key("operation") {
-            self.calls += 1;
             Err(Error::new(
                 "invalid_request",
                 "Tool arguments must not supply an operation tag",
             ))
         } else {
-            self.calls += 1;
             map.insert("operation".into(), json!(operation));
             self.prepare(arguments)
         };
         let gated = prepared.is_ok() && self.config.requires_approval(operation);
+        if gated && let Err(error) = displayed(prepared.as_ref().expect("checked")) {
+            let refused = tool_result(Err(error), &Default::default());
+            return match task_ttl {
+                Some(ttl) => self.create_task(id, ttl, Some(refused), None),
+                None => success(id, refused),
+            };
+        }
         if gated && !self.elicitation {
             let refused = tool_result(
                 Err(Error::new(
@@ -584,7 +624,10 @@ impl Server {
                 }),
                 &Default::default(),
             );
-            return success(id, busy);
+            return match task_ttl {
+                Some(ttl) => self.create_task(id, ttl, Some(busy), None),
+                None => success(id, busy),
+            };
         }
         match (task_ttl, gated) {
             (Some(ttl), true) => {
@@ -714,7 +757,10 @@ impl Server {
 
     fn next_elicitation(&mut self) -> String {
         self.elicitations += 1;
-        format!("ipg-approval-{}", self.elicitations)
+        match crate::crypto::random::<16>() {
+            Ok(id) => format!("ipg-approval-{}", crate::hex::encode(&id[..])),
+            Err(_) => format!("ipg-approval-{}", self.elicitations),
+        }
     }
 
     /// A form elicitation asking a person to approve one specific call.
@@ -730,8 +776,7 @@ impl Server {
             .iter()
             .find(|o| o.0 == operation)
             .map_or("", |o| o.1);
-        let mut arguments = ipg_json::to_value(request).unwrap_or(Value::Null);
-        shorten(&mut arguments);
+        let arguments = displayed(request).unwrap_or(Value::Null);
         let message = format!(
             "An agent asks to run {tool} ({operation}): {description}.\n\nArguments:\n{}\n\nApprove only if you expected this action.",
             ipg_json::to_string_pretty(&arguments).unwrap_or_default()
@@ -748,7 +793,12 @@ impl Server {
 
     /// A client response to one of our elicitation requests.
     fn on_response(&mut self, id: &Value, object: &ipg_json::Map<String, Value>) -> Option<Value> {
-        let pending = self.pending.remove(id.as_str()?)?;
+        let key = id.as_str()?;
+        // An answer to a prompt that was never sent is not a person's answer.
+        if !self.pending.get(key)?.sent {
+            return None;
+        }
+        let pending = self.pending.remove(key)?;
         let result = object.get("result");
         let action = result
             .and_then(|r| r.get("action"))
@@ -762,10 +812,22 @@ impl Server {
         let value = if approved {
             self.run(&pending.tool, pending.operation, Ok(pending.request), true)
         } else {
-            if let Some(log) = &self.config.audit_log {
+            let unrecorded = self.config.audit_log.as_ref().and_then(|log| {
                 let event = json!({"source":"ipg-mcp", "phase":"declined", "tool":pending.tool,
                     "operation":pending.operation, "action":action});
-                let _ = crate::audit::append(log, &event, crate::delegation::now().unwrap_or(0));
+                crate::audit::append(log, &event, crate::delegation::now().unwrap_or(0)).err()
+            });
+            if let Some(error) = unrecorded {
+                return self.deliver(
+                    pending.reply,
+                    tool_result(
+                        Err(audit_unavailable(format!(
+                            "The call was declined and not executed, but the decline could not be recorded: {}",
+                            error.message
+                        ))),
+                        &Default::default(),
+                    ),
+                );
             }
             tool_result(
                 Err(Error::new(
@@ -788,6 +850,8 @@ impl Server {
                 if task.status == "cancelled" {
                     return None;
                 }
+                let value = self.retainable(value);
+                let task = self.tasks.get_mut(&task_id)?;
                 task.finish(value);
                 let waiting = task.waiting.take()?;
                 let result = task.result_with_meta(&task_id);
@@ -819,7 +883,7 @@ impl Server {
             elicitation: None,
         };
         if let Some(result) = result {
-            task.finish(result);
+            task.finish(self.retainable(result));
         }
         if let Some(mut pending) = pending {
             pending.reply = Reply::Task(task_id.clone());
@@ -872,8 +936,10 @@ impl Server {
                     &Default::default(),
                 ));
                 let body = task.describe(&task_id);
-                if let Some(elicitation) = elicitation {
-                    self.pending.remove(&elicitation);
+                if let Some(elicitation) = elicitation
+                    && let Some(pending) = self.pending.remove(&elicitation)
+                {
+                    self.record_cancel(&pending);
                 }
                 Some(success(id, body))
             }
@@ -902,6 +968,37 @@ impl Server {
         }
     }
 
+    /// Make room for a result, evicting the oldest finished tasks; a result
+    /// that still does not fit is replaced by an error.
+    fn retainable(&mut self, result: Value) -> Value {
+        let size = |v: &Value| ipg_json::to_vec(v).map_or(usize::MAX, |b| b.len());
+        let incoming = size(&result);
+        if incoming > MAX_TASK_BYTES / 4 {
+            return too_large();
+        }
+        loop {
+            let retained: usize = self
+                .tasks
+                .values()
+                .filter_map(|t| t.result.as_ref())
+                .map(size)
+                .sum();
+            if retained + incoming <= MAX_TASK_BYTES {
+                return result;
+            }
+            let Some(oldest) = self
+                .tasks
+                .iter()
+                .filter(|(_, t)| t.terminal())
+                .min_by_key(|(_, t)| t.updated)
+                .map(|(id, _)| id.clone())
+            else {
+                return too_large();
+            };
+            self.tasks.remove(&oldest);
+        }
+    }
+
     /// Drop expired tasks and their pending approvals.
     fn expire(&mut self) {
         let now = now_ms();
@@ -923,22 +1020,112 @@ impl Server {
         let Some(request) = params.get("requestId") else {
             return;
         };
-        self.pending
-            .retain(|_, p| !matches!(&p.reply, Reply::Direct(id) if id == request));
+        let cancelled: Vec<String> = self
+            .pending
+            .iter()
+            .filter(|(_, p)| matches!(&p.reply, Reply::Direct(id) if id == request))
+            .map(|(key, _)| key.clone())
+            .collect();
+        for key in cancelled {
+            if let Some(pending) = self.pending.remove(&key) {
+                self.record_cancel(&pending);
+            }
+        }
+    }
+
+    /// Record that a call awaiting approval was cancelled (nothing ran).
+    fn record_cancel(&self, pending: &Pending) {
+        if let Some(log) = &self.config.audit_log {
+            let event = json!({"source":"ipg-mcp", "phase":"cancelled", "tool":pending.tool,
+                "operation":pending.operation});
+            // Nothing executed, so a failed record hides no action.
+            let _ = crate::audit::append(log, &event, crate::delegation::now().unwrap_or(0));
+        }
     }
 }
 
-/// Truncate long strings, such as inline data, for display to a person.
-fn shorten(value: &mut Value) {
-    match value {
-        Value::String(text) if text.chars().count() > 160 => {
-            let head: String = text.chars().take(120).collect();
-            *text = format!("{head}... ({} characters)", text.chars().count());
+/// The longest argument value shown to a person in full.
+const MAX_DISPLAYED: usize = 1024;
+
+/// Characters that render invisibly or reorder text, so a person could misread a value.
+fn deceptive(c: char) -> bool {
+    c.is_control()
+        || matches!(
+            c as u32,
+            0x00AD
+                | 0x034F
+                | 0x061C
+                | 0x115F
+                | 0x1160
+                | 0x17B4
+                | 0x17B5
+                | 0x180B..=0x180F
+                | 0x200B..=0x200F
+                | 0x2028..=0x202E
+                | 0x2060..=0x206F
+                | 0x3164
+                | 0xFE00..=0xFE0F
+                | 0xFEFF
+                | 0xFFA0
+                | 0xFFF9..=0xFFFB
+                | 0x1D173..=0x1D17A
+                | 0xE0000..=0xE0FFF
+        )
+}
+
+/// Arguments as a person approving the call sees them: inline data is
+/// summarized, invisible and bidirectional characters are escaped, and any
+/// other value too long to show in full refuses the call.
+fn displayed(request: &Request) -> Result<Value> {
+    fn walk(value: &mut Value) -> Result<()> {
+        match value {
+            Value::String(text) if text.starts_with("data:") => {
+                let n = text.chars().count();
+                if n > 160 {
+                    let head: String = text.chars().take(64).collect();
+                    *text = format!("{head}... (inline data, {n} characters)");
+                }
+            }
+            Value::String(text) => {
+                if text.chars().count() > MAX_DISPLAYED {
+                    return Err(Error::new(
+                        "invalid_request",
+                        "An argument is too long to show a person for approval",
+                    ));
+                }
+                if text.chars().any(deceptive) {
+                    let backslash = char::from(92u8);
+                    *text = text
+                        .chars()
+                        .map(|c| {
+                            if deceptive(c) {
+                                format!("{backslash}u{{{:04X}}}", c as u32)
+                            } else {
+                                c.to_string()
+                            }
+                        })
+                        .collect();
+                }
+            }
+            Value::Array(items) => items.iter_mut().try_for_each(walk)?,
+            Value::Object(map) => map.values_mut().try_for_each(walk)?,
+            _ => {}
         }
-        Value::Array(items) => items.iter_mut().for_each(shorten),
-        Value::Object(map) => map.values_mut().for_each(shorten),
-        _ => {}
+        Ok(())
     }
+    let mut value = ipg_json::to_value(request)?;
+    walk(&mut value)?;
+    Ok(value)
+}
+
+fn too_large() -> Value {
+    tool_result(
+        Err(Error::new(
+            "limit_exceeded",
+            "The result is too large to retain in a task; call the tool without a task or write outputs to files",
+        )),
+        &Default::default(),
+    )
 }
 
 fn now_ms() -> u64 {
