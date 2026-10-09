@@ -199,6 +199,11 @@ secrets; remove leftovers once no writer is running. On Windows, temporary and
 output files inherit the destination directory's ACLs, so keep secrets and
 outputs in directories readable only by their owner.
 
+An unexpected internal failure while executing a request returns
+`internal_error` (exit 5, not retryable) and leaves a long-running `serve` or
+MCP process running. Treat any output that request may have written as
+untrusted, and do not retry the same input.
+
 The orchestrator must authorize all requested paths and operations. Running
 `serve` grants access to the process identity's files; it is not a sandbox or
 an authorization server. The ontology communicates constraints but cannot

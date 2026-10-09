@@ -1504,7 +1504,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "knowledge",
       "inputs": [],
@@ -1552,7 +1553,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "knowledge.search",
       "inputs": [
@@ -1602,7 +1604,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "request.validate",
       "inputs": [
@@ -1661,7 +1664,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.compare",
       "inputs": [
@@ -1722,7 +1726,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.merge",
       "inputs": [
@@ -1794,7 +1799,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.validity",
       "inputs": [
@@ -1860,7 +1866,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "validity.verify",
       "inputs": [
@@ -1924,7 +1931,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.validity",
       "inputs": [
@@ -1987,7 +1995,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.evaluate",
       "inputs": [
@@ -2045,7 +2054,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.init",
       "inputs": [],
@@ -2105,7 +2115,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.add",
       "inputs": [
@@ -2170,7 +2181,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.revoke",
       "inputs": [
@@ -2232,7 +2244,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "trust.status",
       "inputs": [
@@ -2282,7 +2295,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "discover",
       "inputs": [],
@@ -2328,7 +2342,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "schema",
       "inputs": [],
@@ -2374,7 +2389,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "ontology",
       "inputs": [],
@@ -2420,7 +2436,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "algorithms",
       "inputs": [],
@@ -2466,7 +2483,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "plan",
       "inputs": [
@@ -2530,7 +2548,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.generate",
       "inputs": [
@@ -2601,7 +2620,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.public",
       "inputs": [
@@ -2678,7 +2698,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "encrypt",
       "inputs": [
@@ -2748,7 +2769,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.rewrap",
       "inputs": [
@@ -2820,7 +2842,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.revoke",
       "inputs": [
@@ -2886,7 +2909,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "revocation.verify",
       "inputs": [
@@ -2960,7 +2984,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "grant.issue",
       "inputs": [
@@ -3052,7 +3077,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "message.seal",
       "inputs": [
@@ -3149,7 +3175,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "message.open",
       "inputs": [
@@ -3226,7 +3253,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "grant.verify",
       "inputs": [
@@ -3301,7 +3329,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "decrypt",
       "inputs": [
@@ -3380,7 +3409,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "sign",
       "inputs": [
@@ -3455,7 +3485,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "verify",
       "inputs": [
@@ -3538,7 +3569,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.key_package",
       "inputs": [
@@ -3624,7 +3656,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.group.create",
       "inputs": [
@@ -3706,7 +3739,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.join",
       "inputs": [
@@ -3785,7 +3819,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.commit",
       "inputs": [
@@ -3864,7 +3899,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.encrypt",
       "inputs": [
@@ -3942,7 +3978,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.process",
       "inputs": [
@@ -4015,7 +4052,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.status",
       "inputs": [
@@ -4087,7 +4125,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "mls.export",
       "inputs": [
@@ -4146,7 +4185,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "backup.split",
       "inputs": [
@@ -4205,7 +4245,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "backup.combine",
       "inputs": [
@@ -4275,7 +4316,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "key.rotate",
       "inputs": [
@@ -4343,7 +4385,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "rotation.verify",
       "inputs": [
@@ -4400,7 +4443,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "audit.init",
       "inputs": [],
@@ -4456,7 +4500,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "audit.append",
       "inputs": [
@@ -4513,7 +4558,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "audit.repair",
       "inputs": [
@@ -4582,7 +4628,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "audit.checkpoint",
       "inputs": [
@@ -4649,7 +4696,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "audit.verify",
       "inputs": [
@@ -4726,7 +4774,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "approval.sign",
       "inputs": [
@@ -4804,7 +4853,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "quorum.verify",
       "inputs": [
@@ -4869,7 +4919,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "json.canonicalize",
       "inputs": [
@@ -4942,7 +4993,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "json.sign",
       "inputs": [
@@ -5017,7 +5069,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "json.verify",
       "inputs": [
@@ -5098,7 +5151,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "provenance.attest",
       "inputs": [
@@ -5176,7 +5230,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "provenance.verify",
       "inputs": [
@@ -5235,7 +5290,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "hash",
       "inputs": [
@@ -5287,7 +5343,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "inspect",
       "inputs": [
@@ -5339,7 +5396,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "hardware.tokens",
       "inputs": [],
@@ -5403,7 +5461,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "hardware.key.generate",
       "inputs": [
@@ -5469,7 +5528,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "hardware.key.bind",
       "inputs": [
@@ -5536,7 +5596,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "kms.key.bind",
       "inputs": [
@@ -5589,7 +5650,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.info",
       "inputs": [],
@@ -5652,7 +5714,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.key.generate",
       "inputs": [
@@ -5708,7 +5771,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.key.delete",
       "inputs": [
@@ -5780,7 +5844,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "stream.encrypt",
       "inputs": [
@@ -5857,7 +5922,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "stream.sign",
       "inputs": [
@@ -5933,7 +5999,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "stream.verify",
       "inputs": [
@@ -6011,7 +6078,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "stream.decrypt",
       "inputs": [
@@ -6078,7 +6146,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.attest",
       "inputs": [
@@ -6139,7 +6208,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.attestation.challenge",
       "inputs": [
@@ -6198,7 +6268,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.attestation.respond",
       "inputs": [
@@ -6257,7 +6328,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "tpm.attestation.verify",
       "inputs": [
@@ -6320,7 +6392,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.key.generate",
       "inputs": [
@@ -6385,7 +6458,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.key.import",
       "inputs": [
@@ -6443,7 +6517,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.cert.export",
       "inputs": [
@@ -6505,7 +6580,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.key.export",
       "inputs": [
@@ -6562,7 +6638,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.cert.inspect",
       "inputs": [
@@ -6620,7 +6697,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.encrypt",
       "inputs": [
@@ -6684,7 +6762,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.decrypt",
       "inputs": [
@@ -6745,7 +6824,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.sign",
       "inputs": [
@@ -6802,7 +6882,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.verify",
       "inputs": [
@@ -6867,7 +6948,8 @@
         "hardware_not_found",
         "mechanism_unsupported",
         "provider_error",
-        "pin_locked"
+        "pin_locked",
+        "internal_error"
       ],
       "id": "openpgp.message.verify",
       "inputs": [

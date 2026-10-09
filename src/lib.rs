@@ -1909,7 +1909,24 @@ fn fips_refused(operation: &str) -> Option<&'static str> {
 }
 
 /// Execute under host policy. Callers never choose the host policy per request.
+///
+/// A panic anywhere below, including in a dependency, becomes an
+/// `internal_error` for this request, so one hostile input cannot end a
+/// long-running `serve`, `mcp` or `mcp-http` process.
 pub fn execute_with(request: Request, host: &Host) -> Result<Outcome> {
+    let operation = request.operation();
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| execute_guarded(request, host)))
+        .unwrap_or_else(|_| {
+            Err(Error::new(
+                "internal_error",
+                format!(
+                    "{operation} failed unexpectedly and was abandoned; its outputs, if any, must not be trusted"
+                ),
+            ))
+        })
+}
+
+fn execute_guarded(request: Request, host: &Host) -> Result<Outcome> {
     let _keys = KeyCallScope::begin();
     let _paths = files::PathScope::install(host.paths.clone());
     let _fips = crypto::FipsScope::install(host.fips);

@@ -1300,7 +1300,7 @@ pub fn operation(id: &str) -> Value {
         "constraints":constraints.iter().map(|s|format!("ipg:constraint/{s}")).collect::<Vec<_>>(),
         "algorithms":algorithms.iter().map(|s|format!("ic:{s}")).collect::<Vec<_>>(),
         "request_schema":{"command":"ipg schema", "operation_const":id},
-        "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","replay_detected","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked"]})
+        "errors":["invalid_request","invalid_format","limit_exceeded","authentication_failed","identity_mismatch","key_not_trusted","key_revoked","key_expired","key_not_yet_valid","clock_unavailable","merge_conflict","policy_mismatch","replay_detected","io_error","already_exists","entropy_unavailable","provider_unavailable","hardware_not_found","mechanism_unsupported","provider_error","pin_locked","internal_error"]})
 }
 pub fn discover() -> Value {
     json!({"name":"IronPrivacyGuard", "binary":"ipg", "version":env!("CARGO_PKG_VERSION"),
@@ -2178,6 +2178,7 @@ pub fn export() -> Value {
     ] {
         graph.push(json!({"@id":format!("ipg:error/{id}"),"@type":"ipg:Error","code":id,"exit_code":exit,"retryable":false,"recovery":recovery}));
     }
+    graph.push(json!({"@id":"ipg:error/internal_error","@type":"ipg:Error","code":"internal_error","exit_code":5,"retryable":false,"recovery":"An operation hit an unexpected internal failure and was abandoned. Do not trust any output it may have written, do not retry the same input, and report it."}));
     graph.push(json!({"@id":"ipg:error/approval_declined","@type":"ipg:Error","code":"approval_declined","exit_code":3,"retryable":false,"recovery":"The MCP host requires a person to approve this tool, and the call was declined, dismissed or cancelled; nothing was executed. Do not retry without new instructions from a person."}));
     graph.push(json!({"@id":"ipg:error/audit_unavailable","@type":"ipg:Error","code":"audit_unavailable","exit_code":5,"retryable":true,"recovery":"The MCP host's audit log could not record the call. If the message says the call was not executed, nothing ran; otherwise the operation finished but its result is unrecorded, so inspect its outputs before retrying. Restore the log (remove a stale <log>.lock only when no writer runs)."}));
     graph.push(json!({"@id":"ipg:error/rate_limited","@type":"ipg:Error","code":"rate_limited","exit_code":5,"retryable":true,"recovery":"Wait until the MCP session's current 60-second window ends before retrying; no operation was executed."}));

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Security: moved the exact IronCrypto pins to 0.2.20, which fixes
+  [GHSA-xr22-8pqp-gwfh](https://github.com/nervosys/IronCrypto/security/advisories/GHSA-xr22-8pqp-gwfh)
+  (Poly1305 overflow, IronCrypto 0.2.5 to 0.2.19). In IPG, whose release builds
+  check overflow, a crafted ChaCha20-Poly1305 ciphertext made the process panic
+  before authentication: a denial of service against `decrypt`, `message.open`,
+  `stream.decrypt`, MLS suite 3, `backup.combine` and passphrase-sealed files,
+  including long-running `mcp`, `mcp-http` and `serve` processes. No key or
+  plaintext was exposed. P-384 identities and AES-GCM paths were not affected.
+- A panic while executing a request, including one inside a dependency, now
+  returns `internal_error` for that request instead of ending the process.
 - The FIPS algorithm policy now allows MLS in suite 7 with P-384 identities.
   Under the policy, group state and KeyPackage secrets are sealed with
   PBKDF2-HMAC-SHA-512 (600,000 iterations) and AES-256-GCM, and suites 1 and 3
