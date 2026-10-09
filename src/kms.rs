@@ -755,25 +755,55 @@ fn network_error(error: std::io::Error) -> Error {
     }
 }
 
-/// Map a native TLS failure. Authentication rejection is not a transient outage
-/// and never suggests retrying; only transport failures remain retryable.
-fn tls_error(error: Error) -> Error {
-    match error.code {
-        "io_error" => Error {
-            code: "provider_error",
-            message: format!("AWS network error: {}", error.message),
-            retryable: true,
-        },
-        "limit_exceeded" => Error::new("provider_error", "KMS response exceeds size limit"),
-        "key_not_trusted" => Error::new(
-            "key_not_trusted",
-            format!("AWS TLS validation failed: {}", error.message),
-        ),
-        _ => Error::new(
-            "authentication_failed",
-            format!("AWS TLS validation failed: {}", error.message),
-        ),
+/// Map a TLS failure. Authentication rejection is not a transient outage and
+/// never suggests retrying; only transport failures remain retryable.
+fn tls_error(error: std::io::Error) -> Error {
+    use ironsocketlayer::ErrorKind as Tls;
+    let Some(tls) = error
+        .get_ref()
+        .and_then(|e| e.downcast_ref::<ironsocketlayer::Error>())
+    else {
+        return network_error(error);
+    };
+    let code = match tls.kind() {
+        Tls::UnknownCa
+        | Tls::BadCertificate
+        | Tls::CertificateExpired
+        | Tls::CertificateNameMismatch
+        | Tls::BadCertificateStatus => "key_not_trusted",
+        _ => "authentication_failed",
+    };
+    Error::new(code, format!("AWS TLS validation failed: {tls}"))
+}
+
+/// The TLS client configuration for AWS endpoints, built once per process:
+/// TLS 1.3 against the bundled public roots, HTTP/1.1, no session resumption.
+/// With `IPG_KMS_FIPS=1` the handshake is narrowed to P-256/P-384 key exchange
+/// and AES-GCM, matching the FIPS endpoints it then connects to.
+fn tls_config() -> Result<std::sync::Arc<ironsocketlayer::config::ClientConfig>> {
+    use ironsocketlayer::config::{ClientConfig, Profile};
+    use ironsocketlayer::enums::{CipherSuite, NamedGroup};
+    static CONFIG: std::sync::OnceLock<std::sync::Arc<ClientConfig>> = std::sync::OnceLock::new();
+    if let Some(config) = CONFIG.get() {
+        return Ok(config.clone());
     }
+    let unavailable = |e: ironsocketlayer::Error| {
+        Error::new("provider_error", format!("TLS configuration failed: {e}"))
+    };
+    let mut config = ClientConfig::new(Profile::Default, crate::tls_roots::root_store()?)
+        .map_err(unavailable)?
+        .with_alpn(&[b"http/1.1"]);
+    // Each connection carries one request; tickets would only be retained state.
+    config.tickets = None;
+    if std::env::var("IPG_KMS_FIPS").is_ok_and(|v| v == "1") {
+        config.common.groups = vec![NamedGroup::Secp384r1, NamedGroup::Secp256r1];
+        config.common.suites = vec![
+            CipherSuite::TlsAes256GcmSha384,
+            CipherSuite::TlsAes128GcmSha256,
+        ];
+        config.initial_key_shares = 1;
+    }
+    Ok(CONFIG.get_or_init(|| std::sync::Arc::new(config)).clone())
 }
 
 fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Zeroizing<Vec<u8>>> {
@@ -789,15 +819,40 @@ fn exchange(endpoint: &Endpoint, request: &[u8], timeout: Duration) -> Result<Ze
     socket.set_read_timeout(Some(timeout)).map_err(network)?;
     socket.set_write_timeout(Some(timeout)).map_err(network)?;
     let response = if endpoint.tls {
-        let anchors = crate::tls_roots::anchors()?;
+        use ironsocketlayer::stream::{Timeouts, TlsStream};
+        use std::io::Read as _;
         let mut client =
-            crate::tls::Client::connect_with_anchors(socket, host, anchors).map_err(tls_error)?;
+            TlsStream::connect_with(socket, tls_config()?, host, Timeouts::new(timeout, timeout))
+                .map_err(tls_error)?;
         client.write_all(request).map_err(tls_error)?;
-        // The client wipes its buffer on any failure and requires an
-        // authenticated close_notify, so truncated responses are never parsed.
-        client
-            .read_to_end(MAX_RESPONSE_BYTES as usize)
-            .map_err(tls_error)?
+        client.flush().map_err(tls_error)?;
+        // A read ends cleanly only at the server's authenticated close_notify,
+        // so truncated responses are errors and are never parsed.
+        let mut response = Zeroizing::new(Vec::with_capacity(16 * 1024));
+        let mut chunk = Zeroizing::new([0u8; 8192]);
+        loop {
+            let n = match client.read(&mut chunk[..]) {
+                Ok(0) => break,
+                Ok(n) => n,
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(tls_error(e)),
+            };
+            if (response.len() + n) as u64 > MAX_RESPONSE_BYTES {
+                return Err(Error::new(
+                    "provider_error",
+                    "KMS response exceeds size limit",
+                ));
+            }
+            if response.capacity() - response.len() < n {
+                let mut grown = Zeroizing::new(Vec::with_capacity(
+                    (response.len() + n).max(response.capacity() * 2),
+                ));
+                grown.extend_from_slice(&response);
+                response = grown;
+            }
+            response.extend_from_slice(&chunk[..n]);
+        }
+        response
     } else {
         let mut stream = socket;
         stream.write_all(request).map_err(network)?;
@@ -1230,30 +1285,32 @@ mod tests {
     #[test]
     fn tls_configuration_accepts_bundled_roots() {
         // The real bundled data; no test verifier or custom roots are installed.
-        assert_eq!(crate::tls_roots::anchors().unwrap().len(), 121);
+        assert_eq!(crate::tls_roots::root_store().unwrap().len(), 121);
     }
 
     #[test]
     fn tls_validation_failures_never_suggest_network_retries() {
-        for error in [
-            Error::new("key_not_trusted", "No verified certificate path"),
-            Error::new("authentication_failed", "TLS Finished verification failed"),
-            Error::new(
-                "invalid_format",
-                "Malformed or unsupported X.509 certificate",
-            ),
+        use ironsocketlayer::ErrorKind as Tls;
+        let wrap = |kind| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                ironsocketlayer::Error::new(kind, "test"),
+            )
+        };
+        for (kind, code) in [
+            (Tls::UnknownCa, "key_not_trusted"),
+            (Tls::CertificateNameMismatch, "key_not_trusted"),
+            (Tls::CertificateExpired, "key_not_trusted"),
+            (Tls::HandshakeFailure, "authentication_failed"),
+            (Tls::Decode, "authentication_failed"),
         ] {
-            let error = tls_error(error);
+            let error = tls_error(wrap(kind));
             assert!(!error.retryable);
-            assert!(matches!(
-                error.code,
-                "key_not_trusted" | "authentication_failed"
-            ));
+            assert_eq!(error.code, code);
+            assert!(error.message.starts_with("AWS TLS validation failed"));
         }
-        let oversize = tls_error(Error::new("limit_exceeded", "TLS response exceeds limit"));
-        assert_eq!(oversize.code, "provider_error");
-        assert!(!oversize.retryable);
-        let closed = tls_error(Error::new("io_error", "TLS transport failed"));
+        // A transport failure without a TLS cause stays a retryable outage.
+        let closed = tls_error(std::io::ErrorKind::UnexpectedEof.into());
         assert_eq!(closed.code, "provider_error");
         assert!(closed.retryable);
         let timeout = network_error(std::io::ErrorKind::TimedOut.into());

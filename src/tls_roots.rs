@@ -1,7 +1,6 @@
 //! Bundled public trust-anchor data; no runtime root-store crate or fetching.
 //! Source provenance and update procedure live in data/README.md.
 use crate::error::{Error, Result};
-use crate::x509::TrustAnchor;
 use ipg_json::Deserialize;
 
 #[derive(Deserialize)]
@@ -49,22 +48,81 @@ fn sequence(contents: &[u8]) -> Vec<u8> {
     out
 }
 
-/// The bundled roots as key-form trust anchors for native path validation,
-/// decoded once per process. Names and constraints are preserved exactly.
-pub(crate) fn anchors() -> Result<&'static [TrustAnchor]> {
-    static ANCHORS: std::sync::OnceLock<Vec<TrustAnchor>> = std::sync::OnceLock::new();
-    if let Some(anchors) = ANCHORS.get() {
-        return Ok(anchors);
+/// A DER element: tag, definite length, contents.
+fn tlv(tag: u8, contents: &[u8]) -> Vec<u8> {
+    let mut out = sequence(contents);
+    out[0] = tag;
+    out
+}
+
+/// A minimal certificate carrying one key-form anchor. IronSocketLayer's root
+/// store takes certificates and keeps only their subject, key and name
+/// constraints; it never checks an anchor's signature or dates. The dummy
+/// signature here therefore grants nothing.
+fn anchor_certificate(root: &Anchor) -> Vec<u8> {
+    // ecdsa-with-SHA256; only its syntax is read.
+    let algorithm = tlv(
+        0x30,
+        &[0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02],
+    );
+    let name = sequence(&root.subject);
+    let time = |year: &[u8; 2]| tlv(0x17, &[&year[..], b"0101000000Z"].concat());
+    // basicConstraints: critical, cA TRUE.
+    let mut extensions = tlv(
+        0x30,
+        &[
+            &[0x06, 0x03, 0x55, 0x1d, 0x13, 0x01, 0x01, 0xff][..],
+            &tlv(0x04, &tlv(0x30, &[0x01, 0x01, 0xff])),
+        ]
+        .concat(),
+    );
+    if let Some(constraints) = &root.name_constraints {
+        extensions.extend(tlv(
+            0x30,
+            &[
+                &[0x06, 0x03, 0x55, 0x1d, 0x1e, 0x01, 0x01, 0xff][..],
+                &tlv(0x04, &sequence(constraints)),
+            ]
+            .concat(),
+        ));
     }
-    let anchors = load()?
-        .into_iter()
-        .map(|root| TrustAnchor::Key {
-            subject: sequence(&root.subject),
-            spki: sequence(&root.spki),
-            name_constraints: root.name_constraints.as_deref().map(sequence),
-        })
-        .collect();
-    Ok(ANCHORS.get_or_init(|| anchors))
+    let tbs = tlv(
+        0x30,
+        &[
+            &tlv(0xa0, &[0x02, 0x01, 0x02])[..],
+            &[0x02, 0x01, 0x01],
+            &algorithm,
+            &name,
+            &tlv(0x30, &[time(b"00"), time(b"49")].concat()),
+            &name,
+            &sequence(&root.spki),
+            &tlv(0xa3, &tlv(0x30, &extensions)),
+        ]
+        .concat(),
+    );
+    // A syntactically valid ECDSA-Sig-Value (r = s = 1) in a BIT STRING.
+    let signature = tlv(
+        0x03,
+        &[0x00, 0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01],
+    );
+    tlv(0x30, &[tbs, algorithm, signature].concat())
+}
+
+/// The bundled roots as an IronSocketLayer trust store. Every root must be
+/// accepted, with its subject, key and name constraints preserved.
+pub(crate) fn root_store() -> Result<ironsocketlayer::x509::RootStore> {
+    let invalid = || Error::new("provider_error", "Bundled TLS trust-anchor data is invalid");
+    let roots = load()?;
+    let mut store = ironsocketlayer::x509::RootStore::new();
+    for root in &roots {
+        store
+            .add_der(&anchor_certificate(root))
+            .map_err(|_| invalid())?;
+    }
+    if store.len() != roots.len() {
+        return Err(invalid());
+    }
+    Ok(store)
 }
 
 pub(crate) fn load() -> Result<Vec<Anchor>> {
@@ -138,22 +196,8 @@ mod tests {
     }
 
     #[test]
-    fn every_bundled_root_is_a_well_formed_native_anchor() {
-        let anchors = anchors().unwrap();
-        assert_eq!(anchors.len(), 121);
-        for (anchor, root) in anchors.iter().zip(load().unwrap()) {
-            let TrustAnchor::Key {
-                subject,
-                spki,
-                name_constraints,
-            } = anchor
-            else {
-                panic!("bundled roots are key-form anchors");
-            };
-            assert!(subject.ends_with(&root.subject) && spki.ends_with(&root.spki));
-            assert_eq!(name_constraints.is_some(), root.name_constraints.is_some());
-            crate::x509::check_server_anchor(anchor).unwrap();
-        }
+    fn every_bundled_root_loads_into_the_tls_trust_store() {
+        assert_eq!(root_store().unwrap().len(), 121);
         assert_eq!(sequence(&[]), [0x30, 0]);
         assert_eq!(sequence(&[7; 0x80])[..3], [0x30, 0x81, 0x80]);
         assert_eq!(sequence(&[7; 0x100])[..4], [0x30, 0x82, 1, 0]);

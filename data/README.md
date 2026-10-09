@@ -27,5 +27,5 @@ data and license. Rebuild and redeploy IPG after an update.
 
 This static set does not follow OS root-store changes, enterprise roots or
 platform revocation policy, and it does not refresh itself. Those limitations
-also applied to the former pinned root-store crate. KMS uses these roots as
-key-form trust anchors in IPG's native TLS 1.3 client.
+also applied to the former pinned root-store crate. KMS loads these roots into
+IronSocketLayer's trust store, keeping each subject, key and name constraint.

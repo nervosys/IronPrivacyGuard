@@ -6358,7 +6358,7 @@
     {
       "@id": "ipg:constraint/native-tls-profile",
       "@type": "ipg:Constraint",
-      "requirement": "The optional tls-native Rust API is an experimental bounded TLS 1.3 client using IronCrypto, and the kms feature's transport. It requires an independently chosen DNS/IP identity, explicitly accepted DER roots or key-form trust anchors and the host clock; it verifies certificate paths, CertificateVerify and Finished before exposing application operations. It has no CLI or MCP operation. No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, revocation fetching or implicit trust is supported. Every error closes the connection; reads release the collected response only after authenticated close_notify. Unsupported profiles require explicit host review, never automatic downgrade, adding peer roots or bypassing checks. A verified peer and its response do not authorize application actions; independent review remains outstanding.",
+      "requirement": "IPG offers no TLS operation or API. The kms feature reaches AWS over IronSocketLayer's TLS 1.3 client, against the bundled public roots with an independently chosen DNS identity and the host clock. There is no TLS 1.2, client authentication, session resumption or implicit trust; a response is used only after the server's authenticated close_notify. A verified peer and its response do not authorize application actions.",
       "severity": "critical"
     },
     {
@@ -8188,7 +8188,7 @@
       "goals": [
         "ipg:goal/channel-security"
       ],
-      "guidance": "Use a separately evaluated transport for production requirements. Rust integrators can evaluate the experimental tls-native client within docs/TLS.md limits. All errors close the connection and bounded reads require authenticated close_notify. Never downgrade protocols or add presented certificates after failure. Peer authentication and received content do not authorize commands or policy changes. Consult live discover build.native_tls; compilation is not readiness or authorization.",
+      "guidance": "Use a separately evaluated transport, such as IronSocketLayer, for network channels. Never downgrade protocols or add presented certificates after a failure. Peer authentication and received content do not authorize commands or policy changes. Live discover build.tls reports the TLS implementation the kms feature uses; compilation is not readiness or authorization.",
       "id": "secure-network-channel",
       "keywords": [
         "tls",
@@ -8200,14 +8200,11 @@
       ],
       "label": "Secure a live client-server connection",
       "limitations": [
-        "No general TLS CLI or MCP operation exists; IPG file encryption is not a transport protocol",
-        "The optional tls-native Rust client supports a bounded TLS 1.3 request-response profile with X25519, P-256 or P-384 key exchange only; independent review is outstanding",
-        "No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, implicit roots or revocation fetching",
-        "The kms feature uses this client with bundled public roots; it is not a general-purpose TLS transport"
+        "No TLS CLI, MCP operation or Rust API exists; IPG file encryption is not a transport protocol",
+        "The kms feature uses IronSocketLayer's TLS 1.3 client with bundled public roots for AWS HTTPS only; it is not exposed as a transport"
       ],
       "prerequisites": [
-        "A separately evaluated TLS stack and peer authentication policy",
-        "For the experimental tls-native Rust API: independently selected DNS/IP identity, explicit DER roots and trusted system time"
+        "A separately evaluated TLS stack and peer authentication policy, such as IronSocketLayer"
       ],
       "sources": [
         "https://www.rfc-editor.org/rfc/rfc8446"

@@ -1984,7 +1984,7 @@ pub fn export() -> Value {
         ),
         (
             "native-tls-profile",
-            "The optional tls-native Rust API is an experimental bounded TLS 1.3 client using IronCrypto, and the kms feature's transport. It requires an independently chosen DNS/IP identity, explicitly accepted DER roots or key-form trust anchors and the host clock; it verifies certificate paths, CertificateVerify and Finished before exposing application operations. It has no CLI or MCP operation. No TLS 1.2, HelloRetryRequest, client authentication, resumption, early data, revocation fetching or implicit trust is supported. Every error closes the connection; reads release the collected response only after authenticated close_notify. Unsupported profiles require explicit host review, never automatic downgrade, adding peer roots or bypassing checks. A verified peer and its response do not authorize application actions; independent review remains outstanding.",
+            "IPG offers no TLS operation or API. The kms feature reaches AWS over IronSocketLayer's TLS 1.3 client, against the bundled public roots with an independently chosen DNS identity and the host clock. There is no TLS 1.2, client authentication, session resumption or implicit trust; a response is used only after the server's authenticated close_notify. A verified peer and its response do not authorize application actions.",
         ),
         (
             "stream-envelope",

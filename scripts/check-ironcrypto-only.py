@@ -1,5 +1,8 @@
 """Fail if the selected root dependency graph reaches a third-party package.
 
+Allowed: IPG's own workspace crates, the IronCrypto crates and IronSocketLayer
+(the IronSecurity stack's TLS, which depends only on IronCrypto).
+
 Cargo arguments may follow the script, e.g. --all-features or
 --no-default-features. It never treats an IronCrypto adapter's third-party
 transitive crates as native; optional integration graphs still fail this gate.
@@ -23,6 +26,8 @@ ironcrypto = {
     "ic-hpke", "ic-mlkem", "ic-mldsa", "ic-ontology", "ic-json", "ic-rsa", "ic-pkix",
     "ic-rustls", "ic-fips", "ic-vectors", "iron-crypto",
 }
+# First-party IronSecurity stack crates, used by the kms feature for TLS.
+ironsecurity = {"ironsocketlayer", "isl-ontology"}
 violations = []
 while pending:
     package_id = pending.pop()
@@ -33,7 +38,7 @@ while pending:
     # Only actual first-party workspace members get the local-code exemption.
     local = (package_id in metadata["workspace_members"]
              and package["source"] is None)
-    if not local and package["name"] not in ironcrypto:
+    if not local and package["name"] not in ironcrypto | ironsecurity:
         violations.append(f'{package["name"]}@{package["version"]}')
     pending.extend(nodes[package_id]["dependencies"])
 

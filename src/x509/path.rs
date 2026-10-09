@@ -587,12 +587,6 @@ pub fn verify_tls_server_anchors(
     )
 }
 
-/// Parse an anchor as a TLS server-path issuer without using it.
-#[cfg(all(test, feature = "kms"))]
-pub(crate) fn check_server_anchor(anchor: &TrustAnchor) -> Result<()> {
-    Anchor::parse(anchor, SERVER_USAGE).map(|_| ())
-}
-
 fn check_counts(anchors: usize, intermediates: usize, max_anchors: usize) -> Result<()> {
     if anchors == 0 {
         return Err(Error::new(

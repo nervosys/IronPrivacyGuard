@@ -8,7 +8,8 @@ ignore = []
 
 [licenses]
 version = 2
-# Every crate in the full-feature graph is first-party IPG or IronCrypto.
+# Every crate in the full-feature graph is first-party IPG, IronCrypto or
+# IronSocketLayer.
 allow = ["AGPL-3.0-or-later"]
 confidence-threshold = 0.8
 

@@ -41,6 +41,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-fips"
+version = "0.2.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aad4665470e1b3482ef0bcc1e441f666e60bdb73aa022ed4049cf7c07a11aa1a"
+dependencies = [
+ "ic-cipher",
+ "ic-core",
+ "ic-drbg",
+ "ic-ec",
+ "ic-hash",
+ "ic-hpke",
+ "ic-kdf",
+ "ic-lms",
+ "ic-mac",
+ "ic-mldsa",
+ "ic-mlkem",
+ "ic-ontology",
+ "ic-rsa",
+ "ic-slhdsa",
+]
+
+[[package]]
 name = "ic-hash"
 version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -71,6 +93,16 @@ dependencies = [
  "ic-core",
  "ic-hash",
  "ic-mac",
+]
+
+[[package]]
+name = "ic-lms"
+version = "0.2.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09327a0892669ab9881cb54ff833466e3d0cc8e01cd013d87070bc1b0aed62cc"
+dependencies = [
+ "ic-core",
+ "ic-hash",
 ]
 
 [[package]]
@@ -133,6 +165,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-slhdsa"
+version = "0.2.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "385ef5610ba2608a25ba54909830f935a756c8c0cc237c6825e2f6da15a3c868"
+dependencies = [
+ "ic-core",
+ "ic-hash",
+ "ic-mac",
+]
+
+[[package]]
 name = "ipg"
 version = "0.2.0"
 dependencies = [
@@ -152,6 +195,7 @@ dependencies = [
  "ipg-cng",
  "ipg-json",
  "ipg-pkcs11",
+ "ironsocketlayer",
 ]
 
 [[package]]
@@ -180,3 +224,32 @@ version = "0.1.0"
 dependencies = [
  "ic-core",
 ]
+
+[[package]]
+name = "ironsocketlayer"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63a60df107fea11dd2b84342575aac7db2956ed4ca09955e1342c61963efbf2a"
+dependencies = [
+ "ic-cipher",
+ "ic-core",
+ "ic-drbg",
+ "ic-ec",
+ "ic-fips",
+ "ic-hash",
+ "ic-hpke",
+ "ic-kdf",
+ "ic-mac",
+ "ic-mldsa",
+ "ic-mlkem",
+ "ic-ontology",
+ "ic-pkix",
+ "ic-rsa",
+ "isl-ontology",
+]
+
+[[package]]
+name = "isl-ontology"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94165eb8b4fdc125ec7df617eab9d873ab6d45ae18a7db5db75da4491311a32b"

@@ -25,7 +25,10 @@ graph and fails if any third-party package is reachable. Run it with
 `--all-features` to audit optional integrations too. It follows transitive
 dependencies, including those introduced by IronCrypto adapters. Every feature
 combination passes; CI checks default, minimal, `pkcs11`, `tpm,pkcs11`, `kms`,
-`x509-native`, `tls-native` and `--all-features` builds on each supported OS.
+`x509-native` and `--all-features` builds on each supported OS. The allowed
+set is IPG's own crates, the IronCrypto crates and, for the `kms` feature,
+IronSocketLayer (`ironsocketlayer` and `isl-ontology`), which itself depends
+only on IronCrypto.
 `cargo deny check` allows only the AGPL-licensed first-party and IronCrypto
 crates, denies duplicate versions and has no advisory exceptions.
 
@@ -57,10 +60,9 @@ Windows. Output directories must be access-controlled by the host.
 | `openpgp-native` (default; `openpgp` is an alias) | Correspondent certificates and pinned fingerprints; no GPG subprocess |
 | `pkcs11` | A host-configured vendor library and token/HSM |
 | `tpm` | TPM and configured native transport; Windows uses OS TPM services; native attestation uses IronCrypto only |
-| `kms` | Network, AWS services, credentials and provisioned keys; TLS 1.3 endpoints with X25519, P-256 or P-384 key exchange |
+| `kms` | Network, AWS services, credentials and provisioned keys; TLS 1.3 endpoints through IronSocketLayer |
 | `attestation` | Accepted manufacturer roots and evidence; verification does not require a local TPM |
 | `x509-native` | Caller-selected roots, certificate chain, trusted time and (for TLS) expected host; offline Rust API only |
-| `tls-native` | Connected TCP socket, independently selected host, explicit full-DER roots and host clock; experimental Rust API only |
 
 The native PKCS#11 wrapper loads only the host-configured module. That module is
 trusted native code and must obey the PKCS#11 ABI; size checks cannot sandbox a

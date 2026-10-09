@@ -25,7 +25,7 @@ review before high-value production use.
 
 **IronCrypto is the only dependency.** Every build, including all optional
 integrations, depends only on IronCrypto and first-party IPG crates: OpenPGP,
-PKCS#11, TPM, attestation and AWS KMS (over IPG's own TLS 1.3 client) included.
+PKCS#11, TPM, attestation and AWS KMS (over IronSocketLayer's TLS 1.3 client) included.
 Core software workflows require no external cryptographic programs or services.
 See [dependency boundaries](docs/DEPENDENCIES.md).
 
@@ -66,8 +66,8 @@ schemas and formats are identical with or without it:
 cargo build --release --locked --features pkcs11 --target-dir target
 ```
 
-AWS KMS identities need the `kms` feature (still no C compilation: TLS uses IPG's
-native TLS 1.3 client on IronCrypto). TPM 2.0 identities need the `tpm` feature: Linux uses
+AWS KMS identities need the `kms` feature (still no C compilation: TLS uses
+IronSocketLayer, built on IronCrypto). TPM 2.0 identities need the `tpm` feature: Linux uses
 IPG's native TPM command layer; Windows uses TPM Base Services through the small
 `ipg-cng` crate. Native FFI is isolated in `ipg-cng` and `ipg-pkcs11`. See
 [hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
@@ -75,9 +75,9 @@ verifier holding only the manufacturer's root certificates; the verifier needs t
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
 The standalone `x509-native` feature provides [offline certificate checks](docs/X509.md)
-for Rust callers using only IronCrypto and first-party crates. The `tls-native`
-feature adds an [experimental TLS 1.3 Rust client](docs/TLS.md) with a bounded
-profile; the `kms` feature uses it with [bundled public trust-anchor data](data/README.md).
+for Rust callers using only IronCrypto and first-party crates. The `kms` feature
+reaches AWS over [IronSocketLayer's TLS 1.3 client](docs/TLS.md) with
+[bundled public trust-anchor data](data/README.md).
 
 Native OpenPGP is enabled by default; `--no-default-features` omits it, and
 `openpgp` remains as an alias. It implements RFC 9580 packets and policy over
@@ -525,8 +525,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |
 | `crates/ipg-pkcs11` | Native PKCS#11 FFI, bounded buffers, and session ownership |
-| `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over native TLS 1.3, Sign and DeriveSharedSecret |
-| `src/tls/` | Experimental bounded TLS 1.3 client (`tls-native`): X25519/P-256/P-384, record protection, key schedule |
+| `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over IronSocketLayer TLS 1.3, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA and prehash-ECDSA glue to IronCrypto (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |

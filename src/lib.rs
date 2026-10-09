@@ -43,8 +43,6 @@ pub mod rotation;
 pub mod secrets;
 pub mod stream;
 pub mod stream_signature;
-#[cfg(feature = "tls-native")]
-pub mod tls;
 #[cfg(feature = "kms")]
 mod tls_roots;
 #[cfg(feature = "attestation")]

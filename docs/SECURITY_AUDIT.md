@@ -37,7 +37,8 @@ pinned identity. The Medium findings fall into three groups:
 **Compliance:**
 
 - **FIPS 140-3:** IPG cannot claim FIPS 140-3 validated cryptography, because
-  IronCrypto is unvalidated, with no CMVP validation in progress.
+  IronCrypto is unvalidated. A FIPS 140-3 validation is planned, with no date
+  and no laboratory engagement stated; nothing may be claimed on that plan.
 - **CMMC 2.0 Level 2:** IPG can support many practices, but it cannot by itself
   satisfy SC.L2-3.13.11 (FIPS-validated cryptography for CUI).
 
@@ -252,7 +253,7 @@ Residual risks, by design or awaiting dependencies:
 | --- | --- | --- | --- |
 | T1552.001 Credentials In Files | Reading passphrase, PIN or key files | Argon2id-sealed keys; file-only passphrases; 0600 files (Unix) | M1; Windows relies on directory ACLs |
 | T1110.002 Password Cracking | Offline attacks on sealed keys and state | Argon2id m=64 MiB, t=3, p=4; 16-byte minimum passphrase | L4 (state readable by others after save) |
-| T1557 Adversary-in-the-Middle | Tampering with envelopes, messages or KMS traffic | AEAD with AAD bound to identities; native TLS 1.3 with pinned anchors; channel binding for messages | — |
+| T1557 Adversary-in-the-Middle | Tampering with envelopes, messages or KMS traffic | AEAD with AAD bound to identities; TLS 1.3 (IronSocketLayer) with pinned anchors; channel binding for messages | — |
 | T1565.001 / .002 Data Manipulation | Altering signed artifacts, logs or messages | Pinned-fingerprint signatures, hash-chained audit, signed checkpoints, MLS confirmation tags | M2, L3 |
 | T1070 Indicator Removal | Truncating or rewriting the audit log | Checkpoints detect truncation and rewrites | Unanchored tail; M2 |
 | T1078 Valid Accounts | Misusing delegated authority | Attenuating chains, host-pinned grants, root pinning | M5, M7, L1, L2 |
@@ -270,7 +271,8 @@ Residual risks, by design or awaiting dependencies:
 
 **FIPS 140-3 (module validation): not met.**
 
-- IronCrypto is not CMVP-validated, and no validation is in progress; its own
+- IronCrypto is not CMVP-validated. Its maintainer plans a validation, with no
+  date; until a certificate exists SC.L2-3.13.11 stays unmet. Its own
   registry notes this even for approved algorithms. IPG therefore provides FIPS-approved *algorithms* on
   some paths, never FIPS-*validated* cryptography.
 - Deployments that require FIPS 140-3 must use the hardware paths for
@@ -340,7 +342,7 @@ practices, but assessment applies to the whole environment.
 | AU.L2-3.3.4 Alert on audit logging failure | Calls fail closed with `audit_unavailable` | Supports |
 | IA.L2-3.5.10 Store and transmit only cryptographically protected passwords | Passphrases never travel inline; keys sealed with Argon2id | Partial: Argon2id is not FIPS-approved; M1 |
 | MP.L2-3.8.9 Protect the confidentiality of backup CUI | `backup.split` threshold shares with AEAD | Supports |
-| SC.L2-3.13.8 Cryptographic protection of CUI in transit | Envelopes, agent messages, MLS, native TLS 1.3 to KMS | Supports, but see 3.13.11 |
+| SC.L2-3.13.8 Cryptographic protection of CUI in transit | Envelopes, agent messages, MLS, TLS 1.3 (IronSocketLayer) to KMS | Supports, but see 3.13.11 |
 | SC.L2-3.13.10 Establish and manage cryptographic keys | Generation, rotation, revocation, validity, trust snapshots, hardware custody | Supports (L2) |
 | SC.L2-3.13.11 Employ FIPS-validated cryptography to protect CUI | Approved algorithms on P-384 paths and hardware custody | **Not met by IPG alone**: no CMVP-validated module |
 | SC.L2-3.13.15 Protect the authenticity of communications sessions | Message channel binding; MLS confirmation and membership tags | Supports |

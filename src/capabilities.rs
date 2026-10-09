@@ -47,13 +47,13 @@ pub fn build() -> Value {
     json!({
         "cargo_dependencies":true,
         "ironcrypto_only":true,
-        "migration_status":"every feature, including OpenPGP, PKCS#11, TPM, KMS and native TLS 1.3, uses only first-party and IronCrypto crates",
+        "migration_status":"every feature, including OpenPGP, PKCS#11, TPM, KMS and TLS 1.3, uses only first-party, IronCrypto and IronSocketLayer crates",
         "core_external_executables_required":false,
         "core_requirements":["operating-system entropy", "filesystem access", "host clock"],
         "openpgp_backend":crate::openpgp::IMPLEMENTATION,
         "native_x509":cfg!(feature = "x509-native"),
-        "native_tls":{"compiled":cfg!(feature = "tls-native"),"status":"experimental","interface":"Rust API only","profile":"TLS 1.3, X25519/P-256/P-384, explicit roots, bounded request/response","independently_reviewed":false,"kms_backend":cfg!(feature = "kms"),"authorized":false},
-        "kms_tls_backend":if cfg!(feature = "kms") { "native TLS 1.3 on IronCrypto" } else { "not_compiled" },
+        "tls":{"implementation":"ironsocketlayer","compiled":cfg!(feature = "kms"),"used_for":"AWS KMS, STS and SSO HTTPS only","interface":"none: no TLS CLI, MCP or Rust API is offered","profile":"TLS 1.3 client, bundled public roots, HTTP/1.1, no resumption","authorized":false},
+        "kms_tls_backend":if cfg!(feature = "kms") { "IronSocketLayer TLS 1.3" } else { "not_compiled" },
         "optional_integrations":{
             "pkcs11":{"compiled":cfg!(feature = "pkcs11"),"requires":"vendor library and token"},
             "tpm":{"compiled":cfg!(feature = "tpm"),"requires":"TPM transport; native Linux device or loopback swtpm; Windows uses OS TPM services"},

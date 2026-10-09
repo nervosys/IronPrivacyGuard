@@ -198,18 +198,11 @@ fn live_availability_is_consistent_without_granting_authority() {
     }
     assert_eq!(discovery["build"]["cargo_dependencies"], true);
     assert_eq!(
-        discovery["build"]["native_tls"]["compiled"],
-        cfg!(feature = "tls-native")
+        discovery["build"]["tls"]["implementation"],
+        "ironsocketlayer"
     );
-    assert_eq!(
-        discovery["build"]["native_tls"]["kms_backend"],
-        cfg!(feature = "kms")
-    );
-    assert_eq!(discovery["build"]["native_tls"]["authorized"], false);
-    assert_eq!(
-        discovery["build"]["native_tls"]["independently_reviewed"],
-        false
-    );
+    assert_eq!(discovery["build"]["tls"]["compiled"], cfg!(feature = "kms"));
+    assert_eq!(discovery["build"]["tls"]["authorized"], false);
     assert_eq!(
         discovery["build"]["native_x509"],
         cfg!(feature = "x509-native")
@@ -217,7 +210,7 @@ fn live_availability_is_consistent_without_granting_authority() {
     assert_eq!(
         discovery["build"]["kms_tls_backend"],
         if cfg!(feature = "kms") {
-            "native TLS 1.3 on IronCrypto"
+            "IronSocketLayer TLS 1.3"
         } else {
             "not_compiled"
         }
