@@ -8,6 +8,6 @@ description = "Minimal safe wrapper over Windows CNG and TPM Base Services (Iron
 repository = "https://github.com/nervosys/IronPrivacyGuard"
 
 [dev-dependencies]
-ic-core = "=0.2.15"
-ic-ec = "=0.2.15"
-ic-hash = "=0.2.15"
+ic-core = "=0.2.20"
+ic-ec = "=0.2.20"
+ic-hash = "=0.2.20"

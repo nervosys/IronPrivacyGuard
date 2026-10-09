@@ -623,3 +623,30 @@ fn fips_host_policy_refuses_non_approved_algorithms() {
     )
     .unwrap();
 }
+
+/// GHSA-xr22-8pqp-gwfh: Poly1305 in IronCrypto 0.2.5 to 0.2.19 could overflow
+/// (and panic) on long runs of high bytes. Hostile ChaCha20-Poly1305
+/// ciphertext must be refused as unauthentic, never crash the process.
+#[test]
+fn hostile_chacha20_poly1305_ciphertext_is_refused_without_panicking() {
+    let f = Fixture::new();
+    let agent = f.identity("agent");
+    call(
+        json!({"operation":"encrypt","input":f.path("doc"),"output":f.path("doc.ipg"),
+        "recipient":f.path("agent.public"),"expected_fingerprint":agent,"policy":null}),
+    )
+    .unwrap();
+    let envelope: Value = ipg_json::from_slice(&fs::read(f.path("doc.ipg")).unwrap()).unwrap();
+    // Each nonce derives a fresh Poly1305 key, so vary it across many tries.
+    for i in 0..48u32 {
+        let mut hostile = envelope.clone();
+        hostile["ciphertext"] = json!("ff".repeat(1024));
+        hostile["nonce"] = json!(format!("{:024x}", u128::from(i) * 0x0101_0101_0101 + 7));
+        let name = format!("hostile-{i}");
+        fs::write(f.path(&name), ipg_json::to_vec(&hostile).unwrap()).unwrap();
+        let refused = call(json!({"operation":"decrypt","input":f.path(&name),
+            "output":f.path(&format!("{name}.out")),"key":f.path("agent"),
+            "passphrase_file":f.path("pass")}));
+        assert_eq!(refused.unwrap_err(), "authentication_failed", "try {i}");
+    }
+}

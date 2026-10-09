@@ -57,6 +57,15 @@ Regression tests are in `tests/audit_regressions.rs`, `tests/mcp_approval.rs`,
 | L11, Info 10 | Wiped MLS encoder, `read_limited`, encapsulation, TPM/CNG PIN framing, CNG ECDH output and KMS buffers; redacted KMS errors; bracketed IPv6 endpoints | `5c9e48c` |
 | FIPS, Info 1, 2, 6, 12 | `--algorithm-policy fips` (and `IPG_ALGORITHM_POLICY=fips`); host policy injected into all 16 policy-taking operations; DSSE ECDSA encoding, delegation time semantics, approval reuse, MLS rollback, crash leftovers and Windows ACLs documented | this commit |
 
+After the audit, IronCrypto published
+[GHSA-xr22-8pqp-gwfh](https://github.com/nervosys/IronCrypto/security/advisories/GHSA-xr22-8pqp-gwfh):
+Poly1305 in 0.2.5 to 0.2.19 could overflow on crafted input. IPG's release
+builds check overflow, so hostile ChaCha20-Poly1305 ciphertext crashed the
+process before authentication (denial of service; no key or plaintext
+exposure). IPG now pins IronCrypto `=0.2.20`, has a regression test for the
+crash, and turns any panic during a request into an `internal_error`. This
+audit did not review IronCrypto's arithmetic and did not find the defect.
+
 Residual risks, by design or awaiting dependencies:
 
 - **FIPS 140-3** still needs a validated module. `--algorithm-policy fips`
