@@ -51,7 +51,7 @@ cargo clippy --locked --all-targets --target-dir target -- -D warnings
 
 The executable is `target/release/ipg` (`ipg.exe` on Windows). To install the
 current checkout instead, run `cargo install --path . --locked`. IronCrypto
-components are pinned to crates.io release `0.2.22`, and Cargo.lock pins the
+components are pinned to crates.io release `0.2.23`, and Cargo.lock pins the
 remaining dependency graph for this repository.
 Native IPG identity and envelope cryptography uses IronCrypto. There is no OpenSSL, C
 compilation, TLS library, GPG subprocess, or external cryptographic executable. OS
@@ -74,8 +74,9 @@ IPG's native TPM command layer; Windows uses TPM Base Services through the small
 verifier holding only the manufacturer's root certificates; the verifier needs the
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
 
-The standalone `x509-native` feature provides [offline certificate checks](docs/X509.md)
-for Rust callers using only IronCrypto and first-party crates. The `kms` feature
+The standalone `x509-native` feature provides an
+[offline endorsement-certificate check](docs/X509.md) for Rust callers, through
+IronPKI. The `kms` feature
 reaches AWS over [IronSocketLayer's TLS 1.3 client](docs/TLS.md) with
 [bundled public trust-anchor data](data/README.md).
 
@@ -519,7 +520,7 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tpm2/` | IPG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
 | `src/tpm_native.rs` | Native TPM keys through Linux device/loopback swtpm or Windows TBS, and the attestation prover |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
-| `src/x509.rs`, `src/x509/` | Bounded certificate parsing, signatures, EK paths and TLS server-identity checks |
+| `src/x509.rs` | TPM endorsement-certificate path checks through IronPKI |
 | `src/tls_roots.rs`, `data/tls-roots.json` | Bundled KMS HTTPS trust anchors with pinned provenance and preserved constraints |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |

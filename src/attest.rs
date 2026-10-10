@@ -282,8 +282,8 @@ pub(crate) fn check_evidence(
         .map(|c| hex_field(c, MAX_CERTIFICATE_BYTES, "EK certificate"))
         .collect::<Result<Vec<_>>>()?;
     let anchor = verify_chain(&certificates, anchors, intermediates)?;
-    let parsed = crate::x509::Certificate::parse(&certificates[0])?;
-    require_ek_spki(&ek, parsed.spki)?;
+    let spki = crate::x509::subject_public_key_info(&certificates[0])?;
+    require_ek_spki(&ek, &spki)?;
 
     // Each identity key certified by the AK, with the exact template and point.
     let points = [

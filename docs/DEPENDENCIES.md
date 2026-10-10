@@ -26,9 +26,10 @@ graph and fails if any third-party package is reachable. Run it with
 dependencies, including those introduced by IronCrypto adapters. Every feature
 combination passes; CI checks default, minimal, `pkcs11`, `tpm,pkcs11`, `kms`,
 `x509-native` and `--all-features` builds on each supported OS. The allowed
-set is IPG's own crates, the IronCrypto crates and, for the `kms` feature,
-IronSocketLayer (`ironsocketlayer` and `isl-ontology`), which itself depends
-only on IronCrypto.
+set is IPG's own crates, the IronCrypto crates, IronPKI (`ironpki`, for
+certificate validation) and, for the `kms` feature, IronSocketLayer
+(`ironsocketlayer` and `isl-ontology`). IronPKI and IronSocketLayer depend
+only on IronCrypto and each other.
 `cargo deny check` allows only the AGPL-licensed first-party and IronCrypto
 crates, denies duplicate versions and has no advisory exceptions.
 
@@ -37,16 +38,16 @@ trust anchors ([provenance and maintenance](../data/README.md)); rustls,
 `ic-rustls` and `webpki-roots` have been removed. All 121 roots and their name
 constraints match the previously pinned store and are applied as key-form trust
 anchors with peer-name, certificate-path and handshake authentication retained.
-Attestation uses IPG's bounded X.509 parser and path validator over IronCrypto
-primitives; see [the supported profile](ATTESTATION.md#native-certificate-profile).
-The `x509-native` feature provides [offline TLS server certificate checks](X509.md).
+Attestation validates certificate paths with IronPKI; see
+[the supported profile](ATTESTATION.md#native-certificate-profile). The
+`x509-native` feature provides [that check](X509.md) to Rust callers.
 OpenPGP is native as well: the former rPGP backend and its `rsa` dependency have
 been removed, and correspondent RSA, NIST-curve, Ed448 and X448 public-key
 operations use first-party code over IronCrypto; see [OpenPGP](OPENPGP.md).
 Removing certificate checks or silently disabling existing integrations is not
 a completed migration. Independent certificate-policy fixtures in
-`tests/vectors/attestation-certificate-policy.json`, `x509-signatures.json` and
-`x509-paths.json` cover the EK boundary, signatures and path constraints; they
+`tests/vectors/attestation-certificate-policy.json` and `x509-paths.json` cover
+the EK boundary and path constraints; they
 are a regression baseline, not a complete X.509 conformance suite.
 
 Publication creates a hard link from an exclusive temporary file in the output

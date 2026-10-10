@@ -2,8 +2,16 @@
 
 ## Unreleased
 
-- Moved the exact pins to IronCrypto 0.2.22 and IronSocketLayer 0.3.4. No
-  behavior changes for IPG.
+- Certificate validation now uses IronPKI 0.1.0, the IronSecurity stack's
+  shared validator, and IPG's own X.509 parser and path validator are removed.
+  `x509::verify_endorsement_certificate` keeps its signature and verdicts: all
+  40 independent path and endorsement-key cases agree. Changes:
+  - removed `x509::verify_tls_server`, `x509::verify_tls_server_anchors` and
+    `x509::TrustAnchor`; use IronPKI directly for TLS server certificates;
+  - a path under an rfc822Name or directory-name constraint is now refused
+    rather than evaluated.
+- Moved the exact pins to IronCrypto 0.2.23 and IronSocketLayer 0.4.0, which
+  also validates with IronPKI. The dependency policy now allows `ironpki`.
 - The `kms` feature now reaches AWS over IronSocketLayer's TLS 1.3 client, so
   the IronSecurity stack has one TLS implementation. IPG's experimental
   `tls-native` feature, its `tls::Client` Rust API and the `native_tls_probe`

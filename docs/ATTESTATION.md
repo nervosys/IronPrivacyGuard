@@ -83,28 +83,28 @@ Infineon, STMicroelectronics, Nuvoton, Intel or AMD). IPG ships no roots.
 
 ### Native certificate profile
 
-The bounded, offline validator checks certificate signatures, non-anchor validity,
-CA basic constraints, path length, intermediate `keyCertSign` when key usage is
-present, EK extended usage when present, and ancestor name constraints. It supports
-RSA-2048 through RSA-4096 with PKCS#1 or PSS and SHA-256/384/512, P-256/SHA-256,
-P-384/SHA-384 and Ed25519 certificate signatures. PSS requires MGF1 with the same
-hash and a salt equal to the hash length. SHA-1 is unsupported.
+EK certificate paths are validated offline by
+[IronPKI](https://crates.io/crates/ironpki) for its TPM endorsement-key
+purpose; [X509.md](X509.md) lists how IPG configures it. In short: certificate
+signatures, non-anchor validity, CA basic constraints, path length, intermediate
+`keyCertSign`, EK extended usage when present, and ancestor name constraints
+are checked. Signatures may be RSA of at least 2048 bits with PKCS#1 or PSS
+and SHA-256/384/512, P-256/SHA-256, P-384/SHA-384 or Ed25519. SHA-1 is
+unsupported.
 
-DNS and IPv4/IPv6 constraints are supported. Other constrained name forms, and
-wildcard DNS names under DNS constraints, fail closed when applicable. Unknown
-critical extensions, including critical certificate-policy or CRL-distribution
-extensions, are rejected. Unsupported paths require operator review; do not remove
-constraints or substitute trust anchors to make verification succeed. Certificate
-revocation, policy-tree processing and network fetching are not implemented.
+DNS and IPv4/IPv6 name constraints are evaluated; other constrained name forms
+refuse the path. Unknown critical extensions are rejected. Unsupported paths
+require operator review; do not remove constraints or substitute trust anchors
+to make verification succeed. Certificate revocation, policy processing and
+network fetching are not implemented.
 
-Issuer/subject names match by exact DER encoding. Certificates require positive
-serial numbers of at most 20 magnitude bytes, canonical DER and UTC dates with
-seconds. There are at most 64 anchors, 64 combined intermediates, eight non-anchor
-certificates per path and 256 signature checks per verification. Each parsed
-certificate is limited to 64 KiB, 64 extensions and 128 name attributes; evidence
-retains its tighter 4 KiB certificate limit. Limit exhaustion never authenticates.
-Explicit trust anchors supply the root key and constraints; their expiration and
-self-signatures are not path-certificate checks.
+There are at most 64 anchors, 64 intermediates, eight non-anchor certificates
+per path and 256 signature checks per verification. Each certificate is limited
+to 64 KiB; evidence retains its tighter 4 KiB certificate limit. Limit
+exhaustion never authenticates. Explicit trust anchors supply the root key and
+constraints; their expiration and self-signatures are not path-certificate
+checks. A leaf is accepted only by a verified path, never because it is among
+the anchors.
 
 Independent PyCA fixtures cover signatures, paths and EK binding. These regression
 tests do not establish complete X.509 conformance or replace independent review.

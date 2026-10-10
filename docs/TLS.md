@@ -7,7 +7,9 @@ The `kms` feature is the only part of IPG that speaks TLS. It reaches AWS KMS,
 STS and IAM Identity Center over
 [IronSocketLayer](https://crates.io/crates/ironsocketlayer), the IronSecurity
 stack's TLS 1.3 implementation, which is built on IronCrypto with no
-third-party dependencies and no unsafe code. IPG's former experimental
+third-party dependencies and no unsafe code. It validates server certificates
+with IronPKI, the same validator IPG uses for
+[endorsement-key certificates](X509.md). IPG's former experimental
 `tls-native` client and Rust API were removed in its favour, so the stack has
 one TLS implementation.
 

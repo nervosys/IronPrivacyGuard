@@ -67,6 +67,11 @@ exposure). IPG now pins IronCrypto `=0.2.20`, has a regression test for the
 crash, and turns any panic during a request into an `internal_error`. This
 audit did not review IronCrypto's arithmetic and did not find the defect.
 
+Certificate validation has since moved to IronPKI, the stack's shared
+validator. Finding Info 9 is now closed differently: a path under an rfc822Name
+(or directory-name) constraint is refused rather than evaluated, which is the
+fail-closed direction.
+
 Residual risks, by design or awaiting dependencies:
 
 - **FIPS 140-3** still needs a validated module. `--algorithm-policy fips`
