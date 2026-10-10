@@ -38,7 +38,7 @@ ipg-pkcs11 = { path = "crates/ipg-pkcs11", version = "0.1.0", optional = true }
 ic-rsa = { version = "=0.2.23", optional = true }
 ic-pkix = { version = "=0.2.23", optional = true }
 ironsocketlayer = { version = "=0.4.0", optional = true }
-ironpki = { version = "=0.1.0", optional = true }
+ironpki = { version = "=0.1.1", optional = true }
 
 # Native TPM device access on Linux; Windows FFI isolated in crates/ipg-cng.
 [target.'cfg(windows)'.dependencies]

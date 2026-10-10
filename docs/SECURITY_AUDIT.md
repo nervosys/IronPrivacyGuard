@@ -68,9 +68,9 @@ crash, and turns any panic during a request into an `internal_error`. This
 audit did not review IronCrypto's arithmetic and did not find the defect.
 
 Certificate validation has since moved to IronPKI, the stack's shared
-validator. Finding Info 9 is now closed differently: a path under an rfc822Name
-(or directory-name) constraint is refused rather than evaluated, which is the
-fail-closed direction.
+validator. Finding Info 9 stays closed there: from IronPKI 0.1.1, rfc822Name
+constraints are evaluated and also govern subject `emailAddress` attributes.
+Directory-name constraints refuse the path.
 
 Residual risks, by design or awaiting dependencies:
 

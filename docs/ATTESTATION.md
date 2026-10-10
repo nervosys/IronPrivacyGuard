@@ -92,8 +92,9 @@ are checked. Signatures may be RSA of at least 2048 bits with PKCS#1 or PSS
 and SHA-256/384/512, P-256/SHA-256, P-384/SHA-384 or Ed25519. SHA-1 is
 unsupported.
 
-DNS and IPv4/IPv6 name constraints are evaluated; other constrained name forms
-refuse the path. Unknown critical extensions are rejected. Unsupported paths
+DNS, IPv4/IPv6 and rfc822Name constraints are evaluated, the last also over
+`emailAddress` attributes in the subject; other constrained name forms refuse
+the path. Unknown critical extensions are rejected. Unsupported paths
 require operator review; do not remove constraints or substitute trust anchors
 to make verification succeed. Certificate revocation, policy processing and
 network fetching are not implemented.

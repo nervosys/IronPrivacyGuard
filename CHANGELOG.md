@@ -8,8 +8,11 @@
   40 independent path and endorsement-key cases agree. Changes:
   - removed `x509::verify_tls_server`, `x509::verify_tls_server_anchors` and
     `x509::TrustAnchor`; use IronPKI directly for TLS server certificates;
-  - a path under an rfc822Name or directory-name constraint is now refused
-    rather than evaluated.
+  - a path under a directory-name constraint is refused rather than
+    evaluated.
+- Moved the IronPKI pin to 0.1.1, which evaluates rfc822Name constraints,
+  including over subject `emailAddress` attributes, as IPG's former validator
+  did.
 - Moved the exact pins to IronCrypto 0.2.23 and IronSocketLayer 0.4.0, which
   also validates with IronPKI. The dependency policy now allows `ironpki`.
 - The `kms` feature now reaches AWS over IronSocketLayer's TLS 1.3 client, so
