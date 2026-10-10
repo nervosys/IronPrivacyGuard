@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved the exact pins to IronCrypto 0.2.22 and IronSocketLayer 0.3.4. No
+  behavior changes for IPG.
 - The `kms` feature now reaches AWS over IronSocketLayer's TLS 1.3 client, so
   the IronSecurity stack has one TLS implementation. IPG's experimental
   `tls-native` feature, its `tls::Client` Rust API and the `native_tls_probe`
