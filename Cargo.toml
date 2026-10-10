@@ -37,7 +37,7 @@ ipg-pkcs11 = { path = "crates/ipg-pkcs11", version = "0.1.0", optional = true }
 # TPM attestation verification: native certificate paths over IronCrypto.
 ic-rsa = { version = "=0.2.20", optional = true }
 ic-pkix = { version = "=0.2.20", optional = true }
-ironsocketlayer = { version = "=0.3.2", optional = true }
+ironsocketlayer = { version = "=0.3.3", optional = true }
 
 # Native TPM device access on Linux; Windows FFI isolated in crates/ipg-cng.
 [target.'cfg(windows)'.dependencies]

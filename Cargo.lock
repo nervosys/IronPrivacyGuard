@@ -227,9 +227,9 @@ dependencies = [
 
 [[package]]
 name = "ironsocketlayer"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63a60df107fea11dd2b84342575aac7db2956ed4ca09955e1342c61963efbf2a"
+checksum = "a9c3b378e0c488e1b91a8ae816a8e10e667c1d47c58f6ce8d6abf4975399deb9"
 dependencies = [
  "ic-cipher",
  "ic-core",

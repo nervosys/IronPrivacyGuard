@@ -48,75 +48,20 @@ fn sequence(contents: &[u8]) -> Vec<u8> {
     out
 }
 
-/// A DER element: tag, definite length, contents.
-fn tlv(tag: u8, contents: &[u8]) -> Vec<u8> {
-    let mut out = sequence(contents);
-    out[0] = tag;
-    out
-}
-
-/// A minimal certificate carrying one key-form anchor. IronSocketLayer's root
-/// store takes certificates and keeps only their subject, key and name
-/// constraints; it never checks an anchor's signature or dates. The dummy
-/// signature here therefore grants nothing.
-fn anchor_certificate(root: &Anchor) -> Vec<u8> {
-    // ecdsa-with-SHA256; only its syntax is read.
-    let algorithm = tlv(
-        0x30,
-        &[0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02],
-    );
-    let name = sequence(&root.subject);
-    let time = |year: &[u8; 2]| tlv(0x17, &[&year[..], b"0101000000Z"].concat());
-    // basicConstraints: critical, cA TRUE.
-    let mut extensions = tlv(
-        0x30,
-        &[
-            &[0x06, 0x03, 0x55, 0x1d, 0x13, 0x01, 0x01, 0xff][..],
-            &tlv(0x04, &tlv(0x30, &[0x01, 0x01, 0xff])),
-        ]
-        .concat(),
-    );
-    if let Some(constraints) = &root.name_constraints {
-        extensions.extend(tlv(
-            0x30,
-            &[
-                &[0x06, 0x03, 0x55, 0x1d, 0x1e, 0x01, 0x01, 0xff][..],
-                &tlv(0x04, &sequence(constraints)),
-            ]
-            .concat(),
-        ));
-    }
-    let tbs = tlv(
-        0x30,
-        &[
-            &tlv(0xa0, &[0x02, 0x01, 0x02])[..],
-            &[0x02, 0x01, 0x01],
-            &algorithm,
-            &name,
-            &tlv(0x30, &[time(b"00"), time(b"49")].concat()),
-            &name,
-            &sequence(&root.spki),
-            &tlv(0xa3, &tlv(0x30, &extensions)),
-        ]
-        .concat(),
-    );
-    // A syntactically valid ECDSA-Sig-Value (r = s = 1) in a BIT STRING.
-    let signature = tlv(
-        0x03,
-        &[0x00, 0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01],
-    );
-    tlv(0x30, &[tbs, algorithm, signature].concat())
-}
-
 /// The bundled roots as an IronSocketLayer trust store. Every root must be
-/// accepted, with its subject, key and name constraints preserved.
+/// accepted as a key-form anchor, with its subject, key and name constraints.
 pub(crate) fn root_store() -> Result<ironsocketlayer::x509::RootStore> {
     let invalid = || Error::new("provider_error", "Bundled TLS trust-anchor data is invalid");
     let roots = load()?;
     let mut store = ironsocketlayer::x509::RootStore::new();
     for root in &roots {
+        // The data holds sequence contents; anchors are complete DER elements.
         store
-            .add_der(&anchor_certificate(root))
+            .add_anchor(
+                &sequence(&root.subject),
+                &sequence(&root.spki),
+                root.name_constraints.as_deref().map(sequence).as_deref(),
+            )
             .map_err(|_| invalid())?;
     }
     if store.len() != roots.len() {
