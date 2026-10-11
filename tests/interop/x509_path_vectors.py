@@ -112,8 +112,14 @@ for label, address, network, accepted in [
                        permitted=[x509.IPAddress(ipaddress.ip_network(network))])
     case(label, accepted, target=target, intermediates=[constrained])
 
-case("unsupported_directory_constraint_fails_closed", False,
+# Directory-name constraints govern the subject. The leaf's subject is `ln`.
+case("directory_constraint_permitted", True,
      intermediates=[cert(cn, ca_key, rn, root_key, ca=True, permitted=[x509.DirectoryName(ln)])])
+case("directory_constraint_outside", False,
+     intermediates=[cert(cn, ca_key, rn, root_key, ca=True,
+                         permitted=[x509.DirectoryName(name("Another leaf"))])])
+case("directory_constraint_excluded", False,
+     intermediates=[cert(cn, ca_key, rn, root_key, ca=True, excluded=[x509.DirectoryName(ln)])])
 case("empty_subject_critical_san", True, target=cert(x509.Name([]), leaf_key, cn, ca_key,
      usage=[EK], names=[x509.DirectoryName(ln)]))
 case("issuer_cycle_without_anchor", False,

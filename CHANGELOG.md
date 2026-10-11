@@ -19,6 +19,11 @@
     `x509::TrustAnchor`; use IronPKI directly for TLS server certificates;
   - a path under a directory-name constraint is refused rather than
     evaluated.
+- Moved to IronCrypto 0.2.24 and IronPKI 0.1.2. IronPKI now evaluates
+  directory-name and URI name constraints instead of refusing a path under
+  one, so an endorsement-certificate path whose subject a directory-name
+  constraint permits is accepted where it was refused. The path vectors are
+  regenerated with three directory-name cases.
 - Moved the IronPKI pin to 0.1.1, which evaluates rfc822Name constraints,
   including over subject `emailAddress` attributes, as IPG's former validator
   did.

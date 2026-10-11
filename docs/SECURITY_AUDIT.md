@@ -70,7 +70,7 @@ audit did not review IronCrypto's arithmetic and did not find the defect.
 Certificate validation has since moved to IronPKI, the stack's shared
 validator. Finding Info 9 stays closed there: from IronPKI 0.1.1, rfc822Name
 constraints are evaluated and also govern subject `emailAddress` attributes.
-Directory-name constraints refuse the path.
+From IronPKI 0.1.2, directory-name and URI constraints are evaluated too.
 
 Residual risks, by design or awaiting dependencies:
 
