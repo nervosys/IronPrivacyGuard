@@ -50,6 +50,17 @@ impl From<ipg_json::Error> for Error {
         Self::new("invalid_format", "Invalid JSON or unsupported fields")
     }
 }
+/// IronKeys' TPM layer reports IPG's own codes, so its errors map one to one.
+#[cfg(feature = "attestation")]
+impl From<ironkeys_tpm2::Error> for Error {
+    fn from(e: ironkeys_tpm2::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+            retryable: e.retryable,
+        }
+    }
+}
 impl From<ic_core::Error> for Error {
     fn from(_: ic_core::Error) -> Self {
         Self::new(

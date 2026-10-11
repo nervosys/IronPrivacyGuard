@@ -29,7 +29,8 @@ Hardware-provider tests run against a real PKCS#11 module when
 ## Unsafe code
 
 The main crate is `#![forbid(unsafe_code)]`. Windows CNG and TPM Base Services
-calls live in `crates/ipg-cng`, which must stay minimal: owned handles freed on drop, checked
+calls live in IronKeys' `ironkeys-cng`, and PKCS#11 calls in its `ironkeys-pkcs11`; changes to
+either go to [nervosys/IronKeys](https://github.com/nervosys/IronKeys). Both must stay minimal: owned handles freed on drop, checked
 statuses and validated buffer lengths, with a `SAFETY` comment on every block.
 
 ## Contract discipline

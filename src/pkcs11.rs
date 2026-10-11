@@ -9,7 +9,7 @@ use crate::{
     provider::{self, HardwareKey, Inventory, LibraryInfo, MechanismSupport, Protection},
     provider::{TokenBinding, TokenReport},
 };
-use ipg_pkcs11::{
+use ironkeys_pkcs11::{
     Attribute, AttributeType, Error as CkError, KeyType, ObjectClass, ObjectHandle, Pkcs11,
     Session, Slot,
 };

@@ -129,7 +129,7 @@ parent it does not expose. Windows' own key-attestation claim
 (`NCryptCreateClaim`) was evaluated and rejected: it is signed with ECDSA over SHA-1
 by an operating-system key that nothing binds to the EK.
 
-IPG's TPM 2.0 command layer (`src/tpm2`) is its own safe-Rust implementation:
+The TPM 2.0 command layer (`ironkeys-tpm2`, moved from IPG to IronKeys) is a safe-Rust implementation:
 marshalling, salted HMAC sessions with AES-128-CFB parameter encryption, policy
 sessions for the EK, KDFa, RSA-OAEP and MakeCredential over IronCrypto primitives.
 

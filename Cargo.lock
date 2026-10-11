@@ -207,20 +207,12 @@ dependencies = [
  "ic-ontology",
  "ic-pkix",
  "ic-rsa",
- "ipg-cng",
  "ipg-json",
- "ipg-pkcs11",
+ "ironkeys-cng",
+ "ironkeys-pkcs11",
+ "ironkeys-tpm2",
  "ironpki",
  "ironsocketlayer",
-]
-
-[[package]]
-name = "ipg-cng"
-version = "0.1.2"
-dependencies = [
- "ic-core",
- "ic-ec",
- "ic-hash",
 ]
 
 [[package]]
@@ -235,10 +227,34 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipg-pkcs11"
+name = "ironkeys-cng"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6b6f811b434340c86ad812bd0668e5d9c24368e9c5d9dfca73707424d25a35d"
+
+[[package]]
+name = "ironkeys-pkcs11"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "338ed2af60e89f95c7d5dee2e591d045394fbeb8e39155168534999c0e245506"
 dependencies = [
  "ic-core",
+]
+
+[[package]]
+name = "ironkeys-tpm2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c02023e74a3f3c86d96492cdf0477073ef9043f588e1b93c48c525f2c9d9a4f3"
+dependencies = [
+ "ic-cipher",
+ "ic-core",
+ "ic-drbg",
+ "ic-ec",
+ "ic-hash",
+ "ic-mac",
+ "ic-rsa",
+ "ironkeys-cng",
 ]
 
 [[package]]

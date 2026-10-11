@@ -68,8 +68,8 @@ cargo build --release --locked --features pkcs11 --target-dir target
 
 AWS KMS identities need the `kms` feature (still no C compilation: TLS uses
 IronSocketLayer, built on IronCrypto). TPM 2.0 identities need the `tpm` feature: Linux uses
-IPG's native TPM command layer; Windows uses TPM Base Services through the small
-`ipg-cng` crate. Native FFI is isolated in `ipg-cng` and `ipg-pkcs11`. See
+IronKeys' native TPM command layer (`ironkeys-tpm2`); Windows uses TPM Base Services through the small
+`ironkeys-cng` crate. Native FFI is isolated in IronKeys' `ironkeys-cng` and `ironkeys-pkcs11`. See
 [hardware identities](docs/HARDWARE.md#tpm-20). TPM keys can be attested to a
 verifier holding only the manufacturer's root certificates; the verifier needs the
 `attestation` feature, which `tpm` includes. See [TPM key attestation](docs/ATTESTATION.md).
@@ -517,15 +517,15 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/provider.rs` | Key inputs, hardware references, PIN rules, host custody policy |
 | `src/pkcs11.rs` | PKCS#11 backend (`pkcs11` feature): token selection, key checks, signing and ECDH |
 | `src/cng.rs` | Earlier Windows TPM keys (ipg-cng-key-v1) through the Platform Crypto Provider |
-| `src/tpm2/` | IPG's TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
+| `ironkeys-tpm2` (IronKeys) | The TPM 2.0 layer: marshalling, salted HMAC sessions, KDFa, RSA-OAEP, MakeCredential |
 | `src/tpm_native.rs` | Native TPM keys through Linux device/loopback swtpm or Windows TBS, and the attestation prover |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
 | `src/x509.rs` | TPM endorsement-certificate path checks through IronPKI |
 | `src/tls_roots.rs`, `data/tls-roots.json` | Bundled KMS HTTPS trust anchors with pinned provenance and preserved constraints |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
-| `crates/ipg-cng` | Minimal safe wrapper over Windows CNG and TBS |
-| `crates/ipg-pkcs11` | Native PKCS#11 FFI, bounded buffers, and session ownership |
+| `ironkeys-cng` (IronKeys) | Minimal safe wrapper over Windows CNG and TBS |
+| `ironkeys-pkcs11` (IronKeys) | Native PKCS#11 FFI, bounded buffers, and session ownership |
 | `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over IronSocketLayer TLS 1.3, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA and prehash-ECDSA glue to IronCrypto (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
@@ -613,9 +613,10 @@ IPG is dual-licensed, on the same terms as IronCrypto:
 - **[Commercial](LICENSE-COMMERCIAL.md)** for proprietary, embedded, or SaaS use
   without AGPL obligations. Contact licensing@nervosys.ai.
 
-IronCrypto's license applies to its source; commercial IPG use also needs
-commercial IronCrypto terms. The optional `pkcs11` feature uses IPG's native
-wrapper; the vendor module has its own license. Contributions require agreement to the [CLA](CLA.md); see
+IronCrypto's license applies to its source, and so do those of the other
+IronSecurity crates IPG links (IronPKI, IronSocketLayer and IronKeys); commercial
+IPG use also needs commercial terms for them. The optional `pkcs11` feature uses
+IronKeys' native wrapper; the vendor module has its own license. Contributions require agreement to the [CLA](CLA.md); see
 [CONTRIBUTING.md](CONTRIBUTING.md). Neither license is a statement about
 cryptographic assurance: there is no CMVP certificate and no independent audit.
 

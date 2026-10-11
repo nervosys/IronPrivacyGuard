@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The PKCS#11 and Windows FFI crates and the TPM 2.0 layer now come from
+  IronKeys 0.1.0 (`ironkeys-pkcs11`, `ironkeys-cng`, `ironkeys-tpm2`), the
+  IronSecurity stack's key-custody project. `crates/ipg-pkcs11`,
+  `crates/ipg-cng` and `src/tpm2/` are removed; the code is the same, and no
+  format, schema or behaviour changes. IPG's own key backends, key files and
+  KMS client are unchanged.
 - Certificate validation now uses IronPKI 0.1.0, the IronSecurity stack's
   shared validator, and IPG's own X.509 parser and path validator are removed.
   `x509::verify_endorsement_certificate` keeps its signature and verdicts: all

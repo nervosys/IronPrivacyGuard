@@ -45,8 +45,9 @@ pub mod stream;
 pub mod stream_signature;
 #[cfg(feature = "kms")]
 mod tls_roots;
+// The TPM 2.0 layer lives in IronKeys.
 #[cfg(feature = "attestation")]
-mod tpm2;
+use ironkeys_tpm2 as tpm2;
 #[cfg(feature = "tpm")]
 mod tpm_native;
 pub mod transport;

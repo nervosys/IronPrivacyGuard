@@ -203,7 +203,7 @@ fn expected_key(role: Role, point: &[u8]) -> Result<Vec<u8>> {
         x: point[1..49].to_vec(),
         y: point[49..97].to_vec(),
     };
-    template.marshal()
+    Ok(template.marshal()?)
 }
 #[cfg(feature = "attestation")]
 /// Require a public area to be exactly `template` with the given RSA modulus.

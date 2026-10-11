@@ -33,10 +33,13 @@ If the AGPL requirements are incompatible with your use case — for example, if
 
 Then a **commercial license** is available from NERVOSYS.
 
-IPG links [IronCrypto](https://github.com/nervosys/IronCrypto), which is
-dual-licensed on the same terms. A commercial IPG deployment that avoids AGPL
-obligations also requires commercial terms for IronCrypto; NERVOSYS can provide
-both under one agreement.
+IPG links [IronCrypto](https://github.com/nervosys/IronCrypto) and, depending
+on the features built, [IronPKI](https://github.com/nervosys/IronPKI),
+[IronSocketLayer](https://github.com/nervosys/IronSocketLayer) and
+[IronKeys](https://github.com/nervosys/IronKeys). Each is dual-licensed on the
+same terms. A commercial IPG deployment that avoids AGPL obligations also
+requires commercial terms for those it links; NERVOSYS can provide them under
+one agreement.
 
 ## Obtaining a Commercial License
 

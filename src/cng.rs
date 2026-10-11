@@ -3,7 +3,7 @@
 //! Each identity is two persisted, non-exportable TPM-backed keys (ECDH P-384 and
 //! ECDSA P-384) named in an `ipg-cng-key-v1` file. Key authorization is derived from
 //! the PIN and presented as the provider's usage authorization; the TPM's
-//! dictionary-attack lockout limits guessing. All FFI lives in the `ipg-cng` crate.
+//! dictionary-attack lockout limits guessing. All FFI lives in the `ironkeys-cng` crate.
 use crate::secrets::Zeroizing;
 use crate::{
     crypto::{self, Custody, IdentityKey, PublicKey, Suite},
@@ -12,12 +12,12 @@ use crate::{
 };
 use ic_core::traits::Digest as _;
 use ic_hash::Sha256;
-use ipg_cng::{Algorithm, Key, Provider, status};
+use ironkeys_cng::{Algorithm, Key, Provider, status};
 
 /// `NTE_PERM`: the provider refused the usage authorization.
 const NTE_PERM: i32 = 0x8009_0010_u32 as i32;
 
-fn map(error: ipg_cng::Error) -> Error {
+fn map(error: ironkeys_cng::Error) -> Error {
     let detail = error.to_string();
     let code = match error.status {
         NTE_PERM | status::TPM_AUTHFAIL | status::TPM_20_AUTH_FAIL | status::TPM_20_BAD_AUTH => {

@@ -232,7 +232,9 @@ Residual risks, by design or awaiting dependencies:
 - Runtime dependencies are limited to the IronCrypto crates at `=0.2.12` (since moved to `=0.2.15`) plus
   first-party crates. `scripts/check-ironcrypto-only.py` confirms this.
 - Unsafe code is confined to the FFI crates `ipg-pkcs11` (70 sites) and
-  `ipg-cng` (39). The main crate is `#![forbid(unsafe_code)]`.
+  `ipg-cng` (39). The main crate is `#![forbid(unsafe_code)]`. (Since the
+  audit, both crates moved unchanged to IronKeys as `ironkeys-pkcs11` and
+  `ironkeys-cng`, and IPG depends on those.)
 
 **Historical CVEs and vulnerability classes checked:**
 

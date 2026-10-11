@@ -1,8 +1,9 @@
 """Fail if the selected root dependency graph reaches a third-party package.
 
 Allowed: IPG's own workspace crates, the IronCrypto crates, IronPKI (the
-IronSecurity stack's certificate layer) and IronSocketLayer (its TLS). Those
-two depend only on IronCrypto and each other.
+IronSecurity stack's certificate layer), IronSocketLayer (its TLS) and the
+IronKeys crates (its key custody). Those depend only on IronCrypto and each
+other.
 
 Cargo arguments may follow the script, e.g. --all-features or
 --no-default-features. It never treats an IronCrypto adapter's third-party
@@ -27,8 +28,10 @@ ironcrypto = {
     "ic-hpke", "ic-mlkem", "ic-mldsa", "ic-ontology", "ic-json", "ic-rsa", "ic-pkix",
     "ic-rustls", "ic-fips", "ic-vectors", "iron-crypto",
 }
-# First-party IronSecurity stack crates: certificates, and TLS for KMS.
-ironsecurity = {"ironpki", "ironsocketlayer", "isl-ontology"}
+# First-party IronSecurity stack crates: certificates, TLS for KMS, and the
+# native boundaries to PKCS#11 modules and Windows CNG.
+ironsecurity = {"ironpki", "ironsocketlayer", "isl-ontology",
+                "ironkeys-pkcs11", "ironkeys-cng", "ironkeys-tpm2", "ironkeys-kms"}
 violations = []
 while pending:
     package_id = pending.pop()

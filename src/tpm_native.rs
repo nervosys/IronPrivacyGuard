@@ -207,23 +207,25 @@ impl IdentityKey for NativeIdentity {
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
         let digest = crypto::p384_digest(message);
         self.with_session(|tpm, session| {
-            tpm.sign_p384(
+            Ok(tpm.sign_p384(
                 (self.signing.0, &self.signing.1),
                 session,
                 &self.auth,
                 &digest,
-            )
+            )?)
         })
     }
     fn agree(&self, peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
         crypto::p384_point(peer)?;
         self.with_session(|tpm, session| {
-            tpm.ecdh_z_gen(
+            // IronKeys returns IronCrypto's wiping buffer; IPG's owns a copy.
+            let shared = tpm.ecdh_z_gen(
                 (self.encryption.0, &self.encryption.1),
                 session,
                 &self.auth,
                 peer,
-            )
+            )?;
+            Ok(Zeroizing::new(shared.to_vec()))
         })
     }
 }
@@ -369,7 +371,7 @@ fn ek_certificates(tpm: &mut Tpm) -> Result<Vec<Vec<u8>>> {
     #[cfg(windows)]
     {
         let _ = &tpm;
-        let provider = ipg_cng::Provider::open().map_err(|e| {
+        let provider = ironkeys_cng::Provider::open().map_err(|e| {
             Error::new(
                 "provider_unavailable",
                 format!("Platform Crypto Provider: {e}"),
@@ -505,12 +507,12 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
                     "The evidence names a different attestation key",
                 ));
             }
-            tpm.activate_credential(
+            Ok(tpm.activate_credential(
                 (ak, &ak_public.name()?),
                 (ek, &ek_public.name()?),
                 &attest::hex_field(&challenge.id_object, 1024, "credential blob")?,
                 &attest::hex_field(&challenge.encrypted_secret, 1024, "encrypted secret")?,
-            )
+            )?)
         })();
         tpm.flush(ak);
         let credential = activated?;
@@ -532,6 +534,38 @@ pub fn respond(evidence: &Evidence, challenge: &Challenge) -> Result<Attestation
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tpm2::structures::{
+        ALG_AES, ALG_CFB, ALG_NULL, ALG_RSA, ALG_SHA256, DECRYPT, FIXED_PARENT, FIXED_TPM, Key,
+        NO_DA, RESTRICTED, SENSITIVE_DATA_ORIGIN, Symmetric, Template, USER_WITH_AUTH,
+    };
+    use crate::tpm2::tpm::Auth;
+
+    /// The RSA-2048 storage root Windows provisions, for a test TPM without one.
+    fn windows_srk_template() -> Template {
+        Template {
+            kind: ALG_RSA,
+            name_algorithm: ALG_SHA256,
+            attributes: FIXED_TPM
+                | FIXED_PARENT
+                | SENSITIVE_DATA_ORIGIN
+                | USER_WITH_AUTH
+                | NO_DA
+                | RESTRICTED
+                | DECRYPT,
+            auth_policy: Vec::new(),
+            symmetric: Some(Symmetric {
+                algorithm: ALG_AES,
+                bits: 128,
+                mode: ALG_CFB,
+            }),
+            scheme: (ALG_NULL, ALG_NULL),
+            key: Key::Rsa {
+                bits: 2048,
+                exponent: 0,
+                modulus: vec![0; 256],
+            },
+        }
+    }
 
     #[test]
     fn native_keys_and_attestation_on_a_test_tpm() {
@@ -543,12 +577,17 @@ mod tests {
         let mut tpm = connection().unwrap();
         if tpm.read_public(WINDOWS_SRK).is_err() {
             let (handle, _) = tpm
-                .create_primary(
-                    RH_OWNER,
-                    &structures::windows_srk_template().marshal().unwrap(),
-                )
+                .create_primary(RH_OWNER, &windows_srk_template().marshal().unwrap())
                 .unwrap();
-            tpm.evict_control(handle, WINDOWS_SRK).unwrap();
+            // TPM2_EvictControl: persist it where Windows keeps its own.
+            tpm.execute(
+                0x120,
+                &[(RH_OWNER, &RH_OWNER.to_be_bytes()), (handle, &[])],
+                &mut [Auth::Empty],
+                &WINDOWS_SRK.to_be_bytes(),
+                0,
+            )
+            .unwrap();
             tpm.flush(handle);
         }
         drop(tpm);

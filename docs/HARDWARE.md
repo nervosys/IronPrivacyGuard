@@ -24,7 +24,7 @@ reports `provider_unavailable` for every hardware operation.
 cargo build --release --locked --features pkcs11
 ```
 
-The feature adds the first-party `ipg-pkcs11` wrapper, which loads the vendor
+The feature adds the first-party `ironkeys-pkcs11` wrapper (from IronKeys), which loads the vendor
 module at runtime and depends only on IronCrypto for buffer erasure. There is no
 C compilation and no change to schemas or artifact formats. Sessions close on
 drop; loaded modules remain initialized until process exit. See
@@ -238,8 +238,8 @@ Identities created by earlier versions are `ipg-cng-key-v1` files naming persist
 Platform Crypto Provider keys. They keep working and can be removed with
 `ipg tpm key delete --key alice.cng.json --passphrase-file pin.bin` (it checks the PIN
 and identity first; deletion is irreversible), but they cannot be attested. All FFI
-(CNG and TBS) is isolated in the `ipg-cng` crate, the only code in IPG that uses
-`unsafe`.
+(CNG and TBS) is isolated in IronKeys' `ironkeys-cng` crate. IPG itself contains no
+`unsafe` code; its PKCS#11 calls go through `ironkeys-pkcs11` in the same way.
 
 ### Attestation
 
@@ -370,7 +370,7 @@ IPG_TEST_PKCS11_REQUIRE_IN_TOKEN=1 cargo test --locked --features pkcs11 --lib i
 `tests/windows_tpm_live.rs` runs the lifecycle against the machine's real TPM when
 `IPG_TEST_WINDOWS_TPM=1` (it always deletes its keys; the wrong-PIN check also needs
 `IPG_TEST_WINDOWS_TPM_WRONG_PIN=1`, since failures count toward the TPM lockout).
-`crates/ipg-cng` has an ignored probe test for the raw provider behavior.
+`ironkeys-cng`, in the IronKeys repository, has an ignored probe test for the raw provider behavior.
 
 `tests/tpm_live.rs` runs a full TPM lifecycle when `IPG_TEST_TPM_TCTI` is set;
 `scripts/tpm-test.sh` starts a throwaway swtpm software TPM and runs it:
