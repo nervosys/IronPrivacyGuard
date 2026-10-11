@@ -3,7 +3,8 @@
 IPG offers no TLS operation, MCP tool or Rust API. Its file, message and group
 encryption are not transport protocols.
 
-The `kms` feature is the only part of IPG that speaks TLS. It reaches AWS KMS,
+The `kms` feature is the only part of IPG that speaks TLS. Its client is
+IronKeys' `ironkeys-kms` (moved there from IPG), which reaches AWS KMS,
 STS and IAM Identity Center over
 [IronSocketLayer](https://crates.io/crates/ironsocketlayer), the IronSecurity
 stack's TLS 1.3 implementation, which is built on IronCrypto with no
@@ -18,7 +19,7 @@ one TLS implementation.
 | Setting | Value |
 | --- | --- |
 | Protocol | TLS 1.3 only, client side |
-| Trust | The [bundled public trust anchors](../data/README.md) (121 roots, one with name constraints); never the system store or certificates the peer presents |
+| Trust | The [public trust anchors bundled in `ironkeys-kms`](https://github.com/nervosys/IronKeys/blob/master/crates/ironkeys-kms/data/README.md) (121 roots, one with name constraints); never the system store or certificates the peer presents |
 | Server identity | The AWS endpoint host name IPG selected, sent as SNI and matched against the certificate |
 | Time | The host clock |
 | Key exchange | IronSocketLayer's default profile: X25519MLKEM768 first, then X25519, P-256 and P-384 |

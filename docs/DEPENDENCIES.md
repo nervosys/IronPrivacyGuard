@@ -27,14 +27,16 @@ dependencies, including those introduced by IronCrypto adapters. Every feature
 combination passes; CI checks default, minimal, `pkcs11`, `tpm,pkcs11`, `kms`,
 `x509-native` and `--all-features` builds on each supported OS. The allowed
 set is IPG's own crates, the IronCrypto crates, IronPKI (`ironpki`, for
-certificate validation) and, for the `kms` feature, IronSocketLayer
-(`ironsocketlayer` and `isl-ontology`). IronPKI and IronSocketLayer depend
-only on IronCrypto and each other.
+certificate validation), the IronKeys crates (`ironkeys-pkcs11`,
+`ironkeys-cng`, `ironkeys-tpm2` and `ironkeys-kms`, for keys in devices and
+services) and, through `ironkeys-kms`, IronSocketLayer (`ironsocketlayer` and
+`isl-ontology`). They depend only on IronCrypto and each other.
 `cargo deny check` allows only the AGPL-licensed first-party and IronCrypto
 crates, denies duplicate versions and has no advisory exceptions.
 
-KMS HTTPS uses IPG's [native TLS 1.3 client](TLS.md) with the bundled public
-trust anchors ([provenance and maintenance](../data/README.md)); rustls,
+KMS HTTPS uses [IronSocketLayer's TLS 1.3 client](TLS.md), through IronKeys'
+`ironkeys-kms`, with the public trust anchors bundled there
+([provenance and maintenance](https://github.com/nervosys/IronKeys/blob/master/crates/ironkeys-kms/data/README.md)); rustls,
 `ic-rustls` and `webpki-roots` have been removed. All 121 roots and their name
 constraints match the previously pinned store and are applied as key-form trust
 anchors with peer-name, certificate-path and handshake authentication retained.

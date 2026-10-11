@@ -77,8 +77,9 @@ verifier holding only the manufacturer's root certificates; the verifier needs t
 The standalone `x509-native` feature provides an
 [offline endorsement-certificate check](docs/X509.md) for Rust callers, through
 IronPKI. The `kms` feature
-reaches AWS over [IronSocketLayer's TLS 1.3 client](docs/TLS.md) with
-[bundled public trust-anchor data](data/README.md).
+reaches AWS through IronKeys' KMS client, over
+[IronSocketLayer's TLS 1.3 client](docs/TLS.md) with
+[bundled public trust-anchor data](https://github.com/nervosys/IronKeys/blob/master/crates/ironkeys-kms/data/README.md).
 
 Native OpenPGP is enabled by default; `--no-default-features` omits it, and
 `openpgp` remains as an alias. It implements RFC 9580 packets and policy over
@@ -521,12 +522,12 @@ schema (`call`, `request`, `outcome`, `response`) is independently usable; the
 | `src/tpm_native.rs` | Native TPM keys through Linux device/loopback swtpm or Windows TBS, and the attestation prover |
 | `src/attest.rs` | TPM key attestation formats and verifier (EK chain, TPM2_Certify, credential challenge) |
 | `src/x509.rs` | TPM endorsement-certificate path checks through IronPKI |
-| `src/tls_roots.rs`, `data/tls-roots.json` | Bundled KMS HTTPS trust anchors with pinned provenance and preserved constraints |
+| `ironkeys-kms` (IronKeys) | The AWS KMS client: credential chain, SigV4, IronSocketLayer TLS 1.3, and the bundled HTTPS trust anchors with pinned provenance and preserved constraints |
 | `src/stream.rs` | ipg-stream-v1: multi-recipient streaming encryption |
 | `src/stream_signature.rs` | ipg-stream-signature-v1: any-size detached signatures over SHA-384 commitments |
 | `ironkeys-cng` (IronKeys) | Minimal safe wrapper over Windows CNG and TBS |
 | `ironkeys-pkcs11` (IronKeys) | Native PKCS#11 FFI, bounded buffers, and session ownership |
-| `src/kms.rs` | AWS KMS backend (`kms` feature): SigV4 over IronSocketLayer TLS 1.3, Sign and DeriveSharedSecret |
+| `src/kms.rs` | AWS KMS backend (`kms` feature): IPG identities over IronKeys' KMS client, Sign and DeriveSharedSecret |
 | `src/openpgp/` | OpenPGP boundary over IronCrypto: packets, certificate policy, CFB/EAX/OCB/GCM messages, RSA/DSA and prehash-ECDSA glue to IronCrypto (`public.rs`) and Ed448/X448 (`curve448.rs`) |
 | `src/lifecycle.rs` | Signed revocation and validity certificates |
 | `src/message.rs` | ipg-message-v1 agent messages: sealing, opening checks, replay markers |
@@ -620,6 +621,6 @@ IronKeys' native wrapper; the vendor module has its own license. Contributions r
 [CONTRIBUTING.md](CONTRIBUTING.md). Neither license is a statement about
 cryptographic assurance: there is no CMVP certificate and no independent audit.
 
-Bundled public TLS trust-anchor data has its own
-[CDLA-Permissive-2.0 license](data/tls-roots.LICENSE) and
-[provenance and update procedure](data/README.md).
+The public TLS trust-anchor data bundled in IronKeys' `ironkeys-kms` has its own
+[CDLA-Permissive-2.0 license](https://github.com/nervosys/IronKeys/blob/master/crates/ironkeys-kms/data/tls-roots.LICENSE) and
+[provenance and update procedure](https://github.com/nervosys/IronKeys/blob/master/crates/ironkeys-kms/data/README.md).

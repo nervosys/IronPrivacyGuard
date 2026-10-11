@@ -85,6 +85,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-json"
+version = "0.2.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be1405af76d65c9bc1b84d6469c7c723e1a91961acc7683a980cef515f4a231f"
+
+[[package]]
 name = "ic-kdf"
 version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -209,10 +215,10 @@ dependencies = [
  "ic-rsa",
  "ipg-json",
  "ironkeys-cng",
+ "ironkeys-kms",
  "ironkeys-pkcs11",
  "ironkeys-tpm2",
  "ironpki",
- "ironsocketlayer",
 ]
 
 [[package]]
@@ -231,6 +237,20 @@ name = "ironkeys-cng"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6b6f811b434340c86ad812bd0668e5d9c24368e9c5d9dfca73707424d25a35d"
+
+[[package]]
+name = "ironkeys-kms"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc4859eb341423ebe09b90f0380634cf4cd2dd216f4f37af69e2ef508b98ef8d"
+dependencies = [
+ "ic-core",
+ "ic-ec",
+ "ic-hash",
+ "ic-json",
+ "ic-mac",
+ "ironsocketlayer",
+]
 
 [[package]]
 name = "ironkeys-pkcs11"

@@ -43,8 +43,6 @@ pub mod rotation;
 pub mod secrets;
 pub mod stream;
 pub mod stream_signature;
-#[cfg(feature = "kms")]
-mod tls_roots;
 // The TPM 2.0 layer lives in IronKeys.
 #[cfg(feature = "attestation")]
 use ironkeys_tpm2 as tpm2;

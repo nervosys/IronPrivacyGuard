@@ -2,12 +2,15 @@
 
 ## Unreleased
 
-- The PKCS#11 and Windows FFI crates and the TPM 2.0 layer now come from
-  IronKeys 0.1.0 (`ironkeys-pkcs11`, `ironkeys-cng`, `ironkeys-tpm2`), the
-  IronSecurity stack's key-custody project. `crates/ipg-pkcs11`,
-  `crates/ipg-cng` and `src/tpm2/` are removed; the code is the same, and no
-  format, schema or behaviour changes. IPG's own key backends, key files and
-  KMS client are unchanged.
+- The PKCS#11 and Windows FFI crates, the TPM 2.0 layer and the AWS KMS client
+  now come from IronKeys (`ironkeys-pkcs11`, `ironkeys-cng` and
+  `ironkeys-tpm2` 0.1.0, `ironkeys-kms` 0.1.1), the IronSecurity stack's
+  key-custody project. `crates/ipg-pkcs11`, `crates/ipg-cng`, `src/tpm2/`,
+  the KMS client in `src/kms.rs`, `src/tls_roots.rs`, the bundled TLS roots
+  in `data/` and `scripts/import-tls-roots.py` are removed. The code is the
+  same, and no format, schema or behaviour changes: `IPG_KMS_ENDPOINT` and
+  `IPG_KMS_FIPS` work as before. IPG's own key backends and key files are
+  unchanged.
 - Certificate validation now uses IronPKI 0.1.0, the IronSecurity stack's
   shared validator, and IPG's own X.509 parser and path validator are removed.
   `x509::verify_endorsement_certificate` keeps its signature and verdicts: all

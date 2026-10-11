@@ -61,6 +61,17 @@ impl From<ironkeys_tpm2::Error> for Error {
         }
     }
 }
+/// IronKeys' KMS client reports IPG's own codes, so its errors map one to one.
+#[cfg(feature = "kms")]
+impl From<ironkeys_kms::Error> for Error {
+    fn from(e: ironkeys_kms::Error) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+            retryable: e.retryable,
+        }
+    }
+}
 impl From<ic_core::Error> for Error {
     fn from(_: ic_core::Error) -> Self {
         Self::new(
