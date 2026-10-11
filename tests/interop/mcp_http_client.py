@@ -53,6 +53,7 @@ def main():
         token = os.urandom(32).hex()
         token_file = Path(directory) / "token"
         token_file.write_text(token)
+        token_file.chmod(0o600)  # the server refuses a token others can read
         process = subprocess.Popen([str(args.ipg.resolve()), "mcp-http", "--listen", "127.0.0.1:0",
                                     "--token-file", str(token_file)], stderr=subprocess.PIPE, text=True)
         try:

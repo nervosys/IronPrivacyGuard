@@ -62,11 +62,43 @@ fn send(address: SocketAddr, method: &str, headers: &[(&str, &str)], body: &[u8]
     }
 }
 
+/// Write a bearer-token file readable only by its owner, as the server requires.
+fn write_private(path: &str, contents: &str) {
+    std::fs::write(path, contents).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_token_file_others_can_read_is_refused() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempdir().unwrap();
+    let token_file = dir.path().join("token").display().to_string();
+    write_private(&token_file, &format!("{TOKEN}\n"));
+    let args: Vec<String> = ["--listen", "127.0.0.1:0", "--token-file", &token_file]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    assert!(HttpServer::bind(&args).is_ok());
+    for mode in [0o640, 0o604, 0o644] {
+        std::fs::set_permissions(&token_file, std::fs::Permissions::from_mode(mode)).unwrap();
+        assert_eq!(
+            HttpServer::bind(&args).err().unwrap().code,
+            "policy_mismatch",
+            "{mode:o}"
+        );
+    }
+}
+
 #[test]
 fn http_transport_authenticates_and_scopes_sessions() {
     let dir = tempdir().unwrap();
     let token_file = dir.path().join("token").display().to_string();
-    std::fs::write(&token_file, format!("{TOKEN}\n")).unwrap();
+    write_private(&token_file, &format!("{TOKEN}\n"));
     let args = |extra: &[&str]| -> Vec<String> {
         let mut args = vec![
             "--listen".to_string(),
@@ -92,7 +124,7 @@ fn http_transport_authenticates_and_scopes_sessions() {
         "policy_mismatch"
     );
     let short = dir.path().join("short").display().to_string();
-    std::fs::write(&short, "short").unwrap();
+    write_private(&short, "short");
     let mut weak = args(&[]);
     weak[3] = short;
     assert_eq!(
@@ -218,7 +250,7 @@ fn http_transport_authenticates_and_scopes_sessions() {
 
 fn bound(dir: &std::path::Path) -> SocketAddr {
     let token_file = dir.join("token").display().to_string();
-    std::fs::write(&token_file, format!("{TOKEN}\n")).unwrap();
+    write_private(&token_file, &format!("{TOKEN}\n"));
     let args: Vec<String> = ["--listen", "127.0.0.1:0", "--token-file", &token_file]
         .iter()
         .map(|s| s.to_string())
