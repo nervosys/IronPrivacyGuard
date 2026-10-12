@@ -268,9 +268,9 @@ dependencies = [
 
 [[package]]
 name = "ironpki"
-version = "0.1.3"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f3ec0f928f5ca921622cf280a1976d06f2e0e4e4e481ece156a9224fc4b9709"
+checksum = "8b2a5f4586f80951776e9235fba772f4802309ecfd9618602ccf169fd065ea7e"
 dependencies = [
  "ic-core",
  "ic-hash",

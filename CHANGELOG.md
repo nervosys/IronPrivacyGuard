@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Moved to IronPKI 0.2.1, and through `ironkeys-kms` 0.1.2 to IronSocketLayer
+  0.5.0. IronPKI 0.2.1 fixes two defects in the certificate-policy processing
+  that 0.1.3 introduced. Neither accepted a path it should not have: a valid
+  path with policy mappings could be refused as too involved to evaluate, and
+  a chain issued under a trusted anchor could make one evaluation take about
+  170 ms. A certificate that lists one policy twice, or has malformed policy
+  qualifiers, is now refused. IPG names no certificate policies, so any
+  policy remains acceptable.
 - Added `docs/controls.json`: IPG's CMMC 2.0 statements in the IronSecurity
   stack's `ironsecurity-controls/1` form, for IronEvidence to write as OSCAL.
   7 practices are met for IPG's part, 9 are partial with the gap named, and

@@ -240,9 +240,9 @@ checksum = "b6b6f811b434340c86ad812bd0668e5d9c24368e9c5d9dfca73707424d25a35d"
 
 [[package]]
 name = "ironkeys-kms"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc4859eb341423ebe09b90f0380634cf4cd2dd216f4f37af69e2ef508b98ef8d"
+checksum = "6a60073a3e791b56b4f9f955cc101d656622479f4a87677670c6f7485c848df7"
 dependencies = [
  "ic-core",
  "ic-ec",
@@ -279,9 +279,9 @@ dependencies = [
 
 [[package]]
 name = "ironpki"
-version = "0.1.3"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f3ec0f928f5ca921622cf280a1976d06f2e0e4e4e481ece156a9224fc4b9709"
+checksum = "8b2a5f4586f80951776e9235fba772f4802309ecfd9618602ccf169fd065ea7e"
 dependencies = [
  "ic-core",
  "ic-hash",
@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "ironsocketlayer"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f6c665c50e12d14f2284075ccdd7d46b75836d36d5e340acb0098172b6a79b3"
+checksum = "14cffc7b9f03da9faaefd4fdcbeab61ed48232bca62e4200b40abfd487bb483d"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -315,6 +315,6 @@ dependencies = [
 
 [[package]]
 name = "isl-ontology"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08deeaec34f3bff2f70236d23cd52531718b41adf38f8ecd482a2745f015667c"
+checksum = "ada51e5afe2eaad0353f146a1c14dccbc936484e2f7d7207c5efda7bb29ae30c"
