@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "ironsocketlayer"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1383d61a0451b3a865d720f404caa2b5211cbcee58e970f09719a23c662df4f5"
+checksum = "2f6c665c50e12d14f2284075ccdd7d46b75836d36d5e340acb0098172b6a79b3"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -315,6 +315,6 @@ dependencies = [
 
 [[package]]
 name = "isl-ontology"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "177b932f0f2359ff7a4b08252e66694255f2ab38c413069948efe8663b5ea6f0"
+checksum = "08deeaec34f3bff2f70236d23cd52531718b41adf38f8ecd482a2745f015667c"
