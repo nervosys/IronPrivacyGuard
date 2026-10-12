@@ -21,7 +21,7 @@ def name(text):
 
 def cert(subject, key, issuer, signer, *, ca=False, path=None, sign=True,
          usage=None, names=None, permitted=None, excluded=None, start=BEFORE,
-         end=AFTER, critical=False):
+         end=AFTER, critical=False, extra=()):
     builder = (x509.CertificateBuilder().subject_name(subject).issuer_name(issuer)
                .public_key(key.public_key()).serial_number(x509.random_serial_number())
                .not_valid_before(start).not_valid_after(end)
@@ -36,6 +36,8 @@ def cert(subject, key, issuer, signer, *, ca=False, path=None, sign=True,
         builder = builder.add_extension(x509.SubjectAlternativeName(names), not subject)
     if permitted is not None or excluded is not None:
         builder = builder.add_extension(x509.NameConstraints(permitted, excluded), True)
+    for extension, is_critical in extra:
+        builder = builder.add_extension(extension, is_critical)
     if critical:
         builder = builder.add_extension(x509.UnrecognizedExtension(
             ObjectIdentifier("1.3.6.1.4.1.55555.9"), b"\x05\x00"), True)
@@ -120,6 +122,38 @@ case("directory_constraint_outside", False,
                          permitted=[x509.DirectoryName(name("Another leaf"))])])
 case("directory_constraint_excluded", False,
      intermediates=[cert(cn, ca_key, rn, root_key, ca=True, excluded=[x509.DirectoryName(ln)])])
+# Certificate policies (RFC 5280 6.1) with the default inputs: any policy is
+# acceptable and none is required until a CA requires one.
+POLICY, OTHER_POLICY = [ObjectIdentifier(f"1.3.6.1.4.1.55555.1.{n}") for n in (1, 2)]
+ANY_POLICY = ObjectIdentifier("2.5.29.32.0")
+
+
+def policies(*oids):
+    return (x509.CertificatePolicies([x509.PolicyInformation(oid, None) for oid in oids]), False)
+
+
+REQUIRE = (x509.PolicyConstraints(require_explicit_policy=0, inhibit_policy_mapping=None), True)
+INHIBIT_ANY = (x509.InhibitAnyPolicy(0), True)
+
+
+def policy_case(label, accepted, ca_extra, leaf_extra):
+    case(label, accepted,
+         target=cert(ln, leaf_key, cn, ca_key, usage=[EK], extra=leaf_extra),
+         intermediates=[cert(cn, ca_key, rn, root_key, ca=True, extra=ca_extra)])
+
+
+policy_case("policy_required_and_asserted", True, [policies(POLICY), REQUIRE], [policies(POLICY)])
+policy_case("policy_required_but_absent", False, [policies(POLICY), REQUIRE], [])
+policy_case("policy_required_but_different", False, [policies(POLICY), REQUIRE],
+            [policies(OTHER_POLICY)])
+policy_case("policy_not_required_and_different", True, [policies(POLICY)], [policies(OTHER_POLICY)])
+policy_case("any_policy_satisfies_a_required_policy", True, [policies(POLICY), REQUIRE],
+            [policies(ANY_POLICY)])
+policy_case("inhibited_any_policy_does_not", False, [policies(POLICY), REQUIRE, INHIBIT_ANY],
+            [policies(ANY_POLICY)])
+policy_case("critical_inhibit_any_policy_is_understood", True, [INHIBIT_ANY], [])
+policy_case("malformed_policies_fail_to_parse", False, [],
+            [(x509.UnrecognizedExtension(ObjectIdentifier("2.5.29.32"), b"\x30\x03\x02\x01"), False)])
 case("empty_subject_critical_san", True, target=cert(x509.Name([]), leaf_key, cn, ca_key,
      usage=[EK], names=[x509.DirectoryName(ln)]))
 case("issuer_cycle_without_anchor", False,

@@ -19,6 +19,13 @@
     `x509::TrustAnchor`; use IronPKI directly for TLS server certificates;
   - a path under a directory-name constraint is refused rather than
     evaluated.
+- Moved to IronPKI 0.1.3, which processes certificate policies. An
+  endorsement-certificate path is now refused when a CA in it requires an
+  explicit policy and none is valid down to the leaf, and when a
+  `certificatePolicies` extension is malformed. A critical
+  `policyConstraints`, `policyMappings` or `inhibitAnyPolicy` extension is
+  understood, where it was refused as an unknown critical extension. The path
+  vectors gain eight policy cases.
 - Moved to IronCrypto 0.2.24 and IronPKI 0.1.2. IronPKI now evaluates
   directory-name and URI name constraints instead of refusing a path under
   one, so an endorsement-certificate path whose subject a directory-name

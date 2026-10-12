@@ -43,7 +43,7 @@ ic-rsa = { version = "=0.2.24", optional = true }
 ic-pkix = { version = "=0.2.24", optional = true }
 # The AWS KMS client, from IronKeys; it brings IronSocketLayer for TLS.
 ironkeys-kms = { version = "=0.1.1", optional = true }
-ironpki = { version = "=0.1.2", optional = true }
+ironpki = { version = "=0.1.3", optional = true }
 
 # Native TPM device access on Linux; Windows FFI isolated in IronKeys' ironkeys-cng.
 [target.'cfg(windows)'.dependencies]
