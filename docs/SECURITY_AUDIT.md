@@ -347,7 +347,9 @@ IronEvidence writes as an OSCAL component. There, a practice is `met` when
 IPG's part of it is met, `partial` with the gap named, and `unmet` for
 SC.L2-3.13.11. Practices that rest on IPG's cryptography are partial, because
 that cryptography is not FIPS-validated. Each entry is IPG's claim about
-itself, not an assessment.
+itself, not an assessment. [DEPLOYMENT.md](DEPLOYMENT.md) is the
+organization's half: how to configure IPG for these practices, and what closes
+each gap.
 
 | Practice | IPG support | Status |
 | --- | --- | --- |

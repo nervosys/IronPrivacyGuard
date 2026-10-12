@@ -138,6 +138,8 @@ ipg mcp --allow discover,schema,ontology,knowledge,knowledge.search,request.vali
 This injects the pinned policy into encryption, signing and verification even if
 the caller omits it or supplies null. Attempts to replace it fail. See
 [MCP setup and protocol](docs/MCP.md) for client configuration and boundaries.
+For regulated environments (SP 800-53, CMMC 2.0, CUI), see
+[deployment guidance](docs/DEPLOYMENT.md).
 
 Plan without opening files or reading secrets:
 

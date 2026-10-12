@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `docs/DEPLOYMENT.md`, deployment guidance for regulated environments:
+  validated key custody, the FIPS algorithm policy, the MCP host flags,
+  audit-log operation, what the organization must do for each practice IPG
+  meets only in part, and the evidence to keep. It is the organization's half
+  of `docs/controls.json`.
 - Moved to IronPKI 0.2.1, and through `ironkeys-kms` 0.1.2 to IronSocketLayer
   0.5.0. IronPKI 0.2.1 fixes two defects in the certificate-policy processing
   that 0.1.3 introduced. Neither accepted a path it should not have: a valid
