@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `docs/controls.json`: IPG's CMMC 2.0 statements in the IronSecurity
+  stack's `ironsecurity-controls/1` form, for IronEvidence to write as OSCAL.
+  7 practices are met for IPG's part, 9 are partial with the gap named, and
+  SC.L2-3.13.11 (FIPS-validated cryptography) is unmet.
+- Moved the lockfile to IronSocketLayer 0.4.1, which changes no API or
+  handshake default.
 - The PKCS#11 and Windows FFI crates, the TPM 2.0 layer and the AWS KMS client
   now come from IronKeys (`ironkeys-pkcs11`, `ironkeys-cng` and
   `ironkeys-tpm2` 0.1.0, `ironkeys-kms` 0.1.1), the IronSecurity stack's

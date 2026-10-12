@@ -339,6 +339,16 @@ direction. CNSA 2.0 specifies ML-KEM-1024 and ML-DSA-87; IPG uses the -768 and
 IPG is a tool, not an information system. It can help an organization meet
 practices, but assessment applies to the whole environment.
 
+The table below is the audit's snapshot, and its caveats name findings that
+have since been fixed (see [Remediation status](#remediation-status)). IPG's
+current statement, practice by practice, is [`controls.json`](controls.json):
+17 entries in the IronSecurity stack's `ironsecurity-controls/1` form, which
+IronEvidence writes as an OSCAL component. There, a practice is `met` when
+IPG's part of it is met, `partial` with the gap named, and `unmet` for
+SC.L2-3.13.11. Practices that rest on IPG's cryptography are partial, because
+that cryptography is not FIPS-validated. Each entry is IPG's claim about
+itself, not an assessment.
+
 | Practice | IPG support | Status |
 | --- | --- | --- |
 | AC.L2-3.1.5 Least privilege | Scoped, attenuating delegation grants; MCP `--allow`; key custody policy | Supports (M5, M7, L1 limit it) |

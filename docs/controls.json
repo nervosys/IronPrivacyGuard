@@ -1,0 +1,188 @@
+{
+  "schema": "ironsecurity-controls/1",
+  "project": "IronPrivacyGuard",
+  "description": "An agent-first privacy command-line tool and MCP server: encryption, signing, key custody, delegation, messaging and audit logging over IronCrypto. It is a tool, not an information system; assessment applies to the environment it is deployed in.",
+  "version": "0.2.0",
+  "fipsValidated": false,
+  "controls": [
+    {
+      "framework": "cmmc",
+      "id": "AC.L2-3.1.3",
+      "title": "Control the flow of CUI in accordance with approved authorizations",
+      "bearing": "IPG decides who can read what it encrypts: envelopes are encrypted to pinned recipients and MLS groups admit members by pinned fingerprint.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/TRUST.md", "docs/MLS.md", "tests/trust.rs", "tests/mls.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AC.L2-3.1.5",
+      "title": "Employ the principle of least privilege",
+      "bearing": "IPG limits what an agent or delegate may do with a key: scoped, attenuating delegation grants, the MCP server's --allow list, and the host's key custody policy.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/DELEGATION.md", "docs/MCP.md", "tests/delegation.rs", "tests/audit_regressions.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AC.L2-3.1.7",
+      "title": "Prevent non-privileged users from executing privileged functions",
+      "bearing": "IPG can gate tool calls behind a human: --require-approval, quorum approvals and host-only configuration that tools cannot change.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/MCP.md", "tests/mcp_approval.rs", "tests/quorum.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AU.L2-3.3.1",
+      "title": "Create and retain system audit logs and records",
+      "bearing": "With --audit-log, IPG's MCP server records every tool call. Retention is the deploying organization's.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/AUDIT.md", "tests/audit.rs"],
+        "gap": "IPG writes the log; it does not retain, rotate or forward it, and calls made outside the MCP server are not logged."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AU.L2-3.3.2",
+      "title": "Ensure the actions of individual users can be uniquely traced to those users",
+      "bearing": "IPG attributes agent actions through signed provenance statements and audit events.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/PROVENANCE.md", "docs/AUDIT.md", "tests/provenance.rs"],
+        "gap": "Attribution is to a key, not to a person; binding keys to individuals is the deploying organization's."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AU.L2-3.3.4",
+      "title": "Alert in the event of an audit logging process failure",
+      "bearing": "When the audit log cannot be written, IPG's MCP server fails the call with audit_unavailable instead of proceeding unlogged.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/AUDIT.md", "tests/audit.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "AU.L2-3.3.8",
+      "title": "Protect audit information and audit logging tools from unauthorized access, modification, and deletion",
+      "bearing": "IPG's audit log is a hash chain with signed checkpoints, and the log, its lock and the HTTP token are unreachable through tools.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/AUDIT.md", "tests/audit.rs", "tests/audit_regressions.rs"],
+        "gap": "The chain and checkpoints detect modification and truncation; they do not prevent it. Anyone with write access to the file outside IPG can alter it, and file access control is the host's."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "CM.L2-3.4.6",
+      "title": "Employ the principle of least functionality",
+      "bearing": "IPG's MCP server exposes only allowlisted tools, and KMS, PKCS#11 and TPM support are compiled in only when their features are selected.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/MCP.md", "docs/DEPENDENCIES.md", "tests/mcp.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "CM.L2-3.4.7",
+      "title": "Restrict, disable, or prevent the use of nonessential programs, functions, ports, protocols, and services",
+      "bearing": "IPG's optional backends are off by default and its HTTP transport refuses to listen beyond loopback.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/MCP.md", "docs/DEPENDENCIES.md", "tests/mcp_http.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "IA.L2-3.5.10",
+      "title": "Store and transmit only cryptographically-protected passwords",
+      "bearing": "IPG never accepts a passphrase inline, and seals software keys under a passphrase-derived key.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/FORMAT.md", "tests/security.rs", "tests/inline.rs"],
+        "gap": "The default sealing uses Argon2id, which is not FIPS-approved. The FIPS algorithm policy seals with PBKDF2 and AES-256-GCM instead, but no module involved is FIPS 140 validated."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "MP.L2-3.8.9",
+      "title": "Protect the confidentiality of backup CUI at storage locations",
+      "bearing": "IPG splits a key backup into threshold shares, each protected with authenticated encryption.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/LIFECYCLE.md", "tests/backup.rs"],
+        "gap": "The cryptography protecting the shares is not FIPS-validated; see SC.L2-3.13.11."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SC.L2-3.13.8",
+      "title": "Implement cryptographic mechanisms to prevent unauthorized disclosure of CUI during transmission",
+      "bearing": "IPG encrypts what it sends: envelopes, agent messages, MLS, and TLS 1.3 through IronSocketLayer to AWS KMS.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/PROTOCOL.md", "docs/MESSAGES.md", "docs/MLS.md", "docs/TLS.md"],
+        "gap": "The cryptography is not FIPS-validated; see SC.L2-3.13.11."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SC.L2-3.13.10",
+      "title": "Establish and manage cryptographic keys for cryptography employed in organizational systems",
+      "bearing": "IPG generates, rotates, revokes and bounds the validity of keys, records trust snapshots, and can keep keys in a PKCS#11 token, a TPM or AWS KMS.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/LIFECYCLE.md", "docs/TRUST.md", "docs/HARDWARE.md", "tests/lifecycle.rs", "tests/rotation.rs"],
+        "gap": "Software keys are generated by IronCrypto, which is not FIPS 140 validated. Keys held in a validated HSM, TPM or KMS are generated there, which is the deploying organization's choice to make and to evidence."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SC.L2-3.13.11",
+      "title": "Employ FIPS-validated cryptography when used to protect the confidentiality of CUI",
+      "bearing": "IPG performs the cryptography that protects what it encrypts.",
+      "compliance": {
+        "state": "unmet",
+        "reason": "IronCrypto, which IPG uses for all cryptography, is not CMVP validated. The FIPS algorithm policy restricts IPG to approved algorithms but does not validate them. Hardware and KMS custody can place private-key operations in a validated module; the rest of the cryptography stays in IronCrypto."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SC.L2-3.13.15",
+      "title": "Protect the authenticity of communications sessions",
+      "bearing": "IPG binds agent messages to their channel and authenticates MLS epochs with confirmation and membership tags.",
+      "compliance": {
+        "state": "met",
+        "evidence": ["docs/MESSAGES.md", "docs/MLS.md", "tests/messages.rs", "tests/mls.rs"]
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SC.L2-3.13.16",
+      "title": "Protect the confidentiality of CUI at rest",
+      "bearing": "IPG encrypts files as envelopes and streams, and seals its own key and group state.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/PROTOCOL.md", "docs/FORMAT.md", "tests/stream.rs"],
+        "gap": "The cryptography is not FIPS-validated; see SC.L2-3.13.11."
+      }
+    },
+    {
+      "framework": "cmmc",
+      "id": "SI.L1-3.14.1",
+      "title": "Identify, report, and correct system flaws in a timely manner",
+      "bearing": "IPG's maintainers find and fix flaws in IPG through a source audit, continuous integration, fuzzing and RustSec advisory checks. Patching deployed copies is the deploying organization's.",
+      "compliance": {
+        "state": "partial",
+        "evidence": ["docs/SECURITY_AUDIT.md", "docs/FUZZING.md", "SECURITY.md"],
+        "gap": "The audit was a source review by the project, not an independent review or a penetration test, and it did not cover IronCrypto."
+      }
+    }
+  ]
+}
