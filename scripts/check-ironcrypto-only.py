@@ -27,6 +27,8 @@ ironcrypto = {
     "ic-core", "ic-cipher", "ic-drbg", "ic-ec", "ic-hash", "ic-kdf", "ic-mac",
     "ic-hpke", "ic-mlkem", "ic-mldsa", "ic-ontology", "ic-json", "ic-rsa", "ic-pkix",
     "ic-rustls", "ic-fips", "ic-vectors", "iron-crypto",
+    # Reached through IronPKI, which verifies signatures with ic-sig.
+    "ic-sig", "ic-lms", "ic-slhdsa",
 }
 # First-party IronSecurity stack crates: certificates, TLS for KMS, and the
 # native boundaries to PKCS#11 modules and Windows CNG.
