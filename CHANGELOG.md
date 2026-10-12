@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-10-12
 
 - Added `docs/DEPLOYMENT.md`, deployment guidance for regulated environments:
   validated key custody, the FIPS algorithm policy, the MCP host flags,

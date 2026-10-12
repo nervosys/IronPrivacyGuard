@@ -16,7 +16,7 @@ encryption, non-exportable identities on PKCS#11 tokens, HSMs, TPM 2.0 and AWS K
 signatures, signed revocation and validity certificates, and pinned immutable trust
 snapshots.
 
-**IronPrivacyGuard 0.2.0 is an experimental pre-1.0 release.** It is not an
+**IronPrivacyGuard 0.3.0 is an experimental pre-1.0 release.** It is not an
 audited or drop-in GPG replacement.
 Native IPG keys, envelopes and signatures are not OpenPGP. A separate
 [OpenPGP boundary](docs/OPENPGP.md) exchanges encrypted files and detached
@@ -24,18 +24,19 @@ signatures with GnuPG. The native IPG protocol needs independent cryptographic
 review before high-value production use.
 
 **IronCrypto is the only dependency.** Every build, including all optional
-integrations, depends only on IronCrypto and first-party IPG crates: OpenPGP,
-PKCS#11, TPM, attestation and AWS KMS (over IronSocketLayer's TLS 1.3 client) included.
+integrations, depends only on IronCrypto and first-party IronSecurity crates
+(IronPKI, IronSocketLayer and IronKeys): OpenPGP, PKCS#11, TPM, attestation and
+AWS KMS (over IronSocketLayer's TLS 1.3 client) included.
 Core software workflows require no external cryptographic programs or services.
 See [dependency boundaries](docs/DEPENDENCIES.md).
 
 Install the CLI from [crates.io](https://crates.io/crates/ipg):
 
 ```sh
-cargo install ipg --version 0.2.0 --locked
+cargo install ipg --version 0.3.0 --locked
 ```
 
-This installs the 0.2.0 CLI, including native OpenPGP. Hardware and cloud
+This installs the 0.3.0 CLI, including native OpenPGP. Hardware and cloud
 integrations are optional Cargo features; see their sections below. Prebuilt release binaries and
 checksums are published on the [GitHub releases page](https://github.com/nervosys/IronPrivacyGuard/releases).
 

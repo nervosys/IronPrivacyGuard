@@ -2,7 +2,7 @@
   "schema": "ironsecurity-controls/1",
   "project": "IronPrivacyGuard",
   "description": "An agent-first privacy command-line tool and MCP server: encryption, signing, key custody, delegation, messaging and audit logging over IronCrypto. It is a tool, not an information system; assessment applies to the environment it is deployed in.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "fipsValidated": false,
   "controls": [
     {
