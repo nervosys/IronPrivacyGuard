@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-10-17
 
 - Moved to IronCrypto 0.3.1, IronPKI 0.4.0, IronKeys 0.2.0 and, through
   `ironkeys-kms`, IronSocketLayer 0.7.0: the IronSecurity stack's move to
