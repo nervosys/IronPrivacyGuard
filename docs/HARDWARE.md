@@ -344,12 +344,10 @@ sudo apt-get install softhsm2
 scripts/softhsm-test.sh
 ```
 
-On Windows or macOS, run it in a container:
-
-```sh
-docker run --rm -v "$PWD:/src" -w /src rust:1-bookworm \
-  bash -c "apt-get update && apt-get install -y softhsm2 && scripts/softhsm-test.sh"
-```
+On Windows, run the same commands in a Debian or Ubuntu distribution under WSL,
+from a checkout inside the distribution's own filesystem. On macOS, use a Linux
+virtual machine, or rely on the `softhsm` job in GitHub Actions, which runs this
+script on every push.
 
 On 2026-10-02, the required full lifecycle test passed on Debian 13 under WSL
 with SoftHSMv2 2.6.1 and an isolated token store. It exercised key generation,
