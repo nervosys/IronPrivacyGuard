@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Moved to IronCrypto 0.3.1, IronPKI 0.4.0, IronKeys 0.2.0 and, through
+  `ironkeys-kms`, IronSocketLayer 0.7.0: the IronSecurity stack's move to
+  IronCrypto 0.3.
+- From IronCrypto 0.3.0, hashes, XOFs and MACs refuse once the module is in
+  its error state, where they used to go on working. IPG passes each refusal
+  on: no fingerprint, audit-log hash, key derivation, transcript hash or
+  signed digest is made by a module that failed its self-tests. Such a
+  refusal is now `internal_error`; it used to be reported as
+  `authentication_failed`, which blames the input.
+- IronCrypto 0.3.0 fixes ChaCha20 keystream reuse on AVX2 CPUs in 0.2.7 to
+  0.2.24, for a single ChaCha20-Poly1305 message over 256 GiB or a raw
+  ChaCha20 call near the top of the block counter. IPG did not reach it: a
+  message is at most 32 MiB and a stream chunk 64 KiB, each under its own
+  nonce. IronCrypto 0.3.1 also clears vector registers and dead stack after
+  code that handles secrets.
+- IronPKI 0.3 added URI alternative names and PKCS#10 requests, and
+  0.4.0 refuses to validate or issue once IronCrypto is in its error state.
+  IPG's certificate validation is otherwise unchanged.
+
 ## 0.3.0 — 2026-10-12
 
 - Added `docs/DEPLOYMENT.md`, deployment guidance for regulated environments:

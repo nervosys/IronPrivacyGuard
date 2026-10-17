@@ -104,7 +104,7 @@ fn legacy_snapshot_commitment_is_unchanged() {
     frame.extend_from_slice(current.as_bytes());
     assert_eq!(
         s.digest().unwrap(),
-        iron_privacy_guard::hex::encode(Sha384::digest(&frame))
+        iron_privacy_guard::hex::encode(Sha384::digest(&frame).unwrap())
     );
 
     s.format = "ipg-trust-v1".into();
@@ -119,7 +119,7 @@ fn legacy_snapshot_commitment_is_unchanged() {
     frame.extend_from_slice(legacy.as_bytes());
     assert_eq!(
         s.digest().unwrap(),
-        iron_privacy_guard::hex::encode(Sha256::digest(&frame))
+        iron_privacy_guard::hex::encode(Sha256::digest(&frame).unwrap())
     );
 }
 #[test]

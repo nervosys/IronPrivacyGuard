@@ -52,15 +52,13 @@ pub struct Entry {
     pub hash: String,
 }
 
-fn genesis(log_id: &[u8; 16]) -> [u8; 48] {
+fn genesis(log_id: &[u8; 16]) -> Result<[u8; 48]> {
     digest48(&crypto::frame("IPG audit log v1", &[log_id]))
 }
-fn digest48(data: &[u8]) -> [u8; 48] {
-    let mut out = [0; 48];
-    out.copy_from_slice(&Sha384::digest(data));
-    out
+fn digest48(data: &[u8]) -> Result<[u8; 48]> {
+    Ok(Sha384::digest(data)?)
 }
-fn entry_hash(prev: &[u8; 48], seq: u64, time: u64, event: &[u8]) -> [u8; 48] {
+fn entry_hash(prev: &[u8; 48], seq: u64, time: u64, event: &[u8]) -> Result<[u8; 48]> {
     digest48(&crypto::frame(
         "IPG audit entry v1",
         &[prev, &seq.to_be_bytes(), &time.to_be_bytes(), event],
@@ -134,7 +132,7 @@ pub fn scan(
         return Err(invalid("Not an ipg-audit-v1 log"));
     }
     let log_id = crypto::bytes::<16>(&header.log_id)?;
-    let mut head = genesis(&log_id);
+    let mut head = genesis(&log_id)?;
     let mut heads = BTreeMap::new();
     if wanted.contains(&0) {
         heads.insert(0, crate::hex::encode(head));
@@ -156,7 +154,7 @@ pub fn scan(
             return Err(tampered("Audit entry does not chain to its predecessor"));
         }
         let event = crate::jcs::canonicalize(&entry.event)?;
-        let hash = entry_hash(&head, entry.seq, entry.time, &event);
+        let hash = entry_hash(&head, entry.seq, entry.time, &event)?;
         if crypto::bytes::<48>(&entry.hash)? != hash {
             return Err(tampered("Audit entry hash does not match its content"));
         }
@@ -249,7 +247,7 @@ pub fn append(path: &str, event: &Value, now: u64) -> Result<(u64, String)> {
     let (state, _) = scan(&mut std::io::BufReader::new(&file), &BTreeSet::new())?;
     let prev = crypto::bytes::<48>(&state.head)?;
     let seq = state.size + 1;
-    let hash = crate::hex::encode(entry_hash(&prev, seq, now, &canonical));
+    let hash = crate::hex::encode(entry_hash(&prev, seq, now, &canonical)?);
     let entry = json!({"seq":seq, "time":now, "prev":state.head, "event":event, "hash":hash});
     let mut line = crate::jcs::canonicalize(&entry)?;
     line.push(b'\n');

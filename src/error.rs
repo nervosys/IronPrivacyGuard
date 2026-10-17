@@ -73,7 +73,18 @@ impl From<ironkeys_kms::Error> for Error {
     }
 }
 impl From<ic_core::Error> for Error {
-    fn from(_: ic_core::Error) -> Self {
+    fn from(e: ic_core::Error) -> Self {
+        // A failed self-test leaves IronCrypto refusing every operation,
+        // hashes included; that is not the caller's input at fault.
+        if matches!(
+            e.kind(),
+            ic_core::ErrorKind::ModuleErrorState | ic_core::ErrorKind::SelfTestFailed
+        ) {
+            return Self::new(
+                "internal_error",
+                "The cryptographic module is in its error state and refuses service",
+            );
+        }
         Self::new(
             "authentication_failed",
             "Cryptographic operation rejected its input",

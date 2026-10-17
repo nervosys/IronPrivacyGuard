@@ -128,7 +128,7 @@ impl RatchetTree {
 
     /// Tree hash of the subtree at `x`, with the leaves in `excluded` blanked
     /// and removed from unmerged-leaf lists.
-    fn hash_excluding(&self, suite: Suite, x: u32, excluded: &BTreeSet<u32>) -> Vec<u8> {
+    fn hash_excluding(&self, suite: Suite, x: u32, excluded: &BTreeSet<u32>) -> Result<Vec<u8>> {
         let mut w = Writer::new();
         if tree_math::level(x) == 0 {
             let leaf = self.leaf(x / 2).filter(|_| !excluded.contains(&(x / 2)));
@@ -144,8 +144,9 @@ impl RatchetTree {
                     .collect(),
                 ..p.clone()
             });
-            let left = self.hash_excluding(suite, tree_math::left(x).expect("parent"), excluded);
-            let right = self.hash_excluding(suite, tree_math::right(x).expect("parent"), excluded);
+            let left = self.hash_excluding(suite, tree_math::left(x).expect("parent"), excluded)?;
+            let right =
+                self.hash_excluding(suite, tree_math::right(x).expect("parent"), excluded)?;
             w.u8(2);
             w.optional(parent.as_ref(), |w, p| p.encode(w));
             w.opaque(&left).opaque(&right);
@@ -153,10 +154,10 @@ impl RatchetTree {
         suite.hash(&w.finish())
     }
 
-    pub fn tree_hash(&self, suite: Suite, x: u32) -> Vec<u8> {
+    pub fn tree_hash(&self, suite: Suite, x: u32) -> Result<Vec<u8>> {
         self.hash_excluding(suite, x, &BTreeSet::new())
     }
-    pub fn root_hash(&self, suite: Suite) -> Vec<u8> {
+    pub fn root_hash(&self, suite: Suite) -> Result<Vec<u8>> {
         self.tree_hash(suite, tree_math::root(self.n_leaves()))
     }
 
@@ -169,8 +170,8 @@ impl RatchetTree {
         let mut w = Writer::new();
         w.opaque(&parent.encryption_key)
             .opaque(&parent.parent_hash)
-            .opaque(&self.hash_excluding(suite, sibling, &excluded));
-        Ok(suite.hash(&w.finish()))
+            .opaque(&self.hash_excluding(suite, sibling, &excluded)?);
+        suite.hash(&w.finish())
     }
 
     fn stored_parent_hash(&self, d: u32) -> Option<&[u8]> {
@@ -380,7 +381,11 @@ mod tests {
                 assert_eq!(t.resolution(i as u32), expected, "resolution {i}");
             }
             for (i, expected) in v["tree_hashes"].as_array().unwrap().iter().enumerate() {
-                assert_eq!(t.tree_hash(suite, i as u32), h(expected), "tree hash {i}");
+                assert_eq!(
+                    t.tree_hash(suite, i as u32).unwrap(),
+                    h(expected),
+                    "tree hash {i}"
+                );
             }
             t.verify_parent_hashes(suite).unwrap();
             t.verify_leaves(suite, &h(&v["group_id"])).unwrap();
@@ -401,7 +406,7 @@ mod tests {
         for v in load("tree-operations") {
             let suite = Suite::from_id(v["cipher_suite"].as_u64().unwrap() as u16).unwrap();
             let mut t = tree(&h(&v["tree_before"]));
-            assert_eq!(t.root_hash(suite), h(&v["tree_hash_before"]));
+            assert_eq!(t.root_hash(suite).unwrap(), h(&v["tree_hash_before"]));
             let sender = v["proposal_sender"].as_u64().unwrap() as u32;
             match Proposal::from_bytes(&h(&v["proposal"])).unwrap() {
                 Proposal::Add(kp) => {
@@ -412,7 +417,7 @@ mod tests {
                 other => panic!("unexpected proposal {other:?}"),
             }
             assert_eq!(t.to_nodes().to_bytes(), h(&v["tree_after"]));
-            assert_eq!(t.root_hash(suite), h(&v["tree_hash_after"]));
+            assert_eq!(t.root_hash(suite).unwrap(), h(&v["tree_hash_after"]));
         }
     }
 }

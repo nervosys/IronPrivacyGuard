@@ -296,7 +296,7 @@ fn eax(
             mac.update(&block);
             mac.update(data);
             let mut out = [0; 16];
-            out.copy_from_slice(&mac.finalize().as_ref()[..16]);
+            out.copy_from_slice(&mac.finalize()?.as_ref()[..16]);
             Ok(out)
         };
         let (data, received) = split_tag(input, decrypt)?;

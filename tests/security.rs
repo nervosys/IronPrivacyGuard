@@ -187,7 +187,7 @@ fn low_order_public_key_and_malformed_hex_fail_closed() {
         framed.extend_from_slice(&(f.len() as u64).to_be_bytes());
         framed.extend_from_slice(f);
     }
-    p.fingerprint = iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&framed));
+    p.fingerprint = iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&framed).unwrap());
     assert!(encrypt(&p, &p.fingerprint, b"secret").is_err());
     assert!(bytes::<32>(&"AA".repeat(32)).is_err());
     assert!(bytes::<32>("00").is_err());
@@ -317,9 +317,9 @@ fn ironcrypto_known_answer_tests() {
     ic_ec::X25519::self_test().unwrap();
     ic_ec::Ed25519::self_test().unwrap();
     assert_eq!(
-        iron_privacy_guard::hex::encode(<ic_hash::Sha256 as ic_core::traits::Digest>::digest(
-            b"abc"
-        )),
+        iron_privacy_guard::hex::encode(
+            <ic_hash::Sha256 as ic_core::traits::Digest>::digest(b"abc").unwrap()
+        ),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }

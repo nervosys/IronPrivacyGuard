@@ -42,8 +42,8 @@ impl Content {
     /// SHA-384 of the content as this mode defines it.
     pub fn digest(self, data: &[u8]) -> Result<String> {
         let digest = match self {
-            Self::Bytes => Sha384::digest(data),
-            Self::Rfc8785 => Sha384::digest(&crate::json_signature::canonical(data)?),
+            Self::Bytes => Sha384::digest(data)?,
+            Self::Rfc8785 => Sha384::digest(&crate::json_signature::canonical(data)?)?,
         };
         Ok(crate::hex::encode(digest))
     }

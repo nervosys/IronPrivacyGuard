@@ -374,7 +374,8 @@ fn audit_request(
     let bytes = crate::jcs::canonicalize(&arguments)
         .or_else(|_| ipg_json::to_vec(&arguments).map_err(Error::from));
     let digest = bytes
-        .map(|b| crate::hex::encode(<ic_hash::Sha384 as ic_core::traits::Digest>::digest(&b)))
+        .and_then(|b| Ok(<ic_hash::Sha384 as ic_core::traits::Digest>::digest(&b)?))
+        .map(crate::hex::encode)
         .unwrap_or_default();
     let mut event = json!({"source":"ipg-mcp", "phase":"request", "call":call, "tool":tool,
         "operation":operation, "arguments_sha384":digest});

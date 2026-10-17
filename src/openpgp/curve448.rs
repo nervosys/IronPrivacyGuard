@@ -458,7 +458,9 @@ pub(crate) fn ed448_verify(public: &[u8], message: &[u8], signature: &[u8]) -> b
     h.update(public);
     h.update(message);
     let mut digest = [0u8; 114];
-    h.finalize_xof(&mut digest);
+    if h.finalize_xof(&mut digest).is_err() {
+        return false;
+    }
     let k = reduce_mod_l(&digest);
 
     let lhs = Point::base().mul_vartime(s_bytes);
@@ -495,7 +497,7 @@ mod tests {
     /// RFC 8032 §5.2.5 key derivation, test-only.
     fn ed448_public(secret: &[u8; 57]) -> [u8; 57] {
         let mut h = [0u8; 114];
-        Shake256::xof(secret, &mut h);
+        Shake256::xof(secret, &mut h).unwrap();
         let mut s = [0u8; 57];
         s.copy_from_slice(&h[..57]);
         s[0] &= 0xfc;

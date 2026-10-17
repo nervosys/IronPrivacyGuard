@@ -80,7 +80,7 @@ fn commitment(input: &mut impl Read) -> Result<(u64, String)> {
             .ok_or_else(|| Error::new("limit_exceeded", "Stream signature byte count overflow"))?;
         hash.update(&buffer[..count]);
     }
-    Ok((bytes, crate::hex::encode(hash.finalize())))
+    Ok((bytes, crate::hex::encode(hash.finalize()?)))
 }
 
 pub fn sign(key: &dyn IdentityKey, input: &mut impl Read) -> Result<Signature> {

@@ -55,7 +55,7 @@ fn distinct_public(index: u64) -> crypto::PublicKey {
         format: "ipg-public-v1".into(),
         encryption_key: iron_privacy_guard::hex::encode(enc),
         signing_key: iron_privacy_guard::hex::encode(sig),
-        fingerprint: iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&frame)),
+        fingerprint: iron_privacy_guard::hex::encode(ic_hash::Sha256::digest(&frame).unwrap()),
     }
 }
 #[test]

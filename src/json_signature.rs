@@ -74,8 +74,8 @@ pub fn canonical(document: &[u8]) -> Result<Vec<u8>> {
     crate::jcs::canonicalize(&crate::jcs::parse(document)?)
 }
 
-fn digest(canonical: &[u8]) -> String {
-    crate::hex::encode(Sha384::digest(canonical))
+fn digest(canonical: &[u8]) -> Result<String> {
+    Ok(crate::hex::encode(Sha384::digest(canonical)?))
 }
 
 pub fn sign(key: &dyn IdentityKey, document: &[u8]) -> Result<Signature> {
@@ -87,7 +87,7 @@ pub fn sign(key: &dyn IdentityKey, document: &[u8]) -> Result<Signature> {
         algorithm: public.suite()?.signature_algorithm().into(),
         canonicalization: CANONICALIZATION.into(),
         digest_algorithm: "sha2-384".into(),
-        digest: digest(&canonical(document)?),
+        digest: digest(&canonical(document)?)?,
         signature: String::new(),
     };
     artifact.signature = crypto::sign_message(key, &artifact.message()?)?;
@@ -114,7 +114,7 @@ pub fn verify(
         &signature.message()?,
         &signature.signature,
     )?;
-    if digest(&canonical(document)?) != signature.digest {
+    if digest(&canonical(document)?)? != signature.digest {
         return Err(Error::new(
             "authentication_failed",
             "JSON signature content mismatch",

@@ -36,7 +36,8 @@ fn independent_hybrid_identity_unlocks_to_the_same_seeds() {
         seeds[96..128].try_into().unwrap(),
         &mut ek,
         &mut dk,
-    );
+    )
+    .unwrap();
     assert_eq!(
         ek.to_vec(),
         public.encryption_key_bytes().unwrap()[..ENCAPS_KEY_LEN]
@@ -74,7 +75,8 @@ fn independent_hybrid_envelopes_decrypt_with_matching_intermediates() {
         seeds[96..128].try_into().unwrap(),
         &mut ek,
         &mut dk,
-    );
+    )
+    .unwrap();
     for item in v["messages"].as_array().unwrap() {
         let envelope: Envelope = decode(&item["envelope"]);
         let trace = &item["encryption_trace"];

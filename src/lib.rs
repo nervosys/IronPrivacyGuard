@@ -3033,7 +3033,7 @@ fn execute_guarded(request: Request, host: &Host) -> Result<Outcome> {
             Ok(Outcome::Canonicalized {
                 path: output,
                 bytes: canonical.len() as u64,
-                digest: crate::hex::encode(ic_hash::Sha384::digest(&canonical)),
+                digest: crate::hex::encode(ic_hash::Sha384::digest(&canonical)?),
             })
         }
         Request::JsonSign {
@@ -3221,7 +3221,7 @@ fn execute_guarded(request: Request, host: &Host) -> Result<Outcome> {
         }
         Request::Hash { input } => Ok(Outcome::Digest {
             algorithm: "sha2-256".into(),
-            digest: crate::hex::encode(Sha256::digest(&read(&input)?)),
+            digest: crate::hex::encode(Sha256::digest(&read(&input)?)?),
         }),
         Request::Inspect { input } => {
             // Streams can exceed the artifact limit; only their header is read.

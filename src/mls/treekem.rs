@@ -264,7 +264,7 @@ pub fn create(
         &leaf.tbs(Some((&context.group_id, me))),
     )?;
     tree.set(2 * me, Some(Node::Leaf(leaf.clone())));
-    context.tree_hash = tree.root_hash(suite);
+    context.tree_hash = tree.root_hash(suite)?;
     let encoded_context = context.encode();
     let mut nodes = Vec::with_capacity(path.len());
     for ((node, secret), public) in secrets.iter().zip(&public_keys) {
@@ -354,8 +354,8 @@ mod tests {
                 let update = UpdatePath::from_bytes(&h(&up["update_path"])).unwrap();
                 let mut tree = base.clone();
                 let path = merge(suite, &mut tree, sender, &update, &group_id).unwrap();
-                assert_eq!(tree.root_hash(suite), h(&up["tree_hash_after"]));
-                let ctx = context(tree.root_hash(suite));
+                assert_eq!(tree.root_hash(suite).unwrap(), h(&up["tree_hash_after"]));
+                let ctx = context(tree.root_hash(suite).unwrap());
                 for (j, expected) in up["path_secrets"].as_array().unwrap().iter().enumerate() {
                     let j = j as u32;
                     if j == sender || expected.is_null() {

@@ -429,13 +429,13 @@ mod tests {
     #[test]
     fn ecdsa_against_ic_ec() {
         sign_and_check::<ic_ec::EcdsaP256Sha256>(Curve::P256, 32, |m| {
-            ic_hash::Sha256::digest(m).to_vec()
+            ic_hash::Sha256::digest(m).unwrap().to_vec()
         });
         sign_and_check::<ic_ec::EcdsaP384Sha384>(Curve::P384, 48, |m| {
-            ic_hash::Sha384::digest(m).to_vec()
+            ic_hash::Sha384::digest(m).unwrap().to_vec()
         });
         sign_and_check::<ic_ec::p521::EcdsaP521Sha512>(Curve::P521, 66, |m| {
-            ic_hash::Sha512::digest(m).to_vec()
+            ic_hash::Sha512::digest(m).unwrap().to_vec()
         });
     }
 

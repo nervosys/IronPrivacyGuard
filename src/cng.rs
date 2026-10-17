@@ -41,12 +41,11 @@ fn open_provider() -> Result<Provider> {
 }
 
 /// Usage authorization bound to the PIN; fixed at the SHA-256 digest size.
-fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
-    Zeroizing::new(
-        Sha256::digest(&Zeroizing::new(crypto::frame("IPG CNG authorization v1", &[pin]))[..])
-            .as_ref()
-            .to_vec(),
-    )
+fn authorization(pin: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    let digest = Zeroizing::new(Sha256::digest(
+        &Zeroizing::new(crypto::frame("IPG CNG authorization v1", &[pin]))[..],
+    )?);
+    Ok(Zeroizing::new(digest.to_vec()))
 }
 
 /// `VendorID` and `Firmware` fields of the provider's platform description.
@@ -82,7 +81,7 @@ impl IdentityKey for CngIdentity {
     }
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
         self.signing
-            .sign_digest(&crypto::p384_digest(message))
+            .sign_digest(&crypto::p384_digest(message)?)
             .map_err(map)
     }
     fn agree(&self, peer: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
@@ -106,7 +105,7 @@ fn load(key: &CngKey, pin: &[u8]) -> Result<CngIdentity> {
             "TPM vendor differs from the key file",
         ));
     }
-    let auth = authorization(pin);
+    let auth = authorization(pin)?;
     let encryption = provider
         .open_key(&key.encryption_key_name, &auth)
         .map_err(map)?;
@@ -143,7 +142,7 @@ pub fn delete(key: &CngKey, pin: &[u8]) -> Result<()> {
     crypto::sign_message(&identity, b"IPG key deletion check v1")?;
     let provider = open_provider()?;
     drop(identity);
-    let auth = authorization(pin);
+    let auth = authorization(pin)?;
     provider
         .delete(&key.encryption_key_name, &auth)
         .map_err(map)?;

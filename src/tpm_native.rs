@@ -48,12 +48,11 @@ fn connection() -> Result<Tpm> {
 }
 
 /// Key authorization bound to the PIN; the same derivation as the Linux backend.
-pub(crate) fn authorization(pin: &[u8]) -> Zeroizing<Vec<u8>> {
-    Zeroizing::new(
-        Sha384::digest(&Zeroizing::new(crypto::frame("IPG TPM authorization v1", &[pin]))[..])
-            .as_ref()
-            .to_vec(),
-    )
+pub(crate) fn authorization(pin: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    let digest = Zeroizing::new(Sha384::digest(
+        &Zeroizing::new(crypto::frame("IPG TPM authorization v1", &[pin]))[..],
+    )?);
+    Ok(Zeroizing::new(digest.to_vec()))
 }
 
 fn text(value: u32) -> String {
@@ -205,7 +204,7 @@ impl IdentityKey for NativeIdentity {
         Custody::Hardware
     }
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
-        let digest = crypto::p384_digest(message);
+        let digest = crypto::p384_digest(message)?;
         self.with_session(|tpm, session| {
             Ok(tpm.sign_p384(
                 (self.signing.0, &self.signing.1),
@@ -254,7 +253,7 @@ fn load_identity(mut tpm: Tpm, key: &TpmKey, pin: &[u8]) -> Result<NativeIdentit
         signing: (signing, signing_public.name()?),
         parent: parent.transient.then_some(parent.handle),
         salt: (parent.handle, parent.public.clone()),
-        auth: authorization(pin),
+        auth: authorization(pin)?,
         session: RefCell::new(None),
         tpm: RefCell::new(tpm),
     };
@@ -298,7 +297,7 @@ fn generate_under(pin: &[u8], template: &str) -> Result<(TpmKey, Protection)> {
     let mut tpm = connection()?;
     let tpm_binding = binding(&mut tpm)?;
     let srk = parent(&mut tpm, template)?;
-    let auth = authorization(pin);
+    let auth = authorization(pin)?;
     let mut session = tpm.hmac_session(srk.handle, &srk.public).inspect_err(|_| {
         if srk.transient {
             tpm.flush(srk.handle);
@@ -423,7 +422,7 @@ pub fn evidence(key: &TpmKey, pin: &[u8]) -> Result<Evidence> {
             tpm.create_primary(RH_ENDORSEMENT, &structures::ak_template().marshal()?)?;
         let certified = (|| {
             let ak_name = ak_public.name()?;
-            let auth = authorization(pin);
+            let auth = authorization(pin)?;
             let mut certifications = Vec::new();
             let mut points = Vec::new();
             for (role, blob) in [
@@ -441,7 +440,7 @@ pub fn evidence(key: &TpmKey, pin: &[u8]) -> Result<Evidence> {
                     &mut session,
                     &auth,
                     (ak, &ak_name),
-                    &attest::qualifying_data(&key.public.fingerprint, role),
+                    &attest::qualifying_data(&key.public.fingerprint, role)?,
                 );
                 tpm.flush(handle);
                 let (attest, signature) = certified?;

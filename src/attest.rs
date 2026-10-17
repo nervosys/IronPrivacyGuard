@@ -178,18 +178,19 @@ pub(crate) fn hex_field(value: &str, max: usize, what: &str) -> Result<Vec<u8>> 
 
 /// Qualifying data binding a certification to the identity and the key's role.
 #[cfg(feature = "attestation")]
-pub(crate) fn qualifying_data(fingerprint: &str, role: Role) -> Vec<u8> {
-    Sha256::digest(&crypto::frame(
+pub(crate) fn qualifying_data(fingerprint: &str, role: Role) -> Result<Vec<u8>> {
+    Ok(Sha256::digest(&crypto::frame(
         "IPG TPM key certification v1",
         &[fingerprint.as_bytes(), role.as_str().as_bytes()],
-    ))
-    .as_ref()
-    .to_vec()
+    ))?
+    .to_vec())
 }
 
 impl Evidence {
     pub fn digest(&self) -> Result<String> {
-        Ok(crate::hex::encode(Sha384::digest(&ipg_json::to_vec(self)?)))
+        Ok(crate::hex::encode(Sha384::digest(&ipg_json::to_vec(
+            self,
+        )?)?))
     }
 }
 
@@ -325,7 +326,7 @@ pub(crate) fn check_evidence(
                 "Certification names a different key",
             ));
         }
-        if parsed.extra_data != qualifying_data(&evidence.public.fingerprint, role) {
+        if parsed.extra_data != qualifying_data(&evidence.public.fingerprint, role)? {
             return Err(Error::new(
                 "identity_mismatch",
                 "Certification is bound to a different identity or role",
@@ -349,8 +350,8 @@ pub(crate) fn check_evidence(
     Ok(Checked {
         report: AttestationReport {
             fingerprint: evidence.public.fingerprint.clone(),
-            ek_certificate_sha256: crate::hex::encode(Sha256::digest(&certificates[0])),
-            ek_certificate_anchor: crate::hex::encode(Sha256::digest(&anchor)),
+            ek_certificate_sha256: crate::hex::encode(Sha256::digest(&certificates[0])?),
+            ek_certificate_anchor: crate::hex::encode(Sha256::digest(&anchor)?),
             firmware_version: format!("{:016x}", firmware.unwrap_or(0)),
             key_attributes: vec![
                 "fixedTPM".into(),

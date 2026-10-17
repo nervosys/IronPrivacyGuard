@@ -33,7 +33,7 @@ fn unauthentic(message: &str) -> Error {
 pub type PskStore = BTreeMap<Vec<u8>, Zeroizing<Vec<u8>>>;
 
 /// `MakeKeyPackageRef`.
-pub fn key_package_ref(suite: Suite, kp: &KeyPackage) -> Vec<u8> {
+pub fn key_package_ref(suite: Suite, kp: &KeyPackage) -> Result<Vec<u8>> {
     suite.ref_hash("MLS 1.0 KeyPackage Reference", &kp.to_bytes())
 }
 
@@ -51,7 +51,7 @@ pub fn proposal_ref(
     wire_format: u16,
     content: &FramedContent,
     auth: &AuthData,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     suite.ref_hash(
         "MLS 1.0 Proposal Reference",
         &authenticated_content(wire_format, content, auth),
@@ -389,7 +389,7 @@ impl Group {
             suite,
             group_id,
             epoch: 0,
-            tree_hash: tree.root_hash(suite),
+            tree_hash: tree.root_hash(suite)?,
             confirmed_transcript_hash: Vec::new(),
             extensions: encode_extensions(&extensions),
         };
@@ -402,7 +402,7 @@ impl Group {
                 suite,
                 &[],
                 &confirmation_tag,
-            ),
+            )?,
             confirmation_tag,
             secret_tree: SecretTree::new(suite, &epoch.encryption_secret, 1),
             keys: Keys::from(EpochSecrets {
@@ -563,7 +563,7 @@ impl Group {
             }
             Content::Proposal(proposal) => {
                 self.check_proposal_sender(content.sender, proposal)?;
-                let reference = proposal_ref(self.suite, wire_format, content, auth);
+                let reference = proposal_ref(self.suite, wire_format, content, auth)?;
                 self.pending.push(Pending {
                     reference: reference.clone(),
                     proposal: proposal.clone(),
@@ -832,7 +832,7 @@ impl Group {
                 check_leaf_capabilities(&path.leaf_node, &tree, &applied.extensions)?;
                 let filtered =
                     treekem::merge(suite, &mut tree, committer, path, &context.group_id)?;
-                context.tree_hash = tree.root_hash(suite);
+                context.tree_hash = tree.root_hash(suite)?;
                 if removed_self {
                     Zeroizing::new(vec![0; suite.nh()])
                 } else {
@@ -849,7 +849,7 @@ impl Group {
                 }
             }
             None => {
-                context.tree_hash = tree.root_hash(suite);
+                context.tree_hash = tree.root_hash(suite)?;
                 Zeroizing::new(vec![0; suite.nh()])
             }
         };
@@ -861,7 +861,7 @@ impl Group {
             suite,
             &self.interim_transcript_hash,
             &input.finish(),
-        );
+        )?;
         if removed_self {
             self.removed = true;
             return Ok(Processed::Commit {
@@ -887,7 +887,7 @@ impl Group {
         }
         private.prune(&tree);
         self.interim_transcript_hash =
-            key_schedule::interim_transcript_hash(suite, &context.confirmed_transcript_hash, tag);
+            key_schedule::interim_transcript_hash(suite, &context.confirmed_transcript_hash, tag)?;
         self.confirmation_tag = tag.clone();
         self.tree = tree;
         self.context = context;
@@ -1018,7 +1018,7 @@ impl Group {
             suite,
             &self.interim_transcript_hash,
             &input.finish(),
-        );
+        )?;
         let psk_secret = self.psk_secret(&applied.psks, psks)?;
         let joiner = key_schedule::joiner_secret(
             suite,
@@ -1053,7 +1053,7 @@ impl Group {
             )?)
         };
         self.interim_transcript_hash =
-            key_schedule::interim_transcript_hash(suite, &context.confirmed_transcript_hash, &tag);
+            key_schedule::interim_transcript_hash(suite, &context.confirmed_transcript_hash, &tag)?;
         self.confirmation_tag = tag;
         self.tree = tree;
         self.context = context;
@@ -1105,7 +1105,7 @@ impl Group {
                 &group_secrets.to_bytes(),
             )?;
             secrets.push(EncryptedGroupSecrets {
-                new_member: key_package_ref(suite, kp),
+                new_member: key_package_ref(suite, kp)?,
                 encrypted_group_secrets: HpkeCiphertext {
                     kem_output,
                     ciphertext,
@@ -1148,7 +1148,7 @@ impl Group {
             signature,
             confirmation_tag: None,
         };
-        let reference = proposal_ref(suite, WIRE_PRIVATE, &content, &auth);
+        let reference = proposal_ref(suite, WIRE_PRIVATE, &content, &auth)?;
         self.own_updates.insert(reference.clone(), private);
         self.pending.push(Pending {
             reference,
@@ -1171,7 +1171,7 @@ impl Group {
         if key_package.cipher_suite != welcome.cipher_suite {
             return Err(invalid("welcome cipher suite differs from the key package"));
         }
-        let reference = key_package_ref(suite, key_package);
+        let reference = key_package_ref(suite, key_package)?;
         let entry = welcome
             .secrets
             .iter()
@@ -1250,7 +1250,7 @@ impl Group {
             )
             .map_err(|_| unauthentic("group info signature"))?;
         let context = info.group_context.clone();
-        if tree.root_hash(suite) != context.tree_hash {
+        if tree.root_hash(suite)? != context.tree_hash {
             return Err(unauthentic("ratchet tree hash"));
         }
         tree.verify_parent_hashes(suite)?;
@@ -1306,7 +1306,7 @@ impl Group {
                 suite,
                 &context.confirmed_transcript_hash,
                 &info.confirmation_tag,
-            ),
+            )?,
             confirmation_tag: info.confirmation_tag.clone(),
             secret_tree: SecretTree::new(suite, &epoch.encryption_secret, tree.n_leaves()),
             keys: Keys::from(epoch_clone(&epoch)),
@@ -1431,7 +1431,7 @@ impl Group {
             _ => return Err(Error::new("invalid_format", "Malformed MLS state")),
         };
         r.finish()?;
-        if context.suite != suite || tree.root_hash(suite) != context.tree_hash {
+        if context.suite != suite || tree.root_hash(suite)? != context.tree_hash {
             return Err(Error::new("invalid_format", "MLS state is inconsistent"));
         }
         let hashes = [&interim_transcript_hash, &confirmation_tag];

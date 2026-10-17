@@ -445,14 +445,14 @@ pub(crate) fn frame(domain: &str, fields: &[&[u8]]) -> Vec<u8> {
     }
     out
 }
-fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> String {
+fn fingerprint(suite: Suite, encryption: &[u8], signing: &[u8]) -> Result<String> {
     let framed = frame(suite.identity_domain(), &[encryption, signing]);
-    match suite {
-        Suite::Curve25519 => crate::hex::encode(Sha256::digest(&framed)),
+    Ok(match suite {
+        Suite::Curve25519 => crate::hex::encode(Sha256::digest(&framed)?),
         Suite::P384 | Suite::Hybrid | Suite::P384MlDsa => {
-            crate::hex::encode(Sha384::digest(&framed))
+            crate::hex::encode(Sha384::digest(&framed)?)
         }
-    }
+    })
 }
 /// Check a fingerprint field: 32-byte (ipg-public-v1) or 48-byte (P-384 and hybrid)
 /// lowercase hexadecimal. Pins then compare exactly, so lengths never mix.
@@ -466,7 +466,7 @@ pub fn identity(suite: Suite, encryption: &[u8], signing: &[u8]) -> Result<Publi
         format: suite.key_format().into(),
         encryption_key: crate::hex::encode(encryption),
         signing_key: crate::hex::encode(signing),
-        fingerprint: fingerprint(suite, encryption, signing),
+        fingerprint: fingerprint(suite, encryption, signing)?,
     };
     public.validate()?;
     Ok(public)
@@ -485,7 +485,7 @@ fn mlkem_keys(seeds: &[u8]) -> Result<MlKemKeys> {
         encapsulation: Box::new([0; ENCAPS_KEY_LEN]),
         decapsulation: Box::new(Zeroizing::new([0; DECAPS_KEY_LEN])),
     };
-    MlKem768::keygen_deterministic(d, z, &mut keys.encapsulation, &mut keys.decapsulation);
+    MlKem768::keygen_deterministic(d, z, &mut keys.encapsulation, &mut keys.decapsulation)?;
     Ok(keys)
 }
 /// ML-DSA-65 keys from the FIPS 204 seed held in hybrid seeds [128..160]. Key
@@ -526,7 +526,7 @@ fn public_from_seeds(suite: Suite, seeds: &[u8]) -> Result<PublicKey> {
         format: suite.key_format().into(),
         encryption_key: crate::hex::encode(&enc),
         signing_key: crate::hex::encode(&sig),
-        fingerprint: fingerprint(suite, &enc, &sig),
+        fingerprint: fingerprint(suite, &enc, &sig)?,
     })
 }
 impl PublicKey {
@@ -563,7 +563,7 @@ impl PublicKey {
                 )
             })?;
         }
-        if self.fingerprint != fingerprint(suite, &enc, &sig) {
+        if self.fingerprint != fingerprint(suite, &enc, &sig)? {
             return Err(Error::new(
                 "invalid_format",
                 "Public key fingerprint or format mismatch",
@@ -696,17 +696,17 @@ pub fn mldsa_mu(public_key: &[u8], context: &[u8], message: &[u8]) -> Result<[u8
     let context_len = u8::try_from(context.len())
         .map_err(|_| Error::new("invalid_request", "ML-DSA context exceeds 255 bytes"))?;
     let mut tr = [0; 64];
-    Shake256::xof(public_key, &mut tr);
+    Shake256::xof(public_key, &mut tr)?;
     let input = [&tr[..], &[0, context_len], context, message].concat();
     let mut mu = [0; 64];
-    Shake256::xof(&input, &mut mu);
+    Shake256::xof(&input, &mut mu)?;
     Ok(mu)
 }
 
 /// SHA-384 of a framed message, the input a token signs with raw CKM_ECDSA. Signing
 /// the digest keeps large messages off the provider interface.
-pub fn p384_digest(message: &[u8]) -> Vec<u8> {
-    Sha384::digest(message).as_ref().to_vec()
+pub fn p384_digest(message: &[u8]) -> Result<Vec<u8>> {
+    Ok(Sha384::digest(message)?.to_vec())
 }
 
 /// Verify a suite signature over framed message bytes. The algorithm must be the
@@ -885,7 +885,7 @@ fn mlkem_pairwise_check(seeds: &[u8]) -> Result<()> {
         Zeroizing::new([0; SHARED_SECRET_LEN]),
         Zeroizing::new([0; SHARED_SECRET_LEN]),
     );
-    MlKem768::encapsulate_deterministic(&message, &keys.encapsulation, &mut ciphertext, &mut sent);
+    MlKem768::encapsulate_deterministic(&message, &keys.encapsulation, &mut ciphertext, &mut sent)?;
     MlKem768::decapsulate(&keys.decapsulation, &ciphertext, &mut received)?;
     if !ic_core::ct::verify(sent.as_ref(), received.as_ref()) {
         return Err(Error::new(
@@ -980,17 +980,17 @@ pub(crate) fn envelope_aad(e: &Envelope) -> Vec<u8> {
 }
 /// P-384 SharedInfo: a fixed-size commitment to the envelope AAD, short enough for
 /// every token's `CK_ECDH1_DERIVE_PARAMS` shared-data limit.
-pub(crate) fn p384_shared_info(aad: &[u8]) -> Vec<u8> {
-    Sha384::digest(aad).as_ref().to_vec()
+pub(crate) fn p384_shared_info(aad: &[u8]) -> Result<Vec<u8>> {
+    Ok(Sha384::digest(aad)?.to_vec())
 }
 /// ANSI X9.63 KDF with SHA-384 (PKCS#11 `CKD_SHA384_KDF`), truncated to 32 bytes:
 /// the first block `SHA-384(Z || 00000001 || SharedInfo)` suffices.
-pub fn x963_kdf_sha384(shared: &[u8], shared_info: &[u8]) -> Zeroizing<[u8; 32]> {
+pub fn x963_kdf_sha384(shared: &[u8], shared_info: &[u8]) -> Result<Zeroizing<[u8; 32]>> {
     let input = Zeroizing::new([shared, &1u32.to_be_bytes(), shared_info].concat());
-    let block = Zeroizing::new(Sha384::digest(&input).as_ref().to_vec());
+    let block = Zeroizing::new(Sha384::digest(&input)?);
     let mut key = Zeroizing::new([0; 32]);
     key.copy_from_slice(&block[..32]);
-    key
+    Ok(key)
 }
 fn envelope_key(suite: Suite, shared: &[u8], e: &Envelope) -> Result<Zeroizing<[u8; 32]>> {
     let aad = envelope_aad(e);
@@ -1000,7 +1000,7 @@ fn envelope_key(suite: Suite, shared: &[u8], e: &Envelope) -> Result<Zeroizing<[
             Hkdf::<HmacSha256>::derive(shared, b"IPG encryption v1", &aad, key.as_mut())?;
             Ok(key)
         }
-        Suite::P384 | Suite::P384MlDsa => Ok(x963_kdf_sha384(shared, &p384_shared_info(&aad))),
+        Suite::P384 | Suite::P384MlDsa => x963_kdf_sha384(shared, &p384_shared_info(&aad)?),
     }
 }
 fn seal(suite: Suite, key: &[u8], nonce: &[u8], aad: &[u8], data: &mut [u8]) -> Result<[u8; 16]> {
@@ -1094,7 +1094,7 @@ fn encapsulate(suite: Suite, recipient: &[u8]) -> Result<(Vec<u8>, Zeroizing<Vec
         let message = random::<32>()?;
         let mut ciphertext = [0; CIPHERTEXT_LEN];
         let mut kem = Zeroizing::new([0; SHARED_SECRET_LEN]);
-        MlKem768::encapsulate_deterministic(&message, kem_key, &mut ciphertext, &mut kem);
+        MlKem768::encapsulate_deterministic(&message, kem_key, &mut ciphertext, &mut kem)?;
         ephemeral_key.extend_from_slice(&ciphertext);
         shared.extend_from_slice(kem.as_ref());
     }
@@ -1162,7 +1162,7 @@ pub fn decrypt_with(key: &dyn IdentityKey, e: &Envelope) -> Result<Zeroizing<Vec
         .concat();
         let sealed = Sealed {
             peer: &peer,
-            shared_info: &p384_shared_info(&aad),
+            shared_info: &p384_shared_info(&aad)?,
             nonce: &bytes::<12>(&e.nonce)?,
             aad: &aad,
             ciphertext_and_tag: &ciphertext_and_tag,

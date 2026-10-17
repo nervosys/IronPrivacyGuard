@@ -156,12 +156,12 @@ impl Suite {
         }
     }
 
-    pub fn hash(self, data: &[u8]) -> Vec<u8> {
-        if self.p384() {
-            Sha384::digest(data).to_vec()
+    pub fn hash(self, data: &[u8]) -> Result<Vec<u8>> {
+        Ok(if self.p384() {
+            Sha384::digest(data)?.to_vec()
         } else {
-            Sha256::digest(data).to_vec()
-        }
+            Sha256::digest(data)?.to_vec()
+        })
     }
     pub fn extract(self, salt: &[u8], ikm: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
         let mut prk = Zeroizing::new(vec![0; self.nh()]);
@@ -185,11 +185,11 @@ impl Suite {
         if self.p384() {
             let mut mac = HmacSha384::new(key)?;
             mac.update(data);
-            Ok(mac.finalize().as_ref().to_vec())
+            Ok(mac.finalize()?.as_ref().to_vec())
         } else {
             let mut mac = HmacSha256::new(key)?;
             mac.update(data);
-            Ok(mac.finalize().as_ref().to_vec())
+            Ok(mac.finalize()?.as_ref().to_vec())
         }
     }
 
@@ -232,7 +232,7 @@ impl Suite {
         self.expand_with_label(secret, label, &generation.to_be_bytes(), length)
     }
     /// `RefHash(Label, Value)`.
-    pub fn ref_hash(self, label: &str, value: &[u8]) -> Vec<u8> {
+    pub fn ref_hash(self, label: &str, value: &[u8]) -> Result<Vec<u8>> {
         let mut input = Writer::new();
         input.opaque(label.as_bytes()).opaque(value);
         self.hash(&input.finish())
@@ -482,7 +482,9 @@ mod tests {
             let suite = Suite::from_id(v["cipher_suite"].as_u64().unwrap() as u16).unwrap();
             let r = &v["ref_hash"];
             assert_eq!(
-                suite.ref_hash(r["label"].as_str().unwrap(), &h(&r["value"])),
+                suite
+                    .ref_hash(r["label"].as_str().unwrap(), &h(&r["value"]))
+                    .unwrap(),
                 h(&r["out"])
             );
 

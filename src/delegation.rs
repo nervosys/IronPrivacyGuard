@@ -195,12 +195,12 @@ impl Link {
     }
 
     /// Commitment the next link signs: this link's signed bytes and signature.
-    fn digest(&self, previous: &[u8]) -> Vec<u8> {
+    fn digest(&self, previous: &[u8]) -> Result<Vec<u8>> {
         let framed = crypto::frame(
             "IPG grant link v1",
             &[&self.message(previous), self.signature.as_bytes()],
         );
-        Sha384::digest(&framed).as_ref().to_vec()
+        Ok(Sha384::digest(&framed)?.to_vec())
     }
 
     /// A child may only narrow its parent's authority.
@@ -274,7 +274,7 @@ impl Grant {
                     &link.signature,
                 )?;
             }
-            previous = link.digest(&previous);
+            previous = link.digest(&previous)?;
         }
         Ok(())
     }
@@ -342,7 +342,7 @@ pub fn sign(key: &dyn IdentityKey, mut grant: Grant) -> Result<Grant> {
     let mut previous = Vec::new();
     let last = grant.links.len() - 1;
     for link in &grant.links[..last] {
-        previous = link.digest(&previous);
+        previous = link.digest(&previous)?;
     }
     if key.public().fingerprint != grant.links[last].issuer {
         return Err(Error::new(

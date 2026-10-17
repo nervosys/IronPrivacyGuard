@@ -109,15 +109,15 @@ impl TrustStore {
             1 => crate::hex::encode(Sha256::digest(&crypto::frame(
                 "IPG trust snapshot v1",
                 &[&body],
-            ))),
+            ))?),
             2 => crate::hex::encode(Sha256::digest(&crypto::frame(
                 "IPG trust snapshot v2",
                 &[&body],
-            ))),
+            ))?),
             _ => crate::hex::encode(Sha384::digest(&crypto::frame(
                 "IPG trust snapshot v3",
                 &[&body],
-            ))),
+            ))?),
         })
     }
     /// Snapshots are rewritten in the current format whenever they change.

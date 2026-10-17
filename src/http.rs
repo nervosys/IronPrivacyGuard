@@ -118,7 +118,7 @@ fn authorized(headers: &BTreeMap<String, String>, token: &[u8; 48]) -> bool {
     headers
         .get("authorization")
         .and_then(|v| v.strip_prefix("Bearer "))
-        .map(|t| digest(t.trim().as_bytes()))
+        .and_then(|t| digest(t.trim().as_bytes()).ok())
         .is_some_and(|d| ic_core::ct::verify(&d, token))
 }
 
@@ -173,10 +173,8 @@ impl HttpResponse {
     }
 }
 
-fn digest(token: &[u8]) -> [u8; 48] {
-    let mut out = [0; 48];
-    out.copy_from_slice(&Sha384::digest(token));
-    out
+fn digest(token: &[u8]) -> Result<[u8; 48]> {
+    Ok(Sha384::digest(token)?)
 }
 
 impl HttpServer {
@@ -232,7 +230,7 @@ impl HttpServer {
         }
         Ok(Self {
             listener: TcpListener::bind(address)?,
-            token: digest(token),
+            token: digest(token)?,
             mcp_args,
             sessions: BTreeMap::new(),
             limiter: Default::default(),

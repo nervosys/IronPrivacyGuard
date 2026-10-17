@@ -225,7 +225,7 @@ impl IdentityKey for TokenIdentity {
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
         // Raw CKM_ECDSA over SHA-384 equals ECDSA-SHA384 over the message.
         self.session
-            .sign(self.signing, &crypto::p384_digest(message))
+            .sign(self.signing, &crypto::p384_digest(message)?)
             .map_err(map)
     }
     /// Derive a sensitive, non-extractable AES-256 key with ECDH and the X9.63 KDF,
@@ -590,7 +590,7 @@ mod tests {
         let tag = crypto::bytes::<16>(&envelope.tag).unwrap();
         let sealed = crypto::Sealed {
             peer: &crypto::hex_exact(&envelope.ephemeral_key, 97).unwrap(),
-            shared_info: &crypto::p384_shared_info(&aad),
+            shared_info: &crypto::p384_shared_info(&aad).unwrap(),
             nonce: &crypto::bytes::<12>(&envelope.nonce).unwrap(),
             aad: &aad,
             ciphertext_and_tag: &[

@@ -76,8 +76,8 @@ fn invalid(message: &str) -> Error {
     Error::new("invalid_format", message)
 }
 
-fn digest(data: &[u8]) -> Vec<u8> {
-    Sha384::digest(data).as_ref().to_vec()
+fn digest(data: &[u8]) -> Result<Vec<u8>> {
+    Ok(Sha384::digest(data)?.to_vec())
 }
 
 impl Message {
@@ -104,8 +104,8 @@ impl Message {
     }
 
     /// Domain-separated bytes the sender signs.
-    fn signed(&self, grant: &[u8], content: &[u8]) -> Vec<u8> {
-        crypto::frame(
+    fn signed(&self, grant: &[u8], content: &[u8]) -> Result<Vec<u8>> {
+        Ok(crypto::frame(
             "IPG message v1",
             &[
                 FORMAT.as_bytes(),
@@ -116,10 +116,10 @@ impl Message {
                 &self.created.to_be_bytes(),
                 &self.expires.to_be_bytes(),
                 self.channel_binding.as_deref().unwrap_or("").as_bytes(),
-                &digest(grant),
-                &digest(content),
+                &digest(grant)?,
+                &digest(content)?,
             ],
-        )
+        ))
     }
 }
 
@@ -206,7 +206,7 @@ pub fn seal(
         Some(grant) => ipg_json::to_vec(grant)?,
         None => Vec::new(),
     };
-    let signature = crypto::sign_message(key, &message.signed(&grant_json, content))?;
+    let signature = crypto::sign_message(key, &message.signed(&grant_json, content)?)?;
     let payload = Zeroizing::new(crypto::frame(
         PAYLOAD_DOMAIN,
         &[signature.as_bytes(), &grant_json, content],
@@ -270,7 +270,7 @@ pub fn open(key: &dyn IdentityKey, sender: &PublicKey, message: &Message) -> Res
     crypto::verify_message(
         sender,
         sender.suite()?.signature_algorithm(),
-        &message.signed(grant_json, content),
+        &message.signed(grant_json, content)?,
         &signature,
     )?;
     let grant = if grant_json.is_empty() {

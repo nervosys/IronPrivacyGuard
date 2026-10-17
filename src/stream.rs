@@ -83,10 +83,8 @@ impl Header {
         }
         Ok(())
     }
-    fn associated_data(bytes: &[u8]) -> Vec<u8> {
-        Sha384::digest(&crypto::frame("IPG stream v1", &[bytes]))
-            .as_ref()
-            .to_vec()
+    fn associated_data(bytes: &[u8]) -> Result<Vec<u8>> {
+        Ok(Sha384::digest(&crypto::frame("IPG stream v1", &[bytes]))?.to_vec())
     }
 }
 
@@ -201,7 +199,7 @@ pub fn encrypt(
         recipients: envelopes,
     };
     let header_bytes = ipg_json::to_vec(&header)?;
-    let aad = Header::associated_data(&header_bytes);
+    let aad = Header::associated_data(&header_bytes)?;
     output.write_all(MAGIC)?;
     output.write_all(&(header_bytes.len() as u32).to_be_bytes())?;
     output.write_all(&header_bytes)?;
@@ -302,7 +300,7 @@ pub fn decrypt(
     }
     let content_key = Zeroizing::new(wrapped[16..].to_vec());
     let prefix = crypto::bytes::<7>(&header.nonce_prefix)?;
-    let aad = Header::associated_data(header_bytes);
+    let aad = Header::associated_data(header_bytes)?;
     let mut current = Zeroizing::new(vec![0u8; CHUNK_SIZE + TAG]);
     let mut lookahead = [0u8; 1];
     let mut pending: Option<u8> = None;

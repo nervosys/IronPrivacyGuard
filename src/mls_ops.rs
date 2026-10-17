@@ -540,7 +540,7 @@ pub fn key_package(
     let suite = suite.suite();
     require_approved_suite(suite)?;
     let (kp, secrets, signer) = bound_key_package(&*identity, suite, lifetime)?;
-    let reference = group::key_package_ref(suite, &kp);
+    let reference = group::key_package_ref(suite, &kp)?;
     let sealed = seal(
         KEY_PACKAGE_SECRETS_FORMAT,
         &encode_kp_secrets(&kp, &secrets, &signer),

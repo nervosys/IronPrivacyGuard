@@ -67,7 +67,7 @@ impl IdentityKey for KmsIdentity {
         Custody::Service
     }
     fn sign_raw(&self, message: &[u8]) -> Result<Vec<u8>> {
-        let digest: [u8; 48] = crypto::p384_digest(message)
+        let digest: [u8; 48] = crypto::p384_digest(message)?
             .try_into()
             .map_err(|_| Error::new("internal_error", "SHA-384 digest has the wrong length"))?;
         let mut signature = self.client.sign_p384_digest(&self.signing_key, &digest)?;

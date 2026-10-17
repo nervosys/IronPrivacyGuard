@@ -82,7 +82,7 @@ fn commitments_are_fragment_independent_and_metadata_and_domains_are_bound() {
             assert_eq!(sig.bytes, data.len() as u64);
             assert_eq!(
                 sig.digest,
-                iron_privacy_guard::hex::encode(Sha384::digest(&data))
+                iron_privacy_guard::hex::encode(Sha384::digest(&data).unwrap())
             );
             stream_signature::verify(
                 &secret.public,

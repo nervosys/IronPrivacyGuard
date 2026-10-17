@@ -41,11 +41,11 @@ fn now() -> Result<u64> {
 }
 fn digest(id: u8, data: &[u8]) -> Result<Vec<u8>> {
     Ok(match id {
-        8 => Sha256::digest(data).to_vec(),
-        9 => Sha384::digest(data).to_vec(),
-        10 => Sha512::digest(data).to_vec(),
-        12 => Sha3_256::digest(data).to_vec(),
-        14 => Sha3_512::digest(data).to_vec(),
+        8 => Sha256::digest(data)?.to_vec(),
+        9 => Sha384::digest(data)?.to_vec(),
+        10 => Sha512::digest(data)?.to_vec(),
+        12 => Sha3_256::digest(data)?.to_vec(),
+        14 => Sha3_512::digest(data)?.to_vec(),
         _ => return Err(auth()),
     })
 }
@@ -187,7 +187,7 @@ impl Key {
         key.fingerprint = if version == 4 {
             Sha1::digest(&key.framed()).to_vec()
         } else {
-            Sha256::digest(&key.framed()).to_vec()
+            Sha256::digest(&key.framed())?.to_vec()
         };
         Ok(key)
     }
@@ -2336,7 +2336,7 @@ fn iterated_s2k(
     password: &[u8],
     len: usize,
 ) -> Result<Zeroizing<Vec<u8>>> {
-    fn hash_repeated<D: Digest>(prefix: usize, data: &[u8], count: usize) -> Vec<u8> {
+    fn hash_repeated<D: Digest>(prefix: usize, data: &[u8], count: usize) -> Result<Vec<u8>> {
         let mut h = D::new();
         for _ in 0..prefix {
             h.update(&[0]);
@@ -2347,7 +2347,7 @@ fn iterated_s2k(
             h.update(&data[..n]);
             left -= n;
         }
-        h.finalize().as_ref().to_vec()
+        Ok(h.finalize()?.as_ref().to_vec())
     }
     let mut seed = Zeroizing::new(salt.to_vec());
     seed.extend_from_slice(password);
@@ -2372,9 +2372,9 @@ fn iterated_s2k(
                 }
                 h.finish().to_vec()
             }
-            8 => hash_repeated::<Sha256>(prefix, &seed, count),
-            9 => hash_repeated::<Sha384>(prefix, &seed, count),
-            10 => hash_repeated::<Sha512>(prefix, &seed, count),
+            8 => hash_repeated::<Sha256>(prefix, &seed, count)?,
+            9 => hash_repeated::<Sha384>(prefix, &seed, count)?,
+            10 => hash_repeated::<Sha512>(prefix, &seed, count)?,
             _ => return Err(unsupported()),
         });
         out.extend_from_slice(&hash);
@@ -2739,7 +2739,7 @@ mod tests {
         transcript.extend(&prefix);
         transcript.extend([4, 255]);
         transcript.extend_from_slice(&(prefix.len() as u32).to_be_bytes());
-        let hash = Sha512::digest(&transcript);
+        let hash = Sha512::digest(&transcript).unwrap();
         let mut value = [0; 64];
         Ed25519::sign(&secret.scalars[0], &hash, &mut value).unwrap();
         let mut body = prefix;

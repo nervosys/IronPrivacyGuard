@@ -117,7 +117,7 @@ pub fn export(
     length: usize,
 ) -> Result<Zeroizing<Vec<u8>>> {
     let secret = suite.expand_with_label_bytes(exporter_secret, label, &[], suite.nh())?;
-    suite.expand_with_label(&secret, "exported", &suite.hash(context), length)
+    suite.expand_with_label(&secret, "exported", &suite.hash(context)?, length)
 }
 
 /// A pre-shared key and its encoded `PreSharedKeyID`.
@@ -158,14 +158,22 @@ pub fn psk_secret(suite: Suite, psks: &[Psk<'_>]) -> Result<Zeroizing<Vec<u8>>> 
 
 /// `ConfirmedTranscriptHash` from the previous interim hash and the encoded
 /// `ConfirmedTranscriptHashInput` (wire format, FramedContent, signature).
-pub fn confirmed_transcript_hash(suite: Suite, interim_before: &[u8], input: &[u8]) -> Vec<u8> {
+pub fn confirmed_transcript_hash(
+    suite: Suite,
+    interim_before: &[u8],
+    input: &[u8],
+) -> Result<Vec<u8>> {
     let mut data = interim_before.to_vec();
     data.extend_from_slice(input);
     suite.hash(&data)
 }
 
 /// `InterimTranscriptHash` after a commit with `confirmation_tag`.
-pub fn interim_transcript_hash(suite: Suite, confirmed: &[u8], confirmation_tag: &[u8]) -> Vec<u8> {
+pub fn interim_transcript_hash(
+    suite: Suite,
+    confirmed: &[u8],
+    confirmation_tag: &[u8],
+) -> Result<Vec<u8>> {
     let mut data = confirmed.to_vec();
     let mut w = Writer::new();
     w.opaque(confirmation_tag);
@@ -287,14 +295,15 @@ mod tests {
             let (input, tag) = content.split_at(content.len() - 1 - suite.nh());
             assert_eq!(usize::from(tag[0]), suite.nh());
             let confirmed =
-                confirmed_transcript_hash(suite, &h(&v["interim_transcript_hash_before"]), input);
+                confirmed_transcript_hash(suite, &h(&v["interim_transcript_hash_before"]), input)
+                    .unwrap();
             assert_eq!(confirmed, h(&v["confirmed_transcript_hash_after"]));
             assert_eq!(
                 confirmation_tag(suite, &h(&v["confirmation_key"]), &confirmed).unwrap(),
                 tag[1..]
             );
             assert_eq!(
-                interim_transcript_hash(suite, &confirmed, &tag[1..]),
+                interim_transcript_hash(suite, &confirmed, &tag[1..]).unwrap(),
                 h(&v["interim_transcript_hash_after"])
             );
         }

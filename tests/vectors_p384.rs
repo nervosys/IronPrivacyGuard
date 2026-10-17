@@ -96,14 +96,17 @@ fn independent_p384_envelopes_decrypt_with_matching_intermediates() {
             .unwrap();
         assert_eq!(*shared, bytes(&trace["shared_secret_hex"]));
         // ANSI X9.63 KDF, one SHA-384 block: SHA-384(Z || 00000001 || SHA-384(AAD)).
-        let shared_info = Sha384::digest(&bytes(&trace["aad_hex"]));
-        let block = Sha384::digest(&[&shared[..], &[0, 0, 0, 1], shared_info.as_ref()].concat());
+        let shared_info = Sha384::digest(&bytes(&trace["aad_hex"])).unwrap();
+        let block =
+            Sha384::digest(&[&shared[..], &[0, 0, 0, 1], shared_info.as_ref()].concat()).unwrap();
         assert_eq!(
             block.as_ref()[..32].to_vec(),
             bytes(&trace["derived_key_hex"])
         );
         assert_eq!(
-            crypto::x963_kdf_sha384(&shared, shared_info.as_ref()).to_vec(),
+            crypto::x963_kdf_sha384(&shared, shared_info.as_ref())
+                .unwrap()
+                .to_vec(),
             bytes(&trace["derived_key_hex"])
         );
         assert_eq!(

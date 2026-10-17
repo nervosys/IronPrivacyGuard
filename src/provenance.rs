@@ -100,7 +100,7 @@ pub fn digest(input: &mut impl Read) -> Result<String> {
         }
         hash.update(&buffer[..count]);
     }
-    Ok(crate::hex::encode(hash.finalize()))
+    Ok(crate::hex::encode(hash.finalize()?))
 }
 
 pub fn check_name(name: &str) -> Result<()> {
@@ -355,7 +355,7 @@ pub fn verify(
             recorded_at,
             subjects: subjects.iter().map(|a| a.name.clone()).collect(),
             materials: materials.iter().map(|a| a.name.clone()).collect(),
-            statement_digest: crate::hex::encode(Sha384::digest(&payload)),
+            statement_digest: crate::hex::encode(Sha384::digest(&payload)?),
             parameters,
         },
         subjects,
