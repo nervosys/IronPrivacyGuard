@@ -107,16 +107,20 @@ pub fn verify_endorsement_certificate(
     // `new` leaves accepting an anchor as the leaf off for this purpose.
     let options = VerifyOptions::new(now, Purpose::TpmEndorsementKey, ALGORITHMS, Limits::DEFAULT);
     let chain: Vec<&[u8]> = intermediates.iter().map(Vec::as_slice).collect();
-    let report =
-        ironpki::x509::verify_chain(leaf, &chain, &store, &options).map_err(|e| {
-            match e.kind() {
-                ErrorKind::UnsupportedCertificate | ErrorKind::BadCertificate => malformed(),
-                ErrorKind::CapacityExceeded => {
-                    Error::new("limit_exceeded", "Too many certificate path candidates")
-                }
-                _ => rejected(),
+    let report = ironpki::x509::verify_chain(leaf, &chain, &store, &options).map_err(|e| {
+        match e.kind() {
+            ErrorKind::UnsupportedCertificate | ErrorKind::BadCertificate => malformed(),
+            ErrorKind::CapacityExceeded => {
+                Error::new("limit_exceeded", "Too many certificate path candidates")
             }
-        })?;
+            // IronCrypto refused: the module failed, not the certificate.
+            ErrorKind::ModuleState => Error::new(
+                "internal_error",
+                "The cryptographic module is in its error state and refuses service",
+            ),
+            _ => rejected(),
+        }
+    })?;
     identities
         .iter()
         .find(|(_, subject, spki)| *subject == report.anchor_subject && *spki == report.anchor_spki)

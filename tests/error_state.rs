@@ -21,6 +21,21 @@ fn nothing_is_hashed_or_sealed_in_the_error_state() {
     );
     let (response, status) = handle_call(request.as_bytes());
     assert_eq!(status, 0, "{response}");
+    #[cfg(feature = "x509-native")]
+    let endorsement = {
+        let v: ipg_json::Value =
+            ipg_json::from_str(include_str!("vectors/attestation-certificate-policy.json"))
+                .unwrap();
+        let hex = |s: &ipg_json::Value| iron_privacy_guard::hex::decode(s.as_str().unwrap());
+        let leaf = hex(&v["cases"][0]["certificate"]).unwrap();
+        let anchors = vec![hex(&v["anchor"]).unwrap()];
+        let now = ironpki::x509::Certificate::parse(&leaf)
+            .unwrap()
+            .not_before() as i64;
+        let verify = iron_privacy_guard::x509::verify_endorsement_certificate;
+        assert_eq!(verify(&leaf, &anchors, &[], now).unwrap(), 0);
+        move || verify(&leaf, &anchors, &[], now)
+    };
 
     ic_core::module::enter_error_state();
 
@@ -32,6 +47,9 @@ fn nothing_is_hashed_or_sealed_in_the_error_state() {
     assert!(response["result"].is_null());
     let sealed = crypto::encrypt(&key.public, &key.public.fingerprint, b"secret");
     assert_eq!(sealed.unwrap_err().code, "internal_error");
+    // The endorsement certificate is not at fault either.
+    #[cfg(feature = "x509-native")]
+    assert_eq!(endorsement().unwrap_err().code, "internal_error");
 
     std::fs::remove_dir_all(&dir).unwrap();
 }

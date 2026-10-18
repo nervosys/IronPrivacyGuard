@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Moved to IronCrypto 0.3.2, IronPKI 0.4.1 and, through `ironkeys-kms`,
+  IronSocketLayer 0.7.1. IronCrypto 0.3.2 changes no interface: ML-KEM's
+  Keccak runs eight lanes wide on AVX-512, and P-384 public-key preparation
+  is faster.
+- An endorsement-certificate check that IronCrypto refused because the module
+  is in its error state is now `internal_error`. It used to be
+  `key_not_trusted`, which blames the certificate. IronPKI 0.4.1 reports the
+  refusal as `module-state` instead of as a failed path; nothing was accepted
+  before that should not have been. `tests/error_state.rs` covers it.
+
 ## 0.4.0 — 2026-10-17
 
 - Moved to IronCrypto 0.3.1, IronPKI 0.4.0, IronKeys 0.2.0 and, through
