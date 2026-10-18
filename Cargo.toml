@@ -1,6 +1,6 @@
 [package]
 name = "ipg"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
@@ -37,12 +37,12 @@ ipg-json = { path = "crates/ipg-json", version = "0.1.0" }
 ironkeys-pkcs11 = { version = "=0.2.0", optional = true }
 # The TPM 2.0 layer, from IronKeys: structures for verifying attestations and,
 # with its `device` feature, commands to a TPM.
-ironkeys-tpm2 = { version = "=0.2.0", optional = true }
+ironkeys-tpm2 = { version = "=0.2.1", optional = true }
 # TPM attestation verification: native certificate paths over IronCrypto.
 ic-rsa = { version = "=0.3.2", optional = true }
 ic-pkix = { version = "=0.3.2", optional = true }
 # The AWS KMS client, from IronKeys; it brings IronSocketLayer for TLS.
-ironkeys-kms = { version = "=0.2.0", optional = true }
+ironkeys-kms = { version = "=0.2.1", optional = true }
 ironpki = { version = "=0.4.1", optional = true }
 
 # Native TPM device access on Linux; Windows FFI isolated in IronKeys' ironkeys-cng.

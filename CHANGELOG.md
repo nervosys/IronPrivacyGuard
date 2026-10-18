@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 — 2026-10-18
 
-- Moved to IronCrypto 0.3.2, IronPKI 0.4.1 and, through `ironkeys-kms`,
-  IronSocketLayer 0.7.1. IronCrypto 0.3.2 changes no interface: ML-KEM's
+- Moved to IronCrypto 0.3.2, IronPKI 0.4.1, `ironkeys-tpm2` and
+  `ironkeys-kms` 0.2.1 and, through `ironkeys-kms`, IronSocketLayer 0.7.1. IronCrypto 0.3.2 changes no interface: ML-KEM's
   Keccak runs eight lanes wide on AVX-512, and P-384 public-key preparation
   is faster.
 - An endorsement-certificate check that IronCrypto refused because the module
@@ -11,6 +11,10 @@
   `key_not_trusted`, which blames the certificate. IronPKI 0.4.1 reports the
   refusal as `module-state` instead of as a failed path; nothing was accepted
   before that should not have been. `tests/error_state.rs` covers it.
+- The TPM 2.0 layer and the AWS KMS provider report the same refusal as
+  `internal_error`; they used to report `authentication_failed`. The KMS
+  provider also reports IronSocketLayer's `error:fips-module`, a handshake
+  the module refused locally, as `internal_error` rather than blaming AWS.
 
 ## 0.4.0 — 2026-10-17
 

@@ -200,7 +200,7 @@ dependencies = [
 
 [[package]]
 name = "ipg"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "ic-cipher",
  "ic-core",
@@ -242,9 +242,9 @@ checksum = "4ba47d90e8f200e5b6c0876553dfa0f613ef55d28f2945de524488cb33097130"
 
 [[package]]
 name = "ironkeys-kms"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a63546c77175a3a601511de38020b5de3fb8d8f8366e8c58b1f040215382479e"
+checksum = "816fb874648515bd0a6e54b01f8df1d293a1a58da789f7e34a229cd6e5b4f346"
 dependencies = [
  "ic-core",
  "ic-ec",
@@ -265,9 +265,9 @@ dependencies = [
 
 [[package]]
 name = "ironkeys-tpm2"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea787b653ea9cdd6f05aed18d263eed82374959b0fa630546ac00855ad0b5bba"
+checksum = "0cde9c4fe6bd4de1cda242491281a7086a6efa5028acc318073f06f069702e46"
 dependencies = [
  "ic-cipher",
  "ic-core",
