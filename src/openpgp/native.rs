@@ -2,7 +2,7 @@
 use super::primitives::{
     Sha1, aead, aead_nonce_len, cfb, cfb_decrypt, cipher_block_len, cipher_key_len, ocb,
 };
-use super::wire::{self, Packet, Reader, armor, invalid, mpi, packet, unarmor};
+use super::wire::{self, Packet, Reader, armor, invalid, mpi, packet, sos, unarmor};
 use super::*;
 use super::{curve448, public};
 use crate::crypto;
@@ -131,7 +131,12 @@ impl Key {
                     return Err(invalid("Reserved OpenPGP curve OID length"));
                 }
                 oid = material.take(len)?.to_vec();
-                let public = material.mpi()?.to_vec();
+                let public = if oid == ED448_OID || oid == X448_OID {
+                    material.sos()?
+                } else {
+                    material.mpi()?
+                }
+                .to_vec();
                 if alg == 18 {
                     let len = material.byte()? as usize;
                     kdf = material.take(len)?.to_vec();
@@ -160,7 +165,8 @@ impl Key {
         if version != 4 {
             r.finish()?;
         }
-        // GnuPG writes native Curve448 points as MPIs, which drop leading zeros.
+        // GnuPG keeps a native Curve448 point's leading zeros (an SOS); a writer
+        // that drops them, as in an MPI, gets them back here.
         let width = match (alg, oid.as_slice()) {
             (22, ED448_OID) => 57,
             (18, X448_OID) => 56,
@@ -509,10 +515,12 @@ impl Sig {
             return false;
         }
         // Integer signature components, left-padded to `width` when nonzero.
+        // Ed448's are SOS values, which may keep their leading zeros.
         let integers = |count: usize| -> Option<Vec<&[u8]>> {
             let mut r = Reader::new(&self.value);
+            let ed448 = self.alg == 22 && key.ed448_legacy();
             let values = (0..count)
-                .map(|_| r.mpi().ok())
+                .map(|_| if ed448 { r.sos() } else { r.mpi() }.ok())
                 .collect::<Option<Vec<_>>>()?;
             r.finish().ok()?;
             Some(values)
@@ -1086,7 +1094,8 @@ fn public_end(body: &[u8]) -> Result<usize> {
     } else if version == 4 && matches!(alg, 18 | 19 | 22) {
         let n = r.byte()? as usize;
         r.take(n)?;
-        r.mpi()?;
+        // Accepts a Curve448 point's kept leading zeros; parsing checks the rest.
+        r.sos()?;
         if alg == 18 {
             let n = r.byte()? as usize;
             r.take(n)?;
@@ -1644,7 +1653,12 @@ fn wrap_session(key: &Key, session: &[u8]) -> Result<Vec<u8>> {
             point.push(64);
         }
         point.extend(ephemeral);
-        body.extend(mpi(&point));
+        // GnuPG reads an X448 point in its own form, leading zeros kept.
+        body.extend(if key.cv448() {
+            sos(&point)
+        } else {
+            mpi(&point)
+        });
         body.push(wrapped.len() as u8);
     } else {
         body.extend(ephemeral);
@@ -1688,15 +1702,26 @@ fn unwrap_session(key: &Key, scalar: &[u8], body: &[u8]) -> Result<Option<Sessio
         return Ok(None);
     }
     let agreement = Agreement::of(key).ok_or_else(unsupported)?;
+    let padded;
     let ephemeral = if key.alg == 18 {
-        let p = r.mpi()?;
-        if key.cv25519() {
-            if p.len() != 33 || p[0] != 64 {
+        if key.cv448() {
+            // GnuPG keeps the point's leading zeros; another writer may not.
+            let p = r.sos()?;
+            if p.len() > 56 {
                 return Err(auth());
             }
-            &p[1..]
+            padded = [vec![0; 56 - p.len()], p.to_vec()].concat();
+            &padded[..]
         } else {
-            p
+            let p = r.mpi()?;
+            if key.cv25519() {
+                if p.len() != 33 || p[0] != 64 {
+                    return Err(auth());
+                }
+                &p[1..]
+            } else {
+                p
+            }
         }
     } else {
         r.take(agreement.sizes().1)?

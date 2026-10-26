@@ -521,6 +521,32 @@ fn independent_signature_policy_fixtures_enforce_curve_digest_sizes() {
     }
 }
 
+/// GnuPG keeps a native Curve448 value's leading zero octet and counts it, so
+/// about one Ed448 certificate in forty has such a value somewhere.
+#[cfg(feature = "openpgp-native")]
+#[test]
+fn librepgp_v5_curve448_values_with_leading_zeros_from_gnupg() {
+    let fixture: Value = ipg_json::from_str(include_str!(
+        "vectors/openpgp-librepgp-v5-leading-zeros.json"
+    ))
+    .unwrap();
+    let f = Fixture::new();
+    for case in fixture["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let bytes = iron_privacy_guard::hex::decode(case["certificate_hex"].as_str().unwrap());
+        fs::write(f.path(name), bytes.unwrap()).unwrap();
+        let report =
+            call(json!({"operation":"openpgp.cert.inspect","input":f.path(name)})).unwrap();
+        let certificate = &report["certificate"];
+        assert_eq!(certificate["fingerprint"], case["fingerprint"], "{name}");
+        assert_eq!(certificate["usable_for_signing"], true, "{name}");
+        assert_eq!(certificate["usable_for_encryption"], true, "{name}");
+        for key in certificate["keys"].as_array().unwrap() {
+            assert_eq!(key["bound"], true, "{name}: {key}");
+        }
+    }
+}
+
 #[cfg(feature = "openpgp-native")]
 #[test]
 fn librepgp_v5_ed448_certificates_and_signatures_from_gnupg() {

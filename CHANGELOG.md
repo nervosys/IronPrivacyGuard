@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.1 — 2026-10-18
+## 0.4.1 — 2026-10-25
 
 - Moved to IronCrypto 0.3.2, IronPKI 0.4.1, `ironkeys-tpm2` and
   `ironkeys-kms` 0.2.1 and, through `ironkeys-kms`, IronSocketLayer 0.7.1. IronCrypto 0.3.2 changes no interface: ML-KEM's
@@ -15,6 +15,16 @@
   `internal_error`; they used to report `authentication_failed`. The KMS
   provider also reports IronSocketLayer's `error:fips-module`, a handshake
   the module refused locally, as `internal_error` rather than blaming AWS.
+- GnuPG's Ed448 (LibrePGP v5) certificates are read whatever their values.
+  GnuPG writes a native Curve448 value that starts with a zero octet with
+  that octet kept and counted, which IPG refused as a noncanonical MPI: about
+  one such certificate in forty was rejected outright (a zero-led key point)
+  or had a self-signature that failed to verify (a zero-led signature value).
+  IPG now reads that form for Curve448 points and Ed448 signature values, and
+  writes an X448 ephemeral point to such a key the same way. Nothing that
+  should have been refused is accepted; other MPIs stay as strict.
+  `tests/vectors/openpgp-librepgp-v5-leading-zeros.json` keeps four GnuPG
+  certificates, one for each place it occurred.
 
 ## 0.4.0 — 2026-10-17
 

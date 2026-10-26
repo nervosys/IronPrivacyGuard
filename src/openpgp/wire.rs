@@ -48,6 +48,20 @@ impl<'a> Reader<'a> {
         }
         Ok(value)
     }
+    /// LibrePGP's SOS, which GnuPG writes for native Curve448 values: an MPI,
+    /// except that a value starting with a zero octet keeps it, and its bit
+    /// count is then the whole length.
+    pub fn sos(&mut self) -> Result<&'a [u8]> {
+        let bits = self.u16()? as usize;
+        let value = self.take(bits.div_ceil(8))?;
+        let actual = value
+            .first()
+            .map_or(0, |b| value.len() * 8 - b.leading_zeros() as usize);
+        if actual != bits && !(bits.is_multiple_of(8) && value.first() == Some(&0)) {
+            return Err(invalid("Noncanonical OpenPGP MPI"));
+        }
+        Ok(value)
+    }
     pub fn length(&mut self) -> Result<(usize, bool)> {
         match self.byte()? {
             b @ 0..=191 => Ok((b as usize, false)),
@@ -144,6 +158,20 @@ pub(super) fn mpi(value: &[u8]) -> Vec<u8> {
         .first()
         .map_or(0, |b| value.len() * 8 - b.leading_zeros() as usize);
     let mut out = (u16::try_from(bits).expect("bounded MPI"))
+        .to_be_bytes()
+        .to_vec();
+    out.extend_from_slice(value);
+    out
+}
+
+/// A fixed-width value as GnuPG writes it (see [`Reader::sos`]): whole, with
+/// its full bit count, when it starts with a zero octet, and otherwise as an
+/// MPI.
+pub(super) fn sos(value: &[u8]) -> Vec<u8> {
+    if value.first() != Some(&0) {
+        return mpi(value);
+    }
+    let mut out = (u16::try_from(value.len() * 8).expect("bounded SOS"))
         .to_be_bytes()
         .to_vec();
     out.extend_from_slice(value);
@@ -328,5 +356,18 @@ mod tests {
             reader.finish().unwrap();
         }
         assert!(Reader::new(&[0, 8, 1]).mpi().is_err());
+        // GnuPG keeps a leading zero octet of a Curve448 value and counts it.
+        let mut point = vec![0; 56];
+        point[1] = 0x23;
+        let encoded = sos(&point);
+        assert_eq!(encoded[..2], [1, 192]);
+        assert_eq!(Reader::new(&encoded).sos().unwrap(), point);
+        assert!(Reader::new(&encoded).mpi().is_err());
+        point[0] = 0x23;
+        assert_eq!(sos(&point), mpi(&point));
+        assert_eq!(Reader::new(&sos(&point)).sos().unwrap(), point);
+        // Otherwise an SOS is as strict as an MPI.
+        assert!(Reader::new(&[0, 8, 1]).sos().is_err());
+        assert!(Reader::new(&[0, 7, 0]).sos().is_err());
     }
 }
